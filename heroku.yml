@@ -1,0 +1,5 @@
+# Heroku construit l'image Docker sur la stack "container" (HEROKU_BUILD=docker) ; par
+# défaut il utilise le buildpack emk/rust (RustConfig), qui lit la variable REPOS_TOKEN.
+build:
+  docker:
+    web: Dockerfile
