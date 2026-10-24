@@ -1,0 +1,14 @@
+{
+  "name": "LÜMA",
+  "description": "Le site de LÜMA, l'éditeur photo en Rust : une app Paquets (pages rendues en Rust, animations et labo en WebAssembly, scènes 3D).",
+  "keywords": ["rust", "photo", "paquets", "wasm", "webgl"],
+  "stack": "heroku-26",
+  "buildpacks": [{ "url": "emk/rust" }],
+  "env": {
+    "REPOS_TOKEN": {
+      "description": "Jeton GitHub capable de lire les dépôts privés de Paquets, Vitesse, Securite, Memoire et Active.",
+      "required": true
+    }
+  },
+  "success_url": "/"
+}

@@ -1,0 +1,6 @@
+# Heroku avec le buildpack emk/rust : le buildpack installe Rust puis lancerait un
+# simple `cargo build --release` à la racine, où il n'y a pas de crate. Sa compilation
+# est donc sautée : heroku-build.sh construit le serveur et les îlots (WebAssembly).
+VERSION=stable
+RUST_SKIP_BUILD=1
+trap 'status=$?; if [ "$status" -eq 0 ]; then ENV_DIR="$ENV_DIR" bash "$BUILD_DIR/heroku-build.sh" || exit 1; fi' EXIT
