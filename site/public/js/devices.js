@@ -1,7 +1,7 @@
 // Section Apple : un MacBook dont l'écran s'ouvre au défilement, puis un iPhone qui
 // arrive en montrant ses objectifs avant de se retourner sur l'application LÜMA.
 
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { RoomEnvironment } from '../vendor/RoomEnvironment.js';
 import { RoundedBoxGeometry } from '../vendor/RoundedBoxGeometry.js';
 import { drawDesktopUI, drawPhoneUI } from './screen.js';

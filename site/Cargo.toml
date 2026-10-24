@@ -1,0 +1,71 @@
+[package]
+name = "luma-site"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Le site de LÜMA, écrit avec Paquets : pages rendues en Rust, animations et labo en WebAssembly."
+
+# Crate autonome : le site n'appartient pas au futur workspace du moteur.
+[workspace]
+
+# La bibliothèque contient ce que le serveur et le navigateur partagent (textes, îlots)
+# et, compilée en WebAssembly, le bundle du navigateur. Le binaire est le serveur (et
+# l'export statique).
+[lib]
+name = "luma_site"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "luma-site"
+path = "src/main.rs"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+paquets = { git = "https://github.com/maxlestage/Paquets", default-features = false }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+paquets = { git = "https://github.com/maxlestage/Paquets", default-features = false, features = ["client"] }
+wasm-bindgen = "=0.2.129"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+  "AddEventListenerOptions",
+  "console",
+  "CssStyleDeclaration",
+  "CustomEvent",
+  "CustomEventInit",
+  "Document",
+  "DomRect",
+  "DomTokenList",
+  "Element",
+  "EventTarget",
+  "HtmlCanvasElement",
+  "HtmlElement",
+  "IntersectionObserver",
+  "IntersectionObserverEntry",
+  "IntersectionObserverInit",
+  "KeyboardEvent",
+  "MediaQueryList",
+  "MouseEvent",
+  "NodeList",
+  "Performance",
+  "PointerEvent",
+  "WebGlBuffer",
+  "WebGlProgram",
+  "WebGlRenderingContext",
+  "WebGlShader",
+  "WebGlUniformLocation",
+  "Window",
+] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Le bundle du navigateur : `cargo build --lib --target wasm32-unknown-unknown --profile wasm-release`.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

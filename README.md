@@ -10,28 +10,61 @@ puis Windows, Linux et Android sur le même moteur.
 
 ## Le site
 
-Un site statique, sans étape de build : HTML, CSS et modules JavaScript, avec
-[three.js](https://threejs.org) r170 copié dans `site/vendor/` (aucun CDN pour les scripts).
+Le site est une app [Paquets](https://github.com/maxlestage/Paquets) : du Rust de bout en bout.
+
+| Partie | Où | En quoi |
+|---|---|---|
+| Serveur, pages, SEO, CSP, PWA, export statique | `site/src/server/` | Rust (Paquets, natif) |
+| Photo du pipeline, générée en SVG | `site/src/server/photo.rs` | Rust |
+| Îlots : labo (réglages, préréglages) et filtre des crates | `site/src/islands.rs` | Rust, rendu serveur puis hydraté en WebAssembly |
+| Animations de page : préchargement, révélations, curseur, inclinaison, compteurs, manifeste, pipeline 3D, feuille de route, terminal | `site/src/client/motion.rs` | Rust → WebAssembly |
+| Rendu du labo (WebGL) | `site/src/client/lab.rs`, `lab.frag` | Rust → WebAssembly, shader GLSL |
+| Textes et données | `site/src/content.rs` | Rust, partagé serveur/navigateur |
+| Scènes 3D : objectif photo, MacBook et iPhone | `site/public/js/` | three.js r170, embarqué (aucun CDN) |
+| Styles | `site/public/site.css` | CSS |
+
+La page est du HTML fini rendu par le serveur : elle se lit sans JavaScript, avec ses
+balises SEO, et sa Content-Security-Policy n'autorise que son propre code.
+
+### Construire et lancer
+
+Tout se lance depuis `site/` :
 
 ```sh
-cd site
-python3 -m http.server 8000   # puis http://localhost:8000
+# 1. Le bundle du navigateur (îlots + animations) → pkg/
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.129
+cargo build --lib --target wasm32-unknown-unknown --profile wasm-release
+wasm-bindgen --target web --no-typescript --out-dir pkg \
+  target/wasm32-unknown-unknown/wasm-release/luma_site.wasm
+
+# 2. Le serveur, sur http://localhost:3000 (PORT sur Heroku)
+cargo run --release
+
+# Ou le site en fichiers statiques (GitHub Pages…), liens sous BASE_PATH
+BASE_PATH=/LUMA cargo run --release -- export dist
 ```
 
-Les modules ES ne se chargent pas depuis `file://` : il faut un serveur, n'importe lequel.
-Le dossier `site/` se dépose tel quel sur GitHub Pages, Netlify, Cloudflare Pages ou Heroku.
+Paquets et ses paquets sont des dépôts git privés : il faut un accès GitHub qui peut les lire.
 
-| Fichier | Rôle |
-|---|---|
-| `site/index.html` | Contenu de la page |
-| `site/styles.css` | Thème, mises en page, animations CSS, versions tablette et téléphone |
-| `site/js/main.js` | Point d'entrée, chargement différé des scènes 3D |
-| `site/js/motion.js` | Préchargement, révélations, curseur, inclinaison 3D, sections collantes |
-| `site/js/hero.js` | Objectif 3D : diaphragme à 9 lamelles, lentille irisée, flux de lumière |
-| `site/js/devices.js` | MacBook qui s'ouvre et iPhone qui se retourne au défilement |
-| `site/js/lab.js` | Labo WebGL : photo HDR procédurale, réglages, comparaison avant/après |
-| `site/js/screen.js` | Photo procédurale et écrans de l'application dessinés au canvas |
+### Vérifier
 
-Pensé d'abord pour Safari sur Mac, iPhone et iPad : `100svh`, zones sûres (`env(safe-area-inset-*)`),
-densité de pixels plafonnée à 2, moins de particules sur téléphone, rendu à la demande pour la
-scène des appareils, et respect de « Réduire les animations ». Sans WebGL, la page reste lisible.
+```sh
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo clippy --lib --target wasm32-unknown-unknown -- -D warnings
+cargo test
+```
+
+### Déployer
+
+- **Heroku, buildpack** : `app.json`, `RustConfig`, `heroku-build.sh` et `Procfile`. Ajouter la
+  variable `REPOS_TOKEN` (un jeton GitHub qui lit les dépôts privés).
+- **Docker** : `docker build --build-arg REPOS_TOKEN=… -t luma .`, ou `heroku.yml` sur la stack container.
+
+### Apple d'abord
+
+Pensé d'abord pour Safari sur Mac, iPhone et iPad : installable sur l'écran d'accueil (PWA,
+icônes, `apple-touch-icon`), `100svh`, zones sûres (`env(safe-area-inset-*)`), densité de
+pixels plafonnée à 2, moins de particules sur téléphone, rendu à la demande pour la scène
+des appareils, et respect de « Réduire les animations ».
