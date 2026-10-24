@@ -2,7 +2,7 @@
 // lentille frontale traitée) dans lequel s'engouffre un flux de lumière spectrale.
 // Le défilement ouvre le diaphragme, accélère la lumière et fait entrer la caméra.
 
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { RoomEnvironment } from '../vendor/RoomEnvironment.js';
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
