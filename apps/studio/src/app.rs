@@ -1545,11 +1545,7 @@ impl Studio {
         }
         let mut choose = None;
         let width = ((ui.available_width() - 10.0) / 2.0).floor();
-        for group in [
-            presets::Group::ColorFilm,
-            presets::Group::BlackAndWhiteFilm,
-            presets::Group::Creative,
-        ] {
+        for group in presets::Group::ALL {
             sub_title(ui, group.name());
             let items: Vec<usize> = (0..PRESETS.len())
                 .filter(|&k| PRESETS[k].group == group)
