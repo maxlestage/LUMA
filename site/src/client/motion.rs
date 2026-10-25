@@ -354,11 +354,18 @@ fn counters(reduced: bool) {
             .get_attribute("data-count")
             .and_then(|v| v.parse().ok())
             .unwrap_or(0.0);
+        // Décimales (`data-decimals`) et séparateur de la langue (`data-sep` : « , »).
+        let decimals: usize = el
+            .get_attribute("data-decimals")
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+        let sep = el.get_attribute("data-sep").unwrap_or_else(|| ".".into());
         let start = now();
         request_frame(move |time| {
             let t = clamp01((time - start) / 1600.0);
-            let v = (end * (1.0 - (1.0 - t).powi(4))).round();
-            el.set_text_content(Some(&format!("{v}")));
+            let v = end * (1.0 - (1.0 - t).powi(4));
+            let shown = format!("{v:.decimals$}").replace('.', &sep);
+            el.set_text_content(Some(&shown));
             t < 1.0
         });
     });

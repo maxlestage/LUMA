@@ -1054,3 +1054,8 @@ es = Legislación aplicable
 fr = Ces conditions sont soumises au droit français. En cas de litige, une solution amiable est recherchée d'abord ; à défaut, vous pouvez recourir gratuitement à un médiateur de la consommation.
 en = These terms are governed by French law. In the event of a dispute, an amicable solution is sought first; failing that, you can turn to a consumer mediator free of charge.
 es = Estas condiciones se rigen por la legislación francesa. En caso de litigio, primero se busca una solución amistosa; en su defecto, puedes acudir gratuitamente a un mediador de consumo.
+
+# Le téléchargement fermé (LUMA_DOWNLOADS).
+fr = Voir les tarifs
+en = See pricing
+es = Ver precios
