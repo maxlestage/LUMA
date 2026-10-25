@@ -225,3 +225,27 @@ fn films_and_merge_tools() {
     s.wait();
     s.capture("fusion");
 }
+
+#[test]
+fn films_stacked_with_masks() {
+    let Some(mut s) = Session::open("films-empiles") else {
+        return;
+    };
+    let st = s.studio();
+    // Un film sur toute l'image à 60 %, un autre dans un cercle au centre.
+    let mut full = luma_project::Mask::full();
+    full.look = Some(luma_project::Look {
+        name: "Kodak 2383".into(),
+        amount: 60.0,
+    });
+    let mut radial = luma_project::Mask::radial();
+    radial.look = Some(luma_project::Look {
+        name: "Tri-X 400".into(),
+        amount: 100.0,
+    });
+    st.settings.masks = vec![full, radial];
+    st.tool = luma_studio::app::Tool::Masks;
+    st.selected_mask = Some(1);
+    s.wait();
+    s.capture("films-empiles");
+}

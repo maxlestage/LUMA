@@ -149,8 +149,7 @@ impl Photo {
     pub fn render(&self, settings: &Settings, size: Size, cancel: &Cancel) -> Result<Rendered> {
         let mut timings = Timings::default();
         let base = self.base(settings, size, cancel, &mut timings)?;
-        let mut image = timings.time("copie de la base", || (*base.image).clone());
-        luma_image::finish(&mut image, base.scale, settings, cancel, &mut timings)?;
+        let image = luma_image::finish_layers(&base.image, base.scale, settings, cancel, &mut timings)?;
         Ok(Rendered { image, timings })
     }
 

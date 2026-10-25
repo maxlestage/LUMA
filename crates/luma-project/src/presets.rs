@@ -58,6 +58,11 @@ impl Preset {
     }
 }
 
+/// Le préréglage de ce nom.
+pub fn find(name: &str) -> Option<&'static Preset> {
+    PRESETS.iter().find(|p| p.name == name)
+}
+
 /// Remet à zéro ce qu'un look définit, pour que deux préréglages ne s'additionnent pas.
 fn reset_look(s: &mut Settings) {
     let d = Settings::default();
@@ -233,7 +238,7 @@ macro_rules! preset {
     };
 }
 
-/// Les 72 préréglages intégrés.
+/// Les 100 préréglages intégrés.
 pub const PRESETS: &[Preset] = &[
     // ----- Pellicules couleur -----
     preset!(
@@ -514,6 +519,124 @@ pub const PRESETS: &[Preset] = &[
             grain(s, 38.0, 40.0, 65.0);
         }
     ),
+    preset!(
+        "Pro Image 100",
+        ColorFilm,
+        "Inspiré de Kodak Pro Image 100 : pellicule des pays chauds, peaux dorées, contraste doux.",
+        |s| {
+            base(s, 4.0, 2.0, 6.0);
+            band(s, O, 0.0, 4.0, 4.0);
+            split(s, 200.0, 6.0, 42.0, 12.0);
+            fade(s, 8.0, 248.0);
+            grain(s, 14.0, 20.0, 40.0);
+        }
+    ),
+    preset!(
+        "Royal Gold 400",
+        ColorFilm,
+        "Inspiré de Kodak Royal Gold 400 : chaud et riche, rouges profonds, grain serré.",
+        |s| {
+            base(s, 12.0, 10.0, 6.0);
+            band(s, R, 0.0, 10.0, -4.0);
+            tint(s, 45.0, 10.0);
+            fade(s, 6.0, 250.0);
+            grain(s, 20.0, 24.0, 45.0);
+        }
+    ),
+    preset!(
+        "Vericolor III",
+        ColorFilm,
+        "Inspiré de Kodak Vericolor III : négatif de studio des années 80, neutre et doux.",
+        |s| {
+            base(s, -10.0, -12.0, 0.0);
+            tones(s, -10.0, 8.0, 0.0, 0.0);
+            fade(s, 12.0, 246.0);
+            split(s, 190.0, 6.0, 40.0, 6.0);
+            grain(s, 14.0, 20.0, 40.0);
+        }
+    ),
+    preset!(
+        "Reala 100",
+        ColorFilm,
+        "Inspiré de Fujifilm Reala 100 : la quatrième couche, couleurs justes même sous néons.",
+        |s| {
+            base(s, 6.0, 4.0, 6.0);
+            band(s, G, -4.0, 6.0, 0.0);
+            band(s, M, 0.0, -6.0, 0.0);
+            grain(s, 8.0, 15.0, 32.0);
+        }
+    ),
+    preset!(
+        "Pro 160NS",
+        ColorFilm,
+        "Inspiré de Fujicolor Pro 160NS : pastel et froid, verts tendres, peaux pâles.",
+        |s| {
+            base(s, -12.0, -8.0, 0.0);
+            tones(s, -8.0, 8.0, 0.0, 0.0);
+            band(s, G, 12.0, -12.0, 4.0);
+            split(s, 175.0, 8.0, 190.0, 4.0);
+            fade(s, 12.0, 248.0);
+            grain(s, 12.0, 18.0, 38.0);
+        }
+    ),
+    preset!(
+        "Natura 1600",
+        ColorFilm,
+        "Inspiré de Fujifilm Natura 1600 : la lumière ambiante la nuit, chaud et granuleux.",
+        |s| {
+            base(s, 4.0, -4.0, 6.0);
+            tones(s, -10.0, 12.0, 0.0, 0.0);
+            split(s, 180.0, 10.0, 40.0, 12.0);
+            fade(s, 14.0, 244.0);
+            grain(s, 40.0, 42.0, 60.0);
+        }
+    ),
+    preset!(
+        "Superia 200",
+        ColorFilm,
+        "Inspiré de Fujifilm Superia 200 : quotidien et frais, verts vifs, bleus nets.",
+        |s| {
+            base(s, 8.0, 6.0, 4.0);
+            band(s, G, -4.0, 10.0, 0.0);
+            split(s, 160.0, 8.0, 60.0, 4.0);
+            grain(s, 18.0, 25.0, 45.0);
+        }
+    ),
+    preset!(
+        "Agfa Optima 200",
+        ColorFilm,
+        "Inspiré d'Agfa Optima 200 : couleurs franches, rouges profonds, ombres neutres.",
+        |s| {
+            base(s, 12.0, 8.0, 4.0);
+            band(s, R, 0.0, 12.0, -4.0);
+            band(s, B, 0.0, 8.0, 0.0);
+            grain(s, 16.0, 22.0, 42.0);
+        }
+    ),
+    preset!(
+        "Centuria 400",
+        ColorFilm,
+        "Inspiré de Konica Centuria 400 : magentas doux, ombres teintées, rendu japonais des années 2000.",
+        |s| {
+            base(s, 4.0, 2.0, 4.0);
+            split(s, 300.0, 8.0, 50.0, 10.0);
+            band(s, G, 6.0, -8.0, 0.0);
+            fade(s, 10.0, 246.0);
+            grain(s, 24.0, 28.0, 50.0);
+        }
+    ),
+    preset!(
+        "Solaris 400",
+        ColorFilm,
+        "Inspiré de Ferrania Solaris 400 : la dernière pellicule italienne, chaude et contrastée.",
+        |s| {
+            base(s, 14.0, 10.0, 0.0);
+            tint(s, 30.0, 10.0);
+            band(s, B, -6.0, -10.0, 0.0);
+            fade(s, 8.0, 246.0);
+            grain(s, 28.0, 32.0, 55.0);
+        }
+    ),
     // ----- Cinéma -----
     preset!(
         "CineStill 800T",
@@ -792,6 +915,122 @@ pub const PRESETS: &[Preset] = &[
             grain(s, 45.0, 55.0, 70.0);
         }
     ),
+    preset!(
+        "Eastman 5247",
+        Cinema,
+        "Inspiré du négatif Eastman 5247 des années 70 : contraste dur, couleurs saturées, ombres brunes.",
+        |s| {
+            base(s, 22.0, 10.0, 0.0);
+            tones(s, -6.0, -6.0, 0.0, -10.0);
+            split(s, 30.0, 10.0, 45.0, 10.0);
+            band(s, G, 10.0, -10.0, -6.0);
+            s_curve(s, 4.0, 10.0, 246.0);
+            grain(s, 22.0, 30.0, 55.0);
+        }
+    ),
+    preset!(
+        "Eastman 5254",
+        Cinema,
+        "Inspiré du négatif Eastman 5254 des années 60 : couleurs douces et chaudes, noirs laiteux.",
+        |s| {
+            base(s, 4.0, -8.0, 0.0);
+            tint(s, 40.0, 12.0);
+            fade(s, 18.0, 240.0);
+            band(s, B, -6.0, -15.0, 0.0);
+            grain(s, 24.0, 32.0, 55.0);
+        }
+    ),
+    preset!(
+        "Vision2 500T",
+        Cinema,
+        "Inspiré du Kodak Vision2 500T : la nuit des films des années 2000, cyan et ambre, grain riche.",
+        |s| {
+            base(s, 14.0, 2.0, 4.0);
+            tones(s, -10.0, 0.0, 0.0, -8.0);
+            split(s, 195.0, 24.0, 35.0, 18.0);
+            s_curve(s, 6.0, 8.0, 246.0);
+            grain(s, 32.0, 36.0, 55.0);
+        }
+    ),
+    preset!(
+        "Reala 500D",
+        Cinema,
+        "Inspiré du Fujifilm Reala 500D : négatif de jour, couleurs fidèles, verts naturels.",
+        |s| {
+            base(s, 2.0, 2.0, 6.0);
+            band(s, G, -4.0, 4.0, 0.0);
+            split(s, 185.0, 6.0, 45.0, 6.0);
+            grain(s, 18.0, 26.0, 45.0);
+        }
+    ),
+    preset!(
+        "Fuji F-125",
+        Cinema,
+        "Inspiré du Fujifilm F-125 : intérieurs tungstène doux, ombres vertes typiques de Fuji.",
+        |s| {
+            base(s, 0.0, -4.0, 4.0);
+            split(s, 150.0, 14.0, 40.0, 10.0);
+            fade(s, 8.0, 248.0);
+            grain(s, 14.0, 22.0, 40.0);
+        }
+    ),
+    preset!(
+        "Agfa XT 320",
+        Cinema,
+        "Inspiré de l'Agfa XT 320 : négatif cinéma européen, rouges chauds, contraste mesuré.",
+        |s| {
+            base(s, 10.0, 4.0, 0.0);
+            band(s, R, 0.0, 10.0, 0.0);
+            split(s, 210.0, 10.0, 30.0, 12.0);
+            grain(s, 22.0, 30.0, 50.0);
+        }
+    ),
+    preset!(
+        "Rétention d'argent",
+        Cinema,
+        "Le traitement ENR : une partie de l'argent gardée, noirs profonds, couleurs retenues.",
+        |s| {
+            base(s, 25.0, -30.0, 0.0);
+            tones(s, -6.0, -6.0, 0.0, -12.0);
+            s_curve(s, 0.0, 9.0, 252.0);
+            grain(s, 14.0, 22.0, 45.0);
+        }
+    ),
+    preset!(
+        "Western spaghetti",
+        Cinema,
+        "Le soleil des westerns italiens : jaune poussiéreux, contraste dur, ciels délavés.",
+        |s| {
+            base(s, 28.0, -10.0, 0.0);
+            tint(s, 42.0, 22.0);
+            band(s, B, 0.0, -40.0, 15.0);
+            s.clarity = 18.0;
+            grain(s, 26.0, 32.0, 60.0);
+        }
+    ),
+    preset!(
+        "Polar nordique",
+        Cinema,
+        "Les séries policières du Nord : froid, désaturé, ombres bleu acier.",
+        |s| {
+            base(s, 14.0, -40.0, 0.0);
+            split(s, 210.0, 18.0, 200.0, 6.0);
+            tones(s, -10.0, -5.0, 0.0, -6.0);
+            grain(s, 10.0, 20.0, 40.0);
+        }
+    ),
+    preset!(
+        "Heure dorée",
+        Cinema,
+        "La lumière basse des grands films : or chaud, peaux lumineuses, ombres douces.",
+        |s| {
+            base(s, 6.0, 4.0, 12.0);
+            tones(s, -15.0, 10.0, 0.0, 0.0);
+            split(s, 30.0, 10.0, 40.0, 22.0);
+            fade(s, 8.0, 248.0);
+            grain(s, 10.0, 20.0, 40.0);
+        }
+    ),
     // ----- Noir et blanc -----
     preset!(
         "Tri-X 400",
@@ -936,6 +1175,67 @@ pub const PRESETS: &[Preset] = &[
             grain(s, 25.0, 30.0, 55.0);
         }
     ),
+    preset!(
+        "XP2 Super",
+        BlackAndWhiteFilm,
+        "Inspiré d'Ilford XP2 Super : noir et blanc chromogène, sans grain visible, très doux.",
+        |s| {
+            mono(s);
+            base(s, -4.0, 0.0, 0.0);
+            tones(s, -10.0, 10.0, 0.0, 0.0);
+            grain(s, 4.0, 10.0, 25.0);
+        }
+    ),
+    preset!(
+        "Plus-X 125",
+        BlackAndWhiteFilm,
+        "Inspiré de Kodak Plus-X 125 : le classique des années 60, gris lumineux, grain fin.",
+        |s| {
+            mono(s);
+            base(s, 14.0, 0.0, 0.0);
+            s_curve(s, 4.0, 6.0, 250.0);
+            grain(s, 14.0, 18.0, 40.0);
+        }
+    ),
+    preset!(
+        "APX 100",
+        BlackAndWhiteFilm,
+        "Inspiré d'Agfa APX 100 : tons moyens riches, ciels un peu assombris.",
+        |s| {
+            mono(s);
+            base(s, 12.0, 0.0, 0.0);
+            band(s, B, 0.0, 0.0, -12.0);
+            grain(s, 14.0, 18.0, 40.0);
+        }
+    ),
+    preset!(
+        "Retro 80S",
+        BlackAndWhiteFilm,
+        "Inspiré de Rollei Retro 80S : sensible au rouge lointain, ciels noirs, peaux claires.",
+        |s| {
+            mono(s);
+            base(s, 22.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, 25.0);
+            band(s, O, 0.0, 0.0, 20.0);
+            band(s, B, 0.0, 0.0, -45.0);
+            band(s, A, 0.0, 0.0, -30.0);
+            grain(s, 16.0, 20.0, 45.0);
+        }
+    ),
+    preset!(
+        "Ortho Plus",
+        BlackAndWhiteFilm,
+        "Inspiré d'Ilford Ortho Plus : aveugle au rouge, lèvres et peaux sombres, ciels blancs.",
+        |s| {
+            mono(s);
+            base(s, 18.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, -45.0);
+            band(s, O, 0.0, 0.0, -30.0);
+            band(s, B, 0.0, 0.0, 30.0);
+            band(s, A, 0.0, 0.0, 20.0);
+            grain(s, 12.0, 18.0, 40.0);
+        }
+    ),
     // ----- Instantanés et vintage -----
     preset!(
         "Polaroid 600",
@@ -1070,6 +1370,40 @@ pub const PRESETS: &[Preset] = &[
             grain(s, 30.0, 40.0, 70.0);
         }
     ),
+    preset!(
+        "Polacolor",
+        Instant,
+        "Le Polaroid à décoller : couleurs saturées et un peu froides, bords sombres.",
+        |s| {
+            base(s, 8.0, 10.0, 0.0);
+            split(s, 190.0, 12.0, 50.0, 8.0);
+            fade(s, 20.0, 240.0);
+            vignette(s, -25.0, 40.0);
+        }
+    ),
+    preset!(
+        "FP-100C",
+        Instant,
+        "Inspiré du Fujifilm FP-100C : instantané à décoller, cyan et vert, tons pastel.",
+        |s| {
+            base(s, -4.0, 4.0, 0.0);
+            split(s, 170.0, 14.0, 70.0, 8.0);
+            band(s, G, 10.0, 10.0, 0.0);
+            fade(s, 22.0, 238.0);
+        }
+    ),
+    preset!(
+        "Autochrome",
+        Instant,
+        "Les plaques autochromes Lumière (1907) : couleurs pointillistes et douces, grain de fécule.",
+        |s| {
+            base(s, -10.0, -25.0, 0.0);
+            tint(s, 40.0, 14.0);
+            fade(s, 24.0, 232.0);
+            vignette(s, -30.0, 35.0);
+            grain(s, 55.0, 60.0, 80.0);
+        }
+    ),
     // ----- Créatifs -----
     preset!(
         "Fondu mat",
@@ -1114,16 +1448,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn seventy_two_presets_with_unique_names_in_every_family() {
-        assert_eq!(PRESETS.len(), 72);
+    fn a_hundred_presets_with_unique_names_in_every_family() {
+        assert_eq!(PRESETS.len(), 100);
         let mut names: Vec<&str> = PRESETS.iter().map(|p| p.name).collect();
         names.sort_unstable();
         names.dedup();
-        assert_eq!(names.len(), 72, "noms en double");
+        assert_eq!(names.len(), 100, "noms en double");
         for g in Group::ALL {
             assert!(PRESETS.iter().any(|p| p.group == g), "{}", g.name());
         }
-        assert!(PRESETS.iter().filter(|p| p.group == Group::Cinema).count() >= 20);
+        assert!(PRESETS.iter().filter(|p| p.group == Group::Cinema).count() >= 30);
     }
 
     #[test]

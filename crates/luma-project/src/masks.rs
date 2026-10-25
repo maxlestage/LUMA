@@ -25,6 +25,16 @@ pub enum Shape {
     },
     /// Des touches de pinceau.
     Brush { dabs: Vec<Dab> },
+    /// Toute l'image : pour empiler des films (chacun avec son intensité).
+    Full,
+}
+
+/// Un film (préréglage) appliqué dans la zone d'un masque : son nom et son intensité
+/// (0 à 100). Plusieurs masques portent plusieurs films : ils s'empilent dans l'ordre.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Look {
+    pub name: String,
+    pub amount: f32,
 }
 
 /// Une touche de pinceau : position, rayon (en fraction de la largeur), contour
@@ -92,6 +102,9 @@ pub struct Mask {
     pub amount: f32,
     #[serde(default)]
     pub local: Local,
+    /// Un film dans la zone du masque.
+    #[serde(default)]
+    pub look: Option<Look>,
 }
 
 fn full() -> f32 {
@@ -110,6 +123,7 @@ impl Mask {
             invert: false,
             amount: 100.0,
             local: Local::default(),
+            look: None,
         }
     }
 
@@ -126,6 +140,7 @@ impl Mask {
             invert: false,
             amount: 100.0,
             local: Local::default(),
+            look: None,
         }
     }
 
@@ -137,11 +152,32 @@ impl Mask {
             invert: false,
             amount: 100.0,
             local: Local::default(),
+            look: None,
         }
     }
 
-    /// Le masque agit‑il ?
+    /// Toute l'image, pour un film empilé.
+    pub fn full() -> Mask {
+        Mask {
+            name: "Image entière".into(),
+            shape: Shape::Full,
+            invert: false,
+            amount: 100.0,
+            local: Local::default(),
+            look: None,
+        }
+    }
+
+    /// Les curseurs locaux agissent‑ils ?
     pub fn is_active(&self) -> bool {
         self.amount > 0.0 && !self.local.is_neutral()
+    }
+
+    /// Le film du masque, s'il en a un et qu'il agit (intensité du film, de 0 à 1).
+    pub fn active_look(&self) -> Option<(&str, f32)> {
+        let l = self.look.as_ref()?;
+        // L'intensité du masque (et son inversion) est déjà dans sa zone.
+        let k = l.amount / 100.0;
+        (k > 0.0).then_some((l.name.as_str(), k))
     }
 }
