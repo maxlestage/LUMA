@@ -22,13 +22,18 @@ lipo -create -output "$app/Contents/MacOS/luma-studio" \
   target/aarch64-apple-darwin/release/luma-studio \
   target/x86_64-apple-darwin/release/luma-studio
 
-# L'icône : dessinée par le code, déclinée aux tailles de macOS.
+# L'icône : le logo de LÜMA, dessiné par le code (luma-brand), aux tailles de macOS.
 iconset="$out/LUMA.iconset"
 rm -rf "$iconset" && mkdir -p "$iconset"
-cargo run -q --release -p luma-studio --example icon -- "$out/icon.png"
+# Le logo avec « LÜMA » ; aux plus petites tailles, l'anneau seul (le nom y serait
+# illisible).
+cargo run -q --release -p luma-studio --example icon -- "$out/icon.png" mac
+cargo run -q --release -p luma-studio --example icon -- "$out/icon-small.png" mac-petit
 for size in 16 32 128 256 512; do
-  sips -z $size $size "$out/icon.png" --out "$iconset/icon_${size}x${size}.png" >/dev/null
-  sips -z $((size * 2)) $((size * 2)) "$out/icon.png" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+  src="$out/icon.png"
+  [ $size -le 32 ] && src="$out/icon-small.png"
+  sips -z $size $size "$src" --out "$iconset/icon_${size}x${size}.png" >/dev/null
+  sips -z $((size * 2)) $((size * 2)) "$src" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
 done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/LUMA.icns"
 

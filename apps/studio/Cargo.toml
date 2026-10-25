@@ -19,6 +19,7 @@ luma-image.workspace = true
 luma-render.workspace = true
 luma-gpu.workspace = true
 luma-merge.workspace = true
+luma-brand.workspace = true
 egui.workspace = true
 wgpu.workspace = true
 

@@ -41,6 +41,13 @@ fn main() -> eframe::Result {
         .with_title("LÜMA")
         .with_drag_and_drop(true);
     if !cfg!(target_os = "ios") {
+        // L'icône de la fenêtre et du Dock (pendant le développement, hors du .app).
+        let n = 256;
+        viewport = viewport.with_icon(std::sync::Arc::new(egui::IconData {
+            rgba: luma_brand::logo(n, luma_brand::Backdrop::MacIcon, true),
+            width: n as u32,
+            height: n as u32,
+        }));
         viewport = viewport
             .with_inner_size([1440.0, 900.0])
             .with_min_inner_size([1024.0, 640.0]);

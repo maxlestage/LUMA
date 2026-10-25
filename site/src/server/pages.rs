@@ -34,7 +34,9 @@ fn section_head(label: &'static str, title: Element, lede: Option<Element>) -> E
         .child(lede)
 }
 
-const BRAND_SVG: &str = r##"<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="5.5" fill="url(#brandg)"/><defs><linearGradient id="brandg" x1="0" x2="1"><stop offset="0" stop-color="#ff6b3d"/><stop offset=".5" stop-color="#ffcf4a"/><stop offset="1" stop-color="#8b7bff"/></linearGradient></defs></svg>"##;
+/// La marque de LÜMA : l'anneau de lumière, dessiné par `luma-brand` (régénéré par
+/// `cargo run -p luma-brand --example brand -- site/public/assets site`).
+const BRAND_SVG: &str = include_str!("../../public/assets/marque.svg");
 
 const IRIS_SVG: &str = r##"<svg class="loader-iris" viewBox="-50 -50 100 100"><defs><linearGradient id="spec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b3d"/><stop offset=".35" stop-color="#ffcf4a"/><stop offset=".65" stop-color="#4af2c8"/><stop offset="1" stop-color="#8b7bff"/></linearGradient></defs><circle r="46" fill="none" stroke="url(#spec)" stroke-width="1.2"/><g class="blades"><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/></g></svg>"##;
 

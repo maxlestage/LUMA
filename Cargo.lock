@@ -1900,6 +1900,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
+name = "luma-brand"
+version = "0.1.0"
+dependencies = [
+ "image",
+]
+
+[[package]]
 name = "luma-cli"
 version = "0.1.0"
 dependencies = [
@@ -2005,6 +2012,7 @@ dependencies = [
  "egui",
  "egui_kittest",
  "image",
+ "luma-brand",
  "luma-color",
  "luma-core",
  "luma-gpu",

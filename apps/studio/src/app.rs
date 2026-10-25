@@ -433,6 +433,8 @@ pub struct Studio {
     new_preset_name: String,
     /// Ce qui a changé dans chaque photo du dossier (vignettes, étiquette sous la photo).
     edits: HashMap<PathBuf, presets::Summary>,
+    /// La marque : le fond (l'éclipse), l'anneau, le logo avec son nom.
+    brand: Option<Brand>,
     previews: Vec<Option<TextureHandle>>,
     previews_tag: u64,
     previews_for: Option<PathBuf>,
@@ -506,6 +508,7 @@ impl Studio {
                 .unwrap_or_default(),
             new_preset_name: String::new(),
             edits: HashMap::new(),
+            brand: None,
             previews: Vec::new(),
             previews_tag: 0,
             previews_for: None,
@@ -1229,6 +1232,13 @@ impl Studio {
 
         let full = ui.max_rect();
         ui.painter().rect_filled(full, 0.0, theme::BACKGROUND);
+        let brand = self.brand.get_or_insert_with(|| Brand::new(ui.ctx()));
+        ui.painter().image(
+            brand.backdrop.id(),
+            full,
+            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+            Color32::WHITE,
+        );
         // iPhone (ou fenêtre étroite) : la photo en haut, la barre d'outils, puis
         // l'inspecteur en feuille.
         let compact = full.width() < 820.0;
@@ -1334,11 +1344,22 @@ impl Studio {
     /// L'îlot du haut : la marque, la photo, les gestes d'ensemble.
     fn top_island(&mut self, ui: &mut Ui, compact: bool) {
         ui.horizontal_centered(|ui| {
-            let (r, _) = ui.allocate_exact_size(vec2(26.0, 26.0), egui::Sense::hover());
-            widgets::spectral_ring(ui.painter(), r.center(), 10.0, 3.5, 1.0);
-            ui.painter()
-                .circle_filled(r.center(), 4.0, Color32::from_rgb(0xff, 0xf3, 0xd6));
-            ui.label(RichText::new("LÜMA").strong().size(17.0).color(theme::TEXT));
+            let (r, _) = ui.allocate_exact_size(vec2(30.0, 30.0), egui::Sense::hover());
+            if let Some(b) = &self.brand {
+                ui.painter().image(
+                    b.ring.id(),
+                    r.expand(4.0),
+                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
+            ui.add_space(2.0);
+            ui.label(
+                RichText::new("LÜMA")
+                    .size(15.0)
+                    .extra_letter_spacing(5.0)
+                    .color(theme::TEXT),
+            );
             if !compact {
                 ui.add_space(14.0);
                 if let Some(p) = self.current_path() {
@@ -2476,9 +2497,21 @@ impl Studio {
         self.request_render(rect.width().max(rect.height()) * ppp);
         let painter = ui.painter_at(rect);
         let Some(t) = &self.texture else {
+            // L'accueil : le logo, et ce qu'on peut faire.
+            let side = (rect.width().min(rect.height()) * 0.5).clamp(120.0, 420.0);
+            let logo =
+                Rect::from_center_size(rect.center() - vec2(0.0, side * 0.12), vec2(side, side));
+            if let Some(b) = &self.brand {
+                painter.image(
+                    b.logo.id(),
+                    logo,
+                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
             painter.text(
-                rect.center(),
-                egui::Align2::CENTER_CENTER,
+                pos2(rect.center().x, logo.max.y + 18.0),
+                egui::Align2::CENTER_TOP,
                 &self.status,
                 egui::FontId::proportional(15.0),
                 theme::DIM,
@@ -3471,6 +3504,40 @@ fn big_choice_sized(
 }
 
 /// Les étoiles et le drapeau en bas d'une vignette.
+/// Les images de la marque (luma-brand), chargées une fois.
+struct Brand {
+    backdrop: TextureHandle,
+    ring: TextureHandle,
+    logo: TextureHandle,
+}
+
+impl Brand {
+    fn new(ctx: &egui::Context) -> Brand {
+        let tex = |name: &str, w: usize, h: usize, rgba: Vec<u8>| {
+            ctx.load_texture(
+                name,
+                ColorImage::from_rgba_unmultiplied([w, h], &rgba),
+                TextureOptions::LINEAR,
+            )
+        };
+        Brand {
+            backdrop: tex("fond", 960, 600, luma_brand::backdrop(960, 600)),
+            ring: tex(
+                "anneau",
+                96,
+                96,
+                luma_brand::logo(96, luma_brand::Backdrop::None, false),
+            ),
+            logo: tex(
+                "logo",
+                512,
+                512,
+                luma_brand::logo(512, luma_brand::Backdrop::None, true),
+            ),
+        }
+    }
+}
+
 /// Un film du panneau Films.
 enum Film<'a> {
     Builtin(&'static presets::Preset),

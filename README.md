@@ -25,6 +25,7 @@ panneaux, mêmes curseurs, mêmes plages, et il lit les fichiers XMP de Lightroo
 | `luma-render` | Une photo ouverte : sources et « bases » (étapes de voisinage, celle de la photo et celles des films de masques) en cache, rendu annulable |
 | `luma-merge` | Empilements, panoramas (coins, RANSAC, projections, fondus), DNG ; mesure d'une vraie pellicule en LUT 3D |
 | `luma-gpu` | Les étapes par pixel (rendu, couleur, LUT 3D, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test, les 100 films compris |
+| `luma-brand` | La marque, dessinée par le code : le logo (anneau de lumière en croissant et « LÜMA »), les icônes du Mac, de l'iPhone, de l'iPad et du site, le fond « éclipse » de l'app |
 | `luma-cli` | `luma` : info, développement et export, XMP, mesures, fusion, mesure d'une pellicule |
 
 ```sh
@@ -132,6 +133,10 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   de Lightroom et Camera Raw. **Export** au format des préréglages Lightroom : clic droit
   sur un film pour l'exporter seul, ou « Exporter tous les préréglages » pour un dossier
   rangé par famille (les pellicules mesurées emportent leur `.cube`).
+- **Une app qui ne ressemble à aucune autre** : le logo de LÜMA (l'anneau de lumière)
+  dans la barre, à l'accueil et comme icône ; le fond « éclipse », un noir profond
+  éclairé par les lueurs du logo (or en bas à gauche, bleu en haut à droite) et un
+  immense anneau en filigrane, sous des îlots de verre fumé.
 - **Photo modifiée, d'un coup d'œil** : sous la photo, une étiquette dit son film, son
   intensité et ce qui a été retouché (« Portra 400 · 80 % — Lumière, 1 masque ») ; sur
   les vignettes du film et de la grille, un point spectral et le nom du film.
