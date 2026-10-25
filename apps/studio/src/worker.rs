@@ -620,7 +620,7 @@ fn thumbnail_loop(
         let Ok(photo) = Photo::open(&path) else {
             continue;
         };
-        let settings = read_sidecar(&path).unwrap_or_default();
+        let settings = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());
         let Ok(r) = photo.render(&settings, Size::Fit(320), &Cancel::new()) else {
             continue;
         };

@@ -99,6 +99,16 @@ impl Photo {
         }
     }
 
+    /// Les réglages de départ : ceux d'un RAW, ou d'une image déjà développée
+    /// ([`Settings::for_rendered`]).
+    pub fn default_settings(&self) -> Settings {
+        if self.raw.rendered {
+            Settings::for_rendered()
+        } else {
+            Settings::default()
+        }
+    }
+
     pub fn raw(&self) -> &RawPhoto {
         &self.raw
     }
@@ -289,6 +299,7 @@ impl Photo {
             camera_to_working: self.camera_to_working(&settings.white_balance),
             exposure_bias: self.raw.baseline_exposure,
             scale,
+            rendered: self.raw.rendered,
         };
         let image = luma_image::develop_base(cam, &input, settings, cancel, timings)?;
         let base = Base {
@@ -372,6 +383,7 @@ mod tests {
             orientation: Orientation::Rotate90,
             baseline_exposure: 0.0,
             exif: Exif::default(),
+            rendered: false,
         })
     }
 
@@ -409,6 +421,7 @@ mod tests {
             camera_to_working: p.camera_to_working(&s.white_balance),
             exposure_bias: 0.0,
             scale: source.width as f32 / p.full_size().0 as f32,
+            rendered: false,
         };
         let direct = luma_image::develop(&source, &input, &s, &Cancel::new(), &mut t).unwrap();
         assert_eq!(cached.data, direct.data);

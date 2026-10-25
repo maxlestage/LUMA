@@ -101,9 +101,18 @@ pub fn with_look(current: &Settings, name: &str, look: &Settings, amount: f32) -
     blend(current, &target, amount)
 }
 
+/// Le profil d'un look. Une image déjà développée (profil Original) le garde : la courbe
+/// filmique d'un RAW l'assombrirait. Un look noir et blanc la passe en noir et blanc.
+fn keep_original(s: &mut Settings, profile: Profile) {
+    if s.profile != Profile::Original {
+        s.profile = profile;
+    } else if profile == Profile::Monochrome {
+        s.saturation = -100.0;
+    }
+}
+
 /// Copie dans `s` ce qu'un look définit (les champs de [`reset_look`]), pris dans `from`.
 pub fn take_look(s: &mut Settings, from: &Settings) {
-    s.profile = from.profile;
     s.contrast = from.contrast;
     s.highlights = from.highlights;
     s.shadows = from.shadows;
@@ -126,6 +135,7 @@ pub fn take_look(s: &mut Settings, from: &Settings) {
     e.grain_size = f.grain_size;
     e.grain_roughness = f.grain_roughness;
     s.lut = from.lut.clone();
+    keep_original(s, from.profile);
 }
 
 /// Ce qui a changé dans une photo, pour l'afficher sous elle et sur sa vignette.
@@ -197,7 +207,12 @@ fn close<T: serde::Serialize>(a: &T, b: &T) -> bool {
 /// Le résumé des modifications de `s` par rapport aux réglages neutres. Les réglages du
 /// film sont comptés dans le film, pas dans les panneaux.
 pub fn summary(s: &Settings) -> Summary {
-    let d = Settings::default();
+    // Une image déjà développée part de ses propres réglages (profil Original).
+    let d = if s.profile == Profile::Original {
+        Settings::for_rendered()
+    } else {
+        Settings::default()
+    };
     // Sans le look du film : seules les retouches en plus comptent.
     let mut own = s.clone();
     if let Some(f) = &s.film {
@@ -285,7 +300,7 @@ pub fn summary(s: &Settings) -> Summary {
 /// Remet à zéro ce qu'un look définit, pour que deux préréglages ne s'additionnent pas.
 fn reset_look(s: &mut Settings) {
     let d = Settings::default();
-    s.profile = d.profile;
+    keep_original(s, d.profile);
     s.contrast = 0.0;
     s.highlights = d.highlights;
     s.shadows = d.shadows;

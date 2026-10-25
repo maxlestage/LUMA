@@ -106,6 +106,7 @@ mod tests {
             orientation: Orientation::Normal,
             baseline_exposure: 0.5,
             exif: Exif::default(),
+            rendered: false,
         };
         let (w, h) = (40, 30);
         let rgb: Vec<[f32; 3]> = (0..w * h)

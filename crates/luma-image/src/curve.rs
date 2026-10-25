@@ -105,6 +105,37 @@ impl Filmic {
     }
 }
 
+/// La courbe du profil Original, dans la même table que la filmique : l'identité tant
+/// que les curseurs sont à zéro (l'image reste telle quelle), sinon le Contraste en S
+/// autour du gris moyen, les Blancs et les Noirs agissant sur les extrémités, en
+/// valeurs codées sRGB, comme dans Lightroom sur un JPEG. Au‑delà du blanc : écrêté.
+pub fn display_table(contrast: f32, whites: f32, blacks: f32) -> FilmicTable {
+    let g = 1.0 + contrast.clamp(-100.0, 100.0) / 100.0 * 0.6;
+    let (w, b) = (whites / 100.0 * 0.25, blacks / 100.0 * 0.12);
+    let mid = luma_color::srgb_encode(Filmic::MID_IN);
+    let curve = |x: f32| -> f32 {
+        let mut e = luma_color::srgb_encode(x.clamp(0.0, 1.0));
+        if contrast != 0.0 {
+            // S autour du gris moyen : pente g au gris, extrémités fixes.
+            e = if e < mid {
+                mid * (e / mid).powf(g)
+            } else {
+                1.0 - (1.0 - mid) * ((1.0 - e) / (1.0 - mid)).powf(g)
+            };
+        }
+        e += w * e.powi(4) + b * (1.0 - e).powi(4);
+        luma_color::srgb_decode(e.clamp(0.0, 1.0))
+    };
+    FilmicTable(
+        (0..=FilmicTable::SIZE)
+            .map(|i| {
+                let u = i as f32 / FilmicTable::SIZE as f32;
+                curve(u.powi(4) * FilmicTable::MAX)
+            })
+            .collect(),
+    )
+}
+
 /// Une table 1D sur [0, 1], interpolée linéairement.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Lut(Vec<f32>);

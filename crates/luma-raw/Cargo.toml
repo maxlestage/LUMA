@@ -10,6 +10,7 @@ publish.workspace = true
 luma-core.workspace = true
 luma-color.workspace = true
 rawler.workspace = true
+image.workspace = true
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 rayon.workspace = true
 

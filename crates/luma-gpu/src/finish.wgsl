@@ -59,7 +59,7 @@ fn render(p: vec3<f32>) -> vec3<f32> {
     let n = max(0.5 * mx + 0.5 * lum(p), 1e-7);
     let f = filmic(n);
     var c = p * (f / n);
-    let t = ss(0.72, 1.0, f) * 0.85;
+    let t = ss(0.72, 1.0, f) * P[P_ROLLOFF];
     c = c + (vec3<f32>(f) - c) * t;
     let over = max(c.x, max(c.y, c.z));
     if over > 1.0 && over > f {

@@ -315,6 +315,8 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
             s.profile = Profile::Vivid;
         } else if p.contains("monochrome") {
             s.profile = Profile::Monochrome;
+        } else if p.contains("embedded") {
+            s.profile = Profile::Original;
         }
     }
     if values
@@ -517,6 +519,7 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
                 Profile::Neutral => "Adobe Neutral",
                 Profile::Vivid => "Adobe Vivid",
                 Profile::Monochrome => "Adobe Monochrome",
+                Profile::Original => "Embedded",
             }
             .to_owned(),
         ),

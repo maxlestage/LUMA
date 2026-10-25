@@ -40,6 +40,10 @@ pub enum Profile {
     Vivid,
     /// Noir et blanc.
     Monochrome,
+    /// Le rendu du fichier lui‑même, pour une image déjà développée (JPEG, PNG, TIFF…) :
+    /// sans courbe filmique ni accentuation, l'image reste telle quelle tant qu'aucun
+    /// réglage ne change (« Incorporé » dans Lightroom).
+    Original,
 }
 
 impl Profile {
@@ -50,6 +54,7 @@ impl Profile {
             Profile::Neutral => (0.94, 1.0),
             Profile::Vivid => (1.16, 1.35),
             Profile::Monochrome => (1.08, 0.0),
+            Profile::Original => (1.0, 1.0),
         }
     }
 }
@@ -409,6 +414,19 @@ fn clamp(v: &mut f32, lo: f32, hi: f32) {
 }
 
 impl Settings {
+    /// Les réglages de départ d'une image déjà développée (JPEG, PNG, TIFF…) : le
+    /// profil Original, ni accentuation ni réduction du bruit de couleur (comme
+    /// Lightroom pour un JPEG) : l'image s'ouvre telle qu'elle est.
+    pub fn for_rendered() -> Self {
+        let mut s = Settings {
+            profile: Profile::Original,
+            ..Settings::default()
+        };
+        s.detail.sharpen_amount = 0.0;
+        s.detail.color_nr = 0.0;
+        s
+    }
+
     /// Ramène chaque réglage dans sa plage (fichiers abîmés, valeurs venues d'ailleurs).
     pub fn clamped(mut self) -> Self {
         let s = &mut self;
@@ -559,9 +577,10 @@ impl Settings {
                 "neutral" | "neutre" => Profile::Neutral,
                 "vivid" | "vif" => Profile::Vivid,
                 "monochrome" | "bw" | "nb" => Profile::Monochrome,
+                "original" | "embedded" => Profile::Original,
                 other => {
                     return Err(format!(
-                        "profil inconnu « {other} » (color, neutral, vivid, monochrome)"
+                        "profil inconnu « {other} » (color, neutral, vivid, monochrome, original)"
                     ));
                 }
             };

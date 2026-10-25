@@ -47,13 +47,36 @@ pub fn is_raw(path: &Path) -> bool {
         .is_some_and(|e| RAW_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
 }
 
-/// Les RAW d'un dossier, triés par nom.
+/// Une photo que LÜMA sait ouvrir : un RAW, ou une image déjà développée (JPEG, PNG,
+/// TIFF, WebP… et, sur Mac, HEIC, AVIF, JPEG XL, PSD).
+pub fn is_photo(path: &Path) -> bool {
+    is_raw(path)
+        || path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(luma_raw::raster::supported)
+}
+
+/// Les extensions de la fenêtre d'ouverture : les RAW et les images de ce système.
+pub fn photo_extensions() -> Vec<String> {
+    let raster = luma_raw::raster::EXTENSIONS
+        .iter()
+        .chain(luma_raw::raster::SYSTEM_EXTENSIONS.iter())
+        .filter(|e| luma_raw::raster::supported(e));
+    RAW_EXTENSIONS
+        .iter()
+        .chain(raster)
+        .flat_map(|e| [e.to_string(), e.to_uppercase()])
+        .collect()
+}
+
+/// Les photos d'un dossier, triées par nom.
 pub fn scan(dir: &Path) -> Vec<PathBuf> {
     let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
         .map(|d| {
             d.flatten()
                 .map(|e| e.path())
-                .filter(|p| p.is_file() && is_raw(p))
+                .filter(|p| p.is_file() && is_photo(p))
                 .collect()
         })
         .unwrap_or_default();
@@ -560,14 +583,14 @@ impl Studio {
             });
         match index {
             Some(i) => self.select(i),
-            None => self.status = trf("Aucun RAW dans {dir}", &[("dir", &dir.display())]),
+            None => self.status = trf("Aucune photo dans {dir}", &[("dir", &dir.display())]),
         }
     }
 
     /// La ligne d'état ; vide, l'accueil (dans la langue du moment).
     fn status_text(&self) -> String {
         if self.status.is_empty() {
-            tr("Ouvrez un RAW ou un dossier (Cmd+O), ou déposez-le dans la fenêtre.").to_owned()
+            tr("Ouvrez une photo (RAW, JPEG, PNG, TIFF…) ou un dossier (Cmd+O), ou déposez-la dans la fenêtre.").to_owned()
         } else {
             self.status.clone()
         }
@@ -644,8 +667,9 @@ impl Studio {
                     match result {
                         Ok((photo, sidecar)) => {
                             let from_xmp = sidecar.is_some();
-                            self.settings = sidecar.map(|s| *s).unwrap_or_default();
-                            self.history = vec![(tr("Importation").into(), Settings::default())];
+                            let defaults = photo.default_settings();
+                            self.settings = sidecar.map(|s| *s).unwrap_or_else(|| defaults.clone());
+                            self.history = vec![(tr("Importation").into(), defaults)];
                             if from_xmp {
                                 self.history
                                     .push((tr("Réglages XMP").into(), self.settings.clone()));
@@ -842,6 +866,13 @@ impl Studio {
         }
     }
 
+    /// Les réglages de départ de la photo ouverte (ceux d'un RAW sans photo).
+    fn default_settings(&self) -> Settings {
+        self.photo
+            .as_ref()
+            .map_or_else(Settings::default, |p| p.default_settings())
+    }
+
     fn request_render(&mut self, viewport_px: f32) {
         let (Some(photo), Some(path)) = (&self.photo, self.current_path()) else {
             return;
@@ -853,7 +884,7 @@ impl Studio {
             Size::Fit(((viewport_px / 512.0).ceil().max(1.0) * 512.0) as usize)
         };
         let mut settings = if self.before {
-            Settings::default()
+            photo.default_settings()
         } else {
             self.settings.clone()
         };
@@ -985,7 +1016,7 @@ impl Studio {
                 }
             }
             "reset" => {
-                self.settings = Settings::default();
+                self.settings = self.default_settings();
                 self.commit(tr("Réinitialiser").into());
                 self.touch();
             }
@@ -1219,7 +1250,7 @@ impl Studio {
                         ui.horizontal(|ui| {
                             let text = match &o.folder {
                                 Some(d) => d.display().to_string(),
-                                None => tr("LÜMA/, à côté du RAW").into(),
+                                None => tr("LÜMA/, à côté de l'original").into(),
                             };
                             ui.label(RichText::new(text).color(theme::DIM));
                             if crate::dialogs::FOLDER_PICKER
@@ -1228,7 +1259,8 @@ impl Studio {
                             {
                                 o.folder = Some(d);
                             }
-                            if o.folder.is_some() && ui.button(tr("À côté du RAW")).clicked() {
+                            if o.folder.is_some() && ui.button(tr("À côté de l'original")).clicked()
+                            {
                                 o.folder = None;
                             }
                         });
@@ -3346,12 +3378,16 @@ impl Studio {
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         ui.label(RichText::new(tr("Profil")).color(theme::DIM));
-                        let names = [
+                        let mut names = vec![
                             (Profile::Color, tr("Couleur")),
                             (Profile::Neutral, tr("Neutre")),
                             (Profile::Vivid, tr("Vif")),
                             (Profile::Monochrome, tr("Monochrome")),
                         ];
+                        // Le rendu du fichier lui‑même : pour un JPEG, un PNG, un TIFF…
+                        if self.photo.as_ref().is_some_and(|p| p.raw().rendered) {
+                            names.insert(0, (Profile::Original, tr("Original")));
+                        }
                         let current = names
                             .iter()
                             .find(|n| n.0 == self.settings.profile)
@@ -4176,6 +4212,8 @@ mod tests {
         assert!(is_raw(Path::new("a/IMG_1.CR3")));
         assert!(is_raw(Path::new("b.dng")));
         assert!(!is_raw(Path::new("c.jpg")));
+        assert!(is_photo(Path::new("c.JPG")) && is_photo(Path::new("d.webp")));
+        assert!(!is_photo(Path::new("e.txt")));
     }
 
     #[test]
