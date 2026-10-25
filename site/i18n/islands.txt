@@ -1,0 +1,178 @@
+# Les textes des îlots (le labo, les crates) : compilés dans le serveur et dans le
+# bundle du navigateur (WebAssembly), pour que l'hydratation retrouve les mêmes textes.
+# Une entrée par paragraphe : le texte français tel qu'écrit dans le code, puis ses
+# traductions. Voir crates/luma-i18n.
+
+# ----- Labo -----
+
+fr = Aperçu de la photo retouchée
+en = Preview of the edited photo
+es = Vista previa de la foto editada
+
+fr = Comparer avant et après
+en = Compare before and after
+es = Comparar antes y después
+
+fr = Original
+en = Original
+es = Original
+
+# Images par seconde.
+fr = i/s
+en = fps
+es = fps
+
+# Indice de lumination (exposition).
+fr = IL
+en = EV
+es = EV
+
+fr = Paramètres enregistrés, pixels d'origine intacts : c'est la règle d'or de LÜMA.
+en = Settings are saved, the original pixels stay untouched: that's LÜMA's golden rule.
+es = Se guardan los ajustes y los píxeles originales quedan intactos: es la regla de oro de LÜMA.
+
+fr = Naturel
+en = Natural
+es = Natural
+
+fr = Golden hour
+en = Golden hour
+es = Hora dorada
+
+fr = Ciné
+en = Cinematic
+es = Cine
+
+fr = N&B
+en = B&W
+es = B/N
+
+fr = Exposition
+en = Exposure
+es = Exposición
+
+fr = Contraste
+en = Contrast
+es = Contraste
+
+fr = Hautes lumières
+en = Highlights
+es = Altas luces
+
+fr = Ombres
+en = Shadows
+es = Sombras
+
+fr = Température
+en = Temperature
+es = Temperatura
+
+fr = Teinte
+en = Tint
+es = Matiz
+
+fr = Saturation
+en = Saturation
+es = Saturación
+
+fr = Vignettage
+en = Vignette
+es = Viñeta
+
+# ----- Architecture -----
+
+fr = Filtrer par priorité
+en = Filter by priority
+es = Filtrar por prioridad
+
+fr = Tout
+en = All
+es = Todo
+
+fr = P0 · fondations
+en = P0 · foundations
+es = P0 · cimientos
+
+fr = P1 · éditeur
+en = P1 · editor
+es = P1 · editor
+
+fr = P2 · IA
+en = P2 · AI
+es = P2 · IA
+
+fr = P3 · expansion
+en = P3 · expansion
+es = P3 · expansión
+
+fr = Commandes, annuler/rétablir, historique, tâches asynchrones, erreurs.
+en = Commands, undo/redo, history, async tasks, errors.
+es = Comandos, deshacer/rehacer, historial, tareas asíncronas, errores.
+
+fr = Format de projet versionné et migrable, sauvegarde atomique.
+en = Versioned, migratable project format with atomic saves.
+es = Formato de proyecto versionado y migrable, guardado atómico.
+
+fr = DNG, Bayer, X‑Trans, ProRAW, dématriçage, EXIF, profils caméra.
+en = DNG, Bayer, X‑Trans, ProRAW, demosaicing, EXIF, camera profiles.
+es = DNG, Bayer, X‑Trans, ProRAW, interpolación cromática, EXIF, perfiles de cámara.
+
+fr = ICC, XYZ, sRGB, Display P3, Rec. 2020, EDR/HDR, flottants 32 bits.
+en = ICC, XYZ, sRGB, Display P3, Rec. 2020, EDR/HDR, 32‑bit floats.
+es = ICC, XYZ, sRGB, Display P3, Rec. 2020, EDR/HDR, coma flotante de 32 bits.
+
+fr = Exposition, courbes, HSL, netteté, grain, vignettage, géométrie.
+en = Exposure, curves, HSL, sharpening, grain, vignetting, geometry.
+es = Exposición, curvas, HSL, nitidez, grano, viñeteado, geometría.
+
+fr = Graphe de traitement, tuiles, cache multi‑résolution, annulation.
+en = Processing graph, tiles, multi‑resolution cache, cancellation.
+es = Grafo de procesamiento, teselas, caché multirresolución, cancelación.
+
+fr = wgpu sur Metal d'abord, shaders WGSL, repli sur le CPU.
+en = wgpu on Metal first, WGSL shaders, CPU fallback.
+es = wgpu sobre Metal primero, shaders WGSL, alternativa en la CPU.
+
+fr = Interface adaptative : pointeur, tactile, Apple Pencil, 120 Hz.
+en = Adaptive interface: pointer, touch, Apple Pencil, 120 Hz.
+es = Interfaz adaptable: puntero, táctil, Apple Pencil, 120 Hz.
+
+fr = macOS et iOS d'abord : fichiers, PhotoKit, caméra, EDR, permissions.
+en = macOS and iOS first: files, PhotoKit, camera, EDR, permissions.
+es = macOS e iOS primero: archivos, PhotoKit, cámara, EDR, permisos.
+
+fr = Luminance, couleur, pinceau, dégradés, unions et intersections.
+en = Luminance, color, brush, gradients, unions and intersections.
+es = Luminancia, color, pincel, degradados, uniones e intersecciones.
+
+fr = Catalogue local, collections, notes, doublons, recherche.
+en = Local catalog, collections, ratings, duplicates, search.
+es = Catálogo local, colecciones, valoraciones, duplicados, búsqueda.
+
+fr = JPEG, PNG, TIFF, DNG, lots, préréglages, métadonnées.
+en = JPEG, PNG, TIFF, DNG, batches, presets, metadata.
+es = JPEG, PNG, TIFF, DNG, lotes, ajustes preestablecidos, metadatos.
+
+fr = Styles et profils de rendu partageables.
+en = Shareable styles and rendering profiles.
+es = Estilos y perfiles de renderizado para compartir.
+
+fr = Sujet, ciel, débruitage, super‑résolution. Local, modèles versionnés.
+en = Subject, sky, denoising, super‑resolution. On‑device, versioned models.
+es = Sujeto, cielo, reducción de ruido, superresolución. En local, modelos versionados.
+
+fr = Consentement IA, diagnostics sans contenu photographique.
+en = AI consent, diagnostics without any photo content.
+es = Consentimiento para la IA, diagnósticos sin contenido fotográfico.
+
+fr = Synchronisation chiffrée et facultative entre appareils.
+en = Optional, encrypted sync between devices.
+es = Sincronización cifrada y opcional entre dispositivos.
+
+fr = Extensions isolées, permissions, API stable.
+en = Sandboxed extensions, permissions, stable API.
+es = Extensiones aisladas, permisos, API estable.
+
+fr = Timeline, étalonnage, rendu. Le module le plus risqué.
+en = Timeline, color grading, rendering. The riskiest module.
+es = Línea de tiempo, etalonaje, renderizado. El módulo más arriesgado.
