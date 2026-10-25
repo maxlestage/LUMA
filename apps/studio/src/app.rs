@@ -427,6 +427,12 @@ pub struct Studio {
     luts: Vec<String>,
     /// Une mesure de pellicule est en cours.
     measuring: bool,
+    /// Mes préréglages : enregistrés depuis LÜMA ou importés (Lightroom, Camera Raw).
+    user_presets: Vec<(String, Settings)>,
+    /// Le nom du préréglage à enregistrer (champ du panneau Films).
+    new_preset_name: String,
+    /// Ce qui a changé dans chaque photo du dossier (vignettes, étiquette sous la photo).
+    edits: HashMap<PathBuf, presets::Summary>,
     previews: Vec<Option<TextureHandle>>,
     previews_tag: u64,
     previews_for: Option<PathBuf>,
@@ -495,6 +501,11 @@ impl Studio {
                 luma_image::cube::names()
             },
             measuring: false,
+            user_presets: crate::dialogs::presets_dir()
+                .map(|d| load_user_presets(&d))
+                .unwrap_or_default(),
+            new_preset_name: String::new(),
+            edits: HashMap::new(),
             previews: Vec::new(),
             previews_tag: 0,
             previews_for: None,
@@ -524,6 +535,10 @@ impl Studio {
                 self.worker.thumbnail(p.clone());
             }
             self.meta.insert(p.clone(), read_meta(p));
+            let edits = read_sidecar(p)
+                .map(|s| presets::summary(&s))
+                .unwrap_or_default();
+            self.edits.insert(p.clone(), edits);
         }
         let index = file
             .and_then(|f| self.folder.iter().position(|p| *p == f))
@@ -782,6 +797,7 @@ impl Studio {
             if let Err(e) = write_sidecar(&path, &settings, &meta) {
                 self.status = format!("XMP non enregistré : {e}");
             }
+            self.edits.insert(path, presets::summary(&settings));
         }
     }
 
@@ -1518,23 +1534,137 @@ impl Studio {
         }
     }
 
-    /// Le nombre de films : les préréglages, puis mes pellicules.
+    /// Le nombre de films : les préréglages intégrés, mes pellicules, mes préréglages.
     fn film_count(&self) -> usize {
-        PRESETS.len() + self.luts.len()
+        PRESETS.len() + self.luts.len() + self.user_presets.len()
+    }
+
+    /// Ce qu'est le film `k`.
+    fn film(&self, k: usize) -> Film<'_> {
+        if let Some(p) = PRESETS.get(k) {
+            return Film::Builtin(p);
+        }
+        let k = k - PRESETS.len();
+        match self.luts.get(k) {
+            Some(name) => Film::Lut(name),
+            None => {
+                let (name, look) = &self.user_presets[k - self.luts.len()];
+                Film::Mine(name, look)
+            }
+        }
     }
 
     fn film_name(&self, k: usize) -> &str {
-        PRESETS
-            .get(k)
-            .map_or_else(|| self.luts[k - PRESETS.len()].as_str(), |p| p.name)
+        match self.film(k) {
+            Film::Builtin(p) => p.name,
+            Film::Lut(n) | Film::Mine(n, _) => n,
+        }
     }
 
     /// Les réglages `base` avec le film `k`, à `amount` (0 à 1).
     fn film_applied(&self, k: usize, base: &Settings, amount: f32) -> Settings {
-        match PRESETS.get(k) {
-            Some(p) => p.applied(base, amount),
-            None => presets::with_lut(base, &self.luts[k - PRESETS.len()], amount),
+        match self.film(k) {
+            Film::Builtin(p) => p.applied(base, amount),
+            Film::Lut(n) => presets::with_lut(base, n, amount),
+            Film::Mine(n, look) => presets::with_look(base, n, look, amount),
         }
+    }
+
+    /// Le film `k` en préréglage Lightroom (`.xmp`) dans `path` ; une pellicule mesurée
+    /// emporte sa LUT (`.cube`) à côté.
+    fn export_film(&self, k: usize, path: &Path) -> Result<(), String> {
+        let (group, look) = match self.film(k) {
+            Film::Builtin(p) => (format!("LÜMA — {}", p.group.name()), p.look()),
+            Film::Lut(n) => (
+                "LÜMA — Mes pellicules".to_owned(),
+                presets::with_lut(&Settings::default(), n, 1.0),
+            ),
+            Film::Mine(_, look) => ("LÜMA — Mes préréglages".to_owned(), look.clone()),
+        };
+        let name = self.film_name(k);
+        std::fs::write(path, luma_project::xmp::write_preset(name, &group, &look))
+            .map_err(|e| format!("{} : {e}", path.display()))?;
+        if let Film::Lut(n) = self.film(k)
+            && let Some(cube) = luma_image::cube::get(n)
+        {
+            let lut = path.with_file_name(format!("{}.cube", safe_name(n)));
+            std::fs::write(&lut, cube.to_text()).map_err(|e| format!("{} : {e}", lut.display()))?;
+        }
+        Ok(())
+    }
+
+    /// Tous les films, rangés par famille, dans `dir/Préréglages LÜMA`.
+    fn export_all_films(&self, dir: &Path) -> Result<(PathBuf, usize), String> {
+        let root = dir.join("Préréglages LÜMA");
+        for k in 0..self.film_count() {
+            let group = match self.film(k) {
+                Film::Builtin(p) => p.group.name(),
+                Film::Lut(_) => "Mes pellicules",
+                Film::Mine(..) => "Mes préréglages",
+            };
+            let folder = root.join(group);
+            std::fs::create_dir_all(&folder).map_err(|e| format!("{} : {e}", folder.display()))?;
+            self.export_film(
+                k,
+                &folder.join(format!("{}.xmp", safe_name(self.film_name(k)))),
+            )?;
+        }
+        Ok((root, self.film_count()))
+    }
+
+    /// Enregistre le look des réglages actuels comme préréglage.
+    fn save_user_preset(&mut self, name: &str) -> Result<(), String> {
+        let dir = crate::dialogs::presets_dir().ok_or("pas de dossier Préréglages")?;
+        let path = dir.join(format!("{}.xmp", safe_name(name)));
+        let text = luma_project::xmp::write_preset(name, "LÜMA — Mes préréglages", &self.settings);
+        std::fs::write(&path, text).map_err(|e| format!("{} : {e}", path.display()))?;
+        self.reload_user_presets();
+        Ok(())
+    }
+
+    fn reload_user_presets(&mut self) {
+        self.user_presets = crate::dialogs::presets_dir()
+            .map(|d| load_user_presets(&d))
+            .unwrap_or_default();
+        self.previews_for = None;
+    }
+
+    /// L'étiquette sous la photo : son film et ses retouches, ou « Avant ».
+    fn edit_label(&self, painter: &egui::Painter, photo: Rect) {
+        let text = if self.before {
+            "Avant : sans retouche".to_owned()
+        } else {
+            let e = presets::summary(&self.settings);
+            if !e.is_edited() {
+                return;
+            }
+            e.text()
+        };
+        let galley = painter.layout_no_wrap(text, egui::FontId::proportional(12.0), theme::TEXT);
+        let size = galley.size() + vec2(34.0, 10.0);
+        let w = size.x.min(photo.width() - 16.0);
+        let chip = Rect::from_center_size(
+            pos2(photo.center().x, photo.max.y - size.y / 2.0 - 10.0),
+            vec2(w, size.y),
+        );
+        painter.rect_filled(chip, size.y / 2.0, Color32::from_black_alpha(170));
+        widgets::spectral_ring(
+            painter,
+            pos2(chip.min.x + 13.0, chip.center().y),
+            4.5,
+            2.0,
+            1.0,
+        );
+        painter
+            .with_clip_rect(
+                chip.with_min_x(chip.min.x + 22.0)
+                    .with_max_x(chip.max.x - 8.0),
+            )
+            .galley(
+                pos2(chip.min.x + 24.0, chip.center().y - galley.size().y / 2.0),
+                galley,
+                theme::TEXT,
+            );
     }
 
     /// Relit le dossier des films (de nouvelles LUT ont pu y arriver).
@@ -1628,16 +1758,17 @@ impl Studio {
                 )
             })
             .collect();
-        // Mes pellicules : mesurées sur de vraies pellicules, ou importées.
-        sections.insert(
-            0,
-            (
-                "Mes pellicules",
-                (PRESETS.len()..self.film_count()).collect(),
-            ),
-        );
+        // Mes préréglages, puis mes pellicules (mesurées sur de vraies pellicules, ou
+        // importées).
+        let mine = PRESETS.len() + self.luts.len();
+        sections.insert(0, ("Mes pellicules", (PRESETS.len()..mine).collect()));
+        sections.insert(0, ("Mes préréglages", (mine..self.film_count()).collect()));
+        let mut export = None;
         for (title, items) in sections {
             sub_title(ui, title);
+            if title == "Mes préréglages" {
+                self.my_presets(ui);
+            }
             if title == "Mes pellicules" {
                 self.my_films(ui, &photo);
             }
@@ -1688,12 +1819,19 @@ impl Studio {
                             egui::FontId::proportional(12.0),
                             if active { theme::ACCENT } else { theme::TEXT },
                         );
-                        let hint = PRESETS
-                            .get(k)
-                            .map_or("Pellicule mesurée ou LUT 3D importée (.cube).", |p| {
-                                p.description
-                            });
-                        if r.on_hover_text(hint).clicked() {
+                        let hint = match self.film(k) {
+                            Film::Builtin(p) => p.description,
+                            Film::Lut(_) => "Pellicule mesurée ou LUT 3D importée (.cube).",
+                            Film::Mine(..) => "Mon préréglage.",
+                        };
+                        let r = r.on_hover_text(format!("{hint}\nClic droit : exporter."));
+                        r.context_menu(|ui| {
+                            if ui.button("Exporter ce préréglage…").clicked() {
+                                export = Some(k);
+                                ui.close();
+                            }
+                        });
+                        if r.clicked() {
                             choose = Some(k);
                         }
                     }
@@ -1704,6 +1842,91 @@ impl Studio {
         if let Some(k) = choose {
             self.choose_film(k);
         }
+        if let Some(k) = export
+            && let Some(path) = crate::dialogs::save_preset(&safe_name(self.film_name(k)))
+        {
+            self.status = match self.export_film(k, &path) {
+                Ok(()) => format!("Préréglage exporté : {}", path.display()),
+                Err(e) => format!("Export impossible : {e}"),
+            };
+        }
+    }
+
+    /// Mes préréglages : enregistrer le look actuel, importer, tout exporter.
+    fn my_presets(&mut self, ui: &mut Ui) {
+        ui.label(
+            RichText::new(
+                "Au format de Lightroom (.xmp) : clic droit sur un film pour l'exporter seul, \
+                 ou tous d'un coup, rangés par famille.",
+            )
+            .size(11.5)
+            .color(theme::DIM),
+        );
+        ui.horizontal(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.new_preset_name)
+                    .hint_text("Nom du préréglage")
+                    .desired_width(150.0),
+            );
+            let name = self.new_preset_name.trim().to_owned();
+            if ui
+                .add_enabled(!name.is_empty(), egui::Button::new("Enregistrer"))
+                .on_hover_text(
+                    "Le look des réglages actuels (sans l'exposition, la balance ni le recadrage)",
+                )
+                .clicked()
+            {
+                self.status = match self.save_user_preset(&name) {
+                    Ok(()) => {
+                        self.new_preset_name.clear();
+                        format!("Préréglage enregistré : « {name} »")
+                    }
+                    Err(e) => format!("Préréglage non enregistré : {e}"),
+                };
+            }
+        });
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Exporter tous les préréglages…").clicked()
+                && let Some(dir) = crate::dialogs::pick_export_folder()
+            {
+                self.status = match self.export_all_films(&dir) {
+                    Ok((root, n)) => format!("{n} préréglages exportés dans {}", root.display()),
+                    Err(e) => format!("Export impossible : {e}"),
+                };
+            }
+            if crate::dialogs::FOLDER_PICKER {
+                if ui
+                    .button("Importer…")
+                    .on_hover_text("Des préréglages .xmp de Lightroom, Camera Raw ou LÜMA")
+                    .clicked()
+                {
+                    self.import_presets(&crate::dialogs::pick_presets());
+                }
+            } else if ui.button("Actualiser").clicked() {
+                self.reload_user_presets();
+            }
+        });
+        ui.add_space(4.0);
+    }
+
+    /// Copie des préréglages `.xmp` dans mon dossier Préréglages.
+    fn import_presets(&mut self, files: &[PathBuf]) {
+        if files.is_empty() {
+            return;
+        }
+        let dir = crate::dialogs::presets_dir();
+        let mut n = 0;
+        for f in files {
+            if let (Some(dir), Some(name)) = (&dir, f.file_name())
+                && let Ok(text) = std::fs::read_to_string(f)
+                && luma_project::xmp::read_preset(&text).is_ok()
+                && std::fs::write(dir.join(name), text).is_ok()
+            {
+                n += 1;
+            }
+        }
+        self.status = format!("{n} préréglage(s) importé(s)");
+        self.reload_user_presets();
     }
 
     /// Les boutons de « Mes pellicules » : mesurer une vraie pellicule, importer une LUT.
@@ -2094,6 +2317,13 @@ impl Studio {
                                 }
                             }
                             let meta = self.meta.get(path).cloned().unwrap_or_default();
+                            if let Some(e) = self.edits.get(path) {
+                                let photo = match self.thumbs.get(path) {
+                                    Some(t) => fit(area, t.size()[0], t.size()[1]),
+                                    None => area,
+                                };
+                                paint_edits(painter, photo, e, true);
+                            }
                             paint_meta(painter, rect, &meta);
                             painter.with_clip_rect(rect.shrink(6.0)).text(
                                 pos2(rect.min.x + 12.0, rect.min.y + 6.0),
@@ -2164,6 +2394,9 @@ impl Studio {
                             None => {
                                 painter.rect_filled(rect, 2.0, theme::SECTION);
                             }
+                        }
+                        if let Some(e) = self.edits.get(path) {
+                            paint_edits(painter, rect, e, false);
                         }
                         if let Some(m) = self.meta.get(path) {
                             paint_meta(painter, rect.expand2(vec2(0.0, 0.0)), m);
@@ -2279,6 +2512,7 @@ impl Studio {
         {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
+            self.edit_label(&painter, target);
             if self.show_mask {
                 let mask = &self.settings.masks[i];
                 let stale = self.mask_overlay.as_ref().is_none_or(|(m, _)| m != mask);
@@ -2314,6 +2548,7 @@ impl Studio {
         } else {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
+            self.edit_label(&painter, target);
             let r = ui.interact(target, ui.scope_id().with("photo"), egui::Sense::click());
             if self.eyedropper {
                 ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
@@ -3236,6 +3471,92 @@ fn big_choice_sized(
 }
 
 /// Les étoiles et le drapeau en bas d'une vignette.
+/// Un film du panneau Films.
+enum Film<'a> {
+    Builtin(&'static presets::Preset),
+    Lut(&'a str),
+    Mine(&'a str, &'a Settings),
+}
+
+/// Le signe « modifiée » d'une vignette : un point spectral en haut à gauche et, en bas,
+/// le nom du film (ou « Modifiée »).
+fn paint_edits(painter: &egui::Painter, rect: egui::Rect, e: &presets::Summary, large: bool) {
+    if !e.is_edited() {
+        return;
+    }
+    let r = if large { 5.0 } else { 4.0 };
+    let c = rect.left_top() + vec2(r + 5.0, r + 5.0);
+    painter.circle_filled(c, r + 1.5, Color32::from_black_alpha(150));
+    widgets::spectral_ring(painter, c, r, 2.0, 1.0);
+    let label = match &e.film {
+        Some((name, _)) => name.clone(),
+        None => "Modifiée".to_owned(),
+    };
+    let size = if large { 11.0 } else { 9.5 };
+    if rect.height() < 30.0 {
+        return;
+    }
+    let band = egui::Rect::from_min_max(pos2(rect.min.x, rect.max.y - size - 6.0), rect.max);
+    painter.rect_filled(
+        band,
+        egui::CornerRadius {
+            nw: 0,
+            ne: 0,
+            sw: 4,
+            se: 4,
+        },
+        Color32::from_black_alpha(150),
+    );
+    painter.with_clip_rect(band).text(
+        pos2(band.min.x + 5.0, band.center().y),
+        egui::Align2::LEFT_CENTER,
+        label,
+        egui::FontId::proportional(size),
+        theme::TEXT,
+    );
+}
+
+/// Les préréglages `.xmp` d'un dossier (nom tiré du fichier s'il n'en a pas), triés.
+fn load_user_presets(dir: &Path) -> Vec<(String, Settings)> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut v: Vec<(String, Settings)> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("xmp")))
+        .filter_map(|p| {
+            let (name, s) =
+                luma_project::xmp::read_preset(&std::fs::read_to_string(&p).ok()?).ok()?;
+            Some((
+                name.unwrap_or_else(|| {
+                    p.file_stem()
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .unwrap_or_default()
+                }),
+                s,
+            ))
+        })
+        .collect();
+    v.sort_by_key(|a| a.0.to_lowercase());
+    v
+}
+
+/// Un nom de fichier sûr pour un préréglage.
+fn safe_name(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
+                '-'
+            } else {
+                c
+            }
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 fn paint_meta(painter: &egui::Painter, rect: egui::Rect, meta: &Meta) {
     let y = rect.max.y - 13.0;
     for k in 0..meta.rating {

@@ -7,6 +7,7 @@
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
 //! luma merge <raw>… [options]       empilement ou panorama, en DNG
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
+//! luma presets [dossier]            exporte les 100 films en préréglages Lightroom
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -32,6 +33,9 @@ USAGE
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
+  luma presets [dossier]
+      Exporte les 100 films en préréglages Lightroom (.xmp), rangés par famille, dans
+      « dossier/Préréglages LÜMA » (dossier courant par défaut).
       Mesure une pellicule : la même scène en numérique (RAW, développé avec les réglages
       neutres de LÜMA) et sur film (scan JPEG, PNG ou TIFF). Les images sont alignées
       automatiquement (--aligned si elles se superposent déjà). La LUT obtenue, posée
@@ -405,6 +409,19 @@ fn merge(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma presets` : les films intégrés en préréglages Lightroom, un dossier par famille.
+fn export_presets(dir: &Path) -> Result<usize, String> {
+    use luma_project::presets::PRESETS;
+    for p in PRESETS {
+        let folder = dir.join("Préréglages LÜMA").join(p.group.name());
+        std::fs::create_dir_all(&folder).map_err(|e| format!("{} : {e}", folder.display()))?;
+        let file = folder.join(format!("{}.xmp", p.name.replace(['/', ':'], "-")));
+        let text = xmp::write_preset(p.name, &format!("LÜMA — {}", p.group.name()), &p.look());
+        std::fs::write(&file, text).map_err(|e| format!("{} : {e}", file.display()))?;
+    }
+    Ok(PRESETS.len())
+}
+
 /// `luma film-lut` : mesure une vraie pellicule en LUT 3D.
 fn film_lut(args: Vec<String>) -> Result<(), String> {
     use luma_merge::film;
@@ -464,6 +481,22 @@ fn main() -> ExitCode {
         println!("{USAGE}");
         return ExitCode::SUCCESS;
     };
+    if command == "presets" {
+        let dir = PathBuf::from(args.next().unwrap_or_else(|| ".".into()));
+        return match export_presets(&dir) {
+            Ok(n) => {
+                println!(
+                    "{n} préréglages exportés dans {}",
+                    dir.join("Préréglages LÜMA").display()
+                );
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if command == "film-lut" {
         return match film_lut(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,

@@ -58,6 +58,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Empilements : moyenne, médiane, maximum, ciel étoilé (au‑delà de Lightroom) | ✅ |
 | | Fusion HDR, déformation des bords du panorama | ⏳ |
 | | 100 préréglages avec intensité : pellicules couleur, cinéma, noir et blanc, instantanés ; tous mesurés sur une mire à chaque test (distincts, sans image écrasée, rendus identiques sur le GPU) | ✅ |
+| | Préréglages utilisateur (enregistrer, importer des `.xmp` de Lightroom), export à l'unité ou en dossier au format Lightroom | ✅ |
+| | Photo modifiée signalée sous la photo et sur les vignettes (film, intensité, panneaux retouchés) | ✅ |
 | | Mesure d'une vraie pellicule : un scan comparé à la même scène en numérique, alignement automatique, LUT 3D (au‑delà de Lightroom) | ✅ |
 | | Films empilés par masques, chacun dans sa zone et à son intensité, hautes lumières, ombres et clarté comprises (au‑delà de Lightroom) | ✅ |
 
