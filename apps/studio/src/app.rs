@@ -20,10 +20,11 @@ use egui::{
 };
 use luma_color::OutputSpace;
 use luma_project::xmp::{Flag, Meta};
-use luma_project::{Crop, Profile, Settings, WhiteBalance};
+use luma_project::{Crop, Mask, Profile, Settings, Shape, WhiteBalance};
 use luma_render::{Photo, Size};
 
 use crate::crop;
+use crate::masking;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
 use crate::worker::{
     Event, ExportJob, ExportOptions, Format, Worker, read_meta, read_sidecar, write_sidecar,
@@ -280,6 +281,12 @@ pub struct Studio {
     export_open: bool,
     export_all: bool,
     crop_tool: Option<CropTool>,
+    /// Le masque sélectionné (ses poignées sont à l'écran).
+    pub selected_mask: Option<usize>,
+    brush: masking::Brush,
+    /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
+    show_mask: bool,
+    mask_overlay: Option<(Mask, TextureHandle)>,
 }
 
 impl Studio {
@@ -320,6 +327,10 @@ impl Studio {
             export_open: false,
             export_all: false,
             crop_tool: None,
+            selected_mask: None,
+            brush: masking::Brush::default(),
+            show_mask: false,
+            mask_overlay: None,
         }
     }
 
@@ -436,6 +447,7 @@ impl Studio {
                                     .push(("Réglages XMP".into(), self.settings.clone()));
                             }
                             self.history_pos = self.history.len() - 1;
+                            self.selected_mask = None;
                             let raw = photo.raw();
                             let e = &raw.exif;
                             let mut info = format!("{} {}", raw.make, raw.model);
@@ -629,6 +641,18 @@ impl Studio {
                     .position(|k| i.consume_key(Modifiers::NONE, *k))
                 {
                     action = Some(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n]);
+                } else if i.consume_key(Modifiers::SHIFT, Key::M) {
+                    action = Some("mask_radial");
+                } else if i.consume_key(Modifiers::NONE, Key::M) {
+                    action = Some("mask_linear");
+                } else if i.consume_key(Modifiers::NONE, Key::K) {
+                    action = Some("mask_brush");
+                } else if i.consume_key(Modifiers::NONE, Key::O) {
+                    action = Some("mask_overlay");
+                } else if i.consume_key(Modifiers::NONE, Key::Delete)
+                    || i.consume_key(Modifiers::NONE, Key::Backspace)
+                {
+                    action = Some("mask_delete");
                 } else if i.consume_key(Modifiers::NONE, Key::G) {
                     action = Some("library");
                 } else if i.consume_key(Modifiers::NONE, Key::D)
@@ -734,6 +758,33 @@ impl Studio {
                     self.settings.crop = t.saved;
                 } else if self.export_open {
                     self.export_open = false;
+                } else {
+                    self.selected_mask = None;
+                }
+            }
+            "mask_linear" | "mask_radial" | "mask_brush" if self.photo.is_some() => {
+                let mask = match action {
+                    "mask_linear" => Mask::linear(),
+                    "mask_radial" => Mask::radial(),
+                    _ => Mask::brush(),
+                };
+                let label = format!("Nouveau masque : {}", mask.name.to_lowercase());
+                self.crop_tool = None;
+                self.module = Module::Develop;
+                self.zoom = false;
+                self.settings.masks.push(mask);
+                self.selected_mask = Some(self.settings.masks.len() - 1);
+                self.commit(label);
+                self.touch();
+            }
+            "mask_overlay" => self.show_mask = !self.show_mask,
+            "mask_delete" => {
+                if let Some(i) = self.selected_mask.take()
+                    && i < self.settings.masks.len()
+                {
+                    self.settings.masks.remove(i);
+                    self.commit("Masque supprimé".into());
+                    self.touch();
                 }
             }
             "open" => {
@@ -1424,6 +1475,44 @@ impl Studio {
             if c.changed {
                 self.touch();
             }
+        } else if let Some(i) = self
+            .selected_mask
+            .filter(|i| *i < self.settings.masks.len())
+        {
+            let target = fit(rect.shrink(18.0), iw, ih);
+            painter.image(t.id(), target, uv, Color32::WHITE);
+            if self.show_mask {
+                let mask = &self.settings.masks[i];
+                let stale = self.mask_overlay.as_ref().is_none_or(|(m, _)| m != mask);
+                if stale {
+                    let (w, h) = luma_core::RgbImage::fit(iw, ih, 400);
+                    let image = masking::overlay(mask, w, h);
+                    match &mut self.mask_overlay {
+                        Some((m, tex)) => {
+                            tex.set(image, TextureOptions::LINEAR);
+                            *m = mask.clone();
+                        }
+                        None => {
+                            let tex =
+                                ui.ctx()
+                                    .load_texture("masque", image, TextureOptions::LINEAR);
+                            self.mask_overlay = Some((mask.clone(), tex));
+                        }
+                    }
+                }
+                if let Some((_, tex)) = &self.mask_overlay {
+                    painter.image(tex.id(), target, uv, Color32::WHITE);
+                }
+            }
+            let brush = self.brush;
+            let c = masking::edit(ui, target, &mut self.settings.masks[i], &brush);
+            if c.changed {
+                self.touch();
+            }
+            if c.committed {
+                let name = self.settings.masks[i].name.clone();
+                self.commit(format!("Masque : {}", name.to_lowercase()));
+            }
         } else {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
@@ -1444,6 +1533,13 @@ impl Studio {
         }
         if self.crop_tool.is_some() {
             badges.push("Recadrage : Entrée pour valider, Échap pour annuler");
+        } else if let Some(m) = self.selected_mask.and_then(|i| self.settings.masks.get(i)) {
+            badges.push(match m.shape {
+                Shape::Brush { .. } => {
+                    "Pinceau : peindre en glissant, Option pour gommer, O pour voir le masque"
+                }
+                _ => "Masque : tirer les poignées, O pour voir le masque, Échap pour quitter",
+            });
         }
         for (k, b) in badges.iter().enumerate() {
             let p = rect.min + vec2(24.0, 24.0 + k as f32 * 26.0);
@@ -1488,6 +1584,153 @@ impl Studio {
         label
     }
 
+    /// Panneau Masquage : la liste des masques, et les curseurs du masque choisi.
+    fn masks_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
+        let editing = self.selected_mask.is_some();
+        egui::CollapsingHeader::new(RichText::new("Masquage").strong())
+            .open(editing.then_some(true))
+            .default_open(!self.settings.masks.is_empty())
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for (label, key, action) in [
+                        ("Linéaire", "M", "mask_linear"),
+                        ("Radial", "Maj+M", "mask_radial"),
+                        ("Pinceau", "K", "mask_brush"),
+                    ] {
+                        if ui.button(format!("+ {label}")).on_hover_text(key).clicked() {
+                            self.act(action);
+                        }
+                    }
+                });
+                let mut select = None;
+                for (i, m) in self.settings.masks.iter().enumerate() {
+                    let current = self.selected_mask == Some(i);
+                    let mut text = RichText::new(format!("{}. {}", i + 1, m.name)).size(12.0);
+                    if !m.is_active() {
+                        text = text.color(theme::DIM);
+                    }
+                    if ui.selectable_label(current, text).clicked() {
+                        select = Some(if current { None } else { Some(i) });
+                    }
+                }
+                if let Some(s) = select {
+                    self.selected_mask = s;
+                }
+                let Some(i) = self
+                    .selected_mask
+                    .filter(|i| *i < self.settings.masks.len())
+                else {
+                    if !self.settings.masks.is_empty() {
+                        ui.label(
+                            RichText::new("Choisissez un masque pour le régler.")
+                                .size(11.5)
+                                .color(theme::DIM),
+                        );
+                    }
+                    return;
+                };
+                ui.horizontal(|ui| {
+                    let m = &mut self.settings.masks[i];
+                    if ui.checkbox(&mut m.invert, "Inverser").changed() {
+                        commits.push("Masque inversé".into());
+                    }
+                    if ui.selectable_label(self.show_mask, "Voir (O)").clicked() {
+                        self.show_mask = !self.show_mask;
+                    }
+                    if ui.button("Supprimer").clicked() {
+                        self.act("mask_delete");
+                    }
+                });
+                let Some(m) = self.settings.masks.get_mut(i) else {
+                    return;
+                };
+                let name = m.name.to_lowercase();
+                let spec = |label, min, max, decimals| SliderSpec {
+                    label,
+                    min,
+                    max,
+                    default: if label == "Intensité" { 100.0 } else { 0.0 },
+                    decimals,
+                    track: Track::Plain,
+                    log: false,
+                };
+                let l = &mut m.local;
+                let rows: [(SliderSpec, &mut f32); 11] = [
+                    (spec("Intensité", 0.0, 100.0, 0), &mut m.amount),
+                    (spec("Température", -100.0, 100.0, 0), &mut l.temperature),
+                    (spec("Teinte", -100.0, 100.0, 0), &mut l.tint),
+                    (spec("Exposition", -4.0, 4.0, 2), &mut l.exposure),
+                    (spec("Contraste", -100.0, 100.0, 0), &mut l.contrast),
+                    (spec("Hautes lumières", -100.0, 100.0, 0), &mut l.highlights),
+                    (spec("Ombres", -100.0, 100.0, 0), &mut l.shadows),
+                    (spec("Blancs", -100.0, 100.0, 0), &mut l.whites),
+                    (spec("Noirs", -100.0, 100.0, 0), &mut l.blacks),
+                    (spec("Saturation", -100.0, 100.0, 0), &mut l.saturation),
+                    (spec("Clarté", -100.0, 100.0, 0), &mut l.clarity),
+                ];
+                let mut changed = false;
+                for (spec, value) in rows {
+                    let c = widgets::slider(ui, &spec, value);
+                    changed |= c.changed;
+                    if c.committed {
+                        commits.push(format!(
+                            "Masque {name} : {} {}",
+                            spec.label.to_lowercase(),
+                            format_value(*value, spec.decimals, spec.min < 0.0)
+                        ));
+                    }
+                }
+                if matches!(m.shape, Shape::Brush { .. }) {
+                    sub_title(ui, "Pinceau");
+                    let b = &mut self.brush;
+                    let mut size = b.radius * 100.0;
+                    for (spec, value) in [
+                        (
+                            SliderSpec {
+                                default: 4.0,
+                                ..spec("Taille", 0.5, 25.0, 1)
+                            },
+                            &mut size,
+                        ),
+                        (
+                            SliderSpec {
+                                default: 50.0,
+                                ..spec("Contour progressif", 0.0, 100.0, 0)
+                            },
+                            &mut b.feather,
+                        ),
+                        (
+                            SliderSpec {
+                                default: 100.0,
+                                ..spec("Débit", 1.0, 100.0, 0)
+                            },
+                            &mut b.flow,
+                        ),
+                    ] {
+                        widgets::slider(ui, &spec, value);
+                    }
+                    b.radius = size / 100.0;
+                }
+                if let Shape::Radial { feather, .. } = &mut m.shape {
+                    let c = widgets::slider(
+                        ui,
+                        &SliderSpec {
+                            default: 50.0,
+                            ..spec("Contour progressif", 0.0, 100.0, 0)
+                        },
+                        feather,
+                    );
+                    changed |= c.changed;
+                    if c.committed {
+                        commits.push(format!("Masque {name} : contour progressif"));
+                    }
+                }
+                if changed {
+                    self.xmp_due = Some(0.0);
+                }
+            });
+    }
+
     fn develop_panels(&mut self, ui: &mut Ui) {
         let mut commits: Vec<String> = Vec::new();
         let keep = |l: Option<String>, commits: &mut Vec<String>| {
@@ -1500,6 +1743,8 @@ impl Studio {
         widgets::histogram(ui, &self.histogram, &mut self.clipping)
             .on_hover_text("Clic ou J : afficher l'écrêtage");
         ui.add_space(6.0);
+
+        self.masks_panel(ui, &mut commits);
 
         egui::CollapsingHeader::new(RichText::new("Base").strong())
             .default_open(true)
