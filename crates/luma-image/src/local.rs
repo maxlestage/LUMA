@@ -25,6 +25,7 @@ pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
     let (fw, fh) = (w as f32, h as f32);
     let mut plane = Plane::new(w, h);
     match &mask.shape {
+        Shape::Full => plane.data.iter_mut().for_each(|v| *v = 1.0),
         Shape::Linear { start, end } => {
             // En pixels, pour que le fondu soit le même dans les deux directions.
             let (sx, sy) = (start.0 * fw, start.1 * fh);

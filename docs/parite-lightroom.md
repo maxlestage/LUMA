@@ -55,7 +55,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
 | | Empilements : moyenne, médiane, maximum, ciel étoilé (au‑delà de Lightroom) | ✅ |
 | | Fusion HDR, déformation des bords du panorama | ⏳ |
-| | Préréglages avec intensité ; rendus de pellicules (couleur et noir et blanc) | ✅ |
+| | 100 préréglages avec intensité : pellicules couleur, cinéma, noir et blanc, instantanés | ✅ |
+| | Films empilés par masques, chacun dans sa zone et à son intensité (au‑delà de Lightroom) | ✅ |
 
 ## Formats et couleur
 

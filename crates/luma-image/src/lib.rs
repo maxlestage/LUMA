@@ -52,9 +52,8 @@ pub struct Input {
 
 /// Développe `cam` (RGB caméra linéaire, déjà orientée et recadrée).
 pub fn develop(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
-    let mut img = develop_base(cam, input, s, cancel, t)?;
-    finish(&mut img, input.scale, s, cancel, t)?;
-    Ok(img)
+    let base = develop_base(cam, input, s, cancel, t)?;
+    finish_layers(&base, input.scale, s, cancel, t)
 }
 
 /// Les étapes de voisinage du début (entrée, bruit, tonalité locale) : leur résultat
@@ -103,7 +102,16 @@ pub fn base_key(s: &Settings) -> Settings {
         crop: s.crop,
         lens: s.lens.clone(),
         transform: s.transform.clone(),
-        masks: s.masks.clone(),
+        // Les films des masques n'agissent qu'à la fin : ils ne changent pas la base.
+        masks: s
+            .masks
+            .iter()
+            .map(|m| luma_project::Mask {
+                look: None,
+                ..m.clone()
+            })
+            .filter(|m| m.is_active())
+            .collect(),
         ..d
     }
 }
@@ -122,6 +130,45 @@ pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: 
     t.time("accentuation", || detail::sharpen(img, &s.detail, scale));
     t.time("effets", || effects::apply(img, &s.effects, scale));
     Ok(())
+}
+
+/// Les films empilés par les masques : pour chacun, le masque, les réglages complets
+/// avec ce film, et l'intensité du film (0 à 1).
+pub fn look_layers(s: &Settings) -> Vec<(&luma_project::Mask, Settings, f32)> {
+    s.masks
+        .iter()
+        .filter_map(|m| {
+            let (name, k) = m.active_look()?;
+            let preset = luma_project::presets::find(name)?;
+            Some((m, preset.applied(s, 1.0), k))
+        })
+        .collect()
+}
+
+/// [`finish`], puis les films des masques : chacun est rendu à partir de la même base
+/// et fondu, dans l'ordre des masques, selon leur zone et l'intensité du film.
+pub fn finish_layers(base: &RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
+    let mut out = base.clone();
+    finish(&mut out, scale, s, cancel, t)?;
+    for (mask, look, k) in look_layers(s) {
+        let mut alt = base.clone();
+        finish(&mut alt, scale, &look, cancel, t)?;
+        let weights = t.time("films des masques", || local::weights(mask, out.width, out.height));
+        out.data
+            .par_iter_mut()
+            .zip(alt.data.par_iter().zip(weights.data.par_iter()))
+            .for_each(|(o, (a, &w))| {
+                let w = w * k;
+                if w > 0.0 {
+                    *o = [
+                        o[0] + (a[0] - o[0]) * w,
+                        o[1] + (a[1] - o[1]) * w,
+                        o[2] + (a[2] - o[2]) * w,
+                    ];
+                }
+            });
+    }
+    Ok(out)
 }
 
 /// Les tables de l'étape de rendu, pour le GPU : la courbe filmique (8193 valeurs,
@@ -277,6 +324,65 @@ pub fn histogram(encoded: &[u8]) -> [[u32; 256]; 3] {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn mask_films_stack_where_their_masks_are() {
+        use luma_project::{Look, Mask, Shape};
+        let base = RgbImage::from_fn(40, 30, |x, _| [0.05 + x as f32 * 0.01, 0.12, 0.06]);
+        let mut t = Timings::default();
+        let cancel = Cancel::new();
+        let tri_x = luma_project::presets::find("Tri-X 400").unwrap();
+
+        // Un film sur toute l'image à 100 % = ce film appliqué globalement.
+        let mut s = Settings::default();
+        let mut full = Mask::full();
+        full.look = Some(Look {
+            name: "Tri-X 400".into(),
+            amount: 100.0,
+        });
+        s.masks.push(full);
+        let layered = finish_layers(&base, 1.0, &s, &cancel, &mut t).unwrap();
+        let mut direct = base.clone();
+        finish(
+            &mut direct,
+            1.0,
+            &tri_x.applied(&Settings::default(), 1.0),
+            &cancel,
+            &mut t,
+        )
+        .unwrap();
+        for (a, b) in layered.data.iter().zip(&direct.data) {
+            for c in 0..3 {
+                assert!((a[c] - b[c]).abs() < 1e-5);
+            }
+        }
+
+        // Dans un cercle seulement : le centre est en noir et blanc, le coin en couleur.
+        let mut s = Settings::default();
+        let mut radial = Mask::radial();
+        radial.shape = Shape::Radial {
+            center: (0.5, 0.5),
+            radius: (0.2, 0.2),
+            angle: 0.0,
+            feather: 0.0,
+        };
+        radial.look = Some(Look {
+            name: "Tri-X 400".into(),
+            amount: 100.0,
+        });
+        s.masks.push(radial);
+        let out = finish_layers(&base, 1.0, &s, &cancel, &mut t).unwrap();
+        let center = out.data[15 * 40 + 20];
+        let corner = out.data[0];
+        assert!(
+            (center[0] - center[1]).abs() < 1e-3 && (center[1] - center[2]).abs() < 1e-3,
+            "{center:?}"
+        );
+        assert!((corner[1] - corner[0]).abs() > 0.01, "{corner:?}");
+        // La base (cache) ne dépend pas des films des masques.
+        assert_eq!(base_key(&s), base_key(&Settings::default()));
+    }
+
     use super::*;
 
     fn gray_input() -> Input {
