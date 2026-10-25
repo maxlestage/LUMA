@@ -31,13 +31,15 @@ C'est une estimation, pas une garantie.
   de réactivité publiées ;
 - LÜMA Studio, l'app Mac (`apps/studio`) : module Développement complet, historique,
   XMP automatique, film, raccourcis de Lightroom, Bibliothèque (notes, drapeaux,
-  filtre), outil Recadrage, fenêtre Exporter ; `LÜMA.app` universelle fabriquée par
+  filtre), outil Recadrage, fenêtre Exporter ; finition sur le GPU (Metal), base
+  en cache ; `LÜMA.app` universelle fabriquée par
   la CI sur un runner Apple Silicon.
 
 Prochaines étapes, dans l'ordre :
 
-1. rendu GPU : les étapes par pixel en shaders WGSL sur `wgpu` (Metal), pour passer sous
-   les 100 ms sur Mac et sur iPhone ;
+1. rendu GPU, suite : la finition par pixel est faite (`luma-gpu`, identique au
+   processeur) ; restent les étapes de voisinage (bruit, tonalité locale, accentuation)
+   et l'affichage sans relecture (texture partagée avec l'interface) ;
 2. dans l'app : catalogue (plusieurs dossiers, collections, mots‑clés), préréglages ;
 3. masques (pinceau, dégradés) et corrections d'objectif ;
 4. application iOS, PhotoKit, TestFlight.
