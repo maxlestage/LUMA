@@ -1,10 +1,10 @@
 //! LÜMA Premium dans l'app : l'état enregistré (`licence.json`, à côté des films et des
-//! préréglages), la vérification en ligne en arrière‑plan, et l'écran Premium (les
-//! formules, la clé).
+//! préréglages), la clé signée vérifiée hors ligne, la clé fraîche demandée chaque jour
+//! en arrière‑plan, et l'écran Premium (les formules, la clé).
 //!
 //! Le réseau passe par `curl` (présent sur macOS et Linux) : pas de bibliothèque TLS
-//! compilée dans LÜMA. Sur iPhone et iPad, l'abonnement passera par l'App Store
-//! (achats intégrés) ; en attendant, la clé y est acceptée sans vérification en ligne.
+//! compilée dans LÜMA. Sur iPhone et iPad, la clé est vérifiée hors ligne et vaut
+//! jusqu'à son terme ; l'abonnement y passera par l'App Store (achats intégrés).
 
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
@@ -37,7 +37,12 @@ impl Transport for Curl {
         }
         let out = std::process::Command::new("curl")
             .args(["-sS", "--fail-with-body", "--max-time", "20", "-X", "POST"])
-            .args(["-H", "Accept: application/json"])
+            .args([
+                "-H",
+                "Accept: application/json",
+                "-A",
+                concat!("LUMA/", env!("CARGO_PKG_VERSION")),
+            ])
             .args(["--data", &luma_licence::form_encode(form), url])
             .output()
             .map_err(|e| format!("curl : {e}"))?;
@@ -62,25 +67,6 @@ pub fn open_url(url: &str) -> bool {
         "xdg-open"
     };
     std::process::Command::new(program).arg(url).spawn().is_ok()
-}
-
-/// Le nom de cette machine, visible dans le compte client (pour savoir où la clé est
-/// activée).
-fn machine_name() -> String {
-    let try_cmd = |cmd: &str, args: &[&str]| {
-        std::process::Command::new(cmd)
-            .args(args)
-            .output()
-            .ok()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
-            .filter(|s| !s.is_empty())
-    };
-    if cfg!(target_os = "macos")
-        && let Some(n) = try_cmd("scutil", &["--get", "ComputerName"])
-    {
-        return n;
-    }
-    try_cmd("hostname", &[]).unwrap_or_else(|| "LÜMA".into())
 }
 
 /// Le résultat d'une opération en ligne : le nouvel état, et un message.
@@ -123,14 +109,26 @@ impl Licence {
         if fresh {
             l.save();
         }
-        if l.state.needs_check(now()) {
-            l.run(|s| luma_licence::validate(s, &Curl, now()).map(|()| String::new()));
-        }
+        l.refresh_if_due();
         l
     }
 
+    /// Une fois par jour, en ligne : une clé fraîche tant que l'abonnement est actif.
+    fn refresh_if_due(&mut self) {
+        if let Some(server) = luma_licence::licence_server()
+            && self.state.needs_check(now())
+            && !cfg!(target_os = "ios")
+        {
+            self.run(move |s| {
+                luma_licence::refresh(s, server, luma_licence::public_key().as_ref(), &Curl, now())
+                    .map(|()| String::new())
+            });
+        }
+    }
+
     pub fn access(&self) -> Access {
-        self.state.access(now())
+        self.state
+            .access(now(), luma_licence::public_key().as_ref())
     }
 
     pub fn busy(&self) -> bool {
@@ -181,31 +179,36 @@ impl Licence {
         true
     }
 
-    /// Active la clé saisie.
+    /// Active la clé saisie (vérifiée tout de suite, hors ligne).
     pub fn activate(&mut self) {
         let key = self.key_input.trim().to_owned();
-        if cfg!(target_os = "ios") {
-            // En attendant l'App Store : la clé est gardée telle quelle.
-            self.state.key = Some(key);
-            self.state.instance_id = Some("ios".into());
-            self.state.checked_at = now();
-            self.save();
-            self.message = "Clé enregistrée.".into();
-            return;
+        match luma_licence::activate(
+            &mut self.state,
+            &key,
+            luma_licence::public_key().as_ref(),
+            now(),
+        ) {
+            Ok(c) => {
+                self.save();
+                self.key_input.clear();
+                self.message = format!(
+                    "Bienvenue dans LÜMA Premium{}.",
+                    if c.email.is_empty() {
+                        String::new()
+                    } else {
+                        format!(", {}", c.email)
+                    }
+                );
+            }
+            Err(e) => self.message = e.to_string(),
         }
-        let machine = machine_name();
-        self.message = "Activation…".into();
-        self.run(move |s| {
-            luma_licence::activate(s, &key, &machine, &Curl, now())
-                .map(|()| "Bienvenue dans LÜMA Premium.".to_owned())
-        });
     }
 
-    /// Retire la clé de cette machine.
+    /// Retire la clé de cet appareil (elle reste valable ailleurs).
     pub fn deactivate(&mut self) {
-        self.run(|s| {
-            luma_licence::deactivate(s, &Curl).map(|()| "Clé retirée de cette machine.".to_owned())
-        });
+        luma_licence::forget(&mut self.state);
+        self.save();
+        self.message = "Clé retirée de cet appareil.".into();
     }
 
     /// Ce que dit la puce de la barre du haut.

@@ -10,6 +10,7 @@
 //! luma presets [dossier]            exporte les 100 films en préréglages Lightroom
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
+//! luma licence-keys                 une paire de clés pour signer les licences
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -43,6 +44,9 @@ USAGE
       (24 plages), la recadrer au plus juste dans LÜMA (le XMP garde le recadrage), puis
       lancer la commande : ΔE 2000 de chaque plage (moins de 2 : invisible ; moins de 5 :
       bon).
+  luma licence-keys
+      Une nouvelle paire de clés pour LÜMA Premium : la privée va sur le serveur
+      (LUMA_LICENCE_SECRET, à garder secrète), la publique dans l'app (LUMA_LICENCE_PUBLIC).
   luma presets [dossier]
       Exporte les 100 films en préréglages Lightroom (.xmp), rangés par famille, dans
       « dossier/Préréglages LÜMA » (dossier courant par défaut).
@@ -533,6 +537,24 @@ fn main() -> ExitCode {
         println!("{USAGE}");
         return ExitCode::SUCCESS;
     };
+    if command == "licence-keys" {
+        let mut seed = [0u8; 32];
+        match std::fs::File::open("/dev/urandom").and_then(|mut f| std::io::Read::read_exact(&mut f, &mut seed)) {
+            Ok(()) => {
+                let (secret, public) = luma_licence::keypair(seed);
+                println!("LUMA_LICENCE_SECRET={secret}");
+                println!("LUMA_LICENCE_PUBLIC={public}");
+                eprintln!(
+                    "La première ligne va sur le serveur (heroku config:set), et nulle part ailleurs ;\nla seconde dans les variables du dépôt (Actions), pour construire l'app."
+                );
+                return ExitCode::SUCCESS;
+            }
+            Err(e) => {
+                eprintln!("erreur : pas de hasard ({e})");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
     if command == "cameras" {
         let args: Vec<String> = args.collect();
         let corpus = args

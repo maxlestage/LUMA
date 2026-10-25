@@ -487,7 +487,7 @@ fn cta() -> Element {
 
 /// Tarifs et téléchargement : LÜMA Premium, 14 jours d'essai, puis au mois ou à l'an.
 /// Les liens de paiement viennent de `LUMA_CHECKOUT_MONTHLY` et `LUMA_CHECKOUT_ANNUAL`
-/// (Lemon Squeezy) ; sans eux, les boutons attendent.
+/// (liens de paiement Stripe) ; sans eux, les boutons attendent.
 fn pricing() -> Element {
     type Plan = (
         &'static str,
@@ -540,7 +540,7 @@ fn pricing() -> Element {
             "LÜMA Premium",
             heading(h2, "Quatorze jours pour ", "essayer", ", puis à vous de choisir."),
             Some(p().class("lede").text(
-                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an ; la clé de licence arrive par courriel, et se saisit dans l'app.",
+                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app.",
             )),
         ))
         .child(
@@ -642,6 +642,51 @@ fn site_footer() -> Element {
                 .child(span().text("Fait en France · 100 % Rust · Aucun traceur"))
                 .child(a().href(target("#top")).text("Haut de page ↑")),
         )
+}
+
+/// La page de la clé de licence, après le paiement Stripe.
+pub fn licence(
+    site: &Site,
+    origin: &str,
+    result: Result<(luma_licence::Claims, String), String>,
+    portal: Option<String>,
+) -> Page {
+    let content = match result {
+        Ok((claims, key)) => div()
+            .child(h1().text("Merci !"))
+            .child(p().class("lede").text(format!(
+                "Votre abonnement LÜMA Premium {} est actif{}.",
+                claims.plan.name().to_lowercase(),
+                if claims.email.is_empty() { String::new() } else { format!(" ({})", claims.email) }
+            )))
+            .child(section().id("cle")
+                .child(h2().text("Votre clé de licence"))
+                .child(p().text("Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils, et se renouvelle seule tant que l'abonnement court."))
+                .child(textarea().class("licence-key").attr("readonly", "").attr("rows", "4").attr("aria-label", "Clé de licence").text(key))
+                .child(p().class("todo").text("Gardez l'adresse de cette page (favori) : elle redonne votre clé à tout moment.")))
+            .child(section()
+                .child(h2().text("Pas encore l'app ?"))
+                .child(div().class("hero-cta")
+                    .child(a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text("Télécharger pour Mac")))
+                    .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text("Gérer mon abonnement")))))),
+        Err(e) => div()
+            .child(h1().text("Clé de licence"))
+            .child(p().class("lede").text(format!("Impossible d'afficher la clé : {e}.")))
+            .child(p().text("Si vous venez de payer, rechargez la page dans un instant. Sinon, écrivez‑nous (voir les mentions légales) avec le courriel de l'abonnement.")),
+    };
+    let body = div()
+        .class("site site--plain")
+        .child(navbar())
+        .child(
+            html::main().child(
+                article()
+                    .class("legal")
+                    .child(kicker("LÜMA Premium"))
+                    .child(content),
+            ),
+        )
+        .child(site_footer());
+    layout(site, origin, "Votre clé de licence — LÜMA", body).seo(Seo::new().noindex(true))
 }
 
 /// Une page de documentation (un document du dépôt).

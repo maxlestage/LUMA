@@ -486,10 +486,7 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
         "Assistance",
         &[
             ("Abonnement et clé de licence", "/conditions/#abonnement"),
-            (
-                "Gérer mon abonnement",
-                "https://app.lemonsqueezy.com/my-orders",
-            ),
+            ("Gérer mon abonnement", "/abonnement/"),
             ("Signaler un problème", "/mentions-legales/#contact"),
             ("Contact", "/mentions-legales/#contact"),
         ],
@@ -540,8 +537,8 @@ pub const LEGAL: [Legal; 3] = [
                 "hebergement",
                 "Hébergement",
                 &[
-                    "Le site est hébergé par GitHub Pages : GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États‑Unis.",
-                    "Les paiements et les abonnements sont traités par Lemon Squeezy, revendeur officiel de LÜMA (« merchant of record »).",
+                    "Le site est hébergé par Heroku : Salesforce, Inc., Salesforce Tower, 415 Mission Street, San Francisco, CA 94105, États‑Unis.",
+                    "Les paiements sont traités par Stripe : Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin 2, Irlande.",
                 ],
             ),
             (
@@ -571,8 +568,8 @@ pub const LEGAL: [Legal; 3] = [
                 "licence",
                 "Abonnement",
                 &[
-                    "Pour vérifier un abonnement, l'app envoie à Lemon Squeezy votre clé de licence et le nom de votre appareil (pour que vous voyiez où elle est activée), au plus une fois par jour. Rien d'autre.",
-                    "Lors d'un achat, Lemon Squeezy traite votre nom, votre courriel et votre paiement, selon sa propre politique de confidentialité ; l'éditeur reçoit le courriel associé à l'abonnement.",
+                    "Votre clé de licence est vérifiée par l'app elle‑même, sans réseau. Une fois par jour, en ligne, l'app envoie votre clé au serveur de LÜMA pour en recevoir une à jour ; le serveur demande à Stripe si l'abonnement court. Rien d'autre n'est envoyé.",
+                    "Lors d'un achat, Stripe traite votre nom, votre courriel et votre paiement, selon sa propre politique de confidentialité ; l'éditeur ne voit jamais vos coordonnées bancaires. La clé de licence contient le courriel de l'abonnement.",
                 ],
             ),
             (
@@ -587,7 +584,7 @@ pub const LEGAL: [Legal; 3] = [
                 "Aucun cookie",
                 &[
                     "Le site ne dépose aucun cookie. Installé comme une app (PWA), il garde une copie de ses pages dans votre navigateur, pour s'ouvrir hors ligne : vous pouvez l'effacer à tout moment dans les réglages du navigateur.",
-                    "Le site charge ses polices depuis Google Fonts : votre navigateur contacte alors les serveurs de Google. Il est hébergé par GitHub Pages, qui tient des journaux techniques (adresse IP) pour la sécurité du service.",
+                    "Le site charge ses polices depuis Google Fonts : votre navigateur contacte alors les serveurs de Google. Il est hébergé par Heroku, qui tient des journaux techniques (adresse IP) pour la sécurité du service.",
                 ],
             ),
             (
@@ -616,23 +613,23 @@ pub const LEGAL: [Legal; 3] = [
                 "Abonnement et clé de licence",
                 &[
                     "Deux formules : Mensuel, 9,99 € par mois, et Annuel, 79,99 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.",
-                    "Après le paiement, votre clé de licence arrive par courriel. Saisissez‑la dans LÜMA (puce « Essai » en haut de l'app) : elle s'active sur vos appareils, jusqu'à trois à la fois. « Retirer de cet appareil » la libère pour un autre.",
-                    "L'app revérifie l'abonnement une fois par jour quand elle est en ligne, et reste utilisable 14 jours sans connexion.",
+                    "Après le paiement, votre clé de licence s'affiche sur le site (gardez l'adresse de la page : elle redonne la clé à tout moment). Saisissez‑la dans LÜMA (puce « Essai » en haut de l'app) ; elle vaut pour vos propres appareils, pour votre usage personnel ou professionnel.",
+                    "La clé est valable jusqu'à la fin de la période payée, plus 14 jours. En ligne, l'app la renouvelle d'elle‑même chaque jour tant que l'abonnement court.",
                 ],
             ),
             (
                 "paiement",
                 "Paiement",
                 &[
-                    "Les paiements sont encaissés par Lemon Squeezy, revendeur officiel de LÜMA, qui établit les factures et applique la TVA de votre pays ; ses conditions de vente s'appliquent à la transaction.",
+                    "Les paiements sont encaissés par Stripe, par carte bancaire et les moyens proposés sur la page de paiement. La TVA de votre pays est appliquée ; la facture est envoyée par courriel à chaque paiement.",
                 ],
             ),
             (
                 "resiliation",
                 "Résiliation et remboursement",
                 &[
-                    "Vous pouvez résilier à tout moment depuis votre compte client Lemon Squeezy (lien « Gérer mon abonnement »). L'abonnement reste actif jusqu'à la fin de la période payée, puis LÜMA revient à l'écran Premium.",
-                    "LÜMA étant un contenu numérique fourni dès l'activation, avec votre accord, le droit de rétractation ne s'applique plus une fois la clé activée (article L221‑28 du Code de la consommation). Les remboursements suivent la politique de Lemon Squeezy.",
+                    "Vous pouvez résilier à tout moment depuis le portail client (lien « Gérer mon abonnement ») : factures, moyen de paiement, résiliation. L'abonnement reste actif jusqu'à la fin de la période payée, puis LÜMA revient à l'écran Premium.",
+                    "LÜMA étant un contenu numérique fourni dès l'activation, avec votre accord, le droit de rétractation ne s'applique plus une fois la clé activée (article L221‑28 du Code de la consommation). Pour toute demande de remboursement, écrivez à l'adresse de contact des mentions légales.",
                 ],
             ),
             (

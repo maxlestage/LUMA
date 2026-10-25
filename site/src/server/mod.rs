@@ -7,6 +7,7 @@ pub mod docs;
 pub mod export;
 pub mod pages;
 pub mod photo;
+pub mod stripe;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -216,6 +217,27 @@ fn service_worker(site: &Site) -> String {
         .replace("__PRECACHE__", &list)
 }
 
+/// Décode `%XX` (formulaire).
+fn percent_decode(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%'
+            && let Some(v) = s
+                .get(i + 1..i + 3)
+                .and_then(|h| u8::from_str_radix(h, 16).ok())
+        {
+            out.push(v);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 /// L'application, prête à être lancée ou testée.
 pub fn app(site: Arc<Site>) -> App {
     let mut app = App::new();
@@ -294,6 +316,75 @@ pub fn app(site: Arc<Site>) -> App {
             }
         });
     }
+    // LÜMA Premium : la page de la clé (retour de Stripe) et la clé fraîche de l'app.
+    let premium = site.clone();
+    app.get("/licence/", move |req: Request| {
+        let site = premium.clone();
+        async move {
+            let session = req
+                .query("session_id")
+                .map(|s| s.into_owned())
+                .unwrap_or_default();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_secs());
+            let result = match (stripe::Stripe::from_env(), stripe::signing_key()) {
+                (Some(api), Some(seed)) => stripe::key_for_session(&api, &seed, &session, now),
+                _ => Err("le paiement en ligne n'est pas encore ouvert".into()),
+            };
+            pages::licence(&site, &site.origin(&req), result, stripe::billing_portal())
+                .into_response()
+                .header("cache-control", "no-store")
+        }
+    });
+    // « Gérer mon abonnement » : le portail client Stripe.
+    let portal = site.clone();
+    app.get("/abonnement/", move |req: Request| {
+        let site = portal.clone();
+        async move {
+            match stripe::billing_portal() {
+                Some(url) => Response::new()
+                    .status(302)
+                    .header("location", url)
+                    .header("cache-control", "no-store")
+                    .send(""),
+                None => pages::licence(
+                    &site,
+                    &site.origin(&req),
+                    Err("le portail client n'est pas encore ouvert".into()),
+                    None,
+                )
+                .into_response(),
+            }
+        }
+    });
+    app.post("/api/licence", |req: Request| async move {
+        let body = req.text().await.unwrap_or_default();
+        let key = body
+            .split('&')
+            .find_map(|kv| kv.strip_prefix("key="))
+            .map(|v| v.replace('+', " "))
+            .map(|v| percent_decode(&v))
+            .unwrap_or_default();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        let (status, json) = match (stripe::Stripe::from_env(), stripe::signing_key()) {
+            (Some(api), Some(seed)) => match stripe::refresh(&api, &seed, &key, now) {
+                Ok(k) => (200, format!(r#"{{"key":"{k}"}}"#)),
+                Err(e) => (402, format!(r#"{{"error":"{}"}}"#, e.replace('"', "'"))),
+            },
+            _ => (
+                503,
+                r#"{"error":"serveur de licences non configuré"}"#.to_owned(),
+            ),
+        };
+        Response::new()
+            .status(status)
+            .header("content-type", "application/json; charset=utf-8")
+            .header("cache-control", "no-store")
+            .send(json)
+    });
     // Les pages légales.
     for page in &crate::content::LEGAL {
         // Le routeur sert la même page avec ou sans la barre finale.
@@ -404,6 +495,17 @@ mod tests {
                 "{path} : dépôt privé"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn without_stripe_the_licence_pages_say_so() {
+        let client = client().await;
+        let res = client.get("/licence/?session_id=cs_test_1").await;
+        assert_eq!(res.status().as_u16(), 200);
+        assert!(res.text().contains("pas encore ouvert"));
+        let res = client.post("/api/licence").body("key=LUMA1.abc").await;
+        assert_eq!(res.status().as_u16(), 503);
+        assert!(res.text().contains("error"));
     }
 
     #[tokio::test]

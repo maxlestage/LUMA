@@ -1,6 +1,6 @@
 [package]
 name = "luma-licence"
-description = "LÜMA Premium : l'essai, les abonnements (mois, an) et la vérification des clés de licence."
+description = "LÜMA Premium : l'essai, les abonnements Stripe (mois, an) et les clés de licence signées."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,8 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+# Les clés de licence sont signées par le serveur (Ed25519) et vérifiées hors ligne.
+ed25519-dalek = { version = "2", default-features = false, features = ["std", "fast", "zeroize"] }
 
 [lints]
 workspace = true
