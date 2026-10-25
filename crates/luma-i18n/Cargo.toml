@@ -1,0 +1,10 @@
+[package]
+name = "luma-i18n"
+description = "Les langues de LÜMA (français, anglais, espagnol) : des catalogues de traductions, indexés par le texte français."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
