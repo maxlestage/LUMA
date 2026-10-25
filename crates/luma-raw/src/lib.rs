@@ -369,7 +369,7 @@ impl RawPhoto {
             Mosaic::Linear => RgbImage {
                 width: self.width,
                 height: self.height,
-                data: self.data.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect(),
+                data: self.data.as_chunks::<3>().0.to_vec(),
             },
         }
     }

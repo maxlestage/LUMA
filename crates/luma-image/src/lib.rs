@@ -175,7 +175,7 @@ pub fn encode8(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
     out.par_chunks_mut(3 * img.width.max(1))
         .zip(img.data.par_chunks(img.width.max(1)))
         .for_each(|(dst, src)| {
-            for (d, &p) in dst.chunks_exact_mut(3).zip(src) {
+            for (d, &p) in dst.as_chunks_mut::<3>().0.iter_mut().zip(src) {
                 let c = to_output(&m, p);
                 for i in 0..3 {
                     d[i] = (lut.get(c[i]) * 255.0 + 0.5) as u8;
@@ -192,7 +192,7 @@ pub fn encode16(img: &RgbImage, space: OutputSpace) -> Vec<u16> {
     out.par_chunks_mut(3 * img.width.max(1))
         .zip(img.data.par_chunks(img.width.max(1)))
         .for_each(|(dst, src)| {
-            for (d, &p) in dst.chunks_exact_mut(3).zip(src) {
+            for (d, &p) in dst.as_chunks_mut::<3>().0.iter_mut().zip(src) {
                 let c = to_output(&m, p);
                 for i in 0..3 {
                     d[i] = (space.encode(c[i]) * 65535.0 + 0.5) as u16;
@@ -205,7 +205,7 @@ pub fn encode16(img: &RgbImage, space: OutputSpace) -> Vec<u16> {
 /// L'histogramme RGB (256 classes) de l'image encodée, comme celui de Lightroom.
 pub fn histogram(encoded: &[u8]) -> [[u32; 256]; 3] {
     let mut h = [[0u32; 256]; 3];
-    for px in encoded.chunks_exact(3) {
+    for px in encoded.as_chunks::<3>().0 {
         for c in 0..3 {
             h[c][px[c] as usize] += 1;
         }
