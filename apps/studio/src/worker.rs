@@ -31,6 +31,12 @@ pub enum Event {
         path: PathBuf,
         result: Result<(Arc<Photo>, Option<Box<Settings>>), String>,
     },
+    /// Le doublon de travail de la photo est prêt : la même photo, lue depuis lui (plus
+    /// rapide, bien plus légère en mémoire).
+    Duplicated {
+        path: PathBuf,
+        photo: Arc<Photo>,
+    },
     Rendered(Box<Frame>),
     Thumbnail {
         path: PathBuf,
@@ -297,11 +303,33 @@ impl Worker {
     pub fn open(&self, path: PathBuf) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
-            let result = Photo::open(&path)
+            let result = crate::dialogs::open_photo(&path)
                 .map(|p| (Arc::new(p), read_sidecar(&path).map(Box::new)))
                 .map_err(|e| e.to_string());
-            let _ = sender.send(Event::Loaded { path, result });
+            let photo = result.as_ref().ok().map(|(p, _)| p.clone());
+            let _ = sender.send(Event::Loaded {
+                path: path.clone(),
+                result,
+            });
             repaint();
+            // Un RAW ouvert depuis l'original : son doublon de travail s'écrit
+            // maintenant, puis la photo passe dessus.
+            if let (Some(photo), Some(dir)) = (photo, crate::dialogs::duplicates_dir())
+                && photo.wants_duplicate()
+                && duplicate_fits(&photo)
+                && photo.write_duplicate(&path, &dir).is_ok()
+            {
+                drop(photo);
+                if let Ok(next) = Photo::open_with_duplicates(&path, &dir)
+                    && next.from_duplicate()
+                {
+                    let _ = sender.send(Event::Duplicated {
+                        path,
+                        photo: Arc::new(next),
+                    });
+                    repaint();
+                }
+            }
         });
     }
 
@@ -460,7 +488,7 @@ impl Worker {
                 let out = export_path(&job.source, &options);
                 let result = match job.photo {
                     Some(p) => Ok(p),
-                    None => Photo::open(&job.source)
+                    None => crate::dialogs::open_photo(&job.source)
                         .map(Arc::new)
                         .map_err(|e| e.to_string()),
                 }
@@ -617,7 +645,7 @@ fn thumbnail_loop(
     repaint: Arc<dyn Fn() + Send + Sync>,
 ) {
     while let Ok(path) = queue.recv() {
-        let Ok(photo) = Photo::open(&path) else {
+        let Ok(photo) = crate::dialogs::open_photo(&path) else {
             continue;
         };
         let settings = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());
@@ -632,6 +660,13 @@ fn thumbnail_loop(
         });
         repaint();
     }
+}
+
+/// L'écriture d'un doublon dématrice toute l'image d'un coup : sur iPhone et iPad, où
+/// le système ferme une app trop gourmande, seulement jusqu'à 25 millions de pixels.
+fn duplicate_fits(photo: &Photo) -> bool {
+    let (w, h) = photo.full_size();
+    !cfg!(target_os = "ios") || w * h <= 25_000_000
 }
 
 #[cfg(test)]

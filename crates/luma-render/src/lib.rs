@@ -8,6 +8,7 @@
 //! bloc du capteur), ce qui est bien plus rapide et aussi net à cette taille.
 
 pub mod chart;
+pub mod duplicate;
 pub mod export;
 
 use std::collections::HashMap;
@@ -61,6 +62,8 @@ pub struct Photo {
     ca: Mutex<Option<(f32, f32)>>,
     /// Les matrices caméra → travail déjà calculées, par balance des blancs.
     matrices: Mutex<HashMap<[u32; 3], luma_color::Mat3>>,
+    /// Le doublon de travail : les pixels viennent de lui (`raw` n'en a plus).
+    dup: Option<duplicate::Duplicate>,
 }
 
 const CACHE: usize = 3;
@@ -96,7 +99,43 @@ impl Photo {
             raw,
             sources: Mutex::new(Vec::new()),
             matrices: Mutex::new(HashMap::new()),
+            dup: None,
         }
+    }
+
+    /// Ouvre une photo par son doublon de travail (dans `dir`) s'il existe et
+    /// correspond encore à l'original, sinon par l'original.
+    pub fn open_with_duplicates(path: impl AsRef<Path>, dir: &Path) -> Result<Photo> {
+        let path = path.as_ref();
+        if let Some(dup) = duplicate::path_for(path, dir)
+            && let Some((d, raw)) = duplicate::Duplicate::open(path, &dup)
+        {
+            let mut photo = Photo::new(raw);
+            photo.dup = Some(d);
+            return Ok(photo);
+        }
+        Photo::open(path)
+    }
+
+    /// La photo vient‑elle de son doublon de travail ?
+    pub fn from_duplicate(&self) -> bool {
+        self.dup.is_some()
+    }
+
+    /// Une photo qui gagnerait à avoir un doublon : un RAW ouvert depuis l'original (une
+    /// image déjà développée, JPEG ou PNG, s'ouvre déjà vite).
+    pub fn wants_duplicate(&self) -> bool {
+        self.dup.is_none() && !self.raw.rendered && !self.raw.data.is_empty()
+    }
+
+    /// Écrit le doublon de travail de cette photo (ouverte depuis `source`) dans `dir`,
+    /// puis fait le ménage. Long : en arrière‑plan.
+    pub fn write_duplicate(&self, source: &Path, dir: &Path) -> Result<std::path::PathBuf> {
+        let path =
+            duplicate::path_for(source, dir).ok_or_else(|| luma_core::Error::Decode("original introuvable".into()))?;
+        duplicate::write(&self.raw, source, &path)?;
+        duplicate::trim(dir, duplicate::budget());
+        Ok(path)
     }
 
     /// Les réglages de départ : ceux d'un RAW, ou d'une image déjà développée
@@ -134,7 +173,48 @@ impl Photo {
             return img.clone();
         }
         let (fw, fh) = self.full_size();
-        let img = match size {
+        let img = if let Some(d) = &self.dup {
+            // Le doublon : le plus petit niveau assez grand, lu sur le disque.
+            let level = match size {
+                Size::Full => 0,
+                Size::Fit(max) => {
+                    let (tw, th) = RgbImage::fit(fw, fh, max);
+                    d.level_for(tw.max(th))
+                }
+            };
+            let img = t.time("doublon", || d.read(level)).unwrap_or_else(|_| {
+                let (w, h) = d.sizes()[level];
+                RgbImage {
+                    width: w,
+                    height: h,
+                    data: vec![[0.0; 3]; w * h],
+                }
+            });
+            let oriented = t.time("orientation", || geometry::orient(img, self.raw.orientation));
+            match size {
+                Size::Full => oriented,
+                Size::Fit(max) => {
+                    let (tw, th) = RgbImage::fit(fw, fh, max);
+                    t.time("mise à l'échelle", || oriented.resize_area(tw, th))
+                }
+            }
+        } else {
+            self.source_from_raw(size, fw, fh, t)
+        };
+        let img = Arc::new(img);
+        let mut cache = self.sources.lock().expect("cache");
+        if cache.len() >= CACHE {
+            cache.remove(0);
+        }
+        cache.push((size, img.clone()));
+        drop(cache);
+        self.trim(Some(&img));
+        img
+    }
+
+    /// L'image caméra orientée à la taille demandée, depuis le RAW.
+    fn source_from_raw(&self, size: Size, fw: usize, fh: usize, t: &mut Timings) -> RgbImage {
+        match size {
             Size::Full => {
                 let full = t.time("dématriçage", || self.raw.demosaic());
                 t.time("orientation", || geometry::orient(full, self.raw.orientation))
@@ -152,16 +232,7 @@ impl Photo {
                 let oriented = t.time("orientation", || geometry::orient(base, self.raw.orientation));
                 t.time("mise à l'échelle", || oriented.resize_area(tw, th))
             }
-        };
-        let img = Arc::new(img);
-        let mut cache = self.sources.lock().expect("cache");
-        if cache.len() >= CACHE {
-            cache.remove(0);
         }
-        cache.push((size, img.clone()));
-        drop(cache);
-        self.trim(Some(&img));
-        img
     }
 
     fn camera_to_working(&self, wb: &WhiteBalance) -> luma_color::Mat3 {
