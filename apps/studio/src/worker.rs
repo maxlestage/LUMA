@@ -31,9 +31,9 @@ pub enum Event {
         path: PathBuf,
         result: Result<(Arc<Photo>, Option<Box<Settings>>), String>,
     },
-    /// Le doublon de travail de la photo est prêt : la même photo, lue depuis lui (plus
-    /// rapide, bien plus légère en mémoire).
-    Duplicated {
+    /// La même photo, relue : depuis son doublon de travail une fois écrit (plus rapide,
+    /// bien plus légère en mémoire), ou depuis l'original quand le cache est vidé.
+    Reloaded {
         path: PathBuf,
         photo: Arc<Photo>,
     },
@@ -323,12 +323,27 @@ impl Worker {
                 if let Ok(next) = Photo::open_with_duplicates(&path, &dir)
                     && next.from_duplicate()
                 {
-                    let _ = sender.send(Event::Duplicated {
+                    let _ = sender.send(Event::Reloaded {
                         path,
                         photo: Arc::new(next),
                     });
                     repaint();
                 }
+            }
+        });
+    }
+
+    /// Relit la photo depuis l'original (le cache vient d'être vidé) ; les réglages
+    /// restent ceux de l'app.
+    pub fn reload_original(&self, path: PathBuf) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::spawn(move || {
+            if let Ok(photo) = Photo::open(&path) {
+                let _ = sender.send(Event::Reloaded {
+                    path,
+                    photo: Arc::new(photo),
+                });
+                repaint();
             }
         });
     }
