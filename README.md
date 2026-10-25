@@ -104,6 +104,7 @@ Lightroom à côté du RAW, qui n'est jamais modifié.
 | G, D | Bibliothèque, Développement |
 | 0 à 5 ; P, X, U | Note ; retenir, rejeter, retirer le drapeau (enregistrés dans le XMP, `xmp:Rating` comme Lightroom) |
 | R | Outil Recadrage : poignées, grille des tiers, proportions verrouillées ; Entrée valide, Échap annule |
+| W | Pipette de balance des blancs (cliquer un gris) ; le menu Balance propose aussi Auto et les préréglages de Lightroom |
 | M, Maj+M, K | Masque : dégradé linéaire, dégradé radial, pinceau (Option gomme) ; O montre la zone ; chaque masque a ses curseurs |
 | Cmd+O | Ouvrir un RAW (son dossier remplit le film) ; on peut aussi le déposer |
 | ← → | Photo précédente, suivante |
