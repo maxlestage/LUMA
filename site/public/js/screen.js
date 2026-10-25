@@ -7,7 +7,7 @@ const LABELS = {
     'Bibliothèque': 'Library', 'Développement': 'Develop', 'Masques': 'Masks', 'Export': 'Export',
     'Lumière': 'Light', 'Exposition': 'Exposure', 'Contraste': 'Contrast', 'Hautes lumières': 'Highlights',
     'Ombres': 'Shadows', 'Blancs': 'Whites', 'Noirs': 'Blacks', 'Couleur': 'Color', 'Température': 'Temperature',
-    'Teinte': 'Tint', 'Vibrance': 'Vibrance', 'Saturation': 'Saturation', 'Ciel · IA': 'Sky · AI',
+    'Teinte': 'Tint', 'Vibrance': 'Vibrance', 'Saturation': 'Saturation', 'Ciel · IA': 'Sky · AI', 'Films': 'Films', 'Recadrer': 'Crop',
     'Islande_0427.ARW': 'Iceland_0427.ARW',
   },
   es: {
@@ -15,7 +15,7 @@ const LABELS = {
     'Lumière': 'Luz', 'Exposition': 'Exposición', 'Contraste': 'Contraste', 'Hautes lumières': 'Altas luces',
     'Ombres': 'Sombras', 'Blancs': 'Blancos', 'Noirs': 'Negros', 'Couleur': 'Color',
     'Température': 'Temperatura', 'Teinte': 'Matiz', 'Vibrance': 'Intensidad', 'Saturation': 'Saturación',
-    'Ciel · IA': 'Cielo · IA', 'Islande_0427.ARW': 'Islandia_0427.ARW',
+    'Ciel · IA': 'Cielo · IA', 'Films': 'Películas', 'Recadrer': 'Recortar', 'Islande_0427.ARW': 'Islandia_0427.ARW',
   },
 };
 const tr = (text) => (LABELS[document.documentElement.lang] || {})[text] || text;
@@ -200,41 +200,111 @@ export function drawDesktopUI(canvas) {
 }
 
 /** L'interface de LÜMA sur iPhone. */
+/** Une petite icône d'outil, dessinée au trait (soleil, gouttes, film, masque, recadrage). */
+function toolIcon(ctx, kind, cx, cy, r, color) {
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = r * 0.16; ctx.lineCap = 'round';
+  if (kind === 'light') {
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.42, 0, 7); ctx.stroke();
+    for (let k = 0; k < 8; k++) {
+      const a = (k * Math.PI) / 4;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r * 0.66, cy + Math.sin(a) * r * 0.66);
+      ctx.lineTo(cx + Math.cos(a) * r * 0.92, cy + Math.sin(a) * r * 0.92);
+      ctx.stroke();
+    }
+  } else if (kind === 'color') {
+    [[-0.32, -0.18, '#ff7a59'], [0.32, -0.18, '#4cc6ff'], [0, 0.34, '#8be28b']].forEach(([dx, dy, c]) => {
+      ctx.globalAlpha = 0.85; ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(cx + dx * r, cy + dy * r, r * 0.5, 0, 7); ctx.fill();
+    });
+  } else if (kind === 'film') {
+    ctx.strokeRect(cx - r * 0.62, cy - r * 0.8, r * 1.24, r * 1.6);
+    for (let k = 0; k < 4; k++) {
+      ctx.fillRect(cx - r * 0.5, cy - r * 0.66 + k * r * 0.42, r * 0.14, r * 0.2);
+      ctx.fillRect(cx + r * 0.36, cy - r * 0.66 + k * r * 0.42, r * 0.14, r * 0.2);
+    }
+  } else if (kind === 'mask') {
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.8, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.8, -Math.PI / 2, Math.PI / 2); ctx.fill();
+  } else if (kind === 'crop') {
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.5, cy - r * 0.9); ctx.lineTo(cx - r * 0.5, cy + r * 0.5); ctx.lineTo(cx + r * 0.9, cy + r * 0.5);
+    ctx.moveTo(cx - r * 0.9, cy - r * 0.5); ctx.lineTo(cx + r * 0.5, cy - r * 0.5); ctx.lineTo(cx + r * 0.5, cy + r * 0.9);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** L'écran de l'iPhone : LÜMA en retouche (la Dynamic Island est dessinée par la page). */
 export function drawPhoneUI(canvas) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height, s = W / 390;
+  const font = (w, px) => `${w} ${px * s}px -apple-system, "SF Pro Text", Inter, sans-serif`;
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#fff'; ctx.font = `600 ${15 * s}px -apple-system, Inter, sans-serif`;
-  ctx.fillText('9:41', 34 * s, 36 * s);
-  ctx.fillRect(W - 62 * s, 25 * s, 24 * s, 11 * s);
-  ctx.fillStyle = '#000'; roundRect(ctx, W / 2 - 62 * s, 14 * s, 124 * s, 34 * s, 17 * s); ctx.fill();
 
-  ctx.fillStyle = '#fff'; ctx.font = `700 ${22 * s}px -apple-system, Inter, sans-serif`;
-  ctx.fillText('LÜMA', 22 * s, 92 * s);
-  ctx.font = `${13 * s}px -apple-system, Inter, sans-serif`; ctx.fillStyle = 'rgba(255,255,255,.5)';
-  ctx.fillText('ProRAW · 48 Mpx', 22 * s, 112 * s);
+  // Barre d'état : l'heure, le réseau, le Wi‑Fi, la batterie.
+  ctx.fillStyle = '#fff'; ctx.font = font(600, 17);
+  ctx.textAlign = 'center'; ctx.fillText('9:41', 66 * s, 40 * s); ctx.textAlign = 'left';
+  [5, 8, 11, 14].forEach((h, k) => { roundRect(ctx, (296 + k * 6) * s, (40 - h) * s, 4 * s, h * s, 1 * s); ctx.fill(); });
+  ctx.lineWidth = 2.2 * s; ctx.strokeStyle = '#fff';
+  [[5, 0.55], [9, 0.55], [13, 0.55]].forEach(([r]) => { ctx.beginPath(); ctx.arc(333 * s, 41 * s, r * s, -Math.PI * 0.78, -Math.PI * 0.22); ctx.stroke(); });
+  ctx.lineWidth = 1.2 * s; ctx.globalAlpha = 0.45; roundRect(ctx, 347 * s, 29 * s, 25 * s, 12 * s, 3.5 * s); ctx.stroke(); ctx.globalAlpha = 1;
+  roundRect(ctx, 349 * s, 31 * s, 18 * s, 8 * s, 2 * s); ctx.fill();
 
-  ctx.save(); roundRect(ctx, 0, 130 * s, W, 470 * s, 0); ctx.clip();
-  drawPhoto(ctx, -60 * s, 130 * s, W + 120 * s, 470 * s, { seed: 5, hue: -12 });
+  // En‑tête : retour à la bibliothèque, le nom de la photo, Exporter.
+  ctx.font = font(400, 17); ctx.fillStyle = '#ffc466';
+  ctx.fillText('‹ ' + tr('Bibliothèque'), 14 * s, 92 * s);
+  ctx.fillStyle = '#fff'; ctx.font = font(600, 15); ctx.textAlign = 'center';
+  ctx.fillText(tr('Islande_0427.ARW').replace('.ARW', ''), W / 2 + 40 * s, 92 * s);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,196,102,.16)'; roundRect(ctx, 300 * s, 72 * s, 76 * s, 30 * s, 15 * s); ctx.fill();
+  ctx.fillStyle = '#ffc466'; ctx.font = font(600, 14); ctx.textAlign = 'center';
+  ctx.fillText(tr('Export'), 338 * s, 92 * s); ctx.textAlign = 'left';
+
+  // La photo, bord à bord.
+  const py = 116 * s, ph = 470 * s;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, py, W, ph); ctx.clip();
+  drawPhoto(ctx, -150 * s, py, W + 300 * s, ph, { seed: 5, hue: -12 });
   ctx.restore();
+  // Le masque de ciel, sélectionné : un voile violet sur le ciel et son nom.
+  ctx.save(); ctx.beginPath(); ctx.rect(0, py, W, ph); ctx.clip();
+  ctx.fillStyle = 'rgba(139,123,255,.22)';
+  ctx.beginPath(); ctx.moveTo(0, py);
+  for (let x = 0; x <= W; x += 4) ctx.lineTo(x, py + (238 - Math.abs(ridge(x / W, 6, 0.09, 4)) * 300) * s);
+  ctx.lineTo(W, py); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = 'rgba(20,20,26,.72)'; roundRect(ctx, 14 * s, py + 14 * s, 108 * s, 28 * s, 14 * s); ctx.fill();
+  ctx.fillStyle = '#8b7bff'; ctx.beginPath(); ctx.arc(30 * s, py + 28 * s, 5 * s, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = font(600, 13); ctx.fillText(tr('Ciel · IA'), 42 * s, py + 33 * s);
 
-  // Masque de ciel (sélection IA) dessiné comme au Pencil
-  ctx.strokeStyle = 'rgba(139,123,255,.9)'; ctx.setLineDash([6 * s, 5 * s]); ctx.lineWidth = 2 * s;
-  ctx.beginPath(); ctx.moveTo(0, 360 * s);
-  for (let x = 0; x <= W; x += 6) ctx.lineTo(x, (380 - Math.abs(ridge(x / W, 6, 0.09, 4)) * 470) * s);
-  ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(139,123,255,.9)'; roundRect(ctx, 16 * s, 146 * s, 92 * s, 26 * s, 13 * s); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = `600 ${12 * s}px -apple-system, Inter, sans-serif`; ctx.fillText(tr('Ciel · IA'), 30 * s, 163 * s);
+  // Le réglage en cours : son nom, sa valeur, et la molette graduée.
+  const dy = 640 * s;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = font(600, 12);
+  ctx.fillText(tr('Exposition').toUpperCase(), W / 2, dy);
+  ctx.fillStyle = '#fff'; ctx.font = font(600, 22);
+  ctx.fillText('+0,35', W / 2, dy + 30 * s);
+  ctx.textAlign = 'left';
+  for (let k = -24; k <= 24; k++) {
+    const x = W / 2 + k * 8 * s - 3 * s;
+    const major = (k + 3) % 5 === 0;
+    ctx.fillStyle = `rgba(255,255,255,${major ? 0.7 : 0.3})`;
+    ctx.fillRect(x, dy + (major ? 46 : 50) * s, 1.4 * s, (major ? 18 : 12) * s);
+  }
+  ctx.fillStyle = '#ffc466'; roundRect(ctx, W / 2 - 1.5 * s, dy + 40 * s, 3 * s, 30 * s, 1.5 * s); ctx.fill();
 
-  slider(ctx, 24 * s, 636 * s, W - 48 * s, tr('Exposition'), 0.22, s);
-  slider(ctx, 24 * s, 682 * s, W - 48 * s, tr('Température'), 0.3, s, ['#4aa8ff', '#ddd', '#ffb03b']);
-  const tools = ['☀', '◐', '◍', '✎', '⬚'];
-  tools.forEach((t, i) => {
-    const cx = (W / 6) * (i + 1), cy = H - 70 * s;
-    ctx.fillStyle = i === 0 ? '#fff' : 'rgba(255,255,255,.1)';
-    ctx.beginPath(); ctx.arc(cx, cy, 22 * s, 0, 7); ctx.fill();
-    ctx.fillStyle = i === 0 ? '#000' : '#fff'; ctx.font = `${17 * s}px -apple-system, sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText(t, cx, cy + 6 * s); ctx.textAlign = 'left';
+  // Les outils : icône et nom ; Lumière est actif.
+  const tools = [['light', 'Lumière'], ['color', 'Couleur'], ['film', 'Films'], ['mask', 'Masques'], ['crop', 'Recadrer']];
+  const ty = H - 108 * s;
+  tools.forEach(([kind, name], k) => {
+    const cx = (W / 5) * (k + 0.5);
+    const on = k === 0;
+    if (on) { ctx.fillStyle = 'rgba(255,196,102,.16)'; ctx.beginPath(); ctx.arc(cx, ty, 25 * s, 0, 7); ctx.fill(); }
+    toolIcon(ctx, kind, cx, ty, 13 * s, on ? '#ffc466' : 'rgba(255,255,255,.85)');
+    ctx.fillStyle = on ? '#ffc466' : 'rgba(255,255,255,.6)'; ctx.font = font(500, 11); ctx.textAlign = 'center';
+    ctx.fillText(tr(name), cx, ty + 44 * s); ctx.textAlign = 'left';
   });
-  ctx.fillStyle = 'rgba(255,255,255,.6)'; roundRect(ctx, W / 2 - 68 * s, H - 16 * s, 136 * s, 5 * s, 3 * s); ctx.fill();
+  // L'indicateur d'accueil.
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; roundRect(ctx, W / 2 - 67 * s, H - 18 * s, 134 * s, 5 * s, 2.5 * s); ctx.fill();
 }
