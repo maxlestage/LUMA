@@ -58,7 +58,16 @@ impl Preset {
         let mut target = current.clone();
         reset_look(&mut target);
         (self.apply)(&mut target);
+        target.film = Some(crate::Look {
+            name: self.name.to_string(),
+            amount: 100.0,
+        });
         blend(current, &target, amount)
+    }
+
+    /// Le look seul, sur des réglages neutres : de quoi l'exporter.
+    pub fn look(&self) -> Settings {
+        self.applied(&Settings::default(), 1.0)
     }
 }
 
@@ -76,7 +85,201 @@ pub fn with_lut(current: &Settings, name: &str, amount: f32) -> Settings {
         name: name.to_string(),
         amount: 100.0,
     });
+    target.film = target.lut.clone();
     blend(current, &target, amount)
+}
+
+/// Les réglages `current` avec le look d'un préréglage enregistré (`look`, lu dans son
+/// XMP) nommé `name`, à `amount` (0 à 1).
+pub fn with_look(current: &Settings, name: &str, look: &Settings, amount: f32) -> Settings {
+    let mut target = current.clone();
+    take_look(&mut target, look);
+    target.film = Some(crate::Look {
+        name: name.to_string(),
+        amount: 100.0,
+    });
+    blend(current, &target, amount)
+}
+
+/// Copie dans `s` ce qu'un look définit (les champs de [`reset_look`]), pris dans `from`.
+pub fn take_look(s: &mut Settings, from: &Settings) {
+    s.profile = from.profile;
+    s.contrast = from.contrast;
+    s.highlights = from.highlights;
+    s.shadows = from.shadows;
+    s.whites = from.whites;
+    s.blacks = from.blacks;
+    s.texture = from.texture;
+    s.clarity = from.clarity;
+    s.vibrance = from.vibrance;
+    s.saturation = from.saturation;
+    s.tone_curve = from.tone_curve.clone();
+    s.hsl = from.hsl.clone();
+    s.color_grading = from.color_grading.clone();
+    s.dehaze = from.dehaze;
+    let (e, f) = (&mut s.effects, &from.effects);
+    e.vignette_amount = f.vignette_amount;
+    e.vignette_midpoint = f.vignette_midpoint;
+    e.vignette_feather = f.vignette_feather;
+    e.vignette_roundness = f.vignette_roundness;
+    e.grain_amount = f.grain_amount;
+    e.grain_size = f.grain_size;
+    e.grain_roughness = f.grain_roughness;
+    s.lut = from.lut.clone();
+}
+
+/// Ce qui a changé dans une photo, pour l'afficher sous elle et sur sa vignette.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Summary {
+    /// Le film appliqué et son intensité (0 à 100).
+    pub film: Option<(String, f32)>,
+    /// Les panneaux touchés : « Lumière », « Couleur »…
+    pub panels: Vec<&'static str>,
+    /// Les masques (et parmi eux, ceux qui portent un film).
+    pub masks: usize,
+    pub mask_films: usize,
+}
+
+impl Summary {
+    pub fn is_edited(&self) -> bool {
+        self.film.is_some() || !self.panels.is_empty() || self.masks > 0
+    }
+
+    /// « Portra 400 · 80 % — Lumière, Couleur, 2 masques ».
+    pub fn text(&self) -> String {
+        let mut parts = Vec::new();
+        if let Some((name, amount)) = &self.film {
+            parts.push(if *amount >= 99.5 {
+                name.clone()
+            } else {
+                format!("{name} · {amount:.0} %")
+            });
+        }
+        let mut rest: Vec<String> = self.panels.iter().map(|p| (*p).to_string()).collect();
+        if self.masks > 0 {
+            let films = if self.mask_films > 0 {
+                format!(" ({} avec film)", self.mask_films)
+            } else {
+                String::new()
+            };
+            rest.push(format!(
+                "{} masque{}{films}",
+                self.masks,
+                if self.masks > 1 { "s" } else { "" }
+            ));
+        }
+        if !rest.is_empty() {
+            parts.push(rest.join(", "));
+        }
+        parts.join(" — ")
+    }
+}
+
+/// Deux valeurs égales à l'arrondi du XMP près (une demi‑unité).
+fn close<T: serde::Serialize>(a: &T, b: &T) -> bool {
+    fn near(a: &serde_json::Value, b: &serde_json::Value) -> bool {
+        use serde_json::Value as V;
+        match (a, b) {
+            (V::Number(x), V::Number(y)) => (x.as_f64().unwrap_or(0.0) - y.as_f64().unwrap_or(0.0)).abs() <= 0.51,
+            (V::Array(x), V::Array(y)) => x.len() == y.len() && x.iter().zip(y).all(|(p, q)| near(p, q)),
+            (V::Object(x), V::Object(y)) => {
+                x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| near(v, w)))
+            }
+            _ => a == b,
+        }
+    }
+    match (serde_json::to_value(a), serde_json::to_value(b)) {
+        (Ok(x), Ok(y)) => near(&x, &y),
+        _ => false,
+    }
+}
+
+/// Le résumé des modifications de `s` par rapport aux réglages neutres. Les réglages du
+/// film sont comptés dans le film, pas dans les panneaux.
+pub fn summary(s: &Settings) -> Summary {
+    let d = Settings::default();
+    // Sans le look du film : seules les retouches en plus comptent.
+    let mut own = s.clone();
+    if let Some(f) = &s.film {
+        match find(&f.name) {
+            // Chaque champ du look resté celui du film ne compte pas comme retouche.
+            Some(p) => {
+                let look = p.applied(&d, f.amount / 100.0);
+                macro_rules! same {
+                    ($($($f:ident).+),*) => {$(
+                        if close(&own.$($f).+, &look.$($f).+) {
+                            own.$($f).+ = d.$($f).+.clone();
+                        }
+                    )*};
+                }
+                same!(
+                    profile,
+                    contrast,
+                    highlights,
+                    shadows,
+                    whites,
+                    blacks,
+                    texture,
+                    clarity,
+                    vibrance,
+                    saturation,
+                    tone_curve,
+                    hsl,
+                    color_grading,
+                    dehaze,
+                    effects.vignette_amount,
+                    effects.vignette_midpoint,
+                    effects.vignette_feather,
+                    effects.vignette_roundness,
+                    effects.grain_amount,
+                    effects.grain_size,
+                    effects.grain_roughness,
+                    lut
+                );
+            }
+            // Un film mesuré ou un préréglage enregistré : tout le look est le sien.
+            None => reset_look(&mut own),
+        }
+    }
+    let mut panels = Vec::new();
+    if own.white_balance != d.white_balance
+        || own.exposure != d.exposure
+        || own.contrast != d.contrast
+        || own.highlights != d.highlights
+        || own.shadows != d.shadows
+        || own.whites != d.whites
+        || own.blacks != d.blacks
+        || own.texture != d.texture
+        || own.clarity != d.clarity
+        || own.dehaze != d.dehaze
+        || own.tone_curve != d.tone_curve
+        || own.profile != d.profile
+    {
+        panels.push("Lumière");
+    }
+    if own.vibrance != d.vibrance
+        || own.saturation != d.saturation
+        || own.hsl != d.hsl
+        || own.color_grading != d.color_grading
+        || own.calibration != d.calibration
+    {
+        panels.push("Couleur");
+    }
+    if own.detail != d.detail || own.effects != d.effects {
+        panels.push("Détail");
+    }
+    if own.crop != d.crop || own.lens != d.lens || own.transform != d.transform {
+        panels.push("Géométrie");
+    }
+    if own.lut.is_some() && s.film.is_none() {
+        panels.push("LUT");
+    }
+    Summary {
+        film: s.film.as_ref().map(|f| (f.name.clone(), f.amount)),
+        panels,
+        masks: s.masks.len(),
+        mask_films: s.masks.iter().filter(|m| m.look.is_some()).count(),
+    }
 }
 
 /// Remet à zéro ce qu'un look définit, pour que deux préréglages ne s'additionnent pas.
@@ -104,6 +307,7 @@ fn reset_look(s: &mut Settings) {
     s.effects.grain_size = d.effects.grain_size;
     s.effects.grain_roughness = d.effects.grain_roughness;
     s.lut = None;
+    s.film = None;
 }
 
 /// Le fondu entre deux réglages : chaque nombre est interpolé ; ce qui ne s'interpole
@@ -139,12 +343,19 @@ pub fn blend(from: &Settings, to: &Settings, amount: f32) -> Settings {
         return to.clone();
     };
     let mut out: Settings = serde_json::from_value(mix(&a, &b, f64::from(amount))).unwrap_or_else(|_| to.clone());
-    // Le film mesuré (LUT) s'efface ou apparaît par son intensité, au lieu de basculer.
+    // Le film (et sa LUT) s'efface ou apparaît par son intensité, au lieu de basculer.
+    out.lut = fade_look(&from.lut, &to.lut, amount);
+    out.film = fade_look(&from.film, &to.film, amount);
+    out
+}
+
+/// Le fondu d'un film (LUT ou nom du film) : il s'efface ou apparaît par son intensité.
+fn fade_look(from: &Option<crate::Look>, to: &Option<crate::Look>, amount: f32) -> Option<crate::Look> {
     let fade = |l: &crate::Look, k: f32| crate::Look {
         name: l.name.clone(),
         amount: l.amount * k,
     };
-    out.lut = match (&from.lut, &to.lut) {
+    match (from, to) {
         (None, None) => None,
         (Some(a), None) => Some(fade(a, 1.0 - amount)),
         (None, Some(b)) => Some(fade(b, amount)),
@@ -154,8 +365,7 @@ pub fn blend(from: &Settings, to: &Settings, amount: f32) -> Settings {
         }),
         (Some(a), Some(_)) if amount < 0.5 => Some(fade(a, 1.0 - 2.0 * amount)),
         (Some(_), Some(b)) => Some(fade(b, 2.0 * amount - 1.0)),
-    };
-    out
+    }
 }
 
 fn wheel(hue: f32, saturation: f32, luminance: f32) -> Wheel {
@@ -1628,6 +1838,27 @@ mod tests {
         let back = PRESETS[1].applied(&full, 0.25);
         assert_eq!(back.lut.as_ref().map(|l| l.amount), Some(75.0));
         assert_eq!(PRESETS[1].applied(&full, 1.0).lut, None);
+    }
+
+    #[test]
+    fn the_summary_names_the_film_and_the_extra_retouches() {
+        let d = Settings::default();
+        assert!(!summary(&d).is_edited());
+        let portra = find("Portra 400").unwrap();
+        let mut s = portra.applied(&d, 0.8);
+        let sum = summary(&s);
+        assert_eq!(sum.film, Some(("Portra 400".into(), 80.0)));
+        assert!(sum.panels.is_empty(), "{:?}", sum.panels);
+        assert_eq!(sum.text(), "Portra 400 · 80 %");
+        s.exposure = 0.5;
+        s.masks.push(crate::Mask::radial());
+        assert_eq!(summary(&s).text(), "Portra 400 · 80 % — Lumière, 1 masque");
+        // Relu dans son XMP (valeurs arrondies), le film reste le film.
+        let back = crate::xmp::read(&crate::xmp::write(&s)).unwrap();
+        assert_eq!(summary(&back).text(), "Portra 400 · 80 % — Lumière, 1 masque");
+        // Retirer le film efface son nom.
+        let none = PRESETS[3].applied(&s, 1.0);
+        assert_eq!(none.film.as_ref().map(|f| f.name.as_str()), Some(PRESETS[3].name));
     }
 
     #[test]
