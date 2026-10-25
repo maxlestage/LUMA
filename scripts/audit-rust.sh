@@ -5,7 +5,7 @@
 # 1. Le moteur (crates/luma-*) : aucune exception. Pas de crate de liaison vers une
 #    bibliothèque native (-sys), pas de compilateur C (cc, cmake), pas de bindgen.
 #    Seul luma-gpu, qui parle au pilote graphique (Metal, Vulkan), suit la règle 2.
-# 2. L'application (apps/studio) et luma-gpu, sur macOS (la cible prioritaire) et sur Linux : seules
+# 2. L'application (apps/studio) et luma-gpu, sur macOS, iOS (la cible prioritaire) et sur Linux : seules
 #    les liaisons vers des composants du système d'exploitation sont admises, une par
 #    une, chacune justifiée ci‑dessous. Aucune ne compile de C.
 set -euo pipefail
@@ -35,7 +35,7 @@ else
   echo "Moteur : 100 % Rust, $(tree $engine | grep -c ' v') crates, aucune liaison native."
 fi
 
-for target in aarch64-apple-darwin x86_64-unknown-linux-gnu; do
+for target in aarch64-apple-darwin aarch64-apple-ios x86_64-unknown-linux-gnu; do
   found=$(tree --workspace --target "$target" | grep -E "$banned" | grep -vE "$allowed" || true)
   if [ -n "$found" ]; then
     echo "Application ($target) : dépendances interdites :"; echo "$found"; status=1
