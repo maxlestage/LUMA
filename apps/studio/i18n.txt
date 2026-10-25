@@ -143,13 +143,13 @@ es = Idioma
 
 # ----- L'état, l'historique -----
 
-fr = Ouvrez un RAW ou un dossier (Cmd+O), ou déposez-le dans la fenêtre.
-en = Open a raw file or a folder (Cmd+O), or drop it onto the window.
-es = Abre un archivo RAW o una carpeta (Cmd+O), o arrástralo a la ventana.
+fr = Ouvrez une photo (RAW, JPEG, PNG, TIFF…) ou un dossier (Cmd+O), ou déposez-la dans la fenêtre.
+en = Open a photo (raw, JPEG, PNG, TIFF…) or a folder (Cmd+O), or drop it onto the window.
+es = Abre una foto (RAW, JPEG, PNG, TIFF…) o una carpeta (Cmd+O), o arrástrala a la ventana.
 
-fr = Aucun RAW dans {dir}
-en = No raw files in {dir}
-es = No hay archivos RAW en {dir}
+fr = Aucune photo dans {dir}
+en = No photos in {dir}
+es = No hay fotos en {dir}
 
 fr = Ouverture de {file}…
 en = Opening {file}…
@@ -361,9 +361,9 @@ fr = Dossier
 en = Folder
 es = Carpeta
 
-fr = LÜMA/, à côté du RAW
-en = LÜMA/, next to the raw file
-es = LÜMA/, junto al RAW
+fr = LÜMA/, à côté de l'original
+en = LÜMA/, next to the original
+es = LÜMA/, junto al original
 
 fr = Choisir…
 en = Choose…
@@ -373,9 +373,9 @@ fr = Dossier d'export
 en = Export folder
 es = Carpeta de exportación
 
-fr = À côté du RAW
-en = Next to the raw file
-es = Junto al RAW
+fr = À côté de l'original
+en = Next to the original
+es = Junto al original
 
 # ----- LÜMA Premium -----
 
@@ -2128,3 +2128,8 @@ es = Claro, etéreo, sombras abiertas.
 fr = Noir et blanc dense, clarté forte, ciels sombres.
 en = Dense black and white, strong clarity, dark skies.
 es = Blanco y negro denso, claridad fuerte, cielos oscuros.
+
+# Images déjà développées (JPEG, PNG…).
+fr = Ouvrir une photo
+en = Open a photo
+es = Abrir una foto

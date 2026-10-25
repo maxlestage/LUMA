@@ -16,6 +16,7 @@
 pub mod cameras;
 mod demosaic;
 pub mod dng;
+pub mod raster;
 
 use std::path::Path;
 
@@ -110,6 +111,9 @@ pub struct RawPhoto {
     /// Correction d'exposition prévue par le fichier (DNG `BaselineExposure`), en IL.
     pub baseline_exposure: f32,
     pub exif: Exif,
+    /// Une image déjà développée (JPEG, PNG, TIFF…) : ses valeurs sont celles de
+    /// l'écran, et non la lumière de la scène (voir [`raster`]).
+    pub rendered: bool,
 }
 
 fn illuminant_temperature(i: rawler::imgop::xyz::Illuminant) -> f32 {
@@ -157,6 +161,9 @@ impl RawPhoto {
     /// Décode et normalise un fichier RAW.
     pub fn open(path: impl AsRef<Path>) -> Result<RawPhoto> {
         let path = path.as_ref();
+        if raster::is_raster(path) {
+            return raster::open(path);
+        }
         let source = rawler::rawsource::RawSource::new(path).map_err(Error::Io)?;
         let params = rawler::decoders::RawDecodeParams::default();
         let raw = rawler::decode(&source, &params).map_err(|e| Error::Decode(e.to_string()))?;
@@ -280,6 +287,7 @@ impl RawPhoto {
             },
             baseline_exposure: 0.0,
             exif: Exif::default(),
+            rendered: false,
         };
         photo.as_shot_neutral = if wb[0].is_finite() && wb[1] > 0.0 && wb[0] > 0.0 && wb[2] > 0.0 {
             [wb[1] / wb[0], 1.0, wb[1] / wb[2]]
@@ -414,6 +422,7 @@ mod tests {
             orientation: Orientation::Normal,
             baseline_exposure: 0.0,
             exif: Exif::default(),
+            rendered: false,
         }
     }
 

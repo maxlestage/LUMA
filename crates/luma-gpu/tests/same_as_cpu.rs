@@ -59,6 +59,16 @@ fn every_per_pixel_stage_matches_the_cpu() {
         ..Settings::default()
     };
     cases.push(("neutre (couleur sautée)", s.clone()));
+    cases.push(("original (JPEG)", Settings::for_rendered()));
+    cases.push((
+        "original, contraste, blancs",
+        Settings {
+            contrast: 50.0,
+            whites: 40.0,
+            blacks: -30.0,
+            ..Settings::for_rendered()
+        },
+    ));
     s = Settings {
         contrast: 60.0,
         whites: -30.0,

@@ -50,6 +50,9 @@ pub struct Input {
     pub exposure_bias: f32,
     /// Pixels rendus par pixel de l'image pleine définition (1 pour un export).
     pub scale: f32,
+    /// Une image déjà développée (JPEG…) : ses couleurs vives proches du blanc sont de
+    /// vraies couleurs, et non un canal saturé au capteur.
+    pub rendered: bool,
 }
 
 /// Développe `cam` (RGB caméra linéaire, déjà orientée et recadrée).
@@ -219,7 +222,7 @@ pub fn finish_layers(
 /// indexées par la racine quatrième de x / 4) et, si elles ne sont pas neutres, les
 /// trois courbes des tonalités (4097 valeurs chacune, en sRGB encodé).
 pub fn render_tables(s: &Settings) -> (Vec<f32>, Option<[Vec<f32>; 3]>) {
-    let filmic = Filmic::with_look(s.contrast, s.whites, s.blacks, s.profile.look().0).table();
+    let filmic = tone_table(s);
     (
         filmic.values().to_vec(),
         tone_luts(s).map(|l| l.map(|lut| lut.values().to_vec())),
@@ -241,7 +244,11 @@ fn input_stage(cam: &RgbImage, input: &Input, s: &Settings) -> RgbImage {
         let mut c = lc::apply(&m, src);
         // Un canal saturé au capteur donne une fausse teinte (le rose des ciels brûlés) :
         // on fond ces pixels vers un neutre de même luminance.
-        let clip = smoothstep(0.88, 1.0, raw_max);
+        let clip = if input.rendered {
+            0.0
+        } else {
+            smoothstep(0.88, 1.0, raw_max)
+        };
         if clip > 0.0 {
             let y = luminance(c).max(0.0);
             c = [
@@ -267,8 +274,29 @@ fn tone_luts(s: &Settings) -> Option<[Lut; 3]> {
     (!luts.iter().all(Lut::is_identity)).then_some(luts)
 }
 
+/// La courbe de rendu : filmique pour un RAW, celle de l'image elle‑même (profil
+/// Original) pour une image déjà développée.
+pub fn tone_table(s: &Settings) -> curve::FilmicTable {
+    if s.profile == luma_project::Profile::Original {
+        curve::display_table(s.contrast, s.whites, s.blacks)
+    } else {
+        Filmic::with_look(s.contrast, s.whites, s.blacks, s.profile.look().0).table()
+    }
+}
+
+/// La part de désaturation des hautes lumières (comme un film) : aucune pour le profil
+/// Original, qui garde les couleurs de l'image.
+pub fn highlight_rolloff(s: &Settings) -> f32 {
+    if s.profile == luma_project::Profile::Original {
+        0.0
+    } else {
+        0.85
+    }
+}
+
 fn render_stage(img: &mut RgbImage, s: &Settings) {
-    let filmic = Filmic::with_look(s.contrast, s.whites, s.blacks, s.profile.look().0).table();
+    let filmic = tone_table(s);
+    let rolloff = highlight_rolloff(s);
     let luts = tone_luts(s);
     let encode = EncodeLut::new(lc::srgb_encode);
     let decode = Lut::from_fn(lc::srgb_decode);
@@ -281,7 +309,7 @@ fn render_stage(img: &mut RgbImage, s: &Settings) {
         let r = f / n;
         let mut c = [p[0] * r, p[1] * r, p[2] * r];
         // Vers le blanc : les hautes lumières se désaturent comme sur un film.
-        let t = smoothstep(0.72, 1.0, f) * 0.85;
+        let t = smoothstep(0.72, 1.0, f) * rolloff;
         c = [c[0] + (f - c[0]) * t, c[1] + (f - c[1]) * t, c[2] + (f - c[2]) * t];
         // Aucun canal au‑dessus de 1 : on rapproche du gris plutôt que d'écrêter.
         let over = c[0].max(c[1]).max(c[2]);
@@ -441,6 +469,7 @@ mod tests {
             camera_to_working: lc::IDENTITY,
             exposure_bias: 0.0,
             scale: 1.0,
+            rendered: false,
         }
     }
 
@@ -481,6 +510,7 @@ mod tests {
             camera_to_working: lc::diag([2.0, 1.0, 1.5]),
             exposure_bias: 0.0,
             scale: 1.0,
+            rendered: false,
         };
         let out = develop(
             &img,

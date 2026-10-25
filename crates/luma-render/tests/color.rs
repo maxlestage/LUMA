@@ -61,6 +61,7 @@ fn chart_raw(exposure: f32) -> RawPhoto {
         orientation: Orientation::Normal,
         baseline_exposure: 0.0,
         exif: Exif::default(),
+        rendered: false,
     }
 }
 

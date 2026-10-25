@@ -18,8 +18,8 @@ pub fn documents() -> Option<PathBuf> {
 #[cfg(not(target_os = "ios"))]
 pub fn pick_raw() -> Option<PathBuf> {
     rfd::FileDialog::new()
-        .set_title(tr("Ouvrir un RAW"))
-        .add_filter("RAW", &crate::app::RAW_EXTENSIONS)
+        .set_title(tr("Ouvrir une photo"))
+        .add_filter(tr("Photos"), &crate::app::photo_extensions())
         .pick_file()
 }
 

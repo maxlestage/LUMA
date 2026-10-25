@@ -47,6 +47,7 @@ fn params(s: &Settings, width: usize, height: usize, scale: f32, space: OutputSp
     p.push("SCALE", &[scale]);
     let (_, curves) = luma_image::render_tables(s);
     p.push("CURVES", &[f32::from(u8::from(curves.is_some()))]);
+    p.push("ROLLOFF", &[luma_image::highlight_rolloff(s)]);
 
     let stage = ColorStage::new(s);
     p.push("COLOR", &[f32::from(u8::from(stage.is_some()))]);
