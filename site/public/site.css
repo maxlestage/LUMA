@@ -396,3 +396,25 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 
 /* Page « introuvable » */
 .site--plain .cta { min-height: 100vh; min-height: 100svh; }
+
+/* ----- Tarifs : LÜMA Premium ----- */
+.pricing { padding: clamp(80px, 12vw, 160px) var(--gutter); max-width: 1100px; margin: 0 auto; }
+.download { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin: 34px 0 40px; }
+.download .btn { display: inline-flex; align-items: center; gap: 10px; }
+.download .apple-logo { width: 18px; height: 18px; display: block; }
+.download-note { color: var(--muted); font-size: .9rem; max-width: 420px; }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.plan { padding: 30px; border-radius: 26px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 10px; }
+.plan-best { background: linear-gradient(160deg, rgba(255, 196, 102, .10), rgba(76, 198, 255, .06) 60%, rgba(157, 88, 255, .08)); box-shadow: inset 0 0 0 1.5px rgba(255, 181, 71, .7); }
+.plan-name { font-weight: 600; letter-spacing: .02em; display: flex; gap: 12px; align-items: baseline; }
+.plan-tag { font-size: .75rem; font-weight: 500; color: var(--gold); }
+.plan-price { font-size: clamp(2.2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -.02em; }
+.plan-price span { font-size: 1rem; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.plan-note { color: var(--muted); font-size: .92rem; margin-bottom: 12px; }
+.plan .btn { align-self: flex-start; }
+.btn-disabled { opacity: .55; cursor: default; }
+.btn-disabled::before { display: none; }
+.premium-list { list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 28px; color: var(--muted); }
+.premium-list li { padding-left: 22px; position: relative; }
+.premium-list li::before { content: ""; position: absolute; left: 0; top: .45em; width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--gold); background: conic-gradient(var(--gold), var(--orange), var(--violet), var(--blue), var(--gold)); }
+.plan p { margin: 0; }
