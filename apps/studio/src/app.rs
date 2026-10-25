@@ -1384,7 +1384,7 @@ impl Studio {
                         .color(theme::TEXT),
                 );
                 let line = match &access {
-                    Access::Premium { plan, email } => format!(
+                    Access::Premium { plan, email, .. } => format!(
                         "Merci ! Votre abonnement{} est actif{}.",
                         plan.map(|p| format!(" {}", p.name().to_lowercase())).unwrap_or_default(),
                         email.as_ref().map(|e| format!(" ({e})")).unwrap_or_default()
@@ -1487,7 +1487,7 @@ impl Studio {
         if let Some(url) = chosen {
             if open_url(url) {
                 self.licence.message =
-                    "La page de paiement s'est ouverte : votre clé arrivera par courriel.".into();
+                    "La page de paiement s'est ouverte : après le paiement, votre clé s'affiche sur le site.".into();
             } else {
                 ui.ctx().copy_text(url.to_owned());
                 self.licence.message = "Lien de paiement copié : ouvrez-le dans Safari.".into();
@@ -1496,18 +1496,18 @@ impl Studio {
         ui.add_space(16.0);
         if matches!(access, Access::Premium { .. }) {
             ui.horizontal(|ui| {
-                if ui.button("Gérer mon abonnement").clicked() {
-                    let url = "https://app.lemonsqueezy.com/my-orders";
-                    if !open_url(url) {
-                        ui.ctx().copy_text(url.to_owned());
-                    }
+                if let Some(url) = luma_licence::billing_portal()
+                    && ui.button("Gérer mon abonnement").clicked()
+                    && !open_url(url)
+                {
+                    ui.ctx().copy_text(url.to_owned());
                 }
                 if ui
                     .add_enabled(
                         !self.licence.busy(),
                         egui::Button::new("Retirer de cet appareil"),
                     )
-                    .on_hover_text("Pour activer votre clé sur un autre Mac")
+                    .on_hover_text("La clé reste valable sur vos autres appareils")
                     .clicked()
                 {
                     self.licence.deactivate();
@@ -1516,7 +1516,7 @@ impl Studio {
         } else {
             ui.label(
                 RichText::new(
-                    "Déjà abonné ? Votre clé de licence est dans le courriel de confirmation.",
+                    "Déjà abonné ? Votre clé de licence s'affiche sur le site après le paiement (gardez ce lien).",
                 )
                 .size(12.5)
                 .color(theme::DIM),
@@ -1527,7 +1527,7 @@ impl Studio {
                         .hint_text("Clé de licence")
                         .desired_width(330.0),
                 );
-                let ready = !self.licence.busy() && self.licence.key_input.trim().len() >= 8;
+                let ready = self.licence.key_input.trim().len() >= 8;
                 if ui
                     .add_enabled(ready, egui::Button::new("Activer"))
                     .clicked()

@@ -13,12 +13,24 @@
       "description": "L'adresse publique du site (ex. https://luma.app), pour les liens absolus, le sitemap et les aperçus de partage.",
       "required": false
     },
+    "STRIPE_SECRET_KEY": {
+      "description": "La clé secrète Stripe (sk_live_… ; une clé restreinte en lecture des sessions et abonnements suffit), pour délivrer les clés de licence.",
+      "required": false
+    },
+    "LUMA_LICENCE_SECRET": {
+      "description": "La clé privée qui signe les licences (luma licence-keys). À garder secrète.",
+      "required": false
+    },
     "LUMA_CHECKOUT_MONTHLY": {
-      "description": "Le lien de paiement Lemon Squeezy de la formule Mensuel (boutons S'abonner).",
+      "description": "Le lien de paiement Stripe de la formule Mensuel (boutons S'abonner).",
       "required": false
     },
     "LUMA_CHECKOUT_ANNUAL": {
-      "description": "Le lien de paiement Lemon Squeezy de la formule Annuel.",
+      "description": "Le lien de paiement Stripe de la formule Annuel.",
+      "required": false
+    },
+    "LUMA_BILLING_PORTAL": {
+      "description": "Le lien de connexion au portail client Stripe (Gérer mon abonnement).",
       "required": false
     }
   },

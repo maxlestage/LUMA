@@ -61,7 +61,9 @@ jobs:
           # La boutique (Settings → Secrets and variables → Actions → Variables).
           LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
           LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
-          LUMA_STORE_ID: ${{ vars.LUMA_STORE_ID }}
+          LUMA_LICENCE_PUBLIC: ${{ vars.LUMA_LICENCE_PUBLIC }}
+          LUMA_LICENCE_SERVER: ${{ vars.LUMA_LICENCE_SERVER }}
+          LUMA_BILLING_PORTAL: ${{ vars.LUMA_BILLING_PORTAL }}
         run: scripts/bundle-macos.sh
 
       - name: Publier l'app
