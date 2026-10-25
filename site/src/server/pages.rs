@@ -475,8 +475,8 @@ fn cta() -> Element {
         .child(
             div()
                 .class("hero-cta reveal")
-                .child(a().class("btn magnetic").href(format!("{REPO}/blob/main/docs/architecture.md")).child(span().text("Lire l'architecture")))
-                .child(a().class("btn btn-ghost magnetic").href(format!("{REPO}/blob/main/docs/roadmap.md")).child(span().text("Feuille de route détaillée"))),
+                .child(a().class("btn magnetic").href(format!("{REPO}/blob/master/docs/architecture.md")).child(span().text("Lire l'architecture")))
+                .child(a().class("btn btn-ghost magnetic").href(format!("{REPO}/blob/master/docs/roadmap.md")).child(span().text("Feuille de route détaillée"))),
         )
 }
 

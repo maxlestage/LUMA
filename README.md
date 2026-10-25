@@ -58,6 +58,9 @@ cargo test
 
 ### Déployer
 
+- **GitHub Pages** : `.github/workflows/pages.yml` vérifie, construit et publie le site à chaque
+  push sur `master`, sur `https://maxlestage.github.io/LUMA/`. Il faut le secret `REPOS_TOKEN`
+  et, dans Settings → Pages, la source « GitHub Actions ».
 - **Heroku, buildpack** : `app.json`, `RustConfig`, `heroku-build.sh` et `Procfile`. Ajouter la
   variable `REPOS_TOKEN` (un jeton GitHub qui lit les dépôts privés).
 - **Docker** : `docker build --build-arg REPOS_TOKEN=… -t luma .`, ou `heroku.yml` sur la stack container.
