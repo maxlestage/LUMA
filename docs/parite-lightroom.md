@@ -38,8 +38,10 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |
 | | Débruitage par IA, super‑résolution | ⏳ |
-| Corrections de l'objectif | Profils (distorsion, vignetage), aberrations chromatiques | ⏳ |
-| Transformation | Upright, perspective | ⏳ |
+| Corrections de l'objectif | Aberration chromatique latérale estimée sur la photo, distorsion, vignetage (gain, milieu), défrangeage violet et vert ; noms XMP de Lightroom | ✅ |
+| | Profils d'objectifs (base de données), aberration longitudinale | ⏳ |
+| Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
+| | Upright automatique, guidé | ⏳ |
 | Effets | Vignetage après recadrage (gain, milieu, arrondi, contour progressif, hautes lumières) | ✅ |
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
