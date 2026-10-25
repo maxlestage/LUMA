@@ -157,7 +157,11 @@ fn navbar(here: Here) -> Element {
         .child(
             a().class("btn btn-small magnetic")
                 .href(target(lang, "#tarifs"))
-                .child(span().text(t(lang, "Télécharger"))),
+                .child(span().text(if downloads_open() {
+                    t(lang, "Télécharger")
+                } else {
+                    t(lang, "Tarifs")
+                })),
         )
         .child(lang_switch(here, false))
         .child(
@@ -202,7 +206,11 @@ fn hero(lang: Lang) -> Element {
                 .child(
                     div()
                         .class("hero-cta reveal")
-                        .child(a().class("btn magnetic").href("#tarifs").child(span().text(t(lang, "Télécharger · 14 jours d'essai"))))
+                        .child(a().class("btn magnetic").href("#tarifs").child(span().text(if downloads_open() {
+                            t(lang, "Télécharger · 14 jours d'essai")
+                        } else {
+                            t(lang, "Voir les tarifs")
+                        })))
                         .child(a().class("btn btn-ghost magnetic").href("#labo").child(span().text(t(lang, "Voir le moteur en action")))),
                 ),
         )
@@ -345,7 +353,12 @@ fn apple(lang: Lang) -> Element {
     section().class("apple").id("apple").child(
         div()
             .class("apple-sticky")
-            .child(canvas().id("devices-gl").attr("aria-hidden", "true"))
+            .child(
+                div()
+                    .class("devices")
+                    .id("devices")
+                    .attr("aria-hidden", "true"),
+            )
             .child(
                 div()
                     .class("apple-copy")
@@ -617,7 +630,7 @@ fn pricing(lang: Lang) -> Element {
                 "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app.",
             ))),
         ))
-        .child(
+        .children(downloads_open().then(|| {
             div()
                 .class("download reveal")
                 .child(
@@ -627,8 +640,8 @@ fn pricing(lang: Lang) -> Element {
                         .child(span().html(APPLE_SVG))
                         .child(span().text(t(lang, "Télécharger pour Mac"))),
                 )
-                .child(p().class("download-note").text(download_note(lang))),
-        )
+                .child(p().class("download-note").text(download_note(lang)))
+        }))
         .child(
             div()
                 .class("plans")
@@ -690,13 +703,19 @@ fn site_footer(here: Here) -> Element {
                         .child(
                             div()
                                 .class("footer-apps")
-                                .child(
+                                .child(if downloads_open() {
                                     a().class("store")
                                         .href(link("/download/LUMA-macos.zip"))
                                         .attr("download", "")
                                         .child(span().html(APPLE_SVG))
-                                        .child(span().child(small().text(t(lang, "Télécharger pour"))).child(strong().text("Mac"))),
-                                )
+                                        .child(span().child(small().text(t(lang, "Télécharger pour"))).child(strong().text("Mac")))
+                                } else {
+                                    span()
+                                        .class("store store-soon")
+                                        .attr("aria-disabled", "true")
+                                        .child(span().html(APPLE_SVG))
+                                        .child(span().child(small().text(t(lang, "Bientôt sur"))).child(strong().text("Mac")))
+                                })
                                 .child(
                                     span()
                                         .class("store store-soon")
@@ -745,7 +764,7 @@ pub fn licence(
             .child(section()
                 .child(h2().text(t(lang, "Pas encore l'app ?")))
                 .child(div().class("hero-cta")
-                    .child(a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac"))))
+                    .children(downloads_open().then(|| a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac")))))
                     .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement"))))))),
         Err(e) => div()
             .child(h1().text(t(lang, "Clé de licence")))
@@ -1000,4 +1019,11 @@ fn download_note(lang: Lang) -> String {
             )
         )
     }
+}
+
+/// Le téléchargement de l'app est‑il ouvert (`LUMA_DOWNLOADS=1`) ? Fermé par défaut :
+/// les boutons « Télécharger » disparaissent du site (barre, accueil, tarifs, pied de
+/// page, page de la clé, raccourcis de la PWA) jusqu'à l'ouverture.
+pub fn downloads_open() -> bool {
+    std::env::var("LUMA_DOWNLOADS").is_ok_and(|v| v == "1")
 }

@@ -156,13 +156,17 @@ fn manifest(lang: Lang) -> String {
             icon("/assets/favicon.svg", "any", "image/svg+xml", "any"),
         ]
         .join(","),
-        shortcuts = [
-            shortcut(
-                t(lang, "Télécharger pour Mac"),
-                t(lang, "Télécharger"),
-                &format!("{home}#tarifs"),
-                t(lang, "LÜMA pour Mac, 14 jours d'essai"),
-            ),
+        shortcuts = pages::downloads_open()
+            .then(|| {
+                shortcut(
+                    t(lang, "Télécharger pour Mac"),
+                    t(lang, "Télécharger"),
+                    &format!("{home}#tarifs"),
+                    t(lang, "LÜMA pour Mac, 14 jours d'essai"),
+                )
+            })
+            .into_iter()
+            .chain([
             shortcut(
                 t(lang, "Tarifs"),
                 t(lang, "Tarifs"),
@@ -175,7 +179,8 @@ fn manifest(lang: Lang) -> String {
                 &format!("{home}#labo"),
                 t(lang, "Le moteur en direct, dans le navigateur"),
             ),
-        ]
+        ])
+        .collect::<Vec<_>>()
         .join(","),
         shots = [
             format!(r#"{{"src":"/assets/capture-large.jpg","sizes":"1440x900","type":"image/jpeg","form_factor":"wide","label":"{}"}}"#, json(t(lang, "LÜMA : l'éditeur photo qui développe la lumière"))),
@@ -548,7 +553,8 @@ mod tests {
         assert!(html.contains("/js/scenes.js?v="));
         assert!(html.contains(r#"id="tarifs""#));
         assert!(html.contains("79,99 €") && html.contains("9,99 €"));
-        assert!(html.contains("/download/LUMA-macos.zip"));
+        // Le téléchargement est fermé tant que LUMA_DOWNLOADS ne vaut pas 1.
+        assert!(!html.contains("/download/LUMA-macos.zip") && !html.contains("Télécharger"));
         assert!(
             html.contains(r#"<span class="brand-mark"><svg"#),
             "le logo de la barre"
@@ -565,8 +571,8 @@ mod tests {
         assert!(m.contains(r#""display":"standalone""#));
         assert_eq!(
             m.matches(r#""short_name""#).count(),
-            4,
-            "le nom et trois raccourcis"
+            3,
+            "le nom et deux raccourcis (sans Télécharger, fermé)"
         );
         assert_eq!(m.matches(r#""form_factor""#).count(), 2, "deux captures");
         let sw = client.get("/sw.js").await.text();
@@ -793,7 +799,9 @@ mod tests {
         );
         let en = client.get("/en/manifest.webmanifest").await.text();
         assert!(en.contains(r#""lang":"en""#) && en.contains(r#""start_url":"/en/?source=pwa""#));
-        assert!(en.contains("Download for Mac") && !en.contains("Télécharger"));
+        assert!(
+            en.contains("Pricing") && !en.contains("Download for Mac") && !en.contains("Tarifs")
+        );
         let sw = client.get("/sw.js").await.text();
         assert!(sw.contains("\"/en/\"") && sw.contains("\"/es/conditions/\""));
     }

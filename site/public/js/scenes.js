@@ -1,5 +1,5 @@
-// Les deux scènes 3D du site, sur three.js : l'objectif du haut de page et le Mac et
-// l'iPhone de la section Apple. Tout le reste de la page (animations, labo, îlots) est
+// Les deux scènes du site : l'objectif 3D du haut de page (three.js), et le Mac et
+// l'iPhone de la section Apple (HTML et CSS). Tout le reste de la page (animations, labo, îlots) est
 // en Rust, compilé en WebAssembly ; ce module ne fait que démarrer les scènes.
 //
 // - l'objectif démarre tout de suite et s'entrouvre quand le préchargement se termine
@@ -32,14 +32,14 @@ function start() {
   }
 
   const apple = document.getElementById('apple');
-  const devices = document.getElementById('devices-gl');
+  const devices = document.getElementById('devices');
   if (apple && devices) {
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
       io.disconnect();
       import('./devices.js')
         .then(({ initDevices }) => initDevices(devices, apple, opts))
-        .catch((e) => console.warn('LÜMA : appareils 3D indisponibles', e));
+        .catch((e) => console.warn('LÜMA : appareils indisponibles', e));
     }, { rootMargin: '600px 0px' });
     io.observe(apple);
   }
