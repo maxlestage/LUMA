@@ -20,15 +20,21 @@ luma-render.workspace = true
 luma-gpu.workspace = true
 egui.workspace = true
 wgpu.workspace = true
-rfd.workspace = true
 
 # Sur Mac : l'accessibilité (VoiceOver). Ailleurs : X11 seulement (Wayland compilerait
 # du C, et Linux n'arrive qu'en phase 6).
 [target.'cfg(target_os = "macos")'.dependencies]
 eframe = { workspace = true, features = ["accesskit"] }
+rfd.workspace = true
 
-[target.'cfg(not(target_os = "macos"))'.dependencies]
+# iPhone et iPad : pas de sélecteur de fichiers de bureau (l'app ouvre son dossier
+# Documents, que remplit l'app Fichiers).
+[target.'cfg(target_os = "ios")'.dependencies]
+eframe.workspace = true
+
+[target.'cfg(not(any(target_os = "macos", target_os = "ios")))'.dependencies]
 eframe = { workspace = true, features = ["x11"] }
+rfd.workspace = true
 
 [dev-dependencies]
 egui_kittest.workspace = true
