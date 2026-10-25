@@ -33,6 +33,8 @@ target/release/luma develop photo.ARW -o photo.jpg --space p3 --set exposure=+0.
 target/release/luma develop photo.CR3 --size 2048 -o apercu.jpg    # lit photo.xmp s'il existe
 target/release/luma xmp photo.NEF --set clarity=20 -o photo.xmp      # réglages au format Lightroom
 target/release/luma bench photo.RAF                                   # réactivité mesurée
+target/release/luma merge ciel_*.ARW --stack stars                     # empilement d'étoiles → DNG
+target/release/luma merge pano_*.CR3 --pano cylindrical --no-crop      # panorama sans rognage
 ```
 
 ### Vérifier
