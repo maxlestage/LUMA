@@ -572,9 +572,13 @@ fr = Télécharger pour Mac
 en = Download for Mac
 es = Descargar para Mac
 
-fr = Apple Silicon et Intel, macOS 11 ou plus récent. Premier lancement : clic droit sur LÜMA, puis Ouvrir.
-en = Apple Silicon and Intel, macOS 11 or later. First launch: right‑click LÜMA, then choose Open.
-es = Apple Silicon e Intel, macOS 11 o posterior. Primer arranque: clic derecho en LÜMA y, después, Abrir.
+fr = Apple Silicon et Intel, macOS 11 ou plus récent.
+en = Apple Silicon and Intel, macOS 11 or later.
+es = Apple Silicon e Intel, macOS 11 o posterior.
+
+fr = Premier lancement : si macOS refuse d'ouvrir LÜMA, Réglages Système → Confidentialité et sécurité → « Ouvrir quand même ».
+en = First launch: if macOS won't open LÜMA, go to System Settings → Privacy & Security → “Open Anyway”.
+es = Primer arranque: si macOS no deja abrir LÜMA, ve a Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente».
 
 fr = Mensuel
 en = Monthly

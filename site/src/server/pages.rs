@@ -627,9 +627,7 @@ fn pricing(lang: Lang) -> Element {
                         .child(span().html(APPLE_SVG))
                         .child(span().text(t(lang, "Télécharger pour Mac"))),
                 )
-                .child(p().class("download-note").text(t(lang,
-                    "Apple Silicon et Intel, macOS 11 ou plus récent. Premier lancement : clic droit sur LÜMA, puis Ouvrir.",
-                ))),
+                .child(p().class("download-note").text(download_note(lang))),
         )
         .child(
             div()
@@ -984,4 +982,22 @@ pub fn not_found(site: &Site, origin: &str, lang: Lang) -> Page {
     )
     .seo(Seo::new().noindex(true))
     .status(404)
+}
+
+/// La note sous le bouton de téléchargement. Une app notariée par Apple
+/// (`LUMA_MAC_NOTARIZED=1`, posé par la CI quand les secrets de signature sont là)
+/// s'ouvre d'un double clic ; sinon, la marche à suivre au premier lancement.
+fn download_note(lang: Lang) -> String {
+    let base = t(lang, "Apple Silicon et Intel, macOS 11 ou plus récent.");
+    if std::env::var("LUMA_MAC_NOTARIZED").is_ok_and(|v| v == "1") {
+        base.to_owned()
+    } else {
+        format!(
+            "{base} {}",
+            t(
+                lang,
+                "Premier lancement : si macOS refuse d'ouvrir LÜMA, Réglages Système → Confidentialité et sécurité → « Ouvrir quand même »."
+            )
+        )
+    }
 }

@@ -76,6 +76,22 @@ Pour essayer sans rien encaisser : les mêmes étapes en **mode test** de Stripe
 - **Releases GitHub** : Actions → Release → Run workflow (version `0.1.0`…), ou une étiquette `v…` (`git tag v0.1.0 && git push origin
   v0.1.0`) construit et publie l'app Mac universelle, l'app iPhone et iPad non signée,
   et la ligne de commande pour Mac et Linux (`.github/workflows/release.yml`).
-- **Signature** : l'app Mac est signée « ad hoc » : au premier lancement, clic droit →
-  Ouvrir. Pour une ouverture directe (signature Developer ID et notarisation Apple), il
-  faut un compte Apple Developer (99 $ par an).
+- **Signature et notarisation** : sans compte Apple Developer, l'app est signée
+  « ad hoc » et macOS 15 refuse de l'ouvrir au premier lancement (Réglages Système →
+  Confidentialité et sécurité → « Ouvrir quand même »). Pour la vendre, il faut qu'elle
+  s'ouvre d'un double clic : signature **Developer ID** et **notarisation** par Apple,
+  faites par la CI dès que les secrets sont là :
+  1. S'inscrire à l'Apple Developer Program (99 € par an) : <https://developer.apple.com/programs/>.
+  2. Sur un Mac, Xcode → Réglages → Comptes → Gérer les certificats → « + » →
+     **Developer ID Application** ; puis Trousseau d'accès → ce certificat → Exporter
+     en `.p12`, avec un mot de passe.
+  3. App Store Connect → Utilisateurs et accès → Intégrations → **Clés d'API** :
+     créer une clé (accès « Développeur »), télécharger le `.p8`, noter son
+     identifiant (Key ID) et l'Issuer ID.
+  4. GitHub → Settings → Secrets and variables → Actions → **Secrets** :
+     - `MACOS_CERTIFICATE` : `base64 -i certificat.p12 | pbcopy`, puis coller ;
+     - `MACOS_CERTIFICATE_PASSWORD` : le mot de passe du `.p12` ;
+     - `APPLE_API_KEY` : le contenu du `.p8` ;
+     - `APPLE_API_KEY_ID` et `APPLE_API_ISSUER`.
+  5. Actions → Release → Run workflow : l'app est signée, notariée, agrafée ; la note
+     « Ouvrir quand même » disparaît du site (sur Heroku : `LUMA_MAC_NOTARIZED=1`).

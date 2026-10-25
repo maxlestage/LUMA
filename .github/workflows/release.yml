@@ -37,7 +37,13 @@ jobs:
         with:
           targets: aarch64-apple-darwin, x86_64-apple-darwin, aarch64-apple-ios
       - uses: Swatinem/rust-cache@v2
-      - name: LÜMA.app pour Mac (universelle)
+      - name: LÜMA.app pour Mac (universelle, signée et notariée si les secrets Apple sont là)
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: scripts/bundle-macos.sh
       - name: LÜMA.app pour iPhone et iPad (non signée)
         run: scripts/bundle-ios.sh device
