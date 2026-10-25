@@ -101,7 +101,8 @@ fn every_per_pixel_stage_matches_the_cpu() {
     s.tone_curve.highlights = -30.0;
     s.tone_curve.shadows = 20.0;
     s.tone_curve.red = vec![(0.0, 0.0), (128.0, 150.0), (255.0, 255.0)];
-    cases.push(("monochrome, courbes", s));
+    s.hsl.luminance = [-80.0, -40.0, 0.0, 30.0, 20.0, 60.0, 0.0, -10.0];
+    cases.push(("monochrome, courbes, mélange", s));
     let mut s = Settings::default();
     s.effects.vignette_amount = -60.0;
     s.effects.vignette_roundness = -50.0;
@@ -118,6 +119,16 @@ fn every_per_pixel_stage_matches_the_cpu() {
     }
     compare(&gpu, "Display P3", &cases[3].1, OutputSpace::DisplayP3, 0.25);
     compare(&gpu, "ProPhoto", &cases[2].1, OutputSpace::ProPhoto, 0.25);
+    // Les 100 films, tels qu'ils sont livrés.
+    for p in luma_project::presets::PRESETS {
+        compare(
+            &gpu,
+            p.name,
+            &p.applied(&Settings::default(), 1.0),
+            OutputSpace::Srgb,
+            0.25,
+        );
+    }
 }
 
 #[test]

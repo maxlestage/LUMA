@@ -247,7 +247,11 @@ impl ColorStage {
             c *= (1.0 + wi * bi[1] + wj * bj[1]).max(0.0);
             // La luminance ne touche que les pixels colorés : le gris reste gris.
             let colored = smoothstep(0.01, 0.06, chroma0);
-            l *= (0.6 * (wi * bi[2] + wj * bj[2]) * colored).exp2();
+            // En noir et blanc, la luminance du mélangeur devient le mélange noir et blanc
+            // de Lightroom, plus ample : L ×2 ou ÷2, soit ±3 IL, la force d'un filtre
+            // rouge qui noircit un ciel bleu.
+            let gain = if self.mono { 1.0 } else { 0.6 };
+            l *= (gain * (wi * bi[2] + wj * bj[2]) * colored).exp2();
         }
         if self.mono {
             c = 0.0;

@@ -202,6 +202,25 @@ fn channels(s: &mut Settings, r: (f32, f32), g: (f32, f32), b: (f32, f32)) {
     s.tone_curve.blue = c(b);
 }
 
+/// Le croisement des couches, la signature d'une émulsion : le décalage de chaque couche
+/// (rouge, verte, bleue) dans les ombres, les tons moyens et les hautes lumières, sur
+/// 0–255. Un négatif Fuji verdit ses ombres, un Kodak dore ses hautes lumières, un film
+/// tungstène bleuit tout ce qui n'est pas éclairé.
+fn cross(s: &mut Settings, r: [f32; 3], g: [f32; 3], b: [f32; 3]) {
+    let c = |o: [f32; 3]| {
+        vec![
+            (0.0, 0.0),
+            (64.0, 64.0 + o[0]),
+            (128.0, 128.0 + o[1]),
+            (192.0, 192.0 + o[2]),
+            (255.0, 255.0),
+        ]
+    };
+    s.tone_curve.red = c(r);
+    s.tone_curve.green = c(g);
+    s.tone_curve.blue = c(b);
+}
+
 fn grain(s: &mut Settings, amount: f32, size: f32, roughness: f32) {
     s.effects.grain_amount = amount;
     s.effects.grain_size = size;
@@ -246,12 +265,12 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodak Portra 160 : peaux naturelles, couleurs douces et fines.",
         |s| {
-            base(s, -8.0, -10.0, 4.0);
-            tones(s, -10.0, 5.0, 0.0, 0.0);
+            base(s, -10.0, -14.0, 2.0);
+            tones(s, -12.0, 6.0, 0.0, 0.0);
             fade(s, 8.0, 250.0);
-            band(s, O, 0.0, -4.0, 6.0);
-            band(s, G, 10.0, -15.0, 0.0);
-            split(s, 210.0, 5.0, 45.0, 8.0);
+            band(s, O, 0.0, -6.0, 6.0);
+            band(s, G, 10.0, -18.0, 0.0);
+            cross(s, [-2.0, 0.0, 2.0], [2.0, 2.0, 1.0], [5.0, 3.0, -2.0]);
             grain(s, 10.0, 18.0, 35.0);
         }
     ),
@@ -266,7 +285,7 @@ pub const PRESETS: &[Preset] = &[
             band(s, O, 0.0, -6.0, 6.0);
             band(s, G, 12.0, -18.0, 0.0);
             band(s, B, 0.0, -12.0, 0.0);
-            split(s, 200.0, 8.0, 45.0, 12.0);
+            cross(s, [-2.0, 4.0, 7.0], [0.0, 2.0, 2.0], [5.0, -2.0, -9.0]);
             grain(s, 18.0, 25.0, 45.0);
         }
     ),
@@ -275,12 +294,12 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodak Portra 800 : plus chaud et plus dense, grain visible, lumière tardive.",
         |s| {
-            base(s, -4.0, -4.0, 8.0);
+            base(s, 2.0, 0.0, 8.0);
             tones(s, -12.0, 6.0, 0.0, -4.0);
             fade(s, 14.0, 246.0);
-            band(s, O, 0.0, 0.0, 4.0);
+            band(s, O, 0.0, 2.0, 4.0);
             band(s, G, 15.0, -15.0, 0.0);
-            split(s, 190.0, 10.0, 40.0, 16.0);
+            cross(s, [2.0, 8.0, 10.0], [-2.0, 2.0, 3.0], [2.0, -6.0, -14.0]);
             grain(s, 28.0, 32.0, 55.0);
         }
     ),
@@ -293,6 +312,7 @@ pub const PRESETS: &[Preset] = &[
             band(s, R, 0.0, 10.0, 0.0);
             band(s, B, 0.0, 15.0, -10.0);
             fade(s, 4.0, 252.0);
+            cross(s, [0.0, 0.0, 2.0], [-2.0, 0.0, 0.0], [5.0, 3.0, -2.0]);
             grain(s, 6.0, 15.0, 40.0);
         }
     ),
@@ -319,7 +339,7 @@ pub const PRESETS: &[Preset] = &[
             band(s, Y, -4.0, 10.0, 0.0);
             band(s, G, 8.0, -8.0, 0.0);
             fade(s, 12.0, 244.0);
-            tint(s, 40.0, 10.0);
+            cross(s, [2.0, 4.0, 4.0], [3.0, 5.0, 3.0], [-4.0, -9.0, -12.0]);
             grain(s, 26.0, 32.0, 55.0);
         }
     ),
@@ -328,11 +348,11 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodak UltraMax 400 : saturé, chaud, contrasté, la pellicule des vacances.",
         |s| {
-            base(s, 14.0, 12.0, 6.0);
-            band(s, R, 0.0, 8.0, 0.0);
-            band(s, Y, 0.0, 12.0, 0.0);
-            split(s, 220.0, 6.0, 40.0, 14.0);
+            base(s, 14.0, 14.0, 8.0);
+            band(s, R, 0.0, 12.0, 0.0);
+            band(s, Y, 0.0, 10.0, 0.0);
             fade(s, 6.0, 250.0);
+            cross(s, [5.0, 7.0, 6.0], [0.0, 0.0, 0.0], [-2.0, -5.0, -6.0]);
             grain(s, 26.0, 30.0, 55.0);
         }
     ),
@@ -344,8 +364,8 @@ pub const PRESETS: &[Preset] = &[
             base(s, 4.0, 2.0, 6.0);
             band(s, G, -6.0, 10.0, 4.0);
             band(s, B, -5.0, 6.0, 0.0);
-            split(s, 170.0, 10.0, 60.0, 6.0);
             fade(s, 10.0, 248.0);
+            cross(s, [-5.0, -3.0, 0.0], [5.0, 3.0, 0.0], [2.0, 2.0, -2.0]);
             grain(s, 20.0, 28.0, 50.0);
         }
     ),
@@ -357,7 +377,8 @@ pub const PRESETS: &[Preset] = &[
             base(s, 8.0, 4.0, 0.0);
             fade(s, 8.0, 250.0);
             band(s, G, 0.0, 10.0, 0.0);
-            split(s, 140.0, 12.0, 60.0, 6.0);
+            band(s, R, 6.0, 6.0, 0.0);
+            cross(s, [-7.0, -2.0, 5.0], [6.0, 2.0, -4.0], [4.0, 0.0, 2.0]);
             grain(s, 26.0, 30.0, 55.0);
         }
     ),
@@ -366,9 +387,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Fujifilm Superia X-TRA 800 : nuit et intérieur, cyan dans les ombres, gros grain.",
         |s| {
-            base(s, 10.0, 6.0, 4.0);
-            split(s, 175.0, 16.0, 50.0, 8.0);
+            base(s, 16.0, 8.0, 4.0);
+            tones(s, 0.0, 0.0, 0.0, -6.0);
             fade(s, 14.0, 246.0);
+            cross(s, [-9.0, -5.0, 0.0], [2.0, 2.0, 0.0], [9.0, 5.0, -2.0]);
             grain(s, 36.0, 40.0, 60.0);
         }
     ),
@@ -382,7 +404,7 @@ pub const PRESETS: &[Preset] = &[
             fade(s, 16.0, 246.0);
             band(s, G, 15.0, -10.0, 0.0);
             band(s, B, -10.0, 0.0, 0.0);
-            split(s, 160.0, 10.0, 200.0, 5.0);
+            cross(s, [-3.0, -3.0, -4.0], [3.0, 5.0, 5.0], [3.0, 3.0, 2.0]);
             grain(s, 18.0, 25.0, 45.0);
         }
     ),
@@ -416,7 +438,9 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Fujifilm Provia 100F : diapositive fidèle, contraste net, couleurs propres.",
         |s| {
-            base(s, 10.0, 8.0, 5.0);
+            base(s, 16.0, 8.0, 6.0);
+            s_curve(s, 0.0, 5.0, 255.0);
+            cross(s, [-2.0, -1.0, 0.0], [0.0, 1.0, 0.0], [5.0, 2.0, 0.0]);
             grain(s, 6.0, 15.0, 30.0);
         }
     ),
@@ -425,10 +449,12 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Fujifilm Astia 100F : diapositive douce pour le portrait, peaux délicates.",
         |s| {
-            base(s, -2.0, 0.0, 4.0);
-            tones(s, -10.0, 6.0, 0.0, 0.0);
-            band(s, O, 0.0, -8.0, 6.0);
-            band(s, B, 0.0, 6.0, 0.0);
+            base(s, 6.0, -10.0, 8.0);
+            tones(s, -18.0, 10.0, 0.0, 0.0);
+            s_curve(s, 2.0, 3.0, 253.0);
+            band(s, O, 0.0, -12.0, 10.0);
+            band(s, B, 0.0, 8.0, 0.0);
+            cross(s, [3.0, 6.0, 7.0], [0.0, 1.0, 0.0], [1.0, -3.0, -7.0]);
             grain(s, 5.0, 15.0, 30.0);
         }
     ),
@@ -437,11 +463,12 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodachrome 64 : rouges riches, bleus profonds, contraste marqué.",
         |s| {
-            base(s, 20.0, 6.0, 0.0);
+            base(s, 24.0, 6.0, 0.0);
+            s_curve(s, 0.0, 8.0, 252.0);
             band(s, R, 0.0, 15.0, -5.0);
             band(s, Y, -5.0, 0.0, 0.0);
             band(s, B, 0.0, 10.0, -15.0);
-            split(s, 0.0, 0.0, 40.0, 8.0);
+            cross(s, [3.0, 4.0, 3.0], [-2.0, 0.0, 2.0], [-6.0, -4.0, 0.0]);
             grain(s, 10.0, 20.0, 40.0);
         }
     ),
@@ -450,12 +477,13 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodachrome 25 : la plus fine, couleurs denses et chaudes d'autrefois.",
         |s| {
-            base(s, 22.0, 4.0, 0.0);
+            base(s, 24.0, 8.0, 0.0);
             tones(s, -8.0, 0.0, 0.0, -6.0);
+            s_curve(s, 0.0, 10.0, 250.0);
             band(s, R, 0.0, 12.0, -6.0);
             band(s, G, -8.0, -5.0, -5.0);
             band(s, B, 0.0, 6.0, -18.0);
-            tint(s, 35.0, 6.0);
+            cross(s, [6.0, 7.0, 6.0], [1.0, 3.0, 3.0], [-5.0, -7.0, -8.0]);
             grain(s, 6.0, 12.0, 30.0);
         }
     ),
@@ -464,9 +492,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodak Ektachrome E100 : diapositive claire et froide, blancs purs.",
         |s| {
-            base(s, 15.0, 10.0, 0.0);
+            base(s, 18.0, 10.0, 0.0);
+            s_curve(s, 0.0, 6.0, 255.0);
             band(s, B, 0.0, 10.0, 0.0);
-            split(s, 220.0, 10.0, 0.0, 0.0);
+            cross(s, [-4.0, -2.0, 0.0], [0.0, 0.0, 1.0], [8.0, 5.0, 3.0]);
             grain(s, 6.0, 15.0, 30.0);
         }
     ),
@@ -475,9 +504,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodak Elite Chrome : diapositive grand public, ciels cyan, contraste vif.",
         |s| {
-            base(s, 16.0, 12.0, 4.0);
+            base(s, 20.0, 12.0, 4.0);
             band(s, B, -8.0, 12.0, -6.0);
-            band(s, A, 0.0, 10.0, 0.0);
+            band(s, A, 0.0, 15.0, 0.0);
+            cross(s, [-3.0, -1.0, 1.0], [3.0, 3.0, 2.0], [3.0, 1.0, -2.0]);
             grain(s, 8.0, 18.0, 35.0);
         }
     ),
@@ -489,8 +519,8 @@ pub const PRESETS: &[Preset] = &[
             base(s, 10.0, 10.0, 6.0);
             band(s, R, 0.0, 15.0, 0.0);
             band(s, B, 0.0, 15.0, -6.0);
-            split(s, 210.0, 10.0, 30.0, 10.0);
             fade(s, 8.0, 250.0);
+            cross(s, [0.0, 4.0, 6.0], [0.0, -1.0, 0.0], [7.0, 2.0, -2.0]);
             grain(s, 22.0, 28.0, 50.0);
         }
     ),
@@ -524,10 +554,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodak Pro Image 100 : pellicule des pays chauds, peaux dorées, contraste doux.",
         |s| {
-            base(s, 4.0, 2.0, 6.0);
-            band(s, O, 0.0, 4.0, 4.0);
-            split(s, 200.0, 6.0, 42.0, 12.0);
-            fade(s, 8.0, 248.0);
+            base(s, -2.0, 8.0, 8.0);
+            band(s, O, 0.0, 8.0, 6.0);
+            fade(s, 10.0, 248.0);
+            cross(s, [2.0, 6.0, 8.0], [1.0, 3.0, 3.0], [-4.0, -6.0, -7.0]);
             grain(s, 14.0, 20.0, 40.0);
         }
     ),
@@ -538,8 +568,8 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             base(s, 12.0, 10.0, 6.0);
             band(s, R, 0.0, 10.0, -4.0);
-            tint(s, 45.0, 10.0);
             fade(s, 6.0, 250.0);
+            cross(s, [5.0, 9.0, 9.0], [0.0, 2.0, 2.0], [-4.0, -9.0, -11.0]);
             grain(s, 20.0, 24.0, 45.0);
         }
     ),
@@ -548,10 +578,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Kodak Vericolor III : négatif de studio des années 80, neutre et doux.",
         |s| {
-            base(s, -10.0, -12.0, 0.0);
+            base(s, -14.0, -18.0, 0.0);
             tones(s, -10.0, 8.0, 0.0, 0.0);
             fade(s, 12.0, 246.0);
-            split(s, 190.0, 6.0, 40.0, 6.0);
+            cross(s, [-2.0, -2.0, 0.0], [3.0, 3.0, 2.0], [2.0, 0.0, -3.0]);
             grain(s, 14.0, 20.0, 40.0);
         }
     ),
@@ -560,9 +590,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Fujifilm Reala 100 : la quatrième couche, couleurs justes même sous néons.",
         |s| {
-            base(s, 6.0, 4.0, 6.0);
-            band(s, G, -4.0, 6.0, 0.0);
-            band(s, M, 0.0, -6.0, 0.0);
+            base(s, 12.0, 8.0, 12.0);
+            band(s, G, -6.0, 18.0, 0.0);
+            band(s, M, 0.0, -8.0, 0.0);
+            cross(s, [-5.0, -2.0, 3.0], [5.0, 3.0, 0.0], [4.0, 1.0, -3.0]);
             grain(s, 8.0, 15.0, 32.0);
         }
     ),
@@ -571,11 +602,11 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Fujicolor Pro 160NS : pastel et froid, verts tendres, peaux pâles.",
         |s| {
-            base(s, -12.0, -8.0, 0.0);
+            base(s, -12.0, -14.0, 0.0);
             tones(s, -8.0, 8.0, 0.0, 0.0);
             band(s, G, 12.0, -12.0, 4.0);
-            split(s, 175.0, 8.0, 190.0, 4.0);
             fade(s, 12.0, 248.0);
+            cross(s, [-2.0, -1.0, 0.0], [1.0, 0.0, -2.0], [7.0, 5.0, 4.0]);
             grain(s, 12.0, 18.0, 38.0);
         }
     ),
@@ -584,10 +615,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Fujifilm Natura 1600 : la lumière ambiante la nuit, chaud et granuleux.",
         |s| {
-            base(s, 4.0, -4.0, 6.0);
+            base(s, 6.0, -4.0, 6.0);
             tones(s, -10.0, 12.0, 0.0, 0.0);
-            split(s, 180.0, 10.0, 40.0, 12.0);
             fade(s, 14.0, 244.0);
+            cross(s, [2.0, 4.0, 6.0], [5.0, 4.0, 2.0], [-2.0, -5.0, -9.0]);
             grain(s, 40.0, 42.0, 60.0);
         }
     ),
@@ -596,9 +627,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Fujifilm Superia 200 : quotidien et frais, verts vifs, bleus nets.",
         |s| {
-            base(s, 8.0, 6.0, 4.0);
-            band(s, G, -4.0, 10.0, 0.0);
-            split(s, 160.0, 8.0, 60.0, 4.0);
+            base(s, 10.0, 10.0, 4.0);
+            band(s, G, -4.0, 14.0, 0.0);
+            band(s, R, 4.0, 8.0, 0.0);
+            cross(s, [-2.0, 0.0, 3.0], [5.0, 2.0, 0.0], [0.0, 3.0, 3.0]);
             grain(s, 18.0, 25.0, 45.0);
         }
     ),
@@ -607,9 +639,10 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré d'Agfa Optima 200 : couleurs franches, rouges profonds, ombres neutres.",
         |s| {
-            base(s, 12.0, 8.0, 4.0);
-            band(s, R, 0.0, 12.0, -4.0);
+            base(s, 14.0, 12.0, 4.0);
+            band(s, R, 0.0, 14.0, -4.0);
             band(s, B, 0.0, 8.0, 0.0);
+            cross(s, [3.0, 4.0, 4.0], [-3.0, -3.0, -1.0], [1.0, 0.0, -2.0]);
             grain(s, 16.0, 22.0, 42.0);
         }
     ),
@@ -619,9 +652,9 @@ pub const PRESETS: &[Preset] = &[
         "Inspiré de Konica Centuria 400 : magentas doux, ombres teintées, rendu japonais des années 2000.",
         |s| {
             base(s, 4.0, 2.0, 4.0);
-            split(s, 300.0, 8.0, 50.0, 10.0);
             band(s, G, 6.0, -8.0, 0.0);
             fade(s, 10.0, 246.0);
+            cross(s, [3.0, 2.0, 2.0], [-5.0, -3.0, 0.0], [5.0, 2.0, 0.0]);
             grain(s, 24.0, 28.0, 50.0);
         }
     ),
@@ -630,10 +663,11 @@ pub const PRESETS: &[Preset] = &[
         ColorFilm,
         "Inspiré de Ferrania Solaris 400 : la dernière pellicule italienne, chaude et contrastée.",
         |s| {
-            base(s, 14.0, 10.0, 0.0);
-            tint(s, 30.0, 10.0);
+            base(s, 20.0, 10.0, 0.0);
             band(s, B, -6.0, -10.0, 0.0);
+            band(s, G, -8.0, 8.0, 0.0);
             fade(s, 8.0, 246.0);
+            cross(s, [2.0, 4.0, 4.0], [5.0, 5.0, 2.0], [-6.0, -9.0, -9.0]);
             grain(s, 28.0, 32.0, 55.0);
         }
     ),
@@ -648,7 +682,8 @@ pub const PRESETS: &[Preset] = &[
             fade(s, 10.0, 245.0);
             band(s, R, 8.0, 10.0, 0.0);
             band(s, A, -10.0, 0.0, 0.0);
-            split(s, 200.0, 25.0, 30.0, 15.0);
+            split(s, 200.0, 30.0, 30.0, 18.0);
+            cross(s, [-7.0, -3.0, 6.0], [0.0, 2.0, 2.0], [11.0, 5.0, -4.0]);
             grain(s, 30.0, 40.0, 50.0);
         }
     ),
@@ -660,8 +695,8 @@ pub const PRESETS: &[Preset] = &[
             base(s, -4.0, 4.0, 8.0);
             tones(s, -12.0, 6.0, 0.0, 0.0);
             fade(s, 10.0, 246.0);
-            split(s, 185.0, 12.0, 38.0, 14.0);
             band(s, G, 10.0, -10.0, 0.0);
+            cross(s, [-3.0, 4.0, 8.0], [1.0, 3.0, 3.0], [5.0, -3.0, -9.0]);
             grain(s, 24.0, 32.0, 50.0);
         }
     ),
@@ -670,10 +705,10 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré de CineStill 50D : fin et lumineux, ciels cyan, peaux claires.",
         |s| {
-            base(s, 6.0, 6.0, 8.0);
-            band(s, B, -8.0, 8.0, 0.0);
+            base(s, 10.0, 6.0, 14.0);
+            band(s, B, -8.0, 14.0, 0.0);
             band(s, O, 0.0, -4.0, 6.0);
-            split(s, 190.0, 8.0, 40.0, 8.0);
+            cross(s, [-4.0, -2.0, 1.0], [0.0, 0.0, 0.0], [6.0, 6.0, 4.0]);
             grain(s, 8.0, 15.0, 35.0);
         }
     ),
@@ -682,10 +717,10 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré de Kodak Vision3 50D : négatif cinéma de jour, très fin, couleurs justes et douces.",
         |s| {
-            base(s, -6.0, -2.0, 4.0);
-            tones(s, -10.0, 4.0, 0.0, 0.0);
-            s_curve(s, 6.0, 4.0, 250.0);
-            split(s, 200.0, 6.0, 40.0, 8.0);
+            base(s, -16.0, -4.0, 4.0);
+            tones(s, -12.0, 6.0, 0.0, 0.0);
+            fade(s, 12.0, 250.0);
+            cross(s, [0.0, 1.0, 3.0], [4.0, 4.0, 3.0], [2.0, -1.0, -6.0]);
             grain(s, 6.0, 14.0, 30.0);
         }
     ),
@@ -697,7 +732,7 @@ pub const PRESETS: &[Preset] = &[
             base(s, -4.0, 0.0, 6.0);
             tones(s, -12.0, 6.0, 0.0, 0.0);
             s_curve(s, 8.0, 6.0, 248.0);
-            split(s, 195.0, 10.0, 38.0, 10.0);
+            cross(s, [0.0, 4.0, 6.0], [0.0, 2.0, 3.0], [3.0, -2.0, -7.0]);
             grain(s, 14.0, 22.0, 40.0);
         }
     ),
@@ -708,8 +743,8 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             base(s, 6.0, 0.0, 4.0);
             s_curve(s, 8.0, 6.0, 248.0);
-            split(s, 190.0, 18.0, 35.0, 14.0);
             band(s, O, 0.0, 6.0, 0.0);
+            cross(s, [-5.0, 0.0, 6.0], [0.0, 2.0, 2.0], [9.0, 3.0, -6.0]);
             grain(s, 16.0, 24.0, 40.0);
         }
     ),
@@ -718,10 +753,10 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré de Kodak Vision3 500T : le négatif des nuits de cinéma, noirs profonds, néons.",
         |s| {
-            base(s, 12.0, 4.0, 6.0);
-            tones(s, -14.0, 4.0, 0.0, -6.0);
-            s_curve(s, 6.0, 8.0, 248.0);
-            split(s, 205.0, 22.0, 30.0, 16.0);
+            base(s, 14.0, 4.0, 6.0);
+            tones(s, -14.0, 4.0, 0.0, -8.0);
+            s_curve(s, 4.0, 9.0, 248.0);
+            cross(s, [-7.0, -3.0, 3.0], [-1.0, 0.0, 0.0], [11.0, 7.0, 1.0]);
             mids(s, 30.0, 6.0);
             grain(s, 26.0, 34.0, 50.0);
         }
@@ -734,9 +769,9 @@ pub const PRESETS: &[Preset] = &[
             base(s, 22.0, 6.0, 0.0);
             tones(s, -10.0, 0.0, 0.0, -10.0);
             s_curve(s, 4.0, 10.0, 246.0);
-            split(s, 190.0, 18.0, 38.0, 16.0);
             band(s, O, 0.0, 8.0, 0.0);
             band(s, G, 15.0, -12.0, 0.0);
+            cross(s, [-5.0, 2.0, 7.0], [0.0, 2.0, 2.0], [5.0, -2.0, -9.0]);
             grain(s, 10.0, 20.0, 40.0);
         }
     ),
@@ -745,9 +780,9 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré du film de tirage Kodak 2393 : plus neutre et plus doux que le 2383.",
         |s| {
-            base(s, 14.0, 2.0, 0.0);
-            s_curve(s, 6.0, 7.0, 248.0);
-            split(s, 200.0, 10.0, 40.0, 10.0);
+            base(s, 10.0, -6.0, 0.0);
+            s_curve(s, 6.0, 6.0, 250.0);
+            cross(s, [-3.0, 1.0, 4.0], [1.0, 1.0, 1.0], [4.0, 0.0, -4.0]);
             grain(s, 8.0, 18.0, 35.0);
         }
     ),
@@ -758,9 +793,9 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             base(s, 18.0, 4.0, 0.0);
             s_curve(s, 4.0, 8.0, 248.0);
-            band(s, G, -6.0, 8.0, -6.0);
+            band(s, G, -6.0, 12.0, -6.0);
             band(s, O, -4.0, 0.0, 4.0);
-            split(s, 175.0, 14.0, 20.0, 8.0);
+            cross(s, [-5.0, 0.0, 4.0], [5.0, 2.0, -2.0], [5.0, 2.0, 1.0]);
             grain(s, 8.0, 18.0, 35.0);
         }
     ),
@@ -782,11 +817,11 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré de Fujifilm Eterna Vivid 500 : la variante vive d'Eterna, verts et bleus francs.",
         |s| {
-            base(s, -2.0, 4.0, 10.0);
+            base(s, 0.0, 10.0, 12.0);
             tones(s, -8.0, 8.0, 0.0, 0.0);
-            band(s, G, 0.0, 6.0, 0.0);
-            band(s, B, 0.0, 8.0, 0.0);
-            split(s, 190.0, 8.0, 45.0, 6.0);
+            band(s, G, 0.0, 12.0, 0.0);
+            band(s, B, 0.0, 12.0, 0.0);
+            cross(s, [-3.0, -1.0, 2.0], [3.0, 3.0, 2.0], [5.0, 4.0, 2.0]);
             grain(s, 20.0, 28.0, 45.0);
         }
     ),
@@ -859,10 +894,11 @@ pub const PRESETS: &[Preset] = &[
         "Le contraste de couleurs des grands films d'action : ombres sarcelle, peaux orangées.",
         |s| {
             base(s, 20.0, 0.0, 10.0);
-            split(s, 185.0, 35.0, 35.0, 25.0);
+            split(s, 185.0, 40.0, 35.0, 30.0);
             band(s, G, 30.0, -25.0, 0.0);
             band(s, B, -10.0, 10.0, 0.0);
             s.clarity = 10.0;
+            cross(s, [-8.0, 0.0, 8.0], [2.0, 2.0, 0.0], [10.0, 0.0, -10.0]);
             grain(s, 6.0, 15.0, 30.0);
         }
     ),
@@ -922,9 +958,9 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             base(s, 22.0, 10.0, 0.0);
             tones(s, -6.0, -6.0, 0.0, -10.0);
-            split(s, 30.0, 10.0, 45.0, 10.0);
             band(s, G, 10.0, -10.0, -6.0);
             s_curve(s, 4.0, 10.0, 246.0);
+            cross(s, [7.0, 4.0, 2.0], [2.0, 0.0, 0.0], [-7.0, -4.0, 0.0]);
             grain(s, 22.0, 30.0, 55.0);
         }
     ),
@@ -947,8 +983,8 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             base(s, 14.0, 2.0, 4.0);
             tones(s, -10.0, 0.0, 0.0, -8.0);
-            split(s, 195.0, 24.0, 35.0, 18.0);
             s_curve(s, 6.0, 8.0, 246.0);
+            cross(s, [-7.0, 2.0, 9.0], [2.0, 2.0, 0.0], [9.0, 0.0, -9.0]);
             grain(s, 32.0, 36.0, 55.0);
         }
     ),
@@ -957,9 +993,10 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré du Fujifilm Reala 500D : négatif de jour, couleurs fidèles, verts naturels.",
         |s| {
-            base(s, 2.0, 2.0, 6.0);
-            band(s, G, -4.0, 4.0, 0.0);
-            split(s, 185.0, 6.0, 45.0, 6.0);
+            base(s, -6.0, 2.0, 14.0);
+            tones(s, -12.0, 10.0, 0.0, 0.0);
+            band(s, G, -4.0, 10.0, 0.0);
+            cross(s, [-4.0, -4.0, -1.0], [5.0, 5.0, 3.0], [-1.0, 1.0, 0.0]);
             grain(s, 18.0, 26.0, 45.0);
         }
     ),
@@ -968,9 +1005,9 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré du Fujifilm F-125 : intérieurs tungstène doux, ombres vertes typiques de Fuji.",
         |s| {
-            base(s, 0.0, -4.0, 4.0);
-            split(s, 150.0, 14.0, 40.0, 10.0);
+            base(s, 0.0, -6.0, 4.0);
             fade(s, 8.0, 248.0);
+            cross(s, [-7.0, -2.0, 2.0], [9.0, 4.0, 0.0], [0.0, 0.0, -4.0]);
             grain(s, 14.0, 22.0, 40.0);
         }
     ),
@@ -979,9 +1016,9 @@ pub const PRESETS: &[Preset] = &[
         Cinema,
         "Inspiré de l'Agfa XT 320 : négatif cinéma européen, rouges chauds, contraste mesuré.",
         |s| {
-            base(s, 10.0, 4.0, 0.0);
-            band(s, R, 0.0, 10.0, 0.0);
-            split(s, 210.0, 10.0, 30.0, 12.0);
+            base(s, 10.0, -10.0, 0.0);
+            band(s, R, 0.0, 14.0, 0.0);
+            cross(s, [7.0, 7.0, 6.0], [-2.0, 0.0, 0.0], [-7.0, -6.0, -4.0]);
             grain(s, 22.0, 30.0, 50.0);
         }
     ),
@@ -1026,8 +1063,8 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             base(s, 6.0, 4.0, 12.0);
             tones(s, -15.0, 10.0, 0.0, 0.0);
-            split(s, 30.0, 10.0, 40.0, 22.0);
             fade(s, 8.0, 248.0);
+            cross(s, [4.0, 8.0, 10.0], [2.0, 4.0, 4.0], [-6.0, -9.0, -12.0]);
             grain(s, 10.0, 20.0, 40.0);
         }
     ),
@@ -1040,8 +1077,9 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 25.0, 0.0, 0.0);
             s.clarity = 10.0;
-            band(s, R, 0.0, 0.0, 5.0);
-            band(s, B, 0.0, 0.0, -10.0);
+            band(s, R, 0.0, 0.0, -16.0);
+            band(s, O, 0.0, 0.0, -8.0);
+            band(s, B, 0.0, 0.0, 20.0);
             s.tone_curve.point = vec![(0.0, 6.0), (64.0, 54.0), (128.0, 128.0), (192.0, 204.0), (255.0, 250.0)];
             grain(s, 35.0, 30.0, 60.0);
         }
@@ -1054,6 +1092,10 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 12.0, 0.0, 0.0);
             s.texture = 6.0;
+            band(s, R, 0.0, 0.0, 20.0);
+            band(s, O, 0.0, 0.0, 16.0);
+            band(s, B, 0.0, 0.0, -16.0);
+            s.tone_curve.point = vec![(0.0, 0.0), (64.0, 60.0), (128.0, 126.0), (192.0, 196.0), (255.0, 252.0)];
             grain(s, 16.0, 18.0, 35.0);
         }
     ),
@@ -1063,8 +1105,12 @@ pub const PRESETS: &[Preset] = &[
         "Inspiré d'Ilford HP5 Plus : gris doux et nuancés, grain souple.",
         |s| {
             mono(s);
-            base(s, 8.0, 0.0, 0.0);
-            fade(s, 10.0, 248.0);
+            base(s, 0.0, 0.0, 0.0);
+            tones(s, 0.0, 12.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, -12.0);
+            band(s, G, 0.0, 0.0, -12.0);
+            band(s, B, 0.0, 0.0, 16.0);
+            fade(s, 12.0, 248.0);
             grain(s, 30.0, 30.0, 45.0);
         }
     ),
@@ -1075,7 +1121,10 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             mono(s);
             base(s, 10.0, 0.0, 0.0);
-            tones(s, -8.0, 6.0, 0.0, 0.0);
+            tones(s, -8.0, 6.0, 12.0, 0.0);
+            band(s, R, 0.0, 0.0, -8.0);
+            band(s, B, 0.0, 0.0, 28.0);
+            band(s, A, 0.0, 0.0, 20.0);
             grain(s, 12.0, 16.0, 35.0);
         }
     ),
@@ -1087,6 +1136,10 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 6.0, 0.0, 0.0);
             s.texture = 8.0;
+            band(s, R, 0.0, 0.0, 8.0);
+            band(s, G, 0.0, 0.0, 12.0);
+            band(s, Y, 0.0, 0.0, 8.0);
+            s_curve(s, 0.0, 3.0, 255.0);
             grain(s, 8.0, 12.0, 30.0);
         }
     ),
@@ -1098,6 +1151,9 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 30.0, 0.0, 0.0);
             tones(s, 0.0, 0.0, 0.0, -15.0);
+            band(s, R, 0.0, 0.0, 28.0);
+            band(s, O, 0.0, 0.0, 20.0);
+            fade(s, 10.0, 245.0);
             grain(s, 60.0, 50.0, 70.0);
         }
     ),
@@ -1109,6 +1165,9 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 22.0, 0.0, 0.0);
             s_curve(s, 0.0, 8.0, 255.0);
+            band(s, R, 0.0, 0.0, -32.0);
+            band(s, O, 0.0, 0.0, -20.0);
+            band(s, B, 0.0, 0.0, 12.0);
             grain(s, 4.0, 10.0, 25.0);
         }
     ),
@@ -1119,10 +1178,10 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             mono(s);
             base(s, 12.0, 0.0, 0.0);
-            band(s, R, 0.0, 0.0, 12.0);
-            band(s, O, 0.0, 0.0, 10.0);
-            band(s, B, 0.0, 0.0, -25.0);
-            band(s, A, 0.0, 0.0, -15.0);
+            band(s, R, 0.0, 0.0, 24.0);
+            band(s, O, 0.0, 0.0, 16.0);
+            band(s, B, 0.0, 0.0, -40.0);
+            band(s, A, 0.0, 0.0, -25.0);
             grain(s, 10.0, 15.0, 35.0);
         }
     ),
@@ -1134,6 +1193,9 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 28.0, 0.0, 0.0);
             s.clarity = 12.0;
+            band(s, G, 0.0, 0.0, -16.0);
+            band(s, B, 0.0, 0.0, 20.0);
+            s.tone_curve.point = vec![(0.0, 0.0), (64.0, 56.0), (128.0, 132.0), (192.0, 202.0), (255.0, 250.0)];
             grain(s, 45.0, 35.0, 60.0);
         }
     ),
@@ -1145,6 +1207,9 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 18.0, 0.0, 0.0);
             tones(s, -10.0, 0.0, 0.0, -8.0);
+            band(s, R, 0.0, 0.0, 24.0);
+            band(s, O, 0.0, 0.0, 20.0);
+            band(s, G, 0.0, 0.0, -8.0);
             s_curve(s, 4.0, 8.0, 250.0);
             grain(s, 26.0, 28.0, 50.0);
         }
@@ -1157,7 +1222,10 @@ pub const PRESETS: &[Preset] = &[
             mono(s);
             base(s, 4.0, 0.0, 0.0);
             tones(s, 0.0, 15.0, 0.0, 0.0);
-            fade(s, 14.0, 246.0);
+            band(s, R, 0.0, 0.0, -32.0);
+            band(s, O, 0.0, 0.0, -16.0);
+            band(s, B, 0.0, 0.0, 32.0);
+            fade(s, 16.0, 244.0);
             grain(s, 38.0, 40.0, 75.0);
         }
     ),
@@ -1167,11 +1235,12 @@ pub const PRESETS: &[Preset] = &[
         "Inspiré du film infrarouge : feuillages blancs, ciels presque noirs, halo léger.",
         |s| {
             mono(s);
-            base(s, 25.0, 0.0, 0.0);
-            band(s, G, 0.0, 0.0, 70.0);
-            band(s, Y, 0.0, 0.0, 50.0);
-            band(s, B, 0.0, 0.0, -60.0);
-            band(s, A, 0.0, 0.0, -40.0);
+            base(s, 10.0, 0.0, 0.0);
+            tones(s, -20.0, 10.0, 0.0, 0.0);
+            band(s, G, 0.0, 0.0, 65.0);
+            band(s, Y, 0.0, 0.0, 45.0);
+            band(s, B, 0.0, 0.0, -55.0);
+            band(s, A, 0.0, 0.0, -35.0);
             grain(s, 25.0, 30.0, 55.0);
         }
     ),
@@ -1181,8 +1250,10 @@ pub const PRESETS: &[Preset] = &[
         "Inspiré d'Ilford XP2 Super : noir et blanc chromogène, sans grain visible, très doux.",
         |s| {
             mono(s);
-            base(s, -4.0, 0.0, 0.0);
-            tones(s, -10.0, 10.0, 0.0, 0.0);
+            base(s, -10.0, 0.0, 0.0);
+            tones(s, -14.0, 14.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, 4.0);
+            fade(s, 12.0, 246.0);
             grain(s, 4.0, 10.0, 25.0);
         }
     ),
@@ -1193,6 +1264,9 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             mono(s);
             base(s, 14.0, 0.0, 0.0);
+            tones(s, 0.0, 0.0, 10.0, 0.0);
+            band(s, R, 0.0, 0.0, -12.0);
+            band(s, B, 0.0, 0.0, 16.0);
             s_curve(s, 4.0, 6.0, 250.0);
             grain(s, 14.0, 18.0, 40.0);
         }
@@ -1204,7 +1278,10 @@ pub const PRESETS: &[Preset] = &[
         |s| {
             mono(s);
             base(s, 12.0, 0.0, 0.0);
-            band(s, B, 0.0, 0.0, -12.0);
+            band(s, R, 0.0, 0.0, 12.0);
+            band(s, B, 0.0, 0.0, -28.0);
+            band(s, A, 0.0, 0.0, -16.0);
+            s.tone_curve.point = vec![(0.0, 0.0), (64.0, 60.0), (128.0, 124.0), (192.0, 194.0), (255.0, 254.0)];
             grain(s, 14.0, 18.0, 40.0);
         }
     ),
@@ -1214,11 +1291,12 @@ pub const PRESETS: &[Preset] = &[
         "Inspiré de Rollei Retro 80S : sensible au rouge lointain, ciels noirs, peaux claires.",
         |s| {
             mono(s);
-            base(s, 22.0, 0.0, 0.0);
-            band(s, R, 0.0, 0.0, 25.0);
-            band(s, O, 0.0, 0.0, 20.0);
-            band(s, B, 0.0, 0.0, -45.0);
-            band(s, A, 0.0, 0.0, -30.0);
+            base(s, 18.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, 60.0);
+            band(s, O, 0.0, 0.0, 40.0);
+            band(s, Y, 0.0, 0.0, 10.0);
+            band(s, B, 0.0, 0.0, -80.0);
+            band(s, A, 0.0, 0.0, -55.0);
             grain(s, 16.0, 20.0, 45.0);
         }
     ),
@@ -1228,11 +1306,12 @@ pub const PRESETS: &[Preset] = &[
         "Inspiré d'Ilford Ortho Plus : aveugle au rouge, lèvres et peaux sombres, ciels blancs.",
         |s| {
             mono(s);
-            base(s, 18.0, 0.0, 0.0);
-            band(s, R, 0.0, 0.0, -45.0);
-            band(s, O, 0.0, 0.0, -30.0);
-            band(s, B, 0.0, 0.0, 30.0);
-            band(s, A, 0.0, 0.0, 20.0);
+            base(s, 14.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, -100.0);
+            band(s, O, 0.0, 0.0, -80.0);
+            band(s, Y, 0.0, 0.0, -30.0);
+            band(s, B, 0.0, 0.0, 60.0);
+            band(s, A, 0.0, 0.0, 40.0);
             grain(s, 12.0, 18.0, 40.0);
         }
     ),
@@ -1280,7 +1359,7 @@ pub const PRESETS: &[Preset] = &[
             base(s, 6.0, 4.0, 6.0);
             tones(s, -10.0, 10.0, 5.0, 0.0);
             fade(s, 14.0, 246.0);
-            split(s, 185.0, 10.0, 60.0, 5.0);
+            cross(s, [-5.0, -3.0, 0.0], [2.0, 2.0, 2.0], [7.0, 5.0, 3.0]);
         }
     ),
     preset!(
@@ -1387,9 +1466,9 @@ pub const PRESETS: &[Preset] = &[
         "Inspiré du Fujifilm FP-100C : instantané à décoller, cyan et vert, tons pastel.",
         |s| {
             base(s, -4.0, 4.0, 0.0);
-            split(s, 170.0, 14.0, 70.0, 8.0);
             band(s, G, 10.0, 10.0, 0.0);
-            fade(s, 22.0, 238.0);
+            fade(s, 24.0, 238.0);
+            cross(s, [-7.0, -5.0, -2.0], [5.0, 4.0, 2.0], [5.0, 3.0, 0.0]);
         }
     ),
     preset!(
@@ -1422,11 +1501,19 @@ pub const PRESETS: &[Preset] = &[
             base(s, 12.0, 0.0, 10.0);
             split(s, 190.0, 30.0, 35.0, 22.0);
             band(s, G, 25.0, -20.0, 0.0);
+            cross(s, [-4.0, 0.0, 4.0], [0.0, 0.0, 0.0], [6.0, 0.0, -6.0]);
         }
     ),
     preset!("Haute clé", Creative, "Clair, aérien, ombres ouvertes.", |s| {
         base(s, -20.0, -10.0, 0.0);
         tones(s, -10.0, 40.0, 15.0, 0.0);
+        s.tone_curve.point = vec![
+            (0.0, 10.0),
+            (64.0, 82.0),
+            (128.0, 150.0),
+            (192.0, 212.0),
+            (255.0, 255.0),
+        ];
     }),
     preset!(
         "Noir dramatique",
@@ -1437,8 +1524,8 @@ pub const PRESETS: &[Preset] = &[
             base(s, 40.0, 0.0, 0.0);
             s.clarity = 30.0;
             tones(s, 0.0, 0.0, 0.0, -20.0);
-            band(s, B, 0.0, 0.0, -40.0);
-            band(s, A, 0.0, 0.0, -30.0);
+            band(s, B, 0.0, 0.0, -80.0);
+            band(s, A, 0.0, 0.0, -60.0);
         }
     ),
 ];
