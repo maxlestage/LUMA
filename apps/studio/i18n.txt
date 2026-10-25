@@ -1,0 +1,2130 @@
+# Les traductions de LÜMA Studio : anglais et espagnol.
+#
+# Une entrée par paragraphe : le texte français tel qu'écrit dans le code (la clé), puis
+# l'anglais et l'espagnol. Les trous {nom} sont remplis par l'app après la traduction ;
+# un texte ambigu porte son contexte après « | » (il ne s'affiche pas). Vocabulaire :
+# celui de Lightroom en anglais et en espagnol. Vérifié par apps/studio/tests/i18n.rs.
+
+# ----- Les outils (le rail) -----
+
+fr = Bibliothèque
+en = Library
+es = Biblioteca
+
+fr = Lumière
+en = Light
+es = Luz
+
+fr = Couleur
+en = Color
+es = Color
+
+fr = Détail
+en = Detail
+es = Detalle
+
+fr = Masques
+en = Masks
+es = Máscaras
+
+fr = Films
+en = Films
+es = Películas
+
+fr = Géométrie
+en = Geometry
+es = Geometría
+
+fr = Fusion
+en = Merge
+es = Combinar
+
+fr = Trier, noter, choisir
+en = Sort, rate, pick
+es = Ordenar, valorar, elegir
+
+fr = Profil, balance, tonalité, courbe
+en = Profile, balance, tone, curve
+es = Perfil, balance, tono, curva
+
+fr = Mélangeur, étalonnage, calibration
+en = Mixer, grading, calibration
+es = Mezcla, gradación, calibración
+
+fr = Netteté, bruit, vignetage, grain
+en = Sharpening, noise, vignette, grain
+es = Nitidez, ruido, viñeta, grano
+
+fr = Retouches locales
+en = Local adjustments
+es = Ajustes locales
+
+fr = Pellicules et looks
+en = Film stocks and looks
+es = Películas y estilos
+
+fr = Recadrage, objectif, perspective
+en = Crop, lens, perspective
+es = Recorte, objetivo, perspectiva
+
+fr = Empilements et panoramas
+en = Stacks and panoramas
+es = Apilados y panorámicas
+
+fr = M, Maj+M, K
+en = M, Shift+M, K
+es = M, Mayús+M, K
+
+# ----- La barre du haut -----
+
+fr = Exporter
+en = Export
+es = Exportar
+
+fr = Ouvrir
+en = Open
+es = Abrir
+
+fr = Réinitialiser
+en = Reset
+es = Restablecer
+
+fr = Coller
+en = Paste
+es = Pegar
+
+fr = Copier
+en = Copy
+es = Copiar
+
+fr = Rétablir
+en = Redo
+es = Rehacer
+
+fr = Annuler
+en = Undo
+es = Deshacer
+
+fr = Maj+Cmd+E
+en = Shift+Cmd+E
+es = Mayús+Cmd+E
+
+fr = Maj+Cmd+R
+en = Shift+Cmd+R
+es = Mayús+Cmd+R
+
+fr = Maj+Cmd+V
+en = Shift+Cmd+V
+es = Mayús+Cmd+V
+
+fr = Maj+Cmd+C
+en = Shift+Cmd+C
+es = Mayús+Cmd+C
+
+fr = Maj+Cmd+Z
+en = Shift+Cmd+Z
+es = Mayús+Cmd+Z
+
+fr = Avant
+en = Before
+es = Antes
+
+fr = Après
+en = After
+es = Después
+
+fr = \ : avant / après
+en = \ : before / after
+es = \ : antes / después
+
+fr = Langue
+en = Language
+es = Idioma
+
+# ----- L'état, l'historique -----
+
+fr = Ouvrez un RAW ou un dossier (Cmd+O), ou déposez-le dans la fenêtre.
+en = Open a raw file or a folder (Cmd+O), or drop it onto the window.
+es = Abre un archivo RAW o una carpeta (Cmd+O), o arrástralo a la ventana.
+
+fr = Aucun RAW dans {dir}
+en = No raw files in {dir}
+es = No hay archivos RAW en {dir}
+
+fr = Ouverture de {file}…
+en = Opening {file}…
+es = Abriendo {file}…
+
+fr = Importation
+en = Import
+es = Importación
+
+fr = Réglages XMP
+en = XMP settings
+es = Ajustes XMP
+
+fr = Impossible d'ouvrir {file} : {error}
+en = Couldn't open {file}: {error}
+es = No se puede abrir {file}: {error}
+
+fr = Fusion enregistrée : {file}
+en = Merge saved: {file}
+es = Combinación guardada: {file}
+
+fr = Fusion impossible : {error}
+en = Merge failed: {error}
+es = No se pudo combinar: {error}
+
+fr = Pellicule mesurée : « {name} » (écart numérique → film {before}, avec le film {after})
+en = Film measured: “{name}” (digital → film difference {before}, with the film {after})
+es = Película medida: «{name}» (diferencia digital → película {before}, con la película {after})
+
+fr = Mesure impossible : {error}
+en = Measurement failed: {error}
+es = No se pudo medir: {error}
+
+fr = Exporté{count} : {path}
+en = Exported{count}: {path}
+es = Exportado{count}: {path}
+
+fr = Échec de l'export{count} : {error}
+en = Export failed{count}: {error}
+es = Error al exportar{count}: {error}
+
+fr = XMP non enregistré : {error}
+en = XMP not saved: {error}
+es = XMP no guardado: {error}
+
+fr = Réglages copiés.
+en = Settings copied.
+es = Ajustes copiados.
+
+fr = Coller les réglages
+en = Paste settings
+es = Pegar ajustes
+
+fr = Note retirée
+en = Rating removed
+es = Valoración eliminada
+
+fr = Note : {n} sur 5
+en = Rating: {n} of 5
+es = Valoración: {n} de 5
+
+fr = Recadrage
+en = Crop
+es = Recortar
+
+fr = Nouveau masque : {mask}
+en = New mask: {mask}
+es = Nueva máscara: {mask}
+
+fr = Masque supprimé
+en = Mask deleted
+es = Máscara eliminada
+
+fr = Masque : {mask}
+en = Mask: {mask}
+es = Máscara: {mask}
+
+fr = Masque inversé
+en = Mask inverted
+es = Máscara invertida
+
+fr = Masque {mask} : film {film}
+en = Mask {mask}: film {film}
+es = Máscara {mask}: película {film}
+
+fr = Masque {mask} : {film} à {n} %
+en = Mask {mask}: {film} at {n}%
+es = Máscara {mask}: {film} al {n} %
+
+fr = Masque {mask} : {setting} {value}
+en = Mask {mask}: {setting} {value}
+es = Máscara {mask}: {setting} {value}
+
+fr = Masque {mask} : contour progressif
+en = Mask {mask}: feather
+es = Máscara {mask}: desvanecer
+
+fr = Film : {name}
+en = Film: {name}
+es = Película: {name}
+
+fr = {name} à {n} %
+en = {name} at {n}%
+es = {name} al {n} %
+
+fr = Sans film
+en = No film
+es = Sin película
+
+fr = Pipette : {temperature} K, {tint}
+en = Eyedropper: {temperature} K, {tint}
+es = Pipeta: {temperature} K, {tint}
+
+fr = Profil : {name}
+en = Profile: {name}
+es = Perfil: {name}
+
+fr = Balance : telle quelle
+en = White balance: as shot
+es = Balance: como se tomó
+
+fr = Balance : auto
+en = White balance: auto
+es = Balance: automático
+
+fr = Balance : {name}
+en = White balance: {name}
+es = Balance: {name}
+
+fr = Balance : {temperature} K, {tint}
+en = White balance: {temperature} K, {tint}
+es = Balance: {temperature} K, {tint}
+
+fr = Étalonnage {zone} : {hue}°, {saturation}, {luminance}
+en = Grading {zone}: {hue}°, {saturation}, {luminance}
+es = Gradación {zone}: {hue}°, {saturation}, {luminance}
+
+fr = Aberration chromatique supprimée
+en = Chromatic aberration removed
+es = Aberración cromática eliminada
+
+fr = Aberration chromatique gardée
+en = Chromatic aberration kept
+es = Aberración cromática conservada
+
+fr = Recadrage réinitialisé
+en = Crop reset
+es = Recorte restablecido
+
+fr = Angle {value}
+en = Angle {value}
+es = Ángulo {value}
+
+fr = Historique
+en = History
+es = Historial
+
+fr = Export d'une photo…
+en = Exporting 1 photo…
+es = Exportando 1 foto…
+
+fr = Export de {n} photos…
+en = Exporting {n} photos…
+es = Exportando {n} fotos…
+
+# ----- La fenêtre Exporter -----
+
+fr = Photos
+en = Photos
+es = Fotos
+
+fr = Photo affichée
+en = Current photo
+es = Foto actual
+
+fr = Les {n} du filtre
+en = All {n} filtered
+es = Las {n} filtradas
+
+fr = Format
+en = Format
+es = Formato
+
+fr = Qualité
+en = Quality
+es = Calidad
+
+fr = Profondeur
+en = Bit depth
+es = Profundidad
+
+fr = Espace colorimétrique
+en = Color space
+es = Espacio de color
+
+fr = Dimensions
+en = Dimensions
+es = Dimensiones
+
+fr = Grand côté
+en = Long edge
+es = Lado largo
+
+fr = Grand côté en pixels
+en = Long edge in pixels
+es = Lado largo en píxeles
+
+fr = Dossier
+en = Folder
+es = Carpeta
+
+fr = LÜMA/, à côté du RAW
+en = LÜMA/, next to the raw file
+es = LÜMA/, junto al RAW
+
+fr = Choisir…
+en = Choose…
+es = Elegir…
+
+fr = Dossier d'export
+en = Export folder
+es = Carpeta de exportación
+
+fr = À côté du RAW
+en = Next to the raw file
+es = Junto al RAW
+
+# ----- LÜMA Premium -----
+
+fr = Merci ! Votre abonnement {plan} est actif{email}.
+en = Thank you! Your {plan} subscription is active{email}.
+es = ¡Gracias! Tu suscripción {plan} está activa{email}.
+
+fr = Merci ! Votre abonnement est actif{email}.
+en = Thank you! Your subscription is active{email}.
+es = ¡Gracias! Tu suscripción está activa{email}.
+
+fr = Il vous reste 1 jour d'essai gratuit.
+en = You have 1 day of free trial left.
+es = Te queda 1 día de prueba gratuita.
+
+fr = Il vous reste {n} jours d'essai gratuit.
+en = You have {n} days of free trial left.
+es = Te quedan {n} días de prueba gratuita.
+
+fr = Votre essai est terminé : abonnez-vous pour continuer à développer vos photos.
+en = Your trial has ended: subscribe to keep developing your photos.
+es = Tu prueba ha terminado: suscríbete para seguir revelando tus fotos.
+
+fr = Fermer
+en = Close
+es = Cerrar
+
+fr = Le plus avantageux
+en = Best value
+es = La mejor opción
+
+fr = S'abonner
+en = Subscribe
+es = Suscribirse
+
+fr = Bientôt disponible
+en = Coming soon
+es = Próximamente
+
+fr = Le paiement en ligne ouvre bientôt.
+en = Online payment opens soon.
+es = El pago en línea estará disponible pronto.
+
+fr = La page de paiement s'est ouverte : après le paiement, votre clé s'affiche sur le site.
+en = The payment page has opened: after payment, your key is shown on the website.
+es = Se ha abierto la página de pago: después del pago, tu clave aparecerá en el sitio web.
+
+fr = Lien de paiement copié : ouvrez-le dans Safari.
+en = Payment link copied: open it in Safari.
+es = Enlace de pago copiado: ábrelo en Safari.
+
+fr = Gérer mon abonnement
+en = Manage my subscription
+es = Gestionar mi suscripción
+
+fr = Retirer de cet appareil
+en = Remove from this device
+es = Quitar de este dispositivo
+
+fr = La clé reste valable sur vos autres appareils
+en = The key stays valid on your other devices
+es = La clave sigue siendo válida en tus otros dispositivos
+
+fr = Déjà abonné ? Votre clé de licence s'affiche sur le site après le paiement (gardez ce lien).
+en = Already subscribed? Your license key is shown on the website after payment (keep that link).
+es = ¿Ya tienes una suscripción? Tu clave de licencia aparece en el sitio web después del pago (guarda ese enlace).
+
+fr = Clé de licence
+en = License key
+es = Clave de licencia
+
+fr = Activer
+en = Activate
+es = Activar
+
+fr = Bienvenue dans LÜMA Premium.
+en = Welcome to LÜMA Premium.
+es = Te damos la bienvenida a LÜMA Premium.
+
+fr = Bienvenue dans LÜMA Premium, {email}.
+en = Welcome to LÜMA Premium, {email}.
+es = Te damos la bienvenida a LÜMA Premium, {email}.
+
+fr = Clé retirée de cet appareil.
+en = Key removed from this device.
+es = Clave quitada de este dispositivo.
+
+fr = Essai · {n} j
+en = Trial · {n} d
+es = Prueba · {n} d
+
+fr = Essai terminé
+en = Trial ended
+es = Prueba terminada
+
+fr = Le développement RAW complet, sur le GPU
+en = Full raw development, on the GPU
+es = Revelado RAW completo, en la GPU
+
+fr = 100 films, vos préréglages, et vos pellicules mesurées
+en = 100 films, your presets, and your measured film stocks
+es = 100 películas, tus ajustes preestablecidos y tus películas medidas
+
+fr = Masques, films empilés, recadrage et géométrie
+en = Masks, stacked films, crop and geometry
+es = Máscaras, películas apiladas, recorte y geometría
+
+fr = Empilements, ciel étoilé, panoramas en DNG
+en = Stacks, starry skies, panoramas as DNG
+es = Apilados, cielos estrellados, panorámicas en DNG
+
+fr = Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto
+en = JPEG, PNG and 16-bit TIFF export, in P3 and ProPhoto
+es = Exportación JPEG, PNG y TIFF de 16 bits, en P3 y ProPhoto
+
+fr = Mac, iPhone et iPad, et toutes les mises à jour
+en = Mac, iPhone and iPad, and every update
+es = Mac, iPhone y iPad, y todas las actualizaciones
+
+fr = Mensuel
+en = Monthly
+es = Mensual
+
+fr = Annuel
+en = Annual
+es = Anual
+
+fr = 9,99 €
+en = €9.99
+es = 9,99 €
+
+fr = 79,99 €
+en = €79.99
+es = 79,99 €
+
+fr = par mois
+en = per month
+es = al mes
+
+fr = par an
+en = per year
+es = al año
+
+fr = Sans engagement, résiliable à tout moment.
+en = No commitment, cancel anytime.
+es = Sin permanencia, cancela cuando quieras.
+
+fr = Deux mois offerts : 6,67 € par mois.
+en = Two months free: €6.67 per month.
+es = Dos meses gratis: 6,67 € al mes.
+
+# Les refus de clé (luma-licence) et du serveur des clés (site).
+
+fr = impossible de joindre le serveur de licences ({detail})
+en = can't reach the license server ({detail})
+es = no se puede conectar con el servidor de licencias ({detail})
+
+fr = pas de vérification en ligne sur iPhone et iPad
+en = no online check on iPhone and iPad
+es = sin verificación en línea en iPhone y iPad
+
+fr = réponse illisible
+en = unreadable response
+es = respuesta ilegible
+
+fr = cette version de LÜMA ne vérifie pas encore les clés
+en = this version of LÜMA doesn't check keys yet
+es = esta versión de LÜMA aún no verifica claves
+
+fr = cette clé a expiré : l'app en demande une neuve en ligne
+en = this key has expired: the app requests a new one online
+es = esta clave ha caducado: la app pide una nueva en línea
+
+fr = aucune clé
+en = no key
+es = ninguna clave
+
+fr = abonnement inactif
+en = inactive subscription
+es = suscripción inactiva
+
+fr = ce n'est pas une clé LÜMA
+en = this is not a LÜMA key
+es = no es una clave de LÜMA
+
+fr = clé incomplète
+en = incomplete key
+es = clave incompleta
+
+fr = clé illisible
+en = unreadable key
+es = clave ilegible
+
+fr = signature illisible
+en = unreadable signature
+es = firma ilegible
+
+fr = clé publique invalide
+en = invalid public key
+es = clave pública no válida
+
+fr = clé non reconnue (signature fausse)
+en = key not recognized (bad signature)
+es = clave no reconocida (firma incorrecta)
+
+fr = l'abonnement n'est plus actif
+en = the subscription is no longer active
+es = la suscripción ya no está activa
+
+fr = serveur de licences non configuré
+en = license server not configured
+es = servidor de licencias no configurado
+
+fr = clé sans abonnement
+en = key without a subscription
+es = clave sin suscripción
+
+# ----- Développement : les panneaux -----
+
+fr = Histogramme
+en = Histogram
+es = Histograma
+
+fr = Clic ou J : afficher l'écrêtage
+en = Click or J: show clipping
+es = Clic o J: mostrar recorte
+
+fr = Base
+en = Basic
+es = Básicos
+
+fr = Profil
+en = Profile
+es = Perfil
+
+fr = Neutre
+en = Neutral
+es = Neutro
+
+fr = Vif
+en = Vivid
+es = Intenso
+
+fr = Monochrome
+en = Monochrome
+es = Monocromo
+
+fr = Balance des blancs
+en = White balance
+es = Balance de blancos
+
+fr = Telle quelle
+en = As Shot
+es = Como se tomó
+
+fr = Auto
+en = Auto
+es = Automático
+
+fr = Personnalisée
+en = Custom
+es = Personalizado
+
+fr = Lumière du jour
+en = Daylight
+es = Luz de día
+
+fr = Nuageux
+en = Cloudy
+es = Nublado
+
+fr = Ombre
+en = Shade
+es = Sombra
+
+fr = Tungstène
+en = Tungsten
+es = Tungsteno
+
+fr = Fluorescent
+en = Fluorescent
+es = Fluorescente
+
+fr = Flash
+en = Flash
+es = Flash
+
+fr = Pipette
+en = Eyedropper
+es = Pipeta
+
+fr = W : cliquez un gris de la photo
+en = W: click a gray in the photo
+es = W: haz clic en un gris de la foto
+
+fr = Temp.
+en = Temp.
+es = Temp.
+
+fr = Teinte
+en = Tint
+es = Matiz
+
+fr = Tonalité
+en = Tone
+es = Tono
+
+fr = Présence
+en = Presence
+es = Presencia
+
+fr = Exposition
+en = Exposure
+es = Exposición
+
+fr = Contraste
+en = Contrast
+es = Contraste
+
+fr = Hautes lumières
+en = Highlights
+es = Altas luces
+
+fr = Ombres
+en = Shadows
+es = Sombras
+
+fr = Blancs
+en = Whites
+es = Blancos
+
+fr = Noirs
+en = Blacks
+es = Negros
+
+fr = Texture
+en = Texture
+es = Textura
+
+fr = Clarté
+en = Clarity
+es = Claridad
+
+fr = Correction du voile
+en = Dehaze
+es = Neblina
+
+fr = Vibrance
+en = Vibrance
+es = Intensidad
+
+fr = Saturation
+en = Saturation
+es = Saturación
+
+fr = Courbe des tonalités
+en = Tone Curve
+es = Curva de tonos
+
+fr = Tons clairs
+en = Lights
+es = Claros
+
+fr = Tons foncés
+en = Darks
+es = Oscuros
+
+fr = Séparation ombres
+en = Shadows split
+es = División sombras
+
+fr = Séparation tons moyens
+en = Midtones split
+es = División medios
+
+fr = Séparation hautes lum.
+en = Highlights split
+es = División altas luces
+
+fr = Mélangeur de couleurs
+en = Color Mixer
+es = Mezcla de colores
+
+fr = Teinte|mélangeur
+en = Hue
+es = Tono
+
+fr = Luminance
+en = Luminance
+es = Luminancia
+
+fr = Rouge
+en = Red
+es = Rojo
+
+fr = Orange
+en = Orange
+es = Naranja
+
+fr = Jaune
+en = Yellow
+es = Amarillo
+
+fr = Vert
+en = Green
+es = Verde
+
+fr = Bleu-vert
+en = Aqua
+es = Aguamarina
+
+fr = Bleu
+en = Blue
+es = Azul
+
+fr = Violet
+en = Purple
+es = Morado
+
+fr = Magenta
+en = Magenta
+es = Magenta
+
+fr = Étalonnage des couleurs
+en = Color Grading
+es = Gradación de color
+
+fr = Tons moyens
+en = Midtones
+es = Medios tonos
+
+fr = Hautes lum.
+en = Highlights
+es = Altas luces
+
+fr = Global
+en = Global
+es = Global
+
+fr = Fusion|étalonnage
+en = Blending
+es = Fusión
+
+fr = Balance
+en = Balance
+es = Equilibrio
+
+fr = {zone} : teinte {hue}°, saturation {saturation}
+en = {zone}: hue {hue}°, saturation {saturation}
+es = {zone}: tono {hue}°, saturación {saturation}
+
+fr = Accentuation
+en = Sharpening
+es = Enfoque
+
+fr = Gain
+en = Amount
+es = Cantidad
+
+fr = Rayon
+en = Radius
+es = Radio
+
+fr = Masquage
+en = Masking
+es = Máscara
+
+fr = Réduction du bruit
+en = Noise Reduction
+es = Reducción de ruido
+
+fr = Détail lum.
+en = Lum. detail
+es = Detalle lum.
+
+fr = Contraste lum.
+en = Lum. contrast
+es = Contraste lum.
+
+fr = Détail coul.
+en = Color detail
+es = Detalle color
+
+fr = Lissage
+en = Smoothness
+es = Suavizado
+
+fr = Corrections de l'objectif
+en = Lens Corrections
+es = Correcciones de lente
+
+fr = Supprimer l'aberration chromatique
+en = Remove chromatic aberration
+es = Quitar aberración cromática
+
+fr = Distorsion
+en = Distortion
+es = Distorsión
+
+fr = Vignetage
+en = Vignetting
+es = Viñeteado
+
+fr = Milieu
+en = Midpoint
+es = Punto medio
+
+fr = Défrangeage violet
+en = Purple defringe
+es = Desflecar morado
+
+fr = Défrangeage vert
+en = Green defringe
+es = Desflecar verde
+
+fr = Transformation
+en = Transform
+es = Transformar
+
+fr = Verticale
+en = Vertical
+es = Vertical
+
+fr = Horizontale
+en = Horizontal
+es = Horizontal
+
+fr = Rotation
+en = Rotate
+es = Rotar
+
+fr = Proportions
+en = Aspect
+es = Aspecto
+
+fr = Échelle
+en = Scale
+es = Escala
+
+fr = Effets
+en = Effects
+es = Efectos
+
+fr = Vignetage après recadrage
+en = Post-Crop Vignetting
+es = Viñeta tras recorte
+
+fr = Arrondi
+en = Roundness
+es = Redondez
+
+fr = Contour progressif
+en = Feather
+es = Desvanecer
+
+fr = Grain
+en = Grain
+es = Grano
+
+fr = Taille
+en = Size
+es = Tamaño
+
+fr = Rugosité
+en = Roughness
+es = Aspereza
+
+fr = Étalonnage de l'appareil photo
+en = Calibration
+es = Calibración
+
+fr = Teinte des ombres
+en = Shadows tint
+es = Matiz de sombras
+
+fr = Rouge, teinte
+en = Red hue
+es = Rojo, tono
+
+fr = Rouge, saturation
+en = Red saturation
+es = Rojo, saturación
+
+fr = Vert, teinte
+en = Green hue
+es = Verde, tono
+
+fr = Vert, saturation
+en = Green saturation
+es = Verde, saturación
+
+fr = Bleu, teinte
+en = Blue hue
+es = Azul, tono
+
+fr = Bleu, saturation
+en = Blue saturation
+es = Azul, saturación
+
+fr = Terminer (R)
+en = Done (R)
+es = Listo (R)
+
+fr = Outil Recadrage (R)
+en = Crop tool (R)
+es = Herramienta Recortar (R)
+
+fr = Libre
+en = Free
+es = Libre
+
+fr = Original
+en = Original
+es = Original
+
+fr = Angle
+en = Angle
+es = Ángulo
+
+# ----- La photo -----
+
+fr = Clic ou Z : zoom 1:1
+en = Click or Z: 1:1 zoom
+es = Clic o Z: zoom 1:1
+
+fr = Rendu…
+en = Rendering…
+es = Procesando…
+
+fr = Écrêtage (J)
+en = Clipping (J)
+es = Recorte (J)
+
+fr = Pipette : cliquez un gris ou un blanc de la photo
+en = Eyedropper: click a gray or a white in the photo
+es = Pipeta: haz clic en un gris o un blanco de la foto
+
+fr = Recadrage : Entrée pour valider, Échap pour annuler
+en = Crop: Enter to apply, Esc to cancel
+es = Recortar: Intro para aplicar, Esc para cancelar
+
+fr = Pinceau : peindre en glissant, Option pour gommer, O pour voir le masque
+en = Brush: drag to paint, Option to erase, O to show the mask
+es = Pincel: arrastra para pintar, Opción para borrar, O para ver la máscara
+
+fr = Masque : tirer les poignées, O pour voir le masque, Échap pour quitter
+en = Mask: drag the handles, O to show the mask, Esc to exit
+es = Máscara: arrastra los tiradores, O para ver la máscara, Esc para salir
+
+fr = Avant : sans retouche
+en = Before: unedited
+es = Antes: sin editar
+
+fr = Modifiée
+en = Edited
+es = Editada
+
+fr = {name} · {n} %
+en = {name} · {n}%
+es = {name} · {n} %
+
+fr = 1 masque
+en = 1 mask
+es = 1 máscara
+
+fr = {n} masques
+en = {n} masks
+es = {n} máscaras
+
+fr = ({n} avec film)
+en = ({n} with film)
+es = ({n} con película)
+
+# ----- Masques -----
+
+fr = Radial
+en = Radial
+es = Radial
+
+fr = Maj+M : un cercle, plein effet au centre
+en = Shift+M: a circle, full effect in the center
+es = Mayús+M: un círculo, efecto completo en el centro
+
+fr = Linéaire
+en = Linear
+es = Lineal
+
+fr = M : trois traits, plein effet, milieu, plus d'effet
+en = M: three lines: full effect, middle, no effect
+es = M: tres líneas: efecto completo, centro, sin efecto
+
+fr = Pinceau
+en = Brush
+es = Pincel
+
+fr = K : peindre, Option pour gommer
+en = K: paint, Option to erase
+es = K: pintar, Opción para borrar
+
+fr = Image entière
+en = Whole image
+es = Imagen completa
+
+fr = Image entière|bouton
+en = Whole image
+es = Completa
+
+fr = Toute l'image : pour empiler un film de plus
+en = The whole image: to stack one more film
+es = Toda la imagen: para apilar una película más
+
+fr = Dégradé linéaire
+en = Linear gradient
+es = Degradado lineal
+
+fr = Dégradé radial
+en = Radial gradient
+es = Degradado radial
+
+fr = Choisissez un masque pour le régler.
+en = Choose a mask to adjust it.
+es = Elige una máscara para ajustarla.
+
+fr = Inverser
+en = Invert
+es = Invertir
+
+fr = Voir (O)
+en = Show (O)
+es = Ver (O)
+
+fr = Supprimer
+en = Delete
+es = Eliminar
+
+fr = Film du masque
+en = Mask film
+es = Película de la máscara
+
+fr = Aucun
+en = None
+es = Ninguna
+
+fr = aucun
+en = none
+es = ninguna
+
+fr = Intensité du film
+en = Film amount
+es = Cantidad de película
+
+fr = Réglages du masque
+en = Mask settings
+es = Ajustes de máscara
+
+fr = Intensité
+en = Amount
+es = Cantidad
+
+fr = Température
+en = Temperature
+es = Temperatura
+
+fr = Débit
+en = Flow
+es = Flujo
+
+# ----- Bibliothèque -----
+
+fr = Aucun (Cmd+O)
+en = None (Cmd+O)
+es = Ninguna (Cmd+O)
+
+fr = {n} photos, {shown} affichées
+en = {n} photos, {shown} shown
+es = {n} fotos, {shown} visibles
+
+fr = Filtre
+en = Filter
+es = Filtro
+
+fr = Note minimale
+en = Minimum rating
+es = Valoración mínima
+
+fr = Drapeau
+en = Flag
+es = Marca
+
+fr = Toutes
+en = All
+es = Todas
+
+fr = Retenues (P)
+en = Picks (P)
+es = Seleccionadas (P)
+
+fr = Sans les rejetées (X)
+en = Hide rejects (X)
+es = Sin rechazadas (X)
+
+fr = Raccourcis
+en = Shortcuts
+es = Atajos
+
+fr = 0 à 5 : note
+en = 0 to 5: rating
+es = 0 a 5: valoración
+
+fr = P, X, U : retenir, rejeter, sans drapeau
+en = P, X, U: pick, reject, unflag
+es = P, X, U: seleccionar, rechazar, sin marca
+
+fr = Flèches gauche et droite : photo voisine
+en = Left and right arrows: next photo
+es = Flechas izquierda y derecha: foto contigua
+
+fr = D ou double-clic : Développement
+en = D or double-click: Develop
+es = D o doble clic: Revelar
+
+fr = Métadonnées
+en = Metadata
+es = Metadatos
+
+fr = Retenue
+en = Pick
+es = Seleccionada
+
+fr = Sans drapeau
+en = Unflagged
+es = Sin marca
+
+fr = Rejetée
+en = Rejected
+es = Rechazada
+
+fr = Appareil
+en = Camera
+es = Cámara
+
+fr = Focale
+en = Focal length
+es = Distancia focal
+
+fr = Ouverture
+en = Aperture
+es = Apertura
+
+fr = Vitesse
+en = Shutter speed
+es = Velocidad
+
+fr = Aucune photo ne passe le filtre.
+en = No photos match the filter.
+es = Ninguna foto coincide con el filtro.
+
+fr = Note (0 à 5)
+en = Rating (0 to 5)
+es = Valoración (0 a 5)
+
+fr = Note
+en = Rating
+es = Valoración
+
+# ----- Films -----
+
+fr = Ouvrez une photo pour essayer les films.
+en = Open a photo to try the films.
+es = Abre una foto para probar las películas.
+
+fr = Retirer le film
+en = Remove film
+es = Quitar película
+
+fr = Mes pellicules
+en = My film stocks
+es = Mis películas
+
+fr = Mes préréglages
+en = My presets
+es = Mis ajustes preestablecidos
+
+fr = Pellicules couleur
+en = Color film
+es = Película en color
+
+fr = Cinéma
+en = Cinema
+es = Cine
+
+fr = Pellicules noir et blanc
+en = Black & white film
+es = Película en blanco y negro
+
+fr = Instantanés et vintage
+en = Instant and vintage
+es = Instantáneas y vintage
+
+fr = Créatifs
+en = Creative
+es = Creativos
+
+fr = Pellicule mesurée ou LUT 3D importée (.cube).
+en = Measured film stock or imported 3D LUT (.cube).
+es = Película medida o LUT 3D importada (.cube).
+
+fr = Mon préréglage.
+en = My preset.
+es = Mi ajuste preestablecido.
+
+fr = Clic droit : exporter.
+en = Right-click: export.
+es = Clic derecho: exportar.
+
+fr = Exporter ce préréglage…
+en = Export this preset…
+es = Exportar este ajuste preestablecido…
+
+fr = Préréglage exporté : {path}
+en = Preset exported: {path}
+es = Ajuste preestablecido exportado: {path}
+
+fr = Export impossible : {error}
+en = Export failed: {error}
+es = No se pudo exportar: {error}
+
+fr = Au format de Lightroom (.xmp) : clic droit sur un film pour l'exporter seul, ou tous d'un coup, rangés par famille.
+en = In Lightroom format (.xmp): right-click a film to export it alone, or export them all at once, sorted by family.
+es = En formato de Lightroom (.xmp): clic derecho en una película para exportarla sola, o todas a la vez, ordenadas por familia.
+
+fr = Nom du préréglage
+en = Preset name
+es = Nombre del ajuste
+
+fr = Enregistrer
+en = Save
+es = Guardar
+
+fr = Le look des réglages actuels (sans l'exposition, la balance ni le recadrage)
+en = The look of the current settings (without exposure, white balance or crop)
+es = El estilo de los ajustes actuales (sin exposición, balance de blancos ni recorte)
+
+fr = Préréglage enregistré : « {name} »
+en = Preset saved: “{name}”
+es = Ajuste preestablecido guardado: «{name}»
+
+fr = Préréglage non enregistré : {error}
+en = Preset not saved: {error}
+es = Ajuste preestablecido no guardado: {error}
+
+fr = Exporter tous les préréglages…
+en = Export all presets…
+es = Exportar todos los ajustes…
+
+fr = {n} préréglages exportés dans {path}
+en = {n} presets exported to {path}
+es = {n} ajustes preestablecidos exportados en {path}
+
+fr = Importer…
+en = Import…
+es = Importar…
+
+fr = Des préréglages .xmp de Lightroom, Camera Raw ou LÜMA
+en = .xmp presets from Lightroom, Camera Raw or LÜMA
+es = Ajustes preestablecidos .xmp de Lightroom, Camera Raw o LÜMA
+
+fr = Actualiser
+en = Refresh
+es = Actualizar
+
+fr = {n} préréglage(s) importé(s)
+en = {n} preset(s) imported
+es = {n} ajuste(s) preestablecido(s) importado(s)
+
+fr = Le rendu exact d'une vraie pellicule : photographiez la même scène en numérique (cette photo) et sur film, puis choisissez le scan. LÜMA aligne les deux images et mesure le film, couleur par couleur.
+en = The exact rendering of a real film stock: shoot the same scene digitally (this photo) and on film, then choose the scan. LÜMA aligns the two images and measures the film, color by color.
+es = El aspecto exacto de una película real: fotografía la misma escena en digital (esta foto) y en película, y elige el escaneo. LÜMA alinea las dos imágenes y mide la película, color a color.
+
+fr = Mesurer une pellicule…
+en = Measure a film stock…
+es = Medir una película…
+
+fr = Mesure de la pellicule : {file}…
+en = Measuring the film: {file}…
+es = Midiendo la película: {file}…
+
+fr = Importer une LUT…
+en = Import a LUT…
+es = Importar una LUT…
+
+fr = Alignement et mesure…
+en = Aligning and measuring…
+es = Alineando y midiendo…
+
+fr = Déposez vos LUT .cube dans LÜMA › Films (app Fichiers).
+en = Put your .cube LUTs in LÜMA › Films (Files app).
+es = Coloca tus LUT .cube en LÜMA › Films (app Archivos).
+
+fr = pas de dossier Films
+en = no Films folder
+es = no hay carpeta Films
+
+fr = pas de dossier Préréglages
+en = no Presets folder
+es = no hay carpeta de ajustes preestablecidos
+
+fr = nom de fichier
+en = file name
+es = nombre de archivo
+
+fr = LUT importée : « {name} »
+en = LUT imported: “{name}”
+es = LUT importada: «{name}»
+
+fr = LUT illisible : {error}
+en = Unreadable LUT: {error}
+es = LUT ilegible: {error}
+
+fr = Préréglages LÜMA
+en = LÜMA Presets
+es = Ajustes preestablecidos LÜMA
+
+fr = LUT
+en = LUT
+es = LUT
+
+# ----- Fusion -----
+
+fr = Choisissez les photos dans le film : Cmd-clic pour en ajouter une, Maj-clic pour une suite.
+en = Choose the photos in the filmstrip: Cmd-click to add one, Shift-click for a range.
+es = Elige las fotos en la tira: Cmd-clic para añadir una, Mayús-clic para un rango.
+
+fr = Une photo choisie : ajoutez-en d'autres (Cmd-clic, Maj-clic).
+en = One photo chosen: add more (Cmd-click, Shift-click).
+es = Una foto elegida: añade más (Cmd-clic, Mayús-clic).
+
+fr = {n} photos choisies.
+en = {n} photos chosen.
+es = {n} fotos elegidas.
+
+fr = Tout le dossier
+en = Whole folder
+es = Toda la carpeta
+
+fr = Vider
+en = Clear
+es = Vaciar
+
+fr = Empilement
+en = Stack
+es = Apilado
+
+fr = Panorama
+en = Panorama
+es = Panorámica
+
+fr = Moyenne
+en = Mean
+es = Media
+
+fr = Médiane
+en = Median
+es = Mediana
+
+fr = Maximum
+en = Maximum
+es = Máximo
+
+fr = Étoiles
+en = Stars
+es = Estrellas
+
+fr = Moins de bruit, poses longues simulées
+en = Less noise, simulated long exposures
+es = Menos ruido, exposiciones largas simuladas
+
+fr = Ce qui bouge disparaît (passants, voitures)
+en = Moving things vanish (passers-by, cars)
+es = Lo que se mueve desaparece (peatones, coches)
+
+fr = Filé d'étoiles, traînées de phares, éclairs
+en = Star trails, light trails, lightning
+es = Trazos de estrellas, estelas de faros, rayos
+
+fr = Suit le ciel qui tourne, rejette satellites et avions
+en = Follows the turning sky, rejects satellites and planes
+es = Sigue la rotación del cielo, descarta satélites y aviones
+
+fr = Aligner les poses (à main levée)
+en = Align the frames (handheld)
+es = Alinear las tomas (a pulso)
+
+fr = Perspective
+en = Perspective
+es = Perspectiva
+
+fr = Cylindrique
+en = Cylindrical
+es = Cilíndrica
+
+fr = Sphérique
+en = Spherical
+es = Esférica
+
+fr = Les droites restent droites (architecture) ; jusqu'à 120° environ.
+en = Straight lines stay straight (architecture); up to about 120°.
+es = Las rectas siguen rectas (arquitectura); hasta unos 120°.
+
+fr = Les verticales restent droites : le choix des panoramas horizontaux.
+en = Verticals stay straight: the choice for horizontal panoramas.
+es = Las verticales siguen rectas: la opción para panorámicas horizontales.
+
+fr = Pour les très grands angles et les panoramas sur plusieurs rangées.
+en = For very wide angles and multi-row panoramas.
+es = Para ángulos muy amplios y panorámicas de varias filas.
+
+fr = Rogner automatiquement
+en = Auto crop
+es = Recortar automáticamente
+
+fr = Le rognage est un recadrage ordinaire : on peut le modifier ou le retirer ensuite (Géométrie).
+en = The auto crop is an ordinary crop: you can change or remove it later (Geometry).
+es = El recorte automático es un recorte normal: puedes cambiarlo o quitarlo después (Geometría).
+
+fr = Pleine définition (sinon 2048 px, plus rapide)
+en = Full resolution (otherwise 2048 px, faster)
+es = Resolución completa (si no, 2048 px, más rápido)
+
+fr = Annuler la fusion
+en = Cancel merge
+es = Cancelar combinación
+
+fr = Fusionner {n} photos
+en = Merge {n} photos
+es = Combinar {n} fotos
+
+fr = Préparation
+en = Preparing
+es = Preparando
+
+fr = Lecture des photos
+en = Reading photos
+es = Leyendo fotos
+
+fr = Recherche des recouvrements
+en = Finding overlaps
+es = Buscando solapamientos
+
+fr = Assemblage
+en = Stitching
+es = Uniendo
+
+fr = Terminé
+en = Done
+es = Listo
+
+fr = Analyse des poses
+en = Analyzing frames
+es = Analizando tomas
+
+fr = Alignement sur les étoiles
+en = Aligning on the stars
+es = Alineando con las estrellas
+
+fr = Alignement
+en = Aligning
+es = Alineando
+
+fr = Alignement des poses
+en = Aligning frames
+es = Alineando tomas
+
+fr = Statistiques du ciel
+en = Sky statistics
+es = Estadísticas del cielo
+
+fr = Empilement des étoiles
+en = Stacking the stars
+es = Apilando las estrellas
+
+# ----- Les fenêtres du système -----
+
+fr = Ouvrir un RAW
+en = Open a raw file
+es = Abrir un archivo RAW
+
+fr = Importer une LUT 3D
+en = Import a 3D LUT
+es = Importar una LUT 3D
+
+fr = LUT 3D
+en = 3D LUT
+es = LUT 3D
+
+fr = Le scan de la même scène sur pellicule
+en = The scan of the same scene on film
+es = El escaneo de la misma escena en película
+
+fr = Scan
+en = Scan
+es = Escaneo
+
+fr = Exporter le préréglage
+en = Export preset
+es = Exportar ajuste preestablecido
+
+fr = Préréglage Lightroom
+en = Lightroom preset
+es = Ajuste preestablecido de Lightroom
+
+fr = Exporter les préréglages dans…
+en = Export presets to…
+es = Exportar ajustes preestablecidos en…
+
+fr = Importer des préréglages
+en = Import presets
+es = Importar ajustes preestablecidos
+
+fr = Préréglages
+en = Presets
+es = Ajustes preestablecidos
+
+# ----- Les films intégrés (luma-project) : noms en français, et descriptions -----
+
+fr = Technicolor 2 bandes
+en = Two-Strip Technicolor
+es = Technicolor bicromático
+
+fr = Technicolor 3 bandes
+en = Three-Strip Technicolor
+es = Technicolor tricromático
+
+fr = Blanchiment sauté
+en = Bleach Bypass
+es = Sin blanqueo
+
+fr = Traitement croisé
+en = Cross Processing
+es = Proceso cruzado
+
+fr = Nuit américaine
+en = Day for Night
+es = Noche americana
+
+fr = Néo-noir
+en = Neo-Noir
+es = Neo-noir
+
+fr = Désert
+en = Desert
+es = Desierto
+
+fr = Code vert
+en = Green Code
+es = Código verde
+
+fr = Rétention d'argent
+en = Silver Retention
+es = Retención de plata
+
+fr = Western spaghetti
+en = Spaghetti Western
+es = Spaghetti western
+
+fr = Polar nordique
+en = Nordic Noir
+es = Noir nórdico
+
+fr = Heure dorée
+en = Golden Hour
+es = Hora dorada
+
+fr = Infrarouge
+en = Infrared
+es = Infrarrojo
+
+fr = Polaroid noir et blanc
+en = Polaroid B&W
+es = Polaroid B/N
+
+fr = Appareil jetable
+en = Disposable Camera
+es = Cámara desechable
+
+fr = Pellicule périmée
+en = Expired Film
+es = Película caducada
+
+fr = Années 70
+en = 1970s
+es = Años 70
+
+fr = Sépia
+en = Sepia
+es = Sepia
+
+fr = Daguerréotype
+en = Daguerreotype
+es = Daguerrotipo
+
+fr = Fondu mat
+en = Matte Fade
+es = Mate desvaído
+
+fr = Sarcelle et orange
+en = Teal and Orange
+es = Turquesa y naranja
+
+fr = Haute clé
+en = High Key
+es = Clave alta
+
+fr = Noir dramatique
+en = Dramatic Black
+es = Negro dramático
+
+fr = Blockbuster
+en = Blockbuster
+es = Blockbuster
+
+fr = Polaroid 600
+en = Polaroid 600
+es = Polaroid 600
+
+fr = Polaroid SX-70
+en = Polaroid SX-70
+es = Polaroid SX-70
+
+fr = Instax
+en = Instax
+es = Instax
+
+fr = Lomo LC-A
+en = Lomo LC-A
+es = Lomo LC-A
+
+fr = Holga
+en = Holga
+es = Holga
+
+fr = Cyanotype
+en = Cyanotype
+es = Cianotipia
+
+fr = Polacolor
+en = Polacolor
+es = Polacolor
+
+fr = Autochrome
+en = Autochrome
+es = Autocromo
+
+fr = Inspiré de Kodak Portra 160 : peaux naturelles, couleurs douces et fines.
+en = Inspired by Kodak Portra 160: natural skin, soft and fine colors.
+es = Inspirada en Kodak Portra 160: piel natural, colores suaves y finos.
+
+fr = Inspiré de Kodak Portra 400 : peaux chaudes, contraste doux, noirs délavés.
+en = Inspired by Kodak Portra 400: warm skin, soft contrast, faded blacks.
+es = Inspirada en Kodak Portra 400: piel cálida, contraste suave, negros lavados.
+
+fr = Inspiré de Kodak Portra 800 : plus chaud et plus dense, grain visible, lumière tardive.
+en = Inspired by Kodak Portra 800: warmer and denser, visible grain, late light.
+es = Inspirada en Kodak Portra 800: más cálida y densa, grano visible, luz de tarde.
+
+fr = Inspiré de Kodak Ektar 100 : couleurs franches, rouges et bleus profonds, grain très fin.
+en = Inspired by Kodak Ektar 100: bold colors, deep reds and blues, very fine grain.
+es = Inspirada en Kodak Ektar 100: colores francos, rojos y azules profundos, grano muy fino.
+
+fr = Inspiré de Kodak Gold 200 : lumière dorée, jaunes généreux, ciels adoucis.
+en = Inspired by Kodak Gold 200: golden light, generous yellows, softened skies.
+es = Inspirada en Kodak Gold 200: luz dorada, amarillos generosos, cielos suavizados.
+
+fr = Inspiré de Kodak ColorPlus 200 : pellicule bon marché, chaleur et contraste modeste.
+en = Inspired by Kodak ColorPlus 200: budget film, warmth and modest contrast.
+es = Inspirada en Kodak ColorPlus 200: película económica, calidez y contraste moderado.
+
+fr = Inspiré de Kodak UltraMax 400 : saturé, chaud, contrasté, la pellicule des vacances.
+en = Inspired by Kodak UltraMax 400: saturated, warm, contrasty, the holiday film.
+es = Inspirada en Kodak UltraMax 400: saturada, cálida, contrastada, la película de las vacaciones.
+
+fr = Inspiré de Fujicolor C200 : verts frais, ombres froides, rendu clair.
+en = Inspired by Fujicolor C200: fresh greens, cool shadows, bright rendering.
+es = Inspirada en Fujicolor C200: verdes frescos, sombras frías, aspecto luminoso.
+
+fr = Inspiré de Fujifilm Superia 400 : pellicule du quotidien, ombres verdâtres, grain présent.
+en = Inspired by Fujifilm Superia 400: everyday film, greenish shadows, noticeable grain.
+es = Inspirada en Fujifilm Superia 400: película del día a día, sombras verdosas, grano presente.
+
+fr = Inspiré de Fujifilm Superia X-TRA 800 : nuit et intérieur, cyan dans les ombres, gros grain.
+en = Inspired by Fujifilm Superia X-TRA 800: night and indoors, cyan in the shadows, coarse grain.
+es = Inspirada en Fujifilm Superia X-TRA 800: noche e interiores, cian en las sombras, grano grueso.
+
+fr = Inspiré de Fujifilm Pro 400H : pastels lumineux, verts menthe, ombres froides.
+en = Inspired by Fujifilm Pro 400H: bright pastels, mint greens, cool shadows.
+es = Inspirada en Fujifilm Pro 400H: pasteles luminosos, verdes menta, sombras frías.
+
+fr = Inspiré de Fujifilm Velvia 50 : diapositive de paysage, verts et bleus intenses, ombres denses.
+en = Inspired by Fujifilm Velvia 50: landscape slide film, intense greens and blues, dense shadows.
+es = Inspirada en Fujifilm Velvia 50: diapositiva de paisaje, verdes y azules intensos, sombras densas.
+
+fr = Inspiré de Fujifilm Velvia 100 : saturé mais plus neutre que la 50, magentas tenus.
+en = Inspired by Fujifilm Velvia 100: saturated but more neutral than the 50, restrained magentas.
+es = Inspirada en Fujifilm Velvia 100: saturada pero más neutra que la 50, magentas contenidos.
+
+fr = Inspiré de Fujifilm Provia 100F : diapositive fidèle, contraste net, couleurs propres.
+en = Inspired by Fujifilm Provia 100F: faithful slide film, crisp contrast, clean colors.
+es = Inspirada en Fujifilm Provia 100F: diapositiva fiel, contraste nítido, colores limpios.
+
+fr = Inspiré de Fujifilm Astia 100F : diapositive douce pour le portrait, peaux délicates.
+en = Inspired by Fujifilm Astia 100F: soft portrait slide film, delicate skin.
+es = Inspirada en Fujifilm Astia 100F: diapositiva suave para retrato, piel delicada.
+
+fr = Inspiré de Kodachrome 64 : rouges riches, bleus profonds, contraste marqué.
+en = Inspired by Kodachrome 64: rich reds, deep blues, strong contrast.
+es = Inspirada en Kodachrome 64: rojos ricos, azules profundos, contraste marcado.
+
+fr = Inspiré de Kodachrome 25 : la plus fine, couleurs denses et chaudes d'autrefois.
+en = Inspired by Kodachrome 25: the finest of all, dense and warm colors of the past.
+es = Inspirada en Kodachrome 25: la más fina, colores densos y cálidos de antaño.
+
+fr = Inspiré de Kodak Ektachrome E100 : diapositive claire et froide, blancs purs.
+en = Inspired by Kodak Ektachrome E100: bright, cool slide film, pure whites.
+es = Inspirada en Kodak Ektachrome E100: diapositiva clara y fría, blancos puros.
+
+fr = Inspiré de Kodak Elite Chrome : diapositive grand public, ciels cyan, contraste vif.
+en = Inspired by Kodak Elite Chrome: consumer slide film, cyan skies, punchy contrast.
+es = Inspirada en Kodak Elite Chrome: diapositiva de consumo, cielos cian, contraste vivo.
+
+fr = Inspiré d'Agfa Vista 200 : rouges chauds, ciels très bleus, ombres un peu froides.
+en = Inspired by Agfa Vista 200: warm reds, very blue skies, slightly cool shadows.
+es = Inspirada en Agfa Vista 200: rojos cálidos, cielos muy azules, sombras algo frías.
+
+fr = Inspiré d'Agfa Ultra 100 : saturation extrême, couleurs presque irréelles.
+en = Inspired by Agfa Ultra 100: extreme saturation, almost unreal colors.
+es = Inspirada en Agfa Ultra 100: saturación extrema, colores casi irreales.
+
+fr = Inspiré de Lomography Color 800 : rouges électriques, ombres sales, gros grain.
+en = Inspired by Lomography Color 800: electric reds, muddy shadows, coarse grain.
+es = Inspirada en Lomography Color 800: rojos eléctricos, sombras sucias, grano grueso.
+
+fr = Inspiré de Kodak Pro Image 100 : pellicule des pays chauds, peaux dorées, contraste doux.
+en = Inspired by Kodak Pro Image 100: film for hot climates, golden skin, soft contrast.
+es = Inspirada en Kodak Pro Image 100: película de países cálidos, piel dorada, contraste suave.
+
+fr = Inspiré de Kodak Royal Gold 400 : chaud et riche, rouges profonds, grain serré.
+en = Inspired by Kodak Royal Gold 400: warm and rich, deep reds, tight grain.
+es = Inspirada en Kodak Royal Gold 400: cálida y rica, rojos profundos, grano compacto.
+
+fr = Inspiré de Kodak Vericolor III : négatif de studio des années 80, neutre et doux.
+en = Inspired by Kodak Vericolor III: 1980s studio negative, neutral and soft.
+es = Inspirada en Kodak Vericolor III: negativo de estudio de los años 80, neutro y suave.
+
+fr = Inspiré de Fujifilm Reala 100 : la quatrième couche, couleurs justes même sous néons.
+en = Inspired by Fujifilm Reala 100: the fourth layer, accurate colors even under fluorescent light.
+es = Inspirada en Fujifilm Reala 100: la cuarta capa, colores fieles incluso con fluorescentes.
+
+fr = Inspiré de Fujicolor Pro 160NS : pastel et froid, verts tendres, peaux pâles.
+en = Inspired by Fujicolor Pro 160NS: pastel and cool, tender greens, pale skin.
+es = Inspirada en Fujicolor Pro 160NS: pastel y fría, verdes tiernos, piel pálida.
+
+fr = Inspiré de Fujifilm Natura 1600 : la lumière ambiante la nuit, chaud et granuleux.
+en = Inspired by Fujifilm Natura 1600: available light at night, warm and grainy.
+es = Inspirada en Fujifilm Natura 1600: luz ambiente de noche, cálida y granulada.
+
+fr = Inspiré de Fujifilm Superia 200 : quotidien et frais, verts vifs, bleus nets.
+en = Inspired by Fujifilm Superia 200: everyday and fresh, vivid greens, clean blues.
+es = Inspirada en Fujifilm Superia 200: cotidiana y fresca, verdes vivos, azules nítidos.
+
+fr = Inspiré d'Agfa Optima 200 : couleurs franches, rouges profonds, ombres neutres.
+en = Inspired by Agfa Optima 200: bold colors, deep reds, neutral shadows.
+es = Inspirada en Agfa Optima 200: colores francos, rojos profundos, sombras neutras.
+
+fr = Inspiré de Konica Centuria 400 : magentas doux, ombres teintées, rendu japonais des années 2000.
+en = Inspired by Konica Centuria 400: soft magentas, tinted shadows, a 2000s Japanese look.
+es = Inspirada en Konica Centuria 400: magentas suaves, sombras tintadas, aspecto japonés de los 2000.
+
+fr = Inspiré de Ferrania Solaris 400 : la dernière pellicule italienne, chaude et contrastée.
+en = Inspired by Ferrania Solaris 400: the last Italian film, warm and contrasty.
+es = Inspirada en Ferrania Solaris 400: la última película italiana, cálida y contrastada.
+
+fr = Inspiré de CineStill 800T : film de cinéma tungstène, nuits bleutées, lumières orangées.
+en = Inspired by CineStill 800T: tungsten cinema film, bluish nights, orange lights.
+es = Inspirada en CineStill 800T: película de cine tungsteno, noches azuladas, luces anaranjadas.
+
+fr = Inspiré de CineStill 400D : film lumière du jour, chaud et doux, ombres teintées de cyan.
+en = Inspired by CineStill 400D: daylight film, warm and soft, cyan-tinted shadows.
+es = Inspirada en CineStill 400D: película de luz día, cálida y suave, sombras teñidas de cian.
+
+fr = Inspiré de CineStill 50D : fin et lumineux, ciels cyan, peaux claires.
+en = Inspired by CineStill 50D: fine and bright, cyan skies, light skin.
+es = Inspirada en CineStill 50D: fina y luminosa, cielos cian, piel clara.
+
+fr = Inspiré de Kodak Vision3 50D : négatif cinéma de jour, très fin, couleurs justes et douces.
+en = Inspired by Kodak Vision3 50D: daylight cinema negative, very fine, accurate and soft colors.
+es = Inspirada en Kodak Vision3 50D: negativo de cine de día, muy fino, colores fieles y suaves.
+
+fr = Inspiré de Kodak Vision3 250D : le négatif des longs métrages en extérieur, large et naturel.
+en = Inspired by Kodak Vision3 250D: the negative of feature films shot outdoors, wide-latitude and natural.
+es = Inspirada en Kodak Vision3 250D: el negativo de los largometrajes en exteriores, amplio y natural.
+
+fr = Inspiré de Kodak Vision3 200T : tungstène fin, intérieurs ambrés, ombres sarcelle.
+en = Inspired by Kodak Vision3 200T: fine tungsten, amber interiors, teal shadows.
+es = Inspirada en Kodak Vision3 200T: tungsteno fino, interiores ambarinos, sombras turquesa.
+
+fr = Inspiré de Kodak Vision3 500T : le négatif des nuits de cinéma, noirs profonds, néons.
+en = Inspired by Kodak Vision3 500T: the negative of movie nights, deep blacks, neon.
+es = Inspirada en Kodak Vision3 500T: el negativo de las noches de cine, negros profundos, neones.
+
+fr = Inspiré du film de tirage Kodak 2383 : le rendu des salles, contraste riche, sarcelle et ambre.
+en = Inspired by Kodak 2383 print film: the movie-theater look, rich contrast, teal and amber.
+es = Inspirada en la película de positivado Kodak 2383: el aspecto de las salas, contraste rico, turquesa y ámbar.
+
+fr = Inspiré du film de tirage Kodak 2393 : plus neutre et plus doux que le 2383.
+en = Inspired by Kodak 2393 print film: more neutral and softer than 2383.
+es = Inspirada en la película de positivado Kodak 2393: más neutra y suave que la 2383.
+
+fr = Inspiré du film de tirage Fujifilm 3513 : verts denses, ombres froides, peaux rosées.
+en = Inspired by Fujifilm 3513 print film: dense greens, cool shadows, rosy skin.
+es = Inspirada en la película de positivado Fujifilm 3513: verdes densos, sombras frías, piel rosada.
+
+fr = Inspiré de Fujifilm Eterna : couleurs retenues, contraste bas, élégance du cinéma japonais.
+en = Inspired by Fujifilm Eterna: restrained colors, low contrast, the elegance of Japanese cinema.
+es = Inspirada en Fujifilm Eterna: colores contenidos, contraste bajo, la elegancia del cine japonés.
+
+fr = Inspiré de Fujifilm Eterna Vivid 500 : la variante vive d'Eterna, verts et bleus francs.
+en = Inspired by Fujifilm Eterna Vivid 500: the vivid take on Eterna, bold greens and blues.
+es = Inspirada en Fujifilm Eterna Vivid 500: la variante viva de Eterna, verdes y azules francos.
+
+fr = Le Technicolor des années 1920 : rouges et cyans seuls, pas de vrai bleu ni de vert.
+en = 1920s Technicolor: only reds and cyans, no true blue or green.
+es = El Technicolor de los años 20: solo rojos y cianes, sin azul ni verde verdaderos.
+
+fr = Le Technicolor des années 1940 : couleurs saturées et lumineuses, rouges éclatants.
+en = 1940s Technicolor: saturated, luminous colors, brilliant reds.
+es = El Technicolor de los años 40: colores saturados y luminosos, rojos brillantes.
+
+fr = Le traitement sans blanchiment : argent gardé, couleurs éteintes, contraste dur.
+en = Bleach bypass: silver retained, muted colors, harsh contrast.
+es = El proceso sin blanqueo: plata retenida, colores apagados, contraste duro.
+
+fr = Une diapositive développée comme un négatif : jaunes et verts, ombres bleues, contraste fort.
+en = Slide film developed as a negative: yellows and greens, blue shadows, strong contrast.
+es = Una diapositiva revelada como negativo: amarillos y verdes, sombras azules, contraste fuerte.
+
+fr = Tourner de jour pour faire la nuit : sous‑exposé, bleu, peu saturé.
+en = Shooting by day to make night: underexposed, blue, desaturated.
+es = Rodar de día para simular la noche: subexpuesta, azul, poco saturada.
+
+fr = Le contraste de couleurs des grands films d'action : ombres sarcelle, peaux orangées.
+en = The color contrast of big action movies: teal shadows, orange skin.
+es = El contraste de color de las grandes películas de acción: sombras turquesa, piel anaranjada.
+
+fr = Nuits de néon : magentas et cyans, noirs profonds.
+en = Neon nights: magentas and cyans, deep blacks.
+es = Noches de neón: magentas y cianes, negros profundos.
+
+fr = Lumière écrasante des films de désert : orange brûlé, ciels pâles, contraste dur.
+en = The crushing light of desert movies: burnt orange, pale skies, harsh contrast.
+es = La luz aplastante de las películas del desierto: naranja quemado, cielos pálidos, contraste duro.
+
+fr = Le voile vert des thrillers numériques de 1999 : froid, contrasté, désaturé.
+en = The green cast of 1999 digital thrillers: cold, contrasty, desaturated.
+es = El velo verde de los thrillers digitales de 1999: frío, contrastado, desaturado.
+
+fr = Inspiré de l'Ektachrome 100D en Super 8 : chaud, contrasté, gros grain, coins sombres.
+en = Inspired by Ektachrome 100D in Super 8: warm, contrasty, coarse grain, dark corners.
+es = Inspirada en Ektachrome 100D en Super 8: cálida, contrastada, grano grueso, esquinas oscuras.
+
+fr = Inspiré du négatif Eastman 5247 des années 70 : contraste dur, couleurs saturées, ombres brunes.
+en = Inspired by 1970s Eastman 5247 negative: harsh contrast, saturated colors, brown shadows.
+es = Inspirada en el negativo Eastman 5247 de los años 70: contraste duro, colores saturados, sombras marrones.
+
+fr = Inspiré du négatif Eastman 5254 des années 60 : couleurs douces et chaudes, noirs laiteux.
+en = Inspired by 1960s Eastman 5254 negative: soft, warm colors, milky blacks.
+es = Inspirada en el negativo Eastman 5254 de los años 60: colores suaves y cálidos, negros lechosos.
+
+fr = Inspiré du Kodak Vision2 500T : la nuit des films des années 2000, cyan et ambre, grain riche.
+en = Inspired by Kodak Vision2 500T: the nights of 2000s movies, cyan and amber, rich grain.
+es = Inspirada en Kodak Vision2 500T: la noche del cine de los 2000, cian y ámbar, grano rico.
+
+fr = Inspiré du Fujifilm Reala 500D : négatif de jour, couleurs fidèles, verts naturels.
+en = Inspired by Fujifilm Reala 500D: daylight negative, faithful colors, natural greens.
+es = Inspirada en Fujifilm Reala 500D: negativo de día, colores fieles, verdes naturales.
+
+fr = Inspiré du Fujifilm F-125 : intérieurs tungstène doux, ombres vertes typiques de Fuji.
+en = Inspired by Fujifilm F-125: soft tungsten interiors, Fuji's typical green shadows.
+es = Inspirada en Fujifilm F-125: interiores tungsteno suaves, sombras verdes típicas de Fuji.
+
+fr = Inspiré de l'Agfa XT 320 : négatif cinéma européen, rouges chauds, contraste mesuré.
+en = Inspired by Agfa XT 320: European cinema negative, warm reds, measured contrast.
+es = Inspirada en Agfa XT 320: negativo de cine europeo, rojos cálidos, contraste mesurado.
+
+fr = Le traitement ENR : une partie de l'argent gardée, noirs profonds, couleurs retenues.
+en = ENR processing: part of the silver retained, deep blacks, restrained colors.
+es = El proceso ENR: parte de la plata retenida, negros profundos, colores contenidos.
+
+fr = Le soleil des westerns italiens : jaune poussiéreux, contraste dur, ciels délavés.
+en = The sun of Italian westerns: dusty yellow, harsh contrast, washed-out skies.
+es = El sol de los westerns italianos: amarillo polvoriento, contraste duro, cielos lavados.
+
+fr = Les séries policières du Nord : froid, désaturé, ombres bleu acier.
+en = Nordic crime series: cold, desaturated, steel-blue shadows.
+es = Las series policiacas nórdicas: frío, desaturado, sombras azul acero.
+
+fr = La lumière basse des grands films : or chaud, peaux lumineuses, ombres douces.
+en = The low light of great movies: warm gold, glowing skin, soft shadows.
+es = La luz baja del gran cine: oro cálido, piel luminosa, sombras suaves.
+
+fr = Inspiré de Kodak Tri-X 400 : noir et blanc contrasté du reportage, grain franc.
+en = Inspired by Kodak Tri-X 400: contrasty documentary black and white, bold grain.
+es = Inspirada en Kodak Tri-X 400: blanco y negro contrastado del reportaje, grano franco.
+
+fr = Inspiré de Kodak T-Max 400 : grain tabulaire fin, gris très nuancés.
+en = Inspired by Kodak T-Max 400: fine tabular grain, finely graded grays.
+es = Inspirada en Kodak T-Max 400: grano tabular fino, grises muy matizados.
+
+fr = Inspiré d'Ilford HP5 Plus : gris doux et nuancés, grain souple.
+en = Inspired by Ilford HP5 Plus: soft, nuanced grays, supple grain.
+es = Inspirada en Ilford HP5 Plus: grises suaves y matizados, grano flexible.
+
+fr = Inspiré d'Ilford FP4 Plus : classique et lumineux, grain discret.
+en = Inspired by Ilford FP4 Plus: classic and bright, discreet grain.
+es = Inspirada en Ilford FP4 Plus: clásica y luminosa, grano discreto.
+
+fr = Inspiré d'Ilford Delta 100 : noir et blanc fin et précis, presque sans grain.
+en = Inspired by Ilford Delta 100: fine, precise black and white, almost grainless.
+es = Inspirada en Ilford Delta 100: blanco y negro fino y preciso, casi sin grano.
+
+fr = Inspiré d'Ilford Delta 3200 : la nuit en noir et blanc, grain énorme, noirs bouchés.
+en = Inspired by Ilford Delta 3200: night in black and white, huge grain, crushed blacks.
+es = Inspirada en Ilford Delta 3200: la noche en blanco y negro, grano enorme, negros empastados.
+
+fr = Inspiré d'Ilford Pan F Plus 50 : extrêmement fin, contraste élevé, noirs denses.
+en = Inspired by Ilford Pan F Plus 50: extremely fine, high contrast, dense blacks.
+es = Inspirada en Ilford Pan F Plus 50: extremadamente fina, contraste alto, negros densos.
+
+fr = Inspiré de Fujifilm Acros 100 : ciels sombres (filtre rouge léger), peaux claires.
+en = Inspired by Fujifilm Acros 100: dark skies (light red filter), light skin.
+es = Inspirada en Fujifilm Acros 100: cielos oscuros (filtro rojo suave), piel clara.
+
+fr = Inspiré de Fujifilm Neopan 1600 : rues de nuit, contraste fort, grain serré.
+en = Inspired by Fujifilm Neopan 1600: streets at night, strong contrast, tight grain.
+es = Inspirada en Fujifilm Neopan 1600: calles de noche, contraste fuerte, grano compacto.
+
+fr = Inspiré du Kodak Double-X 5222, le noir et blanc du cinéma : gris profonds, éclat argentique.
+en = Inspired by Kodak Double-X 5222, cinema's black and white: deep grays, silver sheen.
+es = Inspirada en Kodak Double-X 5222, el blanco y negro del cine: grises profundos, brillo argéntico.
+
+fr = Inspiré de Fomapan 400 : rendu d'Europe de l'Est, ombres ouvertes, grain irrégulier.
+en = Inspired by Fomapan 400: an Eastern European look, open shadows, irregular grain.
+es = Inspirada en Fomapan 400: aspecto de Europa del Este, sombras abiertas, grano irregular.
+
+fr = Inspiré du film infrarouge : feuillages blancs, ciels presque noirs, halo léger.
+en = Inspired by infrared film: white foliage, nearly black skies, slight halo.
+es = Inspirada en la película infrarroja: follaje blanco, cielos casi negros, halo ligero.
+
+fr = Inspiré d'Ilford XP2 Super : noir et blanc chromogène, sans grain visible, très doux.
+en = Inspired by Ilford XP2 Super: chromogenic black and white, no visible grain, very soft.
+es = Inspirada en Ilford XP2 Super: blanco y negro cromógeno, sin grano visible, muy suave.
+
+fr = Inspiré de Kodak Plus-X 125 : le classique des années 60, gris lumineux, grain fin.
+en = Inspired by Kodak Plus-X 125: the 1960s classic, luminous grays, fine grain.
+es = Inspirada en Kodak Plus-X 125: el clásico de los años 60, grises luminosos, grano fino.
+
+fr = Inspiré d'Agfa APX 100 : tons moyens riches, ciels un peu assombris.
+en = Inspired by Agfa APX 100: rich midtones, slightly darkened skies.
+es = Inspirada en Agfa APX 100: medios tonos ricos, cielos algo oscurecidos.
+
+fr = Inspiré de Rollei Retro 80S : sensible au rouge lointain, ciels noirs, peaux claires.
+en = Inspired by Rollei Retro 80S: sensitive to far red, black skies, light skin.
+es = Inspirada en Rollei Retro 80S: sensible al rojo lejano, cielos negros, piel clara.
+
+fr = Inspiré d'Ilford Ortho Plus : aveugle au rouge, lèvres et peaux sombres, ciels blancs.
+en = Inspired by Ilford Ortho Plus: red-blind, dark lips and skin, white skies.
+es = Inspirada en Ilford Ortho Plus: ciega al rojo, labios y piel oscuros, cielos blancos.
+
+fr = L'instantané carré des années 80 : chaud, délavé, ombres vert‑cyan.
+en = The square instant photo of the 1980s: warm, faded, green-cyan shadows.
+es = La instantánea cuadrada de los años 80: cálida, desvaída, sombras verde cian.
+
+fr = Le Polaroid d'origine : tons crème, contraste bas, couleurs rêveuses.
+en = The original Polaroid: cream tones, low contrast, dreamy colors.
+es = La Polaroid original: tonos crema, contraste bajo, colores soñadores.
+
+fr = L'instantané noir et blanc : gris laiteux, noirs adoucis.
+en = Black and white instant film: milky grays, softened blacks.
+es = La instantánea en blanco y negro: grises lechosos, negros suavizados.
+
+fr = L'instantané d'aujourd'hui : clair, frais, légère dominante cyan.
+en = Today's instant film: bright, fresh, slight cyan cast.
+es = La instantánea de hoy: clara, fresca, ligera dominante cian.
+
+fr = Le jetable au flash : couleurs criardes, centre éclatant, coins sombres.
+en = The disposable with flash: garish colors, blown-out center, dark corners.
+es = La desechable con flash: colores chillones, centro brillante, esquinas oscuras.
+
+fr = L'appareil russe culte : couleurs saturées, vignetage fort, contraste poussé.
+en = The cult Russian camera: saturated colors, heavy vignetting, pushed contrast.
+es = La cámara rusa de culto: colores saturados, viñeteado fuerte, contraste forzado.
+
+fr = L'appareil en plastique : flou des bords, vignetage énorme, couleurs imprévues.
+en = The plastic camera: blurry edges, huge vignetting, unexpected colors.
+es = La cámara de plástico: bordes borrosos, viñeteado enorme, colores imprevistos.
+
+fr = Un film oublié dans un tiroir : dominante magenta, noirs délavés, grain lourd.
+en = A film forgotten in a drawer: magenta cast, faded blacks, heavy grain.
+es = Una película olvidada en un cajón: dominante magenta, negros lavados, grano pesado.
+
+fr = Les tirages qui ont jauni : orange chaud, bleus éteints, contraste fatigué.
+en = Prints that have yellowed: warm orange, muted blues, tired contrast.
+es = Copias que han amarilleado: naranja cálido, azules apagados, contraste cansado.
+
+fr = Le virage sépia des tirages anciens.
+en = The sepia toning of old prints.
+es = El virado sepia de las copias antiguas.
+
+fr = Le tirage au bleu de Prusse : monochrome cyan profond.
+en = The Prussian blue print: deep cyan monochrome.
+es = La copia al azul de Prusia: monocromo cian profundo.
+
+fr = La plaque argentée des premières photos : gris métallique, bords sombres.
+en = The silvered plate of the first photographs: metallic grays, dark edges.
+es = La placa plateada de las primeras fotos: grises metálicos, bordes oscuros.
+
+fr = Le Polaroid à décoller : couleurs saturées et un peu froides, bords sombres.
+en = The peel-apart Polaroid: saturated, slightly cool colors, dark edges.
+es = La Polaroid de despegar: colores saturados y algo fríos, bordes oscuros.
+
+fr = Inspiré du Fujifilm FP-100C : instantané à décoller, cyan et vert, tons pastel.
+en = Inspired by Fujifilm FP-100C: peel-apart instant film, cyan and green, pastel tones.
+es = Inspirada en Fujifilm FP-100C: instantánea de despegar, cian y verde, tonos pastel.
+
+fr = Les plaques autochromes Lumière (1907) : couleurs pointillistes et douces, grain de fécule.
+en = Lumière Autochrome plates (1907): soft, pointillist colors, starch grain.
+es = Las placas autocromas Lumière (1907): colores puntillistas y suaves, grano de fécula.
+
+fr = Noirs relevés, couleurs retenues : un rendu mat et calme.
+en = Lifted blacks, restrained colors: a calm, matte look.
+es = Negros levantados, colores contenidos: un aspecto mate y sereno.
+
+fr = Le contraste de couleurs du cinéma, en plus discret.
+en = The color contrast of the movies, more subtle.
+es = El contraste de color del cine, más discreto.
+
+fr = Clair, aérien, ombres ouvertes.
+en = Bright, airy, open shadows.
+es = Claro, etéreo, sombras abiertas.
+
+fr = Noir et blanc dense, clarté forte, ciels sombres.
+en = Dense black and white, strong clarity, dark skies.
+es = Blanco y negro denso, claridad fuerte, cielos oscuros.

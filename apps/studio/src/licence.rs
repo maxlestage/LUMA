@@ -11,6 +11,8 @@ use std::sync::mpsc::{Receiver, channel};
 
 use luma_licence::{Access, Plan, Refused, State, Transport};
 
+use crate::i18n::{tr, trf};
+
 /// Maintenant, en secondes Unix.
 pub fn now() -> u64 {
     std::time::SystemTime::now()
@@ -24,7 +26,7 @@ fn dir() -> Option<PathBuf> {
     if let Some(d) = std::env::var_os("LUMA_LICENCE_DIR") {
         return Some(PathBuf::from(d));
     }
-    crate::dialogs::films_dir()?.parent().map(PathBuf::from)
+    crate::dialogs::app_dir()
 }
 
 /// Les requêtes à l'API de licences, par `curl`.
@@ -33,7 +35,7 @@ pub struct Curl;
 impl Transport for Curl {
     fn post(&self, url: &str, form: &[(&str, &str)]) -> Result<String, String> {
         if cfg!(target_os = "ios") {
-            return Err("pas de vérification en ligne sur iPhone et iPad".into());
+            return Err(tr("pas de vérification en ligne sur iPhone et iPad").into());
         }
         let out = std::process::Command::new("curl")
             .args(["-sS", "--fail-with-body", "--max-time", "20", "-X", "POST"])
@@ -69,8 +71,21 @@ pub fn open_url(url: &str) -> bool {
     std::process::Command::new(program).arg(url).spawn().is_ok()
 }
 
-/// Le résultat d'une opération en ligne : le nouvel état, et un message.
-type Done = (State, Result<String, String>);
+/// Le résultat d'une opération en ligne : le nouvel état, et un message (ou le refus :
+/// sans réseau ?, et ce qu'il faut en dire).
+type Done = (State, Result<String, (bool, String)>);
+
+/// Ce que l'app dit d'un refus, dans la langue de l'interface. Les messages de
+/// `luma-licence` (et ceux du serveur) sont en français : ce sont des clés du catalogue.
+pub fn refusal(e: &Refused) -> String {
+    match e {
+        Refused::Offline(detail) => trf(
+            "impossible de joindre le serveur de licences ({detail})",
+            &[("detail", &tr(detail))],
+        ),
+        Refused::Invalid(message) => tr(message).to_owned(),
+    }
+}
 
 /// LÜMA Premium : l'état, et l'opération en ligne en cours.
 pub struct Licence {
@@ -146,7 +161,7 @@ impl Licence {
         let (tx, rx) = channel();
         let mut state = self.state.clone();
         std::thread::spawn(move || {
-            let r = op(&mut state).map_err(|e| e.to_string());
+            let r = op(&mut state).map_err(|e| (matches!(e, Refused::Offline(_)), refusal(&e)));
             let _ = tx.send((state, r));
         });
         self.pending = Some(rx);
@@ -163,18 +178,17 @@ impl Licence {
         };
         self.pending = None;
         // Sans réseau, la vérification du jour ne change rien et ne dit rien.
-        let offline = matches!(&result, Err(e) if e.starts_with("impossible de joindre"));
+        let offline = matches!(&result, Err((true, _)));
         if !offline || state != self.state {
             self.state = state;
             self.save();
         }
         self.message = match result {
             Ok(m) => m,
-            Err(e) if offline && self.state.key.is_some() && self.access().is_allowed() => {
-                let _ = e;
+            Err(_) if offline && self.state.key.is_some() && self.access().is_allowed() => {
                 String::new()
             }
-            Err(e) => e,
+            Err((_, e)) => e,
         };
         true
     }
@@ -191,16 +205,16 @@ impl Licence {
             Ok(c) => {
                 self.save();
                 self.key_input.clear();
-                self.message = format!(
-                    "Bienvenue dans LÜMA Premium{}.",
-                    if c.email.is_empty() {
-                        String::new()
-                    } else {
-                        format!(", {}", c.email)
-                    }
-                );
+                self.message = if c.email.is_empty() {
+                    tr("Bienvenue dans LÜMA Premium.").to_owned()
+                } else {
+                    trf(
+                        "Bienvenue dans LÜMA Premium, {email}.",
+                        &[("email", &c.email)],
+                    )
+                };
             }
-            Err(e) => self.message = e.to_string(),
+            Err(e) => self.message = refusal(&e),
         }
     }
 
@@ -208,20 +222,20 @@ impl Licence {
     pub fn deactivate(&mut self) {
         luma_licence::forget(&mut self.state);
         self.save();
-        self.message = "Clé retirée de cet appareil.".into();
+        self.message = tr("Clé retirée de cet appareil.").into();
     }
 
     /// Ce que dit la puce de la barre du haut.
     pub fn badge(&self) -> String {
         match self.access() {
             Access::Premium { .. } => "Premium".into(),
-            Access::Trial { days_left } => format!("Essai · {days_left} j"),
-            Access::Expired { .. } => "Essai terminé".into(),
+            Access::Trial { days_left } => trf("Essai · {n} j", &[("n", &days_left)]),
+            Access::Expired { .. } => tr("Essai terminé").into(),
         }
     }
 }
 
-/// Ce que LÜMA Premium comprend.
+/// Ce que LÜMA Premium comprend (traduit à l'affichage).
 pub const FEATURES: [&str; 6] = [
     "Le développement RAW complet, sur le GPU",
     "100 films, vos préréglages, et vos pellicules mesurées",

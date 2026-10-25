@@ -37,6 +37,10 @@ fn main() -> eframe::Result {
             .flatten()
     });
     journal("démarrage");
+    // La langue : LUMA_LANG, le choix fait dans l'app, ou celle du système.
+    let lang = luma_studio::i18n::startup();
+    luma_studio::i18n::set_lang(lang);
+    journal(&format!("langue : {}", lang.code()));
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("LÜMA")
         .with_drag_and_drop(true);

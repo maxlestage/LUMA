@@ -26,6 +26,7 @@ use luma_project::{Crop, Mask, Profile, Settings, Shape, WhiteBalance};
 use luma_render::{Photo, Size};
 
 use crate::crop;
+use crate::i18n::{tr, trf};
 use crate::icons::{self, Icon};
 use crate::masking;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
@@ -297,27 +298,27 @@ impl Tool {
 
     pub fn name(self) -> &'static str {
         match self {
-            Tool::Library => "Bibliothèque",
-            Tool::Light => "Lumière",
-            Tool::Color => "Couleur",
-            Tool::Detail => "Détail",
-            Tool::Masks => "Masques",
-            Tool::Films => "Films",
-            Tool::Geometry => "Géométrie",
-            Tool::Merge => "Fusion",
+            Tool::Library => tr("Bibliothèque"),
+            Tool::Light => tr("Lumière"),
+            Tool::Color => tr("Couleur"),
+            Tool::Detail => tr("Détail"),
+            Tool::Masks => tr("Masques"),
+            Tool::Films => tr("Films"),
+            Tool::Geometry => tr("Géométrie"),
+            Tool::Merge => tr("Fusion"),
         }
     }
 
     fn subtitle(self) -> &'static str {
         match self {
-            Tool::Library => "Trier, noter, choisir",
-            Tool::Light => "Profil, balance, tonalité, courbe",
-            Tool::Color => "Mélangeur, étalonnage, calibration",
-            Tool::Detail => "Netteté, bruit, vignetage, grain",
-            Tool::Masks => "Retouches locales",
-            Tool::Films => "Pellicules et looks",
-            Tool::Geometry => "Recadrage, objectif, perspective",
-            Tool::Merge => "Empilements et panoramas",
+            Tool::Library => tr("Trier, noter, choisir"),
+            Tool::Light => tr("Profil, balance, tonalité, courbe"),
+            Tool::Color => tr("Mélangeur, étalonnage, calibration"),
+            Tool::Detail => tr("Netteté, bruit, vignetage, grain"),
+            Tool::Masks => tr("Retouches locales"),
+            Tool::Films => tr("Pellicules et looks"),
+            Tool::Geometry => tr("Recadrage, objectif, perspective"),
+            Tool::Merge => tr("Empilements et panoramas"),
         }
     }
 
@@ -338,7 +339,7 @@ impl Tool {
         match self {
             Tool::Library => "G",
             Tool::Light => "D",
-            Tool::Masks => "M, Maj+M, K",
+            Tool::Masks => tr("M, Maj+M, K"),
             Tool::Geometry => "R",
             _ => "",
         }
@@ -474,7 +475,8 @@ impl Studio {
             clipping: false,
             zoom: false,
             thumbs: HashMap::new(),
-            status: "Ouvrez un RAW ou un dossier (Cmd+O), ou déposez-le dans la fenêtre.".into(),
+            // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
+            status: String::new(),
             xmp_due: None,
             grading_tab: 0,
             hsl_tab: 0,
@@ -558,7 +560,16 @@ impl Studio {
             });
         match index {
             Some(i) => self.select(i),
-            None => self.status = format!("Aucun RAW dans {}", dir.display()),
+            None => self.status = trf("Aucun RAW dans {dir}", &[("dir", &dir.display())]),
+        }
+    }
+
+    /// La ligne d'état ; vide, l'accueil (dans la langue du moment).
+    fn status_text(&self) -> String {
+        if self.status.is_empty() {
+            tr("Ouvrez un RAW ou un dossier (Cmd+O), ou déposez-le dans la fenêtre.").to_owned()
+        } else {
+            self.status.clone()
         }
     }
 
@@ -617,7 +628,7 @@ impl Studio {
         self.flush_xmp();
         self.current = Some(index);
         let path = self.folder[index].clone();
-        self.status = format!("Ouverture de {}…", file_name(&path));
+        self.status = trf("Ouverture de {file}…", &[("file", &file_name(&path))]);
         self.loading = Some(path.clone());
         self.worker.open(path);
     }
@@ -634,10 +645,10 @@ impl Studio {
                         Ok((photo, sidecar)) => {
                             let from_xmp = sidecar.is_some();
                             self.settings = sidecar.map(|s| *s).unwrap_or_default();
-                            self.history = vec![("Importation".into(), Settings::default())];
+                            self.history = vec![(tr("Importation").into(), Settings::default())];
                             if from_xmp {
                                 self.history
-                                    .push(("Réglages XMP".into(), self.settings.clone()));
+                                    .push((tr("Réglages XMP").into(), self.settings.clone()));
                             }
                             self.history_pos = self.history.len() - 1;
                             self.selected_mask = None;
@@ -666,7 +677,10 @@ impl Studio {
                             self.zoom = false;
                         }
                         Err(e) => {
-                            self.status = format!("Impossible d'ouvrir {} : {e}", file_name(&path))
+                            self.status = trf(
+                                "Impossible d'ouvrir {file} : {error}",
+                                &[("file", &file_name(&path)), ("error", &e)],
+                            )
                         }
                     }
                 }
@@ -704,13 +718,18 @@ impl Studio {
                     self.merging = None;
                     match result {
                         Ok(path) => {
-                            self.status = format!("Fusion enregistrée : {}", file_name(&path));
+                            self.status = trf(
+                                "Fusion enregistrée : {file}",
+                                &[("file", &file_name(&path))],
+                            );
                             self.selected.clear();
                             self.tool = Tool::Light;
                             self.module = Module::Develop;
                             self.open_path(&path);
                         }
-                        Err(e) => self.status = format!("Fusion impossible : {e}"),
+                        Err(e) => {
+                            self.status = trf("Fusion impossible : {error}", &[("error", &e)])
+                        }
                     }
                 }
                 Event::Preview {
@@ -732,15 +751,22 @@ impl Studio {
                     self.measuring = false;
                     match result {
                         Ok((name, before, after)) => {
-                            self.status = format!(
-                                "Pellicule mesurée : « {name} » (écart numérique → film {before:.1}, avec le film {after:.1})"
+                            self.status = trf(
+                                "Pellicule mesurée : « {name} » (écart numérique → film {before}, avec le film {after})",
+                                &[
+                                    ("name", &name),
+                                    ("before", &format_value(before, 1, false)),
+                                    ("after", &format_value(after, 1, false)),
+                                ],
                             );
                             self.refresh_luts();
                             if let Some(k) = self.luts.iter().position(|n| *n == name) {
                                 self.choose_film(PRESETS.len() + k);
                             }
                         }
-                        Err(e) => self.status = format!("Mesure impossible : {e}"),
+                        Err(e) => {
+                            self.status = trf("Mesure impossible : {error}", &[("error", &e)])
+                        }
                     }
                 }
                 Event::Exported {
@@ -754,8 +780,14 @@ impl Studio {
                         String::new()
                     };
                     self.status = match result {
-                        Ok(p) => format!("Exporté{count} : {}", p.display()),
-                        Err(e) => format!("Échec de l'export{count} : {e}"),
+                        Ok(p) => trf(
+                            "Exporté{count} : {path}",
+                            &[("count", &count), ("path", &p.display())],
+                        ),
+                        Err(e) => trf(
+                            "Échec de l'export{count} : {error}",
+                            &[("count", &count), ("error", &e)],
+                        ),
                     };
                 }
             }
@@ -804,7 +836,7 @@ impl Studio {
             };
             let meta = self.meta.get(&path).cloned().unwrap_or_default();
             if let Err(e) = write_sidecar(&path, &settings, &meta) {
-                self.status = format!("XMP non enregistré : {e}");
+                self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
             }
             self.edits.insert(path, presets::summary(&settings));
         }
@@ -943,18 +975,18 @@ impl Studio {
             }
             "copy" => {
                 self.clipboard = Some(self.settings.clone());
-                self.status = "Réglages copiés.".into();
+                self.status = tr("Réglages copiés.").into();
             }
             "paste" => {
                 if let Some(s) = self.clipboard.clone() {
                     self.settings = s;
-                    self.commit("Coller les réglages".into());
+                    self.commit(tr("Coller les réglages").into());
                     self.touch();
                 }
             }
             "reset" => {
                 self.settings = Settings::default();
-                self.commit("Réinitialiser".into());
+                self.commit(tr("Réinitialiser").into());
                 self.touch();
             }
             "export" => {
@@ -977,9 +1009,9 @@ impl Studio {
                 let n: u8 = r[4..].parse().unwrap_or(0);
                 self.set_meta(|m| m.rating = n);
                 self.status = if n == 0 {
-                    "Note retirée".into()
+                    tr("Note retirée").into()
                 } else {
-                    format!("Note : {n} sur 5")
+                    trf("Note : {n} sur 5", &[("n", &n)])
                 };
             }
             "crop" => {
@@ -996,7 +1028,7 @@ impl Studio {
             }
             "crop_done" => {
                 if self.crop_tool.take().is_some() {
-                    self.commit("Recadrage".into());
+                    self.commit(tr("Recadrage").into());
                     self.touch();
                 }
             }
@@ -1016,7 +1048,10 @@ impl Studio {
                     "mask_full" => Mask::full(),
                     _ => Mask::brush(),
                 };
-                let label = format!("Nouveau masque : {}", mask.name.to_lowercase());
+                let label = trf(
+                    "Nouveau masque : {mask}",
+                    &[("mask", &tr(&mask.name).to_lowercase())],
+                );
                 self.set_tool(Tool::Masks);
                 self.zoom = false;
                 self.settings.masks.push(mask);
@@ -1031,7 +1066,7 @@ impl Studio {
                     && i < self.settings.masks.len()
                 {
                     self.settings.masks.remove(i);
-                    self.commit("Masque supprimé".into());
+                    self.commit(tr("Masque supprimé").into());
                     self.touch();
                 }
             }
@@ -1093,11 +1128,11 @@ impl Studio {
         if jobs.is_empty() {
             return;
         }
-        self.status = format!(
-            "Export de {} photo{}…",
-            jobs.len(),
-            if jobs.len() > 1 { "s" } else { "" }
-        );
+        self.status = if jobs.len() > 1 {
+            trf("Export de {n} photos…", &[("n", &jobs.len())])
+        } else {
+            tr("Export d'une photo…").into()
+        };
         self.worker.export(jobs, self.export_options.clone());
     }
 
@@ -1106,7 +1141,8 @@ impl Studio {
         let mut open = self.export_open;
         let mut go = false;
         let count = self.visible().len();
-        egui::Window::new("Exporter")
+        egui::Window::new(tr("Exporter"))
+            .id(egui::Id::unique("fenetre-export"))
             .open(&mut open)
             .collapsible(false)
             .resizable(false)
@@ -1117,17 +1153,17 @@ impl Studio {
                     .num_columns(2)
                     .spacing(vec2(12.0, 8.0))
                     .show(ui, |ui| {
-                        ui.label("Photos");
+                        ui.label(tr("Photos"));
                         ui.horizontal(|ui| {
-                            ui.radio_value(&mut self.export_all, false, "Photo affichée");
+                            ui.radio_value(&mut self.export_all, false, tr("Photo affichée"));
                             ui.radio_value(
                                 &mut self.export_all,
                                 true,
-                                format!("Les {count} du filtre"),
+                                trf("Les {n} du filtre", &[("n", &count)]),
                             );
                         });
                         ui.end_row();
-                        ui.label("Format");
+                        ui.label(tr("Format"));
                         ui.horizontal(|ui| {
                             ui.radio_value(&mut o.format, Format::Jpeg, "JPEG");
                             ui.radio_value(&mut o.format, Format::Png, "PNG");
@@ -1135,17 +1171,17 @@ impl Studio {
                         });
                         ui.end_row();
                         if o.format == Format::Jpeg {
-                            ui.label("Qualité");
+                            ui.label(tr("Qualité"));
                             ui.add(egui::Slider::new(&mut o.quality, 1..=100));
                         } else {
-                            ui.label("Profondeur");
+                            ui.label(tr("Profondeur"));
                             ui.horizontal(|ui| {
                                 ui.radio_value(&mut o.bits, 8, "8 bits");
                                 ui.radio_value(&mut o.bits, 16, "16 bits");
                             });
                         }
                         ui.end_row();
-                        ui.label("Espace colorimétrique");
+                        ui.label(tr("Espace colorimétrique"));
                         let spaces = [
                             (OutputSpace::Srgb, "sRGB"),
                             (OutputSpace::DisplayP3, "Display P3"),
@@ -1164,35 +1200,35 @@ impl Studio {
                                 }
                             })
                             .response
-                            .accessible_name("Espace colorimétrique");
+                            .accessible_name(tr("Espace colorimétrique"));
                         ui.end_row();
-                        ui.label("Dimensions");
+                        ui.label(tr("Dimensions"));
                         ui.horizontal(|ui| {
                             let mut resize = o.long_edge.is_some();
-                            ui.checkbox(&mut resize, "Grand côté");
+                            ui.checkbox(&mut resize, tr("Grand côté"));
                             let mut n = o.long_edge.unwrap_or(2048);
                             ui.add_enabled(
                                 resize,
                                 egui::DragValue::new(&mut n).range(64..=20000).suffix(" px"),
                             )
-                            .accessible_name("Grand côté en pixels");
+                            .accessible_name(tr("Grand côté en pixels"));
                             o.long_edge = resize.then_some(n);
                         });
                         ui.end_row();
-                        ui.label("Dossier");
+                        ui.label(tr("Dossier"));
                         ui.horizontal(|ui| {
                             let text = match &o.folder {
                                 Some(d) => d.display().to_string(),
-                                None => "LÜMA/, à côté du RAW".into(),
+                                None => tr("LÜMA/, à côté du RAW").into(),
                             };
                             ui.label(RichText::new(text).color(theme::DIM));
                             if crate::dialogs::FOLDER_PICKER
-                                && ui.button("Choisir…").clicked()
-                                && let Some(d) = crate::dialogs::pick_folder("Dossier d'export")
+                                && ui.button(tr("Choisir…")).clicked()
+                                && let Some(d) = crate::dialogs::pick_folder(tr("Dossier d'export"))
                             {
                                 o.folder = Some(d);
                             }
-                            if o.folder.is_some() && ui.button("À côté du RAW").clicked() {
+                            if o.folder.is_some() && ui.button(tr("À côté du RAW")).clicked() {
                                 o.folder = None;
                             }
                         });
@@ -1200,7 +1236,7 @@ impl Studio {
                     });
                 ui.add_space(8.0);
                 ui.with_layout(egui::Layout::top_down(egui::Align::Max), |ui| {
-                    if ui.button(RichText::new("Exporter").strong()).clicked() {
+                    if ui.button(RichText::new(tr("Exporter")).strong()).clicked() {
                         go = true;
                     }
                 });
@@ -1384,22 +1420,33 @@ impl Studio {
                         .color(theme::TEXT),
                 );
                 let line = match &access {
-                    Access::Premium { plan, email, .. } => format!(
-                        "Merci ! Votre abonnement{} est actif{}.",
-                        plan.map(|p| format!(" {}", p.name().to_lowercase())).unwrap_or_default(),
-                        email.as_ref().map(|e| format!(" ({e})")).unwrap_or_default()
+                    Access::Premium { plan, email, .. } => {
+                        let email = email.as_ref().map(|e| format!(" ({e})")).unwrap_or_default();
+                        match plan {
+                            Some(p) => trf(
+                                "Merci ! Votre abonnement {plan} est actif{email}.",
+                                &[("plan", &tr(p.name()).to_lowercase()), ("email", &email)],
+                            ),
+                            None => trf(
+                                "Merci ! Votre abonnement est actif{email}.",
+                                &[("email", &email)],
+                            ),
+                        }
+                    }
+                    Access::Trial { days_left: 1 } => {
+                        tr("Il vous reste 1 jour d'essai gratuit.").into()
+                    }
+                    Access::Trial { days_left } => trf(
+                        "Il vous reste {n} jours d'essai gratuit.",
+                        &[("n", days_left)],
                     ),
-                    Access::Trial { days_left } => format!(
-                        "Il vous reste {days_left} jour{} d'essai gratuit.",
-                        if *days_left > 1 { "s" } else { "" }
-                    ),
-                    Access::Expired { .. } => "Votre essai est terminé : abonnez-vous pour continuer à développer vos photos.".into(),
+                    Access::Expired { .. } => tr("Votre essai est terminé : abonnez-vous pour continuer à développer vos photos.").into(),
                 };
                 ui.label(RichText::new(line).size(13.5).color(theme::DIM));
             });
             if !locked {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    if ui.button("Fermer").clicked() {
+                    if ui.button(tr("Fermer")).clicked() {
                         self.premium_open = false;
                     }
                 });
@@ -1410,7 +1457,7 @@ impl Studio {
             ui.horizontal(|ui| {
                 let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), egui::Sense::hover());
                 widgets::spectral_ring(ui.painter(), r.center(), 4.0, 2.0, 1.0);
-                ui.label(RichText::new(f).size(13.0).color(theme::TEXT));
+                ui.label(RichText::new(tr(f)).size(13.0).color(theme::TEXT));
             });
         }
         ui.add_space(16.0);
@@ -1445,10 +1492,10 @@ impl Studio {
                     .layout(egui::Layout::top_down(egui::Align::Min)),
             );
             card.horizontal(|ui| {
-                ui.label(RichText::new(plan.name()).size(15.0).color(theme::TEXT));
+                ui.label(RichText::new(tr(plan.name())).size(15.0).color(theme::TEXT));
                 if best {
                     ui.label(
-                        RichText::new("Le plus avantageux")
+                        RichText::new(tr("Le plus avantageux"))
                             .size(11.0)
                             .color(theme::ACCENT),
                     );
@@ -1456,20 +1503,24 @@ impl Studio {
             });
             card.horizontal(|ui| {
                 ui.label(
-                    RichText::new(plan.price())
+                    RichText::new(tr(plan.price()))
                         .size(28.0)
                         .strong()
                         .color(theme::TEXT),
                 );
-                ui.label(RichText::new(plan.period()).size(13.0).color(theme::DIM));
+                ui.label(
+                    RichText::new(tr(plan.period()))
+                        .size(13.0)
+                        .color(theme::DIM),
+                );
             });
-            card.label(RichText::new(plan.note()).size(12.0).color(theme::DIM));
+            card.label(RichText::new(tr(plan.note())).size(12.0).color(theme::DIM));
             card.add_space(8.0);
             let size = vec2(card.available_width(), 30.0);
             match plan.checkout_url() {
                 Some(url) => {
                     if card
-                        .add_sized(size, egui::Button::new("S'abonner"))
+                        .add_sized(size, egui::Button::new(tr("S'abonner")))
                         .clicked()
                     {
                         chosen = Some(url);
@@ -1478,26 +1529,26 @@ impl Studio {
                 None => {
                     card.add_enabled(
                         false,
-                        egui::Button::new("Bientôt disponible").min_size(size),
+                        egui::Button::new(tr("Bientôt disponible")).min_size(size),
                     )
-                    .on_disabled_hover_text("Le paiement en ligne ouvre bientôt.");
+                    .on_disabled_hover_text(tr("Le paiement en ligne ouvre bientôt."));
                 }
             }
         }
         if let Some(url) = chosen {
             if open_url(url) {
                 self.licence.message =
-                    "La page de paiement s'est ouverte : après le paiement, votre clé s'affiche sur le site.".into();
+                    tr("La page de paiement s'est ouverte : après le paiement, votre clé s'affiche sur le site.").into();
             } else {
                 ui.ctx().copy_text(url.to_owned());
-                self.licence.message = "Lien de paiement copié : ouvrez-le dans Safari.".into();
+                self.licence.message = tr("Lien de paiement copié : ouvrez-le dans Safari.").into();
             }
         }
         ui.add_space(16.0);
         if matches!(access, Access::Premium { .. }) {
             ui.horizontal(|ui| {
                 if let Some(url) = luma_licence::billing_portal()
-                    && ui.button("Gérer mon abonnement").clicked()
+                    && ui.button(tr("Gérer mon abonnement")).clicked()
                     && !open_url(url)
                 {
                     ui.ctx().copy_text(url.to_owned());
@@ -1505,9 +1556,9 @@ impl Studio {
                 if ui
                     .add_enabled(
                         !self.licence.busy(),
-                        egui::Button::new("Retirer de cet appareil"),
+                        egui::Button::new(tr("Retirer de cet appareil")),
                     )
-                    .on_hover_text("La clé reste valable sur vos autres appareils")
+                    .on_hover_text(tr("La clé reste valable sur vos autres appareils"))
                     .clicked()
                 {
                     self.licence.deactivate();
@@ -1515,21 +1566,21 @@ impl Studio {
             });
         } else {
             ui.label(
-                RichText::new(
+                RichText::new(tr(
                     "Déjà abonné ? Votre clé de licence s'affiche sur le site après le paiement (gardez ce lien).",
-                )
+                ))
                 .size(12.5)
                 .color(theme::DIM),
             );
             ui.horizontal(|ui| {
                 ui.add(
                     egui::TextEdit::singleline(&mut self.licence.key_input)
-                        .hint_text("Clé de licence")
+                        .hint_text(tr("Clé de licence"))
                         .desired_width(330.0),
                 );
                 let ready = self.licence.key_input.trim().len() >= 8;
                 if ui
-                    .add_enabled(ready, egui::Button::new("Activer"))
+                    .add_enabled(ready, egui::Button::new(tr("Activer")))
                     .clicked()
                 {
                     self.licence.activate();
@@ -1639,6 +1690,7 @@ impl Studio {
             if ui.add(badge).on_hover_text("LÜMA Premium").clicked() {
                 self.premium_open = true;
             }
+            language_menu(ui);
             if !compact {
                 ui.add_space(14.0);
                 if let Some(p) = self.current_path() {
@@ -1663,17 +1715,22 @@ impl Studio {
                 if icon_button(
                     ui,
                     Icon::Export,
-                    if compact { "" } else { "Exporter" },
+                    if compact { "" } else { tr("Exporter") },
                     false,
                 )
-                .on_hover_text("Maj+Cmd+E")
+                .on_hover_text(tr("Maj+Cmd+E"))
                 .clicked()
                 {
                     self.act("export");
                 }
-                if icon_button(ui, Icon::Open, if compact { "" } else { "Ouvrir" }, false)
-                    .on_hover_text("Cmd+O")
-                    .clicked()
+                if icon_button(
+                    ui,
+                    Icon::Open,
+                    if compact { "" } else { tr("Ouvrir") },
+                    false,
+                )
+                .on_hover_text("Cmd+O")
+                .clicked()
                 {
                     self.act("open");
                 }
@@ -1681,11 +1738,11 @@ impl Studio {
                 if !compact {
                     ui.spacing_mut().item_spacing.x = 12.0;
                     for (label, action, tip) in [
-                        ("Réinitialiser", "reset", "Maj+Cmd+R"),
-                        ("Coller", "paste", "Maj+Cmd+V"),
-                        ("Copier", "copy", "Maj+Cmd+C"),
-                        ("Rétablir", "redo", "Maj+Cmd+Z"),
-                        ("Annuler", "undo", "Cmd+Z"),
+                        (tr("Réinitialiser"), "reset", tr("Maj+Cmd+R")),
+                        (tr("Coller"), "paste", tr("Maj+Cmd+V")),
+                        (tr("Copier"), "copy", tr("Maj+Cmd+C")),
+                        (tr("Rétablir"), "redo", tr("Maj+Cmd+Z")),
+                        (tr("Annuler"), "undo", "Cmd+Z"),
                     ] {
                         if ui
                             .add(egui::Button::new(RichText::new(label).size(12.0)).frame(false))
@@ -1696,10 +1753,14 @@ impl Studio {
                         }
                     }
                 }
-                let label = if self.before { "Avant" } else { "Après" };
+                let label = if self.before {
+                    tr("Avant")
+                } else {
+                    tr("Après")
+                };
                 if ui
                     .selectable_label(self.before, label)
-                    .on_hover_text("\\ : avant / après")
+                    .on_hover_text(tr("\\ : avant / après"))
                     .clicked()
                 {
                     self.act("before");
@@ -1812,7 +1873,8 @@ impl Studio {
     /// L'historique (outil Lumière).
     fn history_panel(&mut self, ui: &mut Ui) {
         let mut restore = None;
-        egui::CollapsingHeader::new(RichText::new("Historique").strong())
+        egui::CollapsingHeader::new(RichText::new(tr("Historique")).strong())
+            .id_salt("historique")
             .default_open(false)
             .show(ui, |ui| {
                 for (i, (label, _)) in self.history.iter().enumerate().rev() {
@@ -1854,9 +1916,10 @@ impl Studio {
         }
     }
 
+    /// Le nom affiché du film `k` (les films intégrés aux noms français sont traduits).
     fn film_name(&self, k: usize) -> &str {
         match self.film(k) {
-            Film::Builtin(p) => p.name,
+            Film::Builtin(p) => tr(p.name),
             Film::Lut(n) | Film::Mine(n, _) => n,
         }
     }
@@ -1874,12 +1937,12 @@ impl Studio {
     /// emporte sa LUT (`.cube`) à côté.
     fn export_film(&self, k: usize, path: &Path) -> Result<(), String> {
         let (group, look) = match self.film(k) {
-            Film::Builtin(p) => (format!("LÜMA — {}", p.group.name()), p.look()),
+            Film::Builtin(p) => (format!("LÜMA — {}", tr(p.group.name())), p.look()),
             Film::Lut(n) => (
-                "LÜMA — Mes pellicules".to_owned(),
+                format!("LÜMA — {}", tr("Mes pellicules")),
                 presets::with_lut(&Settings::default(), n, 1.0),
             ),
-            Film::Mine(_, look) => ("LÜMA — Mes préréglages".to_owned(), look.clone()),
+            Film::Mine(_, look) => (format!("LÜMA — {}", tr("Mes préréglages")), look.clone()),
         };
         let name = self.film_name(k);
         std::fs::write(path, luma_project::xmp::write_preset(name, &group, &look))
@@ -1895,12 +1958,12 @@ impl Studio {
 
     /// Tous les films, rangés par famille, dans `dir/Préréglages LÜMA`.
     fn export_all_films(&self, dir: &Path) -> Result<(PathBuf, usize), String> {
-        let root = dir.join("Préréglages LÜMA");
+        let root = dir.join(tr("Préréglages LÜMA"));
         for k in 0..self.film_count() {
             let group = match self.film(k) {
-                Film::Builtin(p) => p.group.name(),
-                Film::Lut(_) => "Mes pellicules",
-                Film::Mine(..) => "Mes préréglages",
+                Film::Builtin(p) => tr(p.group.name()),
+                Film::Lut(_) => tr("Mes pellicules"),
+                Film::Mine(..) => tr("Mes préréglages"),
             };
             let folder = root.join(group);
             std::fs::create_dir_all(&folder).map_err(|e| format!("{} : {e}", folder.display()))?;
@@ -1914,9 +1977,10 @@ impl Studio {
 
     /// Enregistre le look des réglages actuels comme préréglage.
     fn save_user_preset(&mut self, name: &str) -> Result<(), String> {
-        let dir = crate::dialogs::presets_dir().ok_or("pas de dossier Préréglages")?;
+        let dir = crate::dialogs::presets_dir().ok_or(tr("pas de dossier Préréglages"))?;
         let path = dir.join(format!("{}.xmp", safe_name(name)));
-        let text = luma_project::xmp::write_preset(name, "LÜMA — Mes préréglages", &self.settings);
+        let group = format!("LÜMA — {}", tr("Mes préréglages"));
+        let text = luma_project::xmp::write_preset(name, &group, &self.settings);
         std::fs::write(&path, text).map_err(|e| format!("{} : {e}", path.display()))?;
         self.reload_user_presets();
         Ok(())
@@ -1932,13 +1996,13 @@ impl Studio {
     /// L'étiquette sous la photo : son film et ses retouches, ou « Avant ».
     fn edit_label(&self, painter: &egui::Painter, photo: Rect) {
         let text = if self.before {
-            "Avant : sans retouche".to_owned()
+            tr("Avant : sans retouche").to_owned()
         } else {
             let e = presets::summary(&self.settings);
             if !e.is_edited() {
                 return;
             }
-            e.text()
+            summary_text(&e)
         };
         let galley = painter.layout_no_wrap(text, egui::FontId::proportional(12.0), theme::TEXT);
         let size = galley.size() + vec2(34.0, 10.0);
@@ -1986,14 +2050,16 @@ impl Studio {
         let amount = self.preset.as_ref().map_or(1.0, |p| p.1);
         self.settings = self.film_applied(k, &base, amount);
         self.preset = Some((k, amount, base));
-        self.commit(format!("Film : {}", self.film_name(k)));
+        self.commit(trf("Film : {name}", &[("name", &self.film_name(k))]));
         self.touch();
     }
 
     /// Films : les pellicules et les looks, avec leur aperçu sur la photo.
     fn films_panel(&mut self, ui: &mut Ui) {
         let Some(photo) = self.photo.clone() else {
-            ui.label(RichText::new("Ouvrez une photo pour essayer les films.").color(theme::DIM));
+            ui.label(
+                RichText::new(tr("Ouvrez une photo pour essayer les films.")).color(theme::DIM),
+            );
             return;
         };
         // Les réglages sans film : ceux d'avant le préréglage choisi.
@@ -2031,16 +2097,18 @@ impl Studio {
                 self.touch();
             }
             if c.committed {
-                self.commit(format!(
-                    "{} à {} %",
-                    self.film_name(i),
-                    format_value(percent, 0, false)
+                self.commit(trf(
+                    "{name} à {n} %",
+                    &[
+                        ("name", &self.film_name(i)),
+                        ("n", &format_value(percent, 0, false)),
+                    ],
                 ));
             }
-            if ui.button("Retirer le film").clicked() {
+            if ui.button(tr("Retirer le film")).clicked() {
                 self.settings = base;
                 self.preset = None;
-                self.commit("Sans film".into());
+                self.commit(tr("Sans film").into());
                 self.touch();
             }
             ui.add_space(6.0);
@@ -2065,7 +2133,7 @@ impl Studio {
         sections.insert(0, ("Mes préréglages", (mine..self.film_count()).collect()));
         let mut export = None;
         for (title, items) in sections {
-            sub_title(ui, title);
+            sub_title(ui, tr(title));
             if title == "Mes préréglages" {
                 self.my_presets(ui);
             }
@@ -2120,13 +2188,14 @@ impl Studio {
                             if active { theme::ACCENT } else { theme::TEXT },
                         );
                         let hint = match self.film(k) {
-                            Film::Builtin(p) => p.description,
-                            Film::Lut(_) => "Pellicule mesurée ou LUT 3D importée (.cube).",
-                            Film::Mine(..) => "Mon préréglage.",
+                            Film::Builtin(p) => tr(p.description),
+                            Film::Lut(_) => tr("Pellicule mesurée ou LUT 3D importée (.cube)."),
+                            Film::Mine(..) => tr("Mon préréglage."),
                         };
-                        let r = r.on_hover_text(format!("{hint}\nClic droit : exporter."));
+                        let r =
+                            r.on_hover_text(format!("{hint}\n{}", tr("Clic droit : exporter.")));
                         r.context_menu(|ui| {
-                            if ui.button("Exporter ce préréglage…").clicked() {
+                            if ui.button(tr("Exporter ce préréglage…")).clicked() {
                                 export = Some(k);
                                 ui.close();
                             }
@@ -2146,8 +2215,8 @@ impl Studio {
             && let Some(path) = crate::dialogs::save_preset(&safe_name(self.film_name(k)))
         {
             self.status = match self.export_film(k, &path) {
-                Ok(()) => format!("Préréglage exporté : {}", path.display()),
-                Err(e) => format!("Export impossible : {e}"),
+                Ok(()) => trf("Préréglage exporté : {path}", &[("path", &path.display())]),
+                Err(e) => trf("Export impossible : {error}", &[("error", &e)]),
             };
         }
     }
@@ -2155,54 +2224,57 @@ impl Studio {
     /// Mes préréglages : enregistrer le look actuel, importer, tout exporter.
     fn my_presets(&mut self, ui: &mut Ui) {
         ui.label(
-            RichText::new(
+            RichText::new(tr(
                 "Au format de Lightroom (.xmp) : clic droit sur un film pour l'exporter seul, \
                  ou tous d'un coup, rangés par famille.",
-            )
+            ))
             .size(11.5)
             .color(theme::DIM),
         );
         ui.horizontal(|ui| {
             ui.add(
                 egui::TextEdit::singleline(&mut self.new_preset_name)
-                    .hint_text("Nom du préréglage")
+                    .hint_text(tr("Nom du préréglage"))
                     .desired_width(150.0),
             );
             let name = self.new_preset_name.trim().to_owned();
             if ui
-                .add_enabled(!name.is_empty(), egui::Button::new("Enregistrer"))
-                .on_hover_text(
+                .add_enabled(!name.is_empty(), egui::Button::new(tr("Enregistrer")))
+                .on_hover_text(tr(
                     "Le look des réglages actuels (sans l'exposition, la balance ni le recadrage)",
-                )
+                ))
                 .clicked()
             {
                 self.status = match self.save_user_preset(&name) {
                     Ok(()) => {
                         self.new_preset_name.clear();
-                        format!("Préréglage enregistré : « {name} »")
+                        trf("Préréglage enregistré : « {name} »", &[("name", &name)])
                     }
-                    Err(e) => format!("Préréglage non enregistré : {e}"),
+                    Err(e) => trf("Préréglage non enregistré : {error}", &[("error", &e)]),
                 };
             }
         });
         ui.horizontal_wrapped(|ui| {
-            if ui.button("Exporter tous les préréglages…").clicked()
+            if ui.button(tr("Exporter tous les préréglages…")).clicked()
                 && let Some(dir) = crate::dialogs::pick_export_folder()
             {
                 self.status = match self.export_all_films(&dir) {
-                    Ok((root, n)) => format!("{n} préréglages exportés dans {}", root.display()),
-                    Err(e) => format!("Export impossible : {e}"),
+                    Ok((root, n)) => trf(
+                        "{n} préréglages exportés dans {path}",
+                        &[("n", &n), ("path", &root.display())],
+                    ),
+                    Err(e) => trf("Export impossible : {error}", &[("error", &e)]),
                 };
             }
             if crate::dialogs::FOLDER_PICKER {
                 if ui
-                    .button("Importer…")
-                    .on_hover_text("Des préréglages .xmp de Lightroom, Camera Raw ou LÜMA")
+                    .button(tr("Importer…"))
+                    .on_hover_text(tr("Des préréglages .xmp de Lightroom, Camera Raw ou LÜMA"))
                     .clicked()
                 {
                     self.import_presets(&crate::dialogs::pick_presets());
                 }
-            } else if ui.button("Actualiser").clicked() {
+            } else if ui.button(tr("Actualiser")).clicked() {
                 self.reload_user_presets();
             }
         });
@@ -2225,53 +2297,60 @@ impl Studio {
                 n += 1;
             }
         }
-        self.status = format!("{n} préréglage(s) importé(s)");
+        self.status = trf("{n} préréglage(s) importé(s)", &[("n", &n)]);
         self.reload_user_presets();
     }
 
     /// Les boutons de « Mes pellicules » : mesurer une vraie pellicule, importer une LUT.
     fn my_films(&mut self, ui: &mut Ui, photo: &Arc<Photo>) {
         ui.label(
-            RichText::new(
+            RichText::new(tr(
                 "Le rendu exact d'une vraie pellicule : photographiez la même scène en numérique \
                  (cette photo) et sur film, puis choisissez le scan. LÜMA aligne les deux images \
                  et mesure le film, couleur par couleur.",
-            )
+            ))
             .size(11.5)
             .color(theme::DIM),
         );
         ui.horizontal_wrapped(|ui| {
             if crate::dialogs::FOLDER_PICKER {
-                let measure =
-                    ui.add_enabled(!self.measuring, egui::Button::new("Mesurer une pellicule…"));
+                let measure = ui.add_enabled(
+                    !self.measuring,
+                    egui::Button::new(tr("Mesurer une pellicule…")),
+                );
                 if measure.clicked()
                     && let Some(scan) = crate::dialogs::pick_scan()
                     && let Some(dir) = crate::dialogs::films_dir()
                 {
                     self.measuring = true;
-                    self.status = format!("Mesure de la pellicule : {}…", file_name(&scan));
+                    self.status = trf(
+                        "Mesure de la pellicule : {file}…",
+                        &[("file", &file_name(&scan))],
+                    );
                     self.worker.measure_film(photo.clone(), scan, dir);
                 }
-                if ui.button("Importer une LUT…").clicked()
+                if ui.button(tr("Importer une LUT…")).clicked()
                     && let Some(path) = crate::dialogs::pick_lut()
                 {
                     self.import_lut(&path);
                 }
-            } else if ui.button("Actualiser").clicked() {
+            } else if ui.button(tr("Actualiser")).clicked() {
                 self.refresh_luts();
             }
         });
         if self.measuring {
             ui.horizontal(|ui| {
                 ui.spinner();
-                ui.label(RichText::new("Alignement et mesure…").color(theme::DIM));
+                ui.label(RichText::new(tr("Alignement et mesure…")).color(theme::DIM));
             });
         }
         if !crate::dialogs::FOLDER_PICKER {
             ui.label(
-                RichText::new("Déposez vos LUT .cube dans LÜMA › Films (app Fichiers).")
-                    .size(11.5)
-                    .color(theme::DIM),
+                RichText::new(tr(
+                    "Déposez vos LUT .cube dans LÜMA › Films (app Fichiers).",
+                ))
+                .size(11.5)
+                .color(theme::DIM),
             );
         }
         ui.add_space(4.0);
@@ -2282,8 +2361,8 @@ impl Studio {
         let result = (|| -> Result<String, String> {
             let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
             luma_image::cube::Cube::parse(&text).map_err(|e| e.to_string())?;
-            let dir = crate::dialogs::films_dir().ok_or("pas de dossier Films")?;
-            let dest = dir.join(path.file_name().ok_or("nom de fichier")?);
+            let dir = crate::dialogs::films_dir().ok_or(tr("pas de dossier Films"))?;
+            let dest = dir.join(path.file_name().ok_or(tr("nom de fichier"))?);
             if dest != path {
                 std::fs::write(&dest, text).map_err(|e| e.to_string())?;
             }
@@ -2291,13 +2370,13 @@ impl Studio {
         })();
         match result {
             Ok(name) => {
-                self.status = format!("LUT importée : « {name} »");
+                self.status = trf("LUT importée : « {name} »", &[("name", &name)]);
                 self.refresh_luts();
                 if let Some(k) = self.luts.iter().position(|n| *n == name) {
                     self.choose_film(PRESETS.len() + k);
                 }
             }
-            Err(e) => self.status = format!("LUT illisible : {e}"),
+            Err(e) => self.status = trf("LUT illisible : {error}", &[("error", &e)]),
         }
     }
 
@@ -2306,25 +2385,25 @@ impl Studio {
         let n = self.selected.len();
         ui.label(
             RichText::new(match n {
-                0 => "Choisissez les photos dans le film : Cmd-clic pour en ajouter une, Maj-clic pour une suite.".to_owned(),
-                1 => "Une photo choisie : ajoutez-en d'autres (Cmd-clic, Maj-clic).".to_owned(),
-                n => format!("{n} photos choisies."),
+                0 => tr("Choisissez les photos dans le film : Cmd-clic pour en ajouter une, Maj-clic pour une suite.").to_owned(),
+                1 => tr("Une photo choisie : ajoutez-en d'autres (Cmd-clic, Maj-clic).").to_owned(),
+                n => trf("{n} photos choisies.", &[("n", &n)]),
             })
             .color(theme::DIM),
         );
         ui.horizontal(|ui| {
-            if ui.button("Tout le dossier").clicked() {
+            if ui.button(tr("Tout le dossier")).clicked() {
                 self.selected = self.visible().into_iter().collect();
             }
-            if n > 0 && ui.button("Vider").clicked() {
+            if n > 0 && ui.button(tr("Vider")).clicked() {
                 self.selected.clear();
             }
         });
         ui.add_space(10.0);
         ui.horizontal(|ui| {
             for (stack, icon, label) in [
-                (true, Icon::Stack, "Empilement"),
-                (false, Icon::Panorama, "Panorama"),
+                (true, Icon::Stack, tr("Empilement")),
+                (false, Icon::Panorama, tr("Panorama")),
             ] {
                 if big_choice(ui, icon, label, self.merge_stack == stack).clicked() {
                     self.merge_stack = stack;
@@ -2335,19 +2414,22 @@ impl Studio {
         if self.merge_stack {
             use luma_merge::StackMode as S;
             for (mode, text) in [
-                (S::Mean, "Moins de bruit, poses longues simulées"),
-                (S::Median, "Ce qui bouge disparaît (passants, voitures)"),
-                (S::Maximum, "Filé d'étoiles, traînées de phares, éclairs"),
+                (S::Mean, tr("Moins de bruit, poses longues simulées")),
+                (S::Median, tr("Ce qui bouge disparaît (passants, voitures)")),
+                (
+                    S::Maximum,
+                    tr("Filé d'étoiles, traînées de phares, éclairs"),
+                ),
                 (
                     S::Stars,
-                    "Suit le ciel qui tourne, rejette satellites et avions",
+                    tr("Suit le ciel qui tourne, rejette satellites et avions"),
                 ),
             ] {
                 ui.horizontal(|ui| {
                     ui.radio_value(
                         &mut self.stack_mode,
                         mode,
-                        RichText::new(mode.name()).strong(),
+                        RichText::new(tr(mode.name())).strong(),
                     );
                     ui.label(RichText::new(text).size(11.5).color(theme::DIM));
                 });
@@ -2356,7 +2438,7 @@ impl Studio {
             let stars = self.stack_mode == luma_merge::StackMode::Stars;
             ui.add_enabled_ui(!stars, |ui| {
                 let mut align = self.stack_align || stars;
-                ui.checkbox(&mut align, "Aligner les poses (à main levée)");
+                ui.checkbox(&mut align, tr("Aligner les poses (à main levée)"));
                 if !stars {
                     self.stack_align = align;
                 }
@@ -2365,19 +2447,19 @@ impl Studio {
             use luma_merge::Projection as P;
             ui.horizontal(|ui| {
                 for p in [P::Perspective, P::Cylindrical, P::Spherical] {
-                    ui.selectable_value(&mut self.projection, p, p.name());
+                    ui.selectable_value(&mut self.projection, p, tr(p.name()));
                 }
             });
             ui.label(
                 RichText::new(match self.projection {
                     P::Perspective => {
-                        "Les droites restent droites (architecture) ; jusqu'à 120° environ."
+                        tr("Les droites restent droites (architecture) ; jusqu'à 120° environ.")
                     }
                     P::Cylindrical => {
-                        "Les verticales restent droites : le choix des panoramas horizontaux."
+                        tr("Les verticales restent droites : le choix des panoramas horizontaux.")
                     }
                     P::Spherical => {
-                        "Pour les très grands angles et les panoramas sur plusieurs rangées."
+                        tr("Pour les très grands angles et les panoramas sur plusieurs rangées.")
                     }
                 })
                 .size(11.5)
@@ -2385,24 +2467,24 @@ impl Studio {
             );
         }
         ui.add_space(8.0);
-        ui.checkbox(&mut self.auto_crop, "Rogner automatiquement");
+        ui.checkbox(&mut self.auto_crop, tr("Rogner automatiquement"));
         ui.label(
-            RichText::new("Le rognage est un recadrage ordinaire : on peut le modifier ou le retirer ensuite (Géométrie).")
+            RichText::new(tr("Le rognage est un recadrage ordinaire : on peut le modifier ou le retirer ensuite (Géométrie)."))
                 .size(11.0)
                 .color(theme::DIM),
         );
         ui.checkbox(
             &mut self.merge_full,
-            "Pleine définition (sinon 2048 px, plus rapide)",
+            tr("Pleine définition (sinon 2048 px, plus rapide)"),
         );
         ui.add_space(10.0);
         if let Some((fraction, label, cancel)) = &self.merging {
             ui.add(
                 egui::ProgressBar::new(*fraction)
-                    .text(label.clone())
+                    .text(tr(label))
                     .fill(theme::ACCENT),
             );
-            if ui.button("Annuler la fusion").clicked() {
+            if ui.button(tr("Annuler la fusion")).clicked() {
                 cancel.cancel();
             }
             return;
@@ -2410,7 +2492,7 @@ impl Studio {
         let go = ui.add_enabled(
             n >= 2,
             egui::Button::new(
-                RichText::new(format!("Fusionner {} photos", n.max(2)))
+                RichText::new(trf("Fusionner {n} photos", &[("n", &n.max(2))]))
                     .strong()
                     .color(Color32::BLACK),
             )
@@ -2430,7 +2512,7 @@ impl Studio {
                 MergeKind::Panorama(self.projection)
             };
             let cancel = luma_core::Cancel::new();
-            self.merging = Some((0.0, "Préparation".into(), cancel.clone()));
+            self.merging = Some((0.0, tr("Préparation").into(), cancel.clone()));
             self.flush_xmp();
             self.worker.merge(
                 MergeJob {
@@ -2446,45 +2528,48 @@ impl Studio {
 
     /// Bibliothèque, à gauche : le dossier et le filtre.
     fn library_left(&mut self, ui: &mut Ui) {
-        section_title(ui, "Dossier");
+        section_title(ui, tr("Dossier"));
         let dir = self
             .folder
             .first()
             .and_then(|p| p.parent())
             .map(|d| d.display().to_string())
-            .unwrap_or_else(|| "Aucun (Cmd+O)".into());
+            .unwrap_or_else(|| tr("Aucun (Cmd+O)").into());
         ui.label(RichText::new(dir).size(12.0));
         ui.label(
-            RichText::new(format!(
-                "{} photos, {} affichées",
-                self.folder.len(),
-                self.visible().len()
+            RichText::new(trf(
+                "{n} photos, {shown} affichées",
+                &[("n", &self.folder.len()), ("shown", &self.visible().len())],
             ))
             .size(11.5)
             .color(theme::DIM),
         );
         ui.add_space(14.0);
-        section_title(ui, "Filtre");
-        ui.label(RichText::new("Note minimale").color(theme::DIM).size(11.5));
+        section_title(ui, tr("Filtre"));
+        ui.label(
+            RichText::new(tr("Note minimale"))
+                .color(theme::DIM)
+                .size(11.5),
+        );
         if let Some(n) = widgets::rating(ui, self.min_rating, 18.0) {
             self.min_rating = n;
         }
         ui.add_space(8.0);
-        ui.label(RichText::new("Drapeau").color(theme::DIM).size(11.5));
+        ui.label(RichText::new(tr("Drapeau")).color(theme::DIM).size(11.5));
         for (f, name) in [
-            (FlagFilter::All, "Toutes"),
-            (FlagFilter::Picks, "Retenues (P)"),
-            (FlagFilter::NotRejected, "Sans les rejetées (X)"),
+            (FlagFilter::All, tr("Toutes")),
+            (FlagFilter::Picks, tr("Retenues (P)")),
+            (FlagFilter::NotRejected, tr("Sans les rejetées (X)")),
         ] {
             ui.radio_value(&mut self.flag_filter, f, name);
         }
         ui.add_space(14.0);
-        section_title(ui, "Raccourcis");
+        section_title(ui, tr("Raccourcis"));
         for line in [
-            "0 à 5 : note",
-            "P, X, U : retenir, rejeter, sans drapeau",
-            "Flèches gauche et droite : photo voisine",
-            "D ou double-clic : Développement",
+            tr("0 à 5 : note"),
+            tr("P, X, U : retenir, rejeter, sans drapeau"),
+            tr("Flèches gauche et droite : photo voisine"),
+            tr("D ou double-clic : Développement"),
         ] {
             ui.label(RichText::new(line).size(11.5).color(theme::DIM));
         }
@@ -2492,13 +2577,13 @@ impl Studio {
 
     /// Bibliothèque, à droite : la note, le drapeau et les informations de la photo.
     fn library_right(&mut self, ui: &mut Ui) {
-        section_title(ui, "Histogramme");
+        section_title(ui, tr("Histogramme"));
         widgets::histogram(ui, &self.histogram, &mut self.clipping);
         ui.add_space(10.0);
         let Some(path) = self.current_path().map(Path::to_path_buf) else {
             return;
         };
-        section_title(ui, "Métadonnées");
+        section_title(ui, tr("Métadonnées"));
         ui.label(RichText::new(file_name(&path)).strong());
         let meta = self.current_meta();
         if let Some(n) = widgets::rating(ui, meta.rating, 20.0) {
@@ -2506,9 +2591,9 @@ impl Studio {
         }
         ui.horizontal(|ui| {
             for (f, name, action) in [
-                (Flag::Pick, "Retenue", "pick"),
-                (Flag::None, "Sans drapeau", "unflag"),
-                (Flag::Reject, "Rejetée", "reject"),
+                (Flag::Pick, tr("Retenue"), "pick"),
+                (Flag::None, tr("Sans drapeau"), "unflag"),
+                (Flag::Reject, tr("Rejetée"), "reject"),
             ] {
                 if ui.selectable_label(meta.flag == f, name).clicked() {
                     self.act(action);
@@ -2521,21 +2606,21 @@ impl Studio {
             let e = &raw.exif;
             let (w, h) = photo.full_size();
             let mut rows = vec![
-                ("Appareil", format!("{} {}", raw.make, raw.model)),
-                ("Dimensions", format!("{w} × {h}")),
+                (tr("Appareil"), format!("{} {}", raw.make, raw.model)),
+                (tr("Dimensions"), format!("{w} × {h}")),
             ];
             if let Some(iso) = e.iso {
                 rows.push(("ISO", iso.to_string()));
             }
             if let Some(f) = e.focal_length {
-                rows.push(("Focale", format!("{f:.0} mm")));
+                rows.push((tr("Focale"), format!("{f:.0} mm")));
             }
             if let Some(a) = e.aperture {
-                rows.push(("Ouverture", format!("f/{}", format_value(a, 1, false))));
+                rows.push((tr("Ouverture"), format!("f/{}", format_value(a, 1, false))));
             }
             if let Some(t) = e.exposure_time {
                 rows.push((
-                    "Vitesse",
+                    tr("Vitesse"),
                     if t < 1.0 {
                         format!("1/{:.0} s", 1.0 / t)
                     } else {
@@ -2546,6 +2631,7 @@ impl Studio {
             egui::Grid::new("exif").num_columns(2).show(ui, |ui| {
                 for (k, v) in rows {
                     ui.label(RichText::new(k).color(theme::DIM));
+
                     ui.label(v);
                     ui.end_row();
                 }
@@ -2559,9 +2645,9 @@ impl Studio {
         if visible.is_empty() {
             let rect = ui.max_rect();
             let text = if self.folder.is_empty() {
-                self.status.clone()
+                self.status_text()
             } else {
-                "Aucune photo ne passe le filtre.".into()
+                tr("Aucune photo ne passe le filtre.").into()
             };
             ui.painter().text(
                 rect.center(),
@@ -2791,7 +2877,7 @@ impl Studio {
             painter.text(
                 pos2(rect.center().x, logo.max.y + 18.0),
                 egui::Align2::CENTER_TOP,
-                &self.status,
+                self.status_text(),
                 egui::FontId::proportional(15.0),
                 theme::DIM,
             );
@@ -2854,8 +2940,8 @@ impl Studio {
                 self.touch();
             }
             if c.committed {
-                let name = self.settings.masks[i].name.clone();
-                self.commit(format!("Masque : {}", name.to_lowercase()));
+                let name = tr(&self.settings.masks[i].name).to_lowercase();
+                self.commit(trf("Masque : {mask}", &[("mask", &name)]));
             }
         } else {
             let target = fit(rect.shrink(18.0), iw, ih);
@@ -2879,38 +2965,40 @@ impl Studio {
                     };
                     self.wb_label = "Personnalisée";
                     self.eyedropper = false;
-                    self.commit(format!(
-                        "Pipette : {} K, {}",
-                        format_value(t.temperature, 0, false),
-                        format_value(t.tint, 0, true)
+                    self.commit(trf(
+                        "Pipette : {temperature} K, {tint}",
+                        &[
+                            ("temperature", &format_value(t.temperature, 0, false)),
+                            ("tint", &format_value(t.tint, 0, true)),
+                        ],
                     ));
                     self.touch();
                 }
-            } else if r.on_hover_text("Clic ou Z : zoom 1:1").clicked() {
+            } else if r.on_hover_text(tr("Clic ou Z : zoom 1:1")).clicked() {
                 self.zoom = true;
             }
         }
         let mut badges = Vec::new();
         if self.before {
-            badges.push("Avant");
+            badges.push(tr("Avant"));
         }
         if self.loading.is_some() || self.shown != self.generation {
-            badges.push("Rendu…");
+            badges.push(tr("Rendu…"));
         }
         if self.clipping {
-            badges.push("Écrêtage (J)");
+            badges.push(tr("Écrêtage (J)"));
         }
         if self.eyedropper {
-            badges.push("Pipette : cliquez un gris ou un blanc de la photo");
+            badges.push(tr("Pipette : cliquez un gris ou un blanc de la photo"));
         }
         if self.crop_tool.is_some() {
-            badges.push("Recadrage : Entrée pour valider, Échap pour annuler");
+            badges.push(tr("Recadrage : Entrée pour valider, Échap pour annuler"));
         } else if let Some(m) = self.selected_mask.and_then(|i| self.settings.masks.get(i)) {
             badges.push(match m.shape {
                 Shape::Brush { .. } => {
-                    "Pinceau : peindre en glissant, Option pour gommer, O pour voir le masque"
+                    tr("Pinceau : peindre en glissant, Option pour gommer, O pour voir le masque")
                 }
-                _ => "Masque : tirer les poignées, O pour voir le masque, Échap pour quitter",
+                _ => tr("Masque : tirer les poignées, O pour voir le masque, Échap pour quitter"),
             });
         }
         for (k, b) in badges.iter().enumerate() {
@@ -2925,7 +3013,7 @@ impl Studio {
             painter.galley(p + vec2(8.0, 4.0), galley, Color32::WHITE);
         }
         let status = painter.layout_no_wrap(
-            self.status.clone(),
+            self.status_text(),
             egui::FontId::proportional(11.5),
             theme::DIM,
         );
@@ -2937,29 +3025,36 @@ impl Studio {
     }
 
     fn fields(&mut self, ui: &mut Ui, fields: &[Field]) -> Option<String> {
-        let mut label = None;
-        for f in fields {
-            let value = (f.get)(&mut self.settings);
-            let change = widgets::slider(ui, &f.spec, value);
-            let v = *value;
-            if change.changed {
-                self.touch();
+        // Un groupe à part : deux groupes d'un même panneau ont des libellés communs
+        // (« Gain » du vignetage et du grain), qui ne doivent pas partager leur id.
+        let group: Vec<&str> = fields.iter().map(|f| f.spec.label).collect();
+        ui.scope_builder(egui::UiBuilder::new().id_salt(group), |ui| {
+            let mut label = None;
+            for f in fields {
+                let value = (f.get)(&mut self.settings);
+                let change = widgets::slider(ui, &f.spec, value);
+                let v = *value;
+                if change.changed {
+                    self.touch();
+                }
+                if change.committed {
+                    label = Some(format!(
+                        "{} {}",
+                        tr(f.spec.label),
+                        format_value(v, f.spec.decimals, f.spec.min < 0.0)
+                    ));
+                }
             }
-            if change.committed {
-                label = Some(format!(
-                    "{} {}",
-                    f.spec.label,
-                    format_value(v, f.spec.decimals, f.spec.min < 0.0)
-                ));
-            }
-        }
-        label
+            label
+        })
+        .inner
     }
 
     /// Panneau Masquage : la liste des masques, et les curseurs du masque choisi.
     fn masks_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
         let editing = self.selected_mask.is_some();
-        egui::CollapsingHeader::new(RichText::new("Masquage").strong())
+        egui::CollapsingHeader::new(RichText::new(tr("Masquage")).strong())
+            .id_salt("Masquage")
             .open(editing.then_some(true))
             .default_open(true)
             .show(ui, |ui| {
@@ -2968,26 +3063,26 @@ impl Studio {
                     for (icon, label, key, action) in [
                         (
                             Icon::Radial,
-                            "Radial",
-                            "Maj+M : un cercle, plein effet au centre",
+                            tr("Radial"),
+                            tr("Maj+M : un cercle, plein effet au centre"),
                             "mask_radial",
                         ),
                         (
                             Icon::Linear,
-                            "Linéaire",
-                            "M : trois traits, plein effet, milieu, plus d'effet",
+                            tr("Linéaire"),
+                            tr("M : trois traits, plein effet, milieu, plus d'effet"),
                             "mask_linear",
                         ),
                         (
                             Icon::Brush,
-                            "Pinceau",
-                            "K : peindre, Option pour gommer",
+                            tr("Pinceau"),
+                            tr("K : peindre, Option pour gommer"),
                             "mask_brush",
                         ),
                         (
                             Icon::Films,
-                            "Image entière",
-                            "Toute l'image : pour empiler un film de plus",
+                            tr("Image entière|bouton"),
+                            tr("Toute l'image : pour empiler un film de plus"),
                             "mask_full",
                         ),
                     ] {
@@ -3005,9 +3100,10 @@ impl Studio {
                     let film = m
                         .look
                         .as_ref()
-                        .map(|l| format!(" · {}", l.name))
+                        .map(|l| format!(" · {}", tr(&l.name)))
                         .unwrap_or_default();
-                    let mut text = RichText::new(format!("{}. {}{film}", i + 1, m.name)).size(12.0);
+                    let mut text =
+                        RichText::new(format!("{}. {}{film}", i + 1, tr(&m.name))).size(12.0);
                     if !m.is_active() && m.active_look().is_none() {
                         text = text.color(theme::DIM);
                     }
@@ -3024,7 +3120,7 @@ impl Studio {
                 else {
                     if !self.settings.masks.is_empty() {
                         ui.label(
-                            RichText::new("Choisissez un masque pour le régler.")
+                            RichText::new(tr("Choisissez un masque pour le régler."))
                                 .size(11.5)
                                 .color(theme::DIM),
                         );
@@ -3033,13 +3129,16 @@ impl Studio {
                 };
                 ui.horizontal(|ui| {
                     let m = &mut self.settings.masks[i];
-                    if ui.checkbox(&mut m.invert, "Inverser").changed() {
-                        commits.push("Masque inversé".into());
+                    if ui.checkbox(&mut m.invert, tr("Inverser")).changed() {
+                        commits.push(tr("Masque inversé").into());
                     }
-                    if ui.selectable_label(self.show_mask, "Voir (O)").clicked() {
+                    if ui
+                        .selectable_label(self.show_mask, tr("Voir (O)"))
+                        .clicked()
+                    {
                         self.show_mask = !self.show_mask;
                     }
-                    if ui.button("Supprimer").clicked() {
+                    if ui.button(tr("Supprimer")).clicked() {
                         self.act("mask_delete");
                     }
                 });
@@ -3047,7 +3146,7 @@ impl Studio {
                 let Some(m) = self.settings.masks.get_mut(i) else {
                     return;
                 };
-                let name = m.name.to_lowercase();
+                let name = tr(&m.name).to_lowercase();
                 let spec = |label, min, max, decimals| SliderSpec {
                     label,
                     min,
@@ -3058,33 +3157,43 @@ impl Studio {
                     log: false,
                 };
                 // Le film du masque : il s'empile sur le reste, dans la zone du masque.
-                sub_title(ui, "Film du masque");
-                let current = m
-                    .look
-                    .as_ref()
-                    .map_or_else(|| "Aucun".to_owned(), |l| l.name.clone());
+                sub_title(ui, tr("Film du masque"));
+                let current = m.look.as_ref().map(|l| l.name.clone());
                 let mut pick: Option<Option<String>> = None;
                 egui::ComboBox::from_id_salt("film-masque")
-                    .selected_text(&current)
+                    .selected_text(current.as_deref().map_or(tr("Aucun"), tr))
                     .height(440.0)
                     .show_ui(ui, |ui| {
-                        if ui.selectable_label(current == "Aucun", "Aucun").clicked() {
+                        if ui
+                            .selectable_label(current.is_none(), tr("Aucun"))
+                            .clicked()
+                        {
                             pick = Some(None);
                         }
                         if !luts.is_empty() {
-                            ui.label(RichText::new("Mes pellicules").size(11.0).color(theme::DIM));
+                            ui.label(
+                                RichText::new(tr("Mes pellicules"))
+                                    .size(11.0)
+                                    .color(theme::DIM),
+                            );
                             for n in &luts {
-                                if ui.selectable_label(current == *n, n).clicked() {
+                                if ui
+                                    .selectable_label(current.as_deref() == Some(n), n)
+                                    .clicked()
+                                {
                                     pick = Some(Some(n.clone()));
                                 }
                             }
                         }
                         for group in presets::Group::ALL {
-                            ui.label(RichText::new(group.name()).size(11.0).color(theme::DIM));
+                            ui.label(RichText::new(tr(group.name())).size(11.0).color(theme::DIM));
                             for p in PRESETS.iter().filter(|p| p.group == group) {
                                 if ui
-                                    .selectable_label(current == p.name, p.name)
-                                    .on_hover_text(p.description)
+                                    .selectable_label(
+                                        current.as_deref() == Some(p.name),
+                                        tr(p.name),
+                                    )
+                                    .on_hover_text(tr(p.description))
                                     .clicked()
                                 {
                                     pick = Some(Some(p.name.to_owned()));
@@ -3093,13 +3202,16 @@ impl Studio {
                         }
                     })
                     .response
-                    .accessible_name("Film du masque");
+                    .accessible_name(tr("Film du masque"));
                 let mut film_changed = false;
                 if let Some(choice) = pick {
                     let amount = m.look.as_ref().map_or(100.0, |l| l.amount);
-                    commits.push(format!(
-                        "Masque {name} : film {}",
-                        choice.as_deref().unwrap_or("aucun")
+                    commits.push(trf(
+                        "Masque {mask} : film {film}",
+                        &[
+                            ("mask", &name),
+                            ("film", &choice.as_deref().map_or(tr("aucun"), tr)),
+                        ],
                     ));
                     m.look = choice.map(|n| luma_project::Look { name: n, amount });
                     film_changed = true;
@@ -3113,14 +3225,17 @@ impl Studio {
                     let c = widgets::slider(ui, &film, &mut look.amount);
                     film_changed |= c.changed;
                     if c.committed {
-                        commits.push(format!(
-                            "Masque {name} : {} à {} %",
-                            look.name,
-                            format_value(look.amount, 0, false)
+                        commits.push(trf(
+                            "Masque {mask} : {film} à {n} %",
+                            &[
+                                ("mask", &name),
+                                ("film", &tr(&look.name)),
+                                ("n", &format_value(look.amount, 0, false)),
+                            ],
                         ));
                     }
                 }
-                sub_title(ui, "Réglages du masque");
+                sub_title(ui, tr("Réglages du masque"));
                 let l = &mut m.local;
                 let rows: [(SliderSpec, &mut f32); 11] = [
                     (spec("Intensité", 0.0, 100.0, 0), &mut m.amount),
@@ -3140,15 +3255,21 @@ impl Studio {
                     let c = widgets::slider(ui, &spec, value);
                     changed |= c.changed;
                     if c.committed {
-                        commits.push(format!(
-                            "Masque {name} : {} {}",
-                            spec.label.to_lowercase(),
-                            format_value(*value, spec.decimals, spec.min < 0.0)
+                        commits.push(trf(
+                            "Masque {mask} : {setting} {value}",
+                            &[
+                                ("mask", &name),
+                                ("setting", &tr(spec.label).to_lowercase()),
+                                (
+                                    "value",
+                                    &format_value(*value, spec.decimals, spec.min < 0.0),
+                                ),
+                            ],
                         ));
                     }
                 }
                 if matches!(m.shape, Shape::Brush { .. }) {
-                    sub_title(ui, "Pinceau");
+                    sub_title(ui, tr("Pinceau"));
                     let b = &mut self.brush;
                     let mut size = b.radius * 100.0;
                     for (spec, value) in [
@@ -3189,7 +3310,10 @@ impl Studio {
                     );
                     changed |= c.changed;
                     if c.committed {
-                        commits.push(format!("Masque {name} : contour progressif"));
+                        commits.push(trf(
+                            "Masque {mask} : contour progressif",
+                            &[("mask", &name)],
+                        ));
                     }
                 }
                 if changed {
@@ -3206,9 +3330,9 @@ impl Studio {
             }
         };
 
-        section_title(ui, "Histogramme");
+        section_title(ui, tr("Histogramme"));
         widgets::histogram(ui, &self.histogram, &mut self.clipping)
-            .on_hover_text("Clic ou J : afficher l'écrêtage");
+            .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
         ui.add_space(6.0);
 
         if self.tool == Tool::Masks {
@@ -3216,21 +3340,22 @@ impl Studio {
         }
 
         if self.tool == Tool::Light {
-            egui::CollapsingHeader::new(RichText::new("Base").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Base")).strong())
+                .id_salt("Base")
                 .default_open(true)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("Profil").color(theme::DIM));
+                        ui.label(RichText::new(tr("Profil")).color(theme::DIM));
                         let names = [
-                            (Profile::Color, "Couleur"),
-                            (Profile::Neutral, "Neutre"),
-                            (Profile::Vivid, "Vif"),
-                            (Profile::Monochrome, "Monochrome"),
+                            (Profile::Color, tr("Couleur")),
+                            (Profile::Neutral, tr("Neutre")),
+                            (Profile::Vivid, tr("Vif")),
+                            (Profile::Monochrome, tr("Monochrome")),
                         ];
                         let current = names
                             .iter()
                             .find(|n| n.0 == self.settings.profile)
-                            .map_or("Couleur", |n| n.1);
+                            .map_or(names[0].1, |n| n.1);
                         egui::ComboBox::from_id_salt("profil")
                             .selected_text(current)
                             .show_ui(ui, |ui| {
@@ -3239,17 +3364,17 @@ impl Studio {
                                         .selectable_value(&mut self.settings.profile, p, name)
                                         .changed()
                                     {
-                                        commits.push(format!("Profil : {name}"));
+                                        commits.push(trf("Profil : {name}", &[("name", &name)]));
                                     }
                                 }
                             })
                             .response
-                            .accessible_name("Profil");
+                            .accessible_name(tr("Profil"));
                     });
                     ui.add_space(4.0);
                     let as_shot = self.photo.as_ref().map(|p| p.as_shot());
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("Balance des blancs").color(theme::DIM));
+                        ui.label(RichText::new(tr("Balance des blancs")).color(theme::DIM));
                         let current = match self.settings.white_balance {
                             WhiteBalance::AsShot => "Telle quelle",
                             WhiteBalance::Custom { temperature, tint } => WB_PRESETS
@@ -3259,23 +3384,23 @@ impl Studio {
                         };
                         let mut choice: Option<&'static str> = None;
                         egui::ComboBox::from_id_salt("balance")
-                            .selected_text(current)
+                            .selected_text(tr(current))
                             .show_ui(ui, |ui| {
                                 for name in ["Telle quelle", "Auto"]
                                     .into_iter()
                                     .chain(WB_PRESETS.iter().map(|p| p.0))
                                 {
-                                    if ui.selectable_label(current == name, name).clicked() {
+                                    if ui.selectable_label(current == name, tr(name)).clicked() {
                                         choice = Some(name);
                                     }
                                 }
                             })
                             .response
-                            .accessible_name("Balance des blancs");
+                            .accessible_name(tr("Balance des blancs"));
                         let picking = self.eyedropper;
                         if ui
-                            .selectable_label(picking, "Pipette")
-                            .on_hover_text("W : cliquez un gris de la photo")
+                            .selectable_label(picking, tr("Pipette"))
+                            .on_hover_text(tr("W : cliquez un gris de la photo"))
                             .clicked()
                         {
                             self.eyedropper = !picking;
@@ -3283,7 +3408,7 @@ impl Studio {
                         match choice {
                             Some("Telle quelle") => {
                                 self.settings.white_balance = WhiteBalance::AsShot;
-                                commits.push("Balance : telle quelle".into());
+                                commits.push(tr("Balance : telle quelle").into());
                             }
                             Some("Auto") => {
                                 if let Some(photo) = &self.photo {
@@ -3293,7 +3418,7 @@ impl Studio {
                                         tint: t.tint,
                                     };
                                     self.wb_label = "Auto";
-                                    commits.push("Balance : auto".into());
+                                    commits.push(tr("Balance : auto").into());
                                 }
                             }
                             Some(name) => {
@@ -3302,7 +3427,10 @@ impl Studio {
                                         temperature: p.1,
                                         tint: p.2,
                                     };
-                                    commits.push(format!("Balance : {}", name.to_lowercase()));
+                                    commits.push(trf(
+                                        "Balance : {name}",
+                                        &[("name", &tr(name).to_lowercase())],
+                                    ));
                                 }
                             }
                             None => {}
@@ -3342,23 +3470,26 @@ impl Studio {
                         self.touch();
                     }
                     if c.committed {
-                        commits.push(format!(
-                            "Balance : {} K, {}",
-                            format_value(temperature, 0, false),
-                            format_value(tint, 0, true)
+                        commits.push(trf(
+                            "Balance : {temperature} K, {tint}",
+                            &[
+                                ("temperature", &format_value(temperature, 0, false)),
+                                ("tint", &format_value(tint, 0, true)),
+                            ],
                         ));
                     }
-                    sub_title(ui, "Tonalité");
+                    sub_title(ui, tr("Tonalité"));
                     let l = self.fields(ui, &TONE);
                     keep(l, &mut commits);
-                    sub_title(ui, "Présence");
+                    sub_title(ui, tr("Présence"));
                     let l = self.fields(ui, &PRESENCE);
                     keep(l, &mut commits);
                 });
         }
 
         if self.tool == Tool::Light {
-            egui::CollapsingHeader::new(RichText::new("Courbe des tonalités").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Courbe des tonalités")).strong())
+                .id_salt("Courbe des tonalités")
                 .default_open(true)
                 .show(ui, |ui| {
                     curve_preview(ui, &self.settings);
@@ -3368,15 +3499,20 @@ impl Studio {
         }
 
         if self.tool == Tool::Color {
-            egui::CollapsingHeader::new(RichText::new("Mélangeur de couleurs").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Mélangeur de couleurs")).strong())
+                .id_salt("Mélangeur de couleurs")
                 .default_open(true)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        for (i, name) in ["Teinte", "Saturation", "Luminance"].iter().enumerate() {
-                            ui.selectable_value(&mut self.hsl_tab, i, *name);
+                        for (i, name) in [tr("Teinte|mélangeur"), tr("Saturation"), tr("Luminance")]
+                            .into_iter()
+                            .enumerate()
+                        {
+                            ui.selectable_value(&mut self.hsl_tab, i, name);
                         }
                     });
-                    let kind = ["Teinte", "Saturation", "Luminance"][self.hsl_tab];
+                    let kind =
+                        [tr("Teinte|mélangeur"), tr("Saturation"), tr("Luminance")][self.hsl_tab];
                     for (i, name) in HSL_NAMES.iter().enumerate() {
                         let value = match self.hsl_tab {
                             0 => &mut self.settings.hsl.hue[i],
@@ -3401,7 +3537,7 @@ impl Studio {
                         if c.committed {
                             commits.push(format!(
                                 "{kind} {} {}",
-                                name.to_lowercase(),
+                                tr(name).to_lowercase(),
                                 format_value(v, 0, true)
                             ));
                         }
@@ -3410,18 +3546,29 @@ impl Studio {
         }
 
         if self.tool == Tool::Color {
-            egui::CollapsingHeader::new(RichText::new("Étalonnage des couleurs").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Étalonnage des couleurs")).strong())
+                .id_salt("Étalonnage des couleurs")
                 .default_open(true)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        for (i, name) in ["Ombres", "Tons moyens", "Hautes lum.", "Global"]
-                            .iter()
-                            .enumerate()
+                        for (i, name) in [
+                            tr("Ombres"),
+                            tr("Tons moyens"),
+                            tr("Hautes lum."),
+                            tr("Global"),
+                        ]
+                        .into_iter()
+                        .enumerate()
                         {
-                            ui.selectable_value(&mut self.grading_tab, i, *name);
+                            ui.selectable_value(&mut self.grading_tab, i, name);
                         }
                     });
-                    let names = ["Ombres", "Tons moyens", "Hautes lumières", "Global"];
+                    let names = [
+                        tr("Ombres"),
+                        tr("Tons moyens"),
+                        tr("Hautes lumières"),
+                        tr("Global"),
+                    ];
                     let g = &mut self.settings.color_grading;
                     let wheel = match self.grading_tab {
                         0 => &mut g.shadows,
@@ -3451,7 +3598,7 @@ impl Studio {
                     c.merge(widgets::slider(ui, &lum, &mut wheel.luminance));
                     let (h, s, l) = (wheel.hue, wheel.saturation, wheel.luminance);
                     let blend = SliderSpec {
-                        label: "Fusion",
+                        label: "Fusion|étalonnage",
                         min: 0.0,
                         max: 100.0,
                         default: 50.0,
@@ -3474,43 +3621,49 @@ impl Studio {
                         self.touch();
                     }
                     if c.committed {
-                        commits.push(format!(
-                            "Étalonnage {} : {h:.0}°, {s:.0}, {}",
-                            names[self.grading_tab].to_lowercase(),
-                            format_value(l, 0, true)
+                        commits.push(trf(
+                            "Étalonnage {zone} : {hue}°, {saturation}, {luminance}",
+                            &[
+                                ("zone", &names[self.grading_tab].to_lowercase()),
+                                ("hue", &format!("{h:.0}")),
+                                ("saturation", &format!("{s:.0}")),
+                                ("luminance", &format_value(l, 0, true)),
+                            ],
                         ));
                     }
                 });
         }
 
         if self.tool == Tool::Detail {
-            egui::CollapsingHeader::new(RichText::new("Détail").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Détail")).strong())
+                .id_salt("Détail")
                 .default_open(true)
                 .show(ui, |ui| {
-                    sub_title(ui, "Accentuation");
+                    sub_title(ui, tr("Accentuation"));
                     let l = self.fields(ui, &SHARPEN);
                     keep(l, &mut commits);
-                    sub_title(ui, "Réduction du bruit");
+                    sub_title(ui, tr("Réduction du bruit"));
                     let l = self.fields(ui, &NOISE);
                     keep(l, &mut commits);
                 });
         }
 
         if self.tool == Tool::Geometry {
-            egui::CollapsingHeader::new(RichText::new("Corrections de l'objectif").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Corrections de l'objectif")).strong())
+                .id_salt("Corrections de l'objectif")
                 .default_open(true)
                 .show(ui, |ui| {
                     if ui
                         .checkbox(
                             &mut self.settings.lens.remove_ca,
-                            "Supprimer l'aberration chromatique",
+                            tr("Supprimer l'aberration chromatique"),
                         )
                         .changed()
                     {
                         commits.push(if self.settings.lens.remove_ca {
-                            "Aberration chromatique supprimée".into()
+                            tr("Aberration chromatique supprimée").into()
                         } else {
-                            "Aberration chromatique gardée".into()
+                            tr("Aberration chromatique gardée").into()
                         });
                     }
                     let l = self.fields(ui, &LENS);
@@ -3519,7 +3672,8 @@ impl Studio {
         }
 
         if self.tool == Tool::Geometry {
-            egui::CollapsingHeader::new(RichText::new("Transformation").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Transformation")).strong())
+                .id_salt("Transformation")
                 .default_open(true)
                 .show(ui, |ui| {
                     let l = self.fields(ui, &TRANSFORM);
@@ -3528,60 +3682,65 @@ impl Studio {
         }
 
         if self.tool == Tool::Detail {
-            egui::CollapsingHeader::new(RichText::new("Effets").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Effets")).strong())
+                .id_salt("Effets")
                 .default_open(true)
                 .show(ui, |ui| {
-                    sub_title(ui, "Vignetage après recadrage");
+                    sub_title(ui, tr("Vignetage après recadrage"));
                     let l = self.fields(ui, &VIGNETTE);
                     keep(l, &mut commits);
-                    sub_title(ui, "Grain");
+                    sub_title(ui, tr("Grain"));
                     let l = self.fields(ui, &GRAIN);
                     keep(l, &mut commits);
                 });
         }
 
         if self.tool == Tool::Color {
-            egui::CollapsingHeader::new(RichText::new("Étalonnage de l'appareil photo").strong())
-                .default_open(true)
-                .show(ui, |ui| {
-                    let l = self.fields(ui, &CALIBRATION);
-                    keep(l, &mut commits);
-                });
+            egui::CollapsingHeader::new(
+                RichText::new(tr("Étalonnage de l'appareil photo")).strong(),
+            )
+            .id_salt("Étalonnage de l'appareil photo")
+            .default_open(true)
+            .show(ui, |ui| {
+                let l = self.fields(ui, &CALIBRATION);
+                keep(l, &mut commits);
+            });
         }
 
         if self.tool == Tool::Geometry {
             let cropping = self.crop_tool.is_some();
-            egui::CollapsingHeader::new(RichText::new("Recadrage").strong())
+            egui::CollapsingHeader::new(RichText::new(tr("Recadrage")).strong())
+                .id_salt("Recadrage")
                 .open(cropping.then_some(true))
                 .default_open(true)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         let label = if cropping {
-                            "Terminer (R)"
+                            tr("Terminer (R)")
                         } else {
-                            "Outil Recadrage (R)"
+                            tr("Outil Recadrage (R)")
                         };
                         if ui.selectable_label(cropping, label).clicked() {
                             self.act("crop");
                         }
-                        if ui.button("Réinitialiser").clicked() {
+                        if ui.button(tr("Réinitialiser")).clicked() {
                             self.settings.crop = Crop::default();
-                            commits.push("Recadrage réinitialisé".into());
+                            commits.push(tr("Recadrage réinitialisé").into());
                         }
                     });
                     if let Some(tool) = &mut self.crop_tool {
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new("Proportions").color(theme::DIM));
+                            ui.label(RichText::new(tr("Proportions")).color(theme::DIM));
                             let before = tool.aspect;
                             egui::ComboBox::from_id_salt("proportions")
-                                .selected_text(crop::ASPECTS[tool.aspect].0)
+                                .selected_text(tr(crop::ASPECTS[tool.aspect].0))
                                 .show_ui(ui, |ui| {
                                     for (k, (name, _)) in crop::ASPECTS.iter().enumerate() {
-                                        ui.selectable_value(&mut tool.aspect, k, *name);
+                                        ui.selectable_value(&mut tool.aspect, k, tr(name));
                                     }
                                 })
                                 .response
-                                .accessible_name("Proportions");
+                                .accessible_name(tr("Proportions"));
                             if tool.aspect != before
                                 && let Some(photo) = &self.photo
                             {
@@ -3609,9 +3768,9 @@ impl Studio {
                         self.touch();
                     }
                     if c.committed {
-                        commits.push(format!(
-                            "Angle {}",
-                            format_value(self.settings.crop.angle, 1, true)
+                        commits.push(trf(
+                            "Angle {value}",
+                            &[("value", &format_value(self.settings.crop.angle, 1, true))],
                         ));
                     }
                 });
@@ -3835,8 +3994,8 @@ fn paint_edits(painter: &egui::Painter, rect: egui::Rect, e: &presets::Summary, 
     painter.circle_filled(c, r + 1.5, Color32::from_black_alpha(150));
     widgets::spectral_ring(painter, c, r, 2.0, 1.0);
     let label = match &e.film {
-        Some((name, _)) => name.clone(),
-        None => "Modifiée".to_owned(),
+        Some((name, _)) => tr(name).to_owned(),
+        None => tr("Modifiée").to_owned(),
     };
     let size = if large { 11.0 } else { 9.5 };
     if rect.height() < 30.0 {
@@ -3860,6 +4019,60 @@ fn paint_edits(painter: &egui::Painter, rect: egui::Rect, e: &presets::Summary, 
         egui::FontId::proportional(size),
         theme::TEXT,
     );
+}
+
+/// Le résumé des modifications, traduit : « Portra 400 · 80 % — Lumière, Couleur, 2
+/// masques » (comme `Summary::text`).
+fn summary_text(e: &presets::Summary) -> String {
+    let mut parts = Vec::new();
+    if let Some((name, amount)) = &e.film {
+        let name = tr(name);
+        parts.push(if *amount >= 99.5 {
+            name.to_owned()
+        } else {
+            trf(
+                "{name} · {n} %",
+                &[("name", &name), ("n", &format_value(*amount, 0, false))],
+            )
+        });
+    }
+    let mut rest: Vec<String> = e.panels.iter().map(|p| tr(p).to_owned()).collect();
+    if e.masks > 0 {
+        let mut masks = if e.masks > 1 {
+            trf("{n} masques", &[("n", &e.masks)])
+        } else {
+            tr("1 masque").to_owned()
+        };
+        if e.mask_films > 0 {
+            masks += " ";
+            masks += &trf("({n} avec film)", &[("n", &e.mask_films)]);
+        }
+        rest.push(masks);
+    }
+    if !rest.is_empty() {
+        parts.push(rest.join(", "));
+    }
+    parts.join(" — ")
+}
+
+/// Le choix de la langue, dans la barre du haut : il s'applique tout de suite et reste
+/// au prochain lancement.
+fn language_menu(ui: &mut Ui) {
+    let current = crate::i18n::lang();
+    let label = RichText::new(current.code().to_uppercase())
+        .size(11.0)
+        .color(theme::DIM);
+    let menu = ui.menu_button(label, |ui| {
+        for l in crate::i18n::Lang::ALL {
+            if ui.selectable_label(l == current, l.name()).clicked() {
+                crate::i18n::choose(l);
+                ui.close();
+            }
+        }
+    });
+    menu.response
+        .on_hover_text(tr("Langue"))
+        .accessible_name(tr("Langue"));
 }
 
 /// Les préréglages `.xmp` d'un dossier (nom tiré du fichier s'il n'en a pas), triés.
@@ -3983,6 +4196,42 @@ mod tests {
             assert_eq!(*(f.get)(&mut s), f.spec.default, "{}", f.spec.label);
         }
     }
+
+    /// Les textes des tableaux constants sont traduits à l'affichage : ils doivent être
+    /// dans le catalogue (les `tr("…")` du code sont vérifiés par `tests/i18n.rs`).
+    #[test]
+    fn constant_texts_are_in_the_catalog() {
+        let c = crate::i18n::catalog();
+        let fields = TONE
+            .iter()
+            .chain(&LENS)
+            .chain(&TRANSFORM)
+            .chain(&PRESENCE)
+            .chain(&CURVE)
+            .chain(&SHARPEN)
+            .chain(&NOISE)
+            .chain(&VIGNETTE)
+            .chain(&GRAIN)
+            .chain(&CALIBRATION)
+            .map(|f| f.spec.label);
+        let texts: Vec<&str> = fields
+            .chain(HSL_NAMES)
+            .chain(WB_PRESETS.iter().map(|p| p.0))
+            .chain(["Telle quelle", "Auto", "Personnalisée"])
+            .chain(crop::ASPECTS.iter().map(|a| a.0))
+            .chain(crate::licence::FEATURES)
+            .chain(Tool::ALL.map(Tool::key))
+            .filter(|t| !t.is_empty() && !t.chars().all(|c| !c.is_alphabetic()))
+            .collect();
+        let missing: Vec<&&str> = texts
+            .iter()
+            .filter(|t| !c.has(t) && !NOT_TRANSLATED.contains(t))
+            .collect();
+        assert!(missing.is_empty(), "absents du catalogue : {missing:?}");
+    }
+
+    /// Les mots identiques dans les trois langues (et les touches seules).
+    const NOT_TRANSLATED: [&str; 3] = ["G", "D", "R"];
 
     #[test]
     fn fit_keeps_the_aspect_ratio() {

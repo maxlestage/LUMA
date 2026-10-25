@@ -103,12 +103,18 @@ impl Change {
     }
 }
 
-/// Le format d'une valeur, à la française (virgule décimale, signe explicite).
+/// Le format d'une valeur : virgule décimale (en français et en espagnol, point en
+/// anglais), signe explicite.
 pub fn format_value(v: f32, decimals: usize, signed: bool) -> String {
-    let s = format!("{:.*}", decimals, v.abs()).replace('.', ",");
+    let s = format!("{:.*}", decimals, v.abs());
+    let s = if crate::i18n::decimal_comma() {
+        s.replace('.', ",")
+    } else {
+        s
+    };
     if signed && v > 0.0 {
         format!("+{s}")
-    } else if v < 0.0 && s.chars().any(|c| c != '0' && c != ',') {
+    } else if v < 0.0 && s.chars().any(|c| c != '0' && c != ',' && c != '.') {
         format!("−{s}")
     } else {
         s
@@ -158,7 +164,7 @@ pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
     ui.painter().text(
         pos2(label_rect.max.x, label_rect.center().y),
         egui::Align2::RIGHT_CENTER,
-        spec.label,
+        crate::i18n::tr(spec.label),
         egui::FontId::proportional(12.5),
         text_color,
     );
@@ -278,7 +284,7 @@ pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
                         .ok()
                 }),
         )
-        .accessible_name(spec.label);
+        .accessible_name(crate::i18n::tr(spec.label));
     if v != *value {
         *value = v;
         change.changed = true;
@@ -300,9 +306,13 @@ pub fn color_wheel(
 ) -> Change {
     let mut change = Change::default();
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(diameter), Sense::click_and_drag());
-    let response: Response = response.on_hover_text(format!(
-        "{id} : teinte {:.0}°, saturation {:.0}",
-        hue, saturation
+    let response: Response = response.on_hover_text(crate::i18n::trf(
+        "{zone} : teinte {hue}°, saturation {saturation}",
+        &[
+            ("zone", &id),
+            ("hue", &format!("{hue:.0}")),
+            ("saturation", &format!("{saturation:.0}")),
+        ],
     ));
     let center = rect.center();
     let radius = diameter / 2.0 - 3.0;
@@ -447,7 +457,7 @@ pub fn paint_star(painter: &egui::Painter, center: Pos2, radius: f32, color: Col
 /// La note en étoiles ; cliquer une étoile donne la note, recliquer la note la retire.
 pub fn rating(ui: &mut Ui, value: u8, size: f32) -> Option<u8> {
     let (rect, response) = ui.allocate_exact_size(vec2(size * 5.4, size), Sense::click());
-    let response = response.on_hover_text("Note (0 à 5)");
+    let response = response.on_hover_text(crate::i18n::tr("Note (0 à 5)"));
     let hover = response
         .hover_pos()
         .map(|p| (((p.x - rect.min.x) / (size * 1.08)).floor() as u8 + 1).min(5));
@@ -462,7 +472,9 @@ pub fn rating(ui: &mut Ui, value: u8, size: f32) -> Option<u8> {
         paint_star(ui.painter(), c, size * 0.48, color);
     }
     let clicked = response.clicked();
-    response.widget_info(|| egui::WidgetInfo::slider(true, f64::from(value), "Note"));
+    response
+        .widget_info(|| egui::WidgetInfo::slider(true, f64::from(value), crate::i18n::tr("Note")));
+
     match hover {
         Some(n) if clicked => Some(if n == value { 0 } else { n }),
         _ => None,

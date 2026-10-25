@@ -4,6 +4,9 @@
 
 use std::path::PathBuf;
 
+#[cfg(not(target_os = "ios"))]
+use crate::i18n::tr;
+
 /// Le dossier Documents de l'app sur iOS (créé au besoin).
 pub fn documents() -> Option<PathBuf> {
     let dir = PathBuf::from(std::env::var_os("HOME")?).join("Documents");
@@ -15,7 +18,7 @@ pub fn documents() -> Option<PathBuf> {
 #[cfg(not(target_os = "ios"))]
 pub fn pick_raw() -> Option<PathBuf> {
     rfd::FileDialog::new()
-        .set_title("Ouvrir un RAW")
+        .set_title(tr("Ouvrir un RAW"))
         .add_filter("RAW", &crate::app::RAW_EXTENSIONS)
         .pick_file()
 }
@@ -60,12 +63,17 @@ pub fn films_dir() -> Option<PathBuf> {
     Some(dir)
 }
 
+/// Le dossier de LÜMA, au‑dessus de Films : celui de `licence.json`, de `langue.txt`…
+pub fn app_dir() -> Option<PathBuf> {
+    films_dir()?.parent().map(PathBuf::from)
+}
+
 /// Une LUT 3D à importer.
 #[cfg(not(target_os = "ios"))]
 pub fn pick_lut() -> Option<PathBuf> {
     rfd::FileDialog::new()
-        .set_title("Importer une LUT 3D")
-        .add_filter("LUT 3D", &["cube", "CUBE"])
+        .set_title(tr("Importer une LUT 3D"))
+        .add_filter(tr("LUT 3D"), &["cube", "CUBE"])
         .pick_file()
 }
 
@@ -78,9 +86,9 @@ pub fn pick_lut() -> Option<PathBuf> {
 #[cfg(not(target_os = "ios"))]
 pub fn pick_scan() -> Option<PathBuf> {
     rfd::FileDialog::new()
-        .set_title("Le scan de la même scène sur pellicule")
+        .set_title(tr("Le scan de la même scène sur pellicule"))
         .add_filter(
-            "Scan",
+            tr("Scan"),
             &[
                 "jpg", "jpeg", "png", "tif", "tiff", "JPG", "JPEG", "PNG", "TIF", "TIFF",
             ],
@@ -116,9 +124,9 @@ pub fn presets_dir() -> Option<PathBuf> {
 #[cfg(not(target_os = "ios"))]
 pub fn save_preset(name: &str) -> Option<PathBuf> {
     rfd::FileDialog::new()
-        .set_title("Exporter le préréglage")
+        .set_title(tr("Exporter le préréglage"))
         .set_file_name(format!("{name}.xmp"))
-        .add_filter("Préréglage Lightroom", &["xmp"])
+        .add_filter(tr("Préréglage Lightroom"), &["xmp"])
         .save_file()
 }
 
@@ -130,7 +138,7 @@ pub fn save_preset(name: &str) -> Option<PathBuf> {
 /// Le dossier où exporter tous les préréglages.
 #[cfg(not(target_os = "ios"))]
 pub fn pick_export_folder() -> Option<PathBuf> {
-    pick_folder("Exporter les préréglages dans…")
+    pick_folder(tr("Exporter les préréglages dans…"))
 }
 
 #[cfg(target_os = "ios")]
@@ -149,8 +157,8 @@ fn export_folder() -> Option<PathBuf> {
 #[cfg(not(target_os = "ios"))]
 pub fn pick_presets() -> Vec<PathBuf> {
     rfd::FileDialog::new()
-        .set_title("Importer des préréglages")
-        .add_filter("Préréglages", &["xmp", "XMP"])
+        .set_title(tr("Importer des préréglages"))
+        .add_filter(tr("Préréglages"), &["xmp", "XMP"])
         .pick_files()
         .unwrap_or_default()
 }
