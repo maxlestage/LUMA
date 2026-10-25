@@ -52,7 +52,10 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |
 | | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), zoom 1:1 | ✅ |
-| | Fusion HDR, panorama | ⏳ |
+| | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
+| | Empilements : moyenne, médiane, maximum, ciel étoilé (au‑delà de Lightroom) | ✅ |
+| | Fusion HDR, déformation des bords du panorama | ⏳ |
+| | Préréglages avec intensité ; rendus de pellicules (couleur et noir et blanc) | ✅ |
 
 ## Formats et couleur
 

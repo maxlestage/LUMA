@@ -263,8 +263,9 @@ impl Photo {
             scale,
             id: NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
         };
-        // Pleine définition (export) : trop gros pour être gardé.
-        if size != Size::Full {
+        // Pleine définition (export) : trop gros pour être gardé ; les petits rendus
+        // (vignettes, aperçus des préréglages) ne chassent pas la base de l'aperçu.
+        if !matches!(size, Size::Full | Size::Fit(..=400)) {
             *self.base.lock().expect("base") = Some((size, key, base.clone()));
         }
         Ok(base)
@@ -314,18 +315,18 @@ mod tests {
         let p = photo();
         let mut s = Settings::default();
         let mut t = Timings::default();
-        let a = p.base(&s, Size::Fit(32), &Cancel::new(), &mut t).unwrap();
+        let a = p.base(&s, Size::Fit(600), &Cancel::new(), &mut t).unwrap();
         s.contrast = 40.0;
         s.vibrance = 30.0;
         s.effects.vignette_amount = -20.0;
-        let b = p.base(&s, Size::Fit(32), &Cancel::new(), &mut t).unwrap();
+        let b = p.base(&s, Size::Fit(600), &Cancel::new(), &mut t).unwrap();
         assert_eq!(a.id, b.id);
         s.exposure = 0.5;
-        let c = p.base(&s, Size::Fit(32), &Cancel::new(), &mut t).unwrap();
+        let c = p.base(&s, Size::Fit(600), &Cancel::new(), &mut t).unwrap();
         assert_ne!(a.id, c.id);
         // Le rendu avec base en cache est le même qu'un développement complet.
-        let cached = p.render(&s, Size::Fit(32), &Cancel::new()).unwrap().image;
-        let source = p.source(Size::Fit(32), &mut t);
+        let cached = p.render(&s, Size::Fit(600), &Cancel::new()).unwrap().image;
+        let source = p.source(Size::Fit(600), &mut t);
         let input = Input {
             camera_to_working: p.camera_to_working(&s.white_balance),
             exposure_bias: 0.0,
