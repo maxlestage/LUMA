@@ -469,14 +469,27 @@ fn render_loop(
                         .iter()
                         .all(|(_, s, _)| g.can_finish(s, w, h, base.scale)) =>
             {
-                let finish = |s: &luma_project::Settings| {
-                    g.finish(&base.image, base.id, base.scale, s, OutputSpace::Srgb)
-                };
-                let mut rgba = finish(&job.settings);
-                // Les films des masques : chacun rendu sur le GPU, puis fondu selon
-                // la zone du masque.
+                let mut rgba = g.finish(
+                    &base.image,
+                    base.id,
+                    base.scale,
+                    &job.settings,
+                    OutputSpace::Srgb,
+                );
+                // Les films des masques : chacun rendu sur le GPU (depuis sa propre base
+                // s'il touche aux hautes lumières, aux ombres ou à la clarté), puis fondu
+                // selon la zone du masque.
                 for (mask, look, k) in &layers {
-                    let alt = finish(look);
+                    let own = if luma_image::needs_own_base(&job.settings, look) {
+                        job.photo.base(look, job.size, &cancel, &mut timings).ok()
+                    } else {
+                        None
+                    };
+                    let b = own
+                        .as_ref()
+                        .filter(|b| (b.image.width, b.image.height) == (w, h))
+                        .unwrap_or(&base);
+                    let alt = g.finish(&b.image, b.id, b.scale, look, OutputSpace::Srgb);
                     let weights = luma_image::local::weights(mask, w, h);
                     for ((o, a), wt) in rgba
                         .as_chunks_mut::<4>()
@@ -497,10 +510,12 @@ fn render_loop(
                 (rgba, true)
             }
             _ => {
+                let photo = &job.photo;
                 let Ok(image) = luma_image::finish_layers(
                     &base.image,
                     base.scale,
                     &job.settings,
+                    &mut |look, t| photo.base(look, job.size, &cancel, t).map(|b| b.image),
                     &cancel,
                     &mut timings,
                 ) else {

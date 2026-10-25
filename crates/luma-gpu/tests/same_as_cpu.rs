@@ -138,3 +138,29 @@ fn sharpening_at_full_size_stays_on_the_cpu() {
     assert!(gpu.can_finish(&s, 100, 100, 0.3));
     assert!(!gpu.can_finish(&s, 100, 100, 1.0), "accentuation visible à 100 %");
 }
+
+/// Plusieurs bases (la photo, les films de masques qui ont la leur) restent sur le GPU :
+/// en alternant, chaque rendu part bien de sa base.
+#[test]
+fn several_bases_stay_uploaded_and_never_mix() {
+    let Some(gpu) = Gpu::any() else { return };
+    let s = Settings::default();
+    let a = test_image(120, 80);
+    let b = RgbImage::from_fn(120, 80, |x, _| [0.05 + x as f32 * 0.004, 0.1, 0.3]);
+    let reference = |img: &RgbImage| {
+        let mut cpu = img.clone();
+        luma_image::finish(&mut cpu, 0.25, &s, &Cancel::new(), &mut Timings::default()).unwrap();
+        luma_image::encode8(&cpu, OutputSpace::Srgb)
+    };
+    let (ra, rb) = (reference(&a), reference(&b));
+    for (img, id, cpu) in [(&a, 10, &ra), (&b, 11, &rb), (&a, 10, &ra), (&b, 11, &rb)] {
+        let out = gpu.finish(img, id, 0.25, &s, OutputSpace::Srgb);
+        let worst = cpu
+            .chunks(3)
+            .zip(out.chunks(4))
+            .flat_map(|(c, g)| (0..3).map(move |k| c[k].abs_diff(g[k])))
+            .max()
+            .unwrap();
+        assert!(worst <= 2, "base {id} : écart {worst}");
+    }
+}
