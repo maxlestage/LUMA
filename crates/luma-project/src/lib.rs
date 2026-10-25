@@ -8,6 +8,7 @@
 //! [`xmp`]).
 
 pub mod masks;
+pub mod presets;
 pub mod xmp;
 
 pub use masks::{Dab, Local, Mask, Shape};
