@@ -346,6 +346,12 @@ impl OkLab {
         }
     }
 
+    /// Les matrices (RGB → LMS, LMS → RGB, LMS' → Lab, Lab → LMS') et l'écart du
+    /// blanc, pour refaire le même calcul ailleurs (shaders du GPU).
+    pub fn parts(&self) -> ([Mat3; 4], (f32, f32)) {
+        ([self.to_lms, self.from_lms, LMS_TO_LAB, self.lab_to_lms], self.white)
+    }
+
     #[inline]
     pub fn from_rgb(&self, c: Vec3) -> Vec3 {
         let lms = apply(&self.to_lms, c);

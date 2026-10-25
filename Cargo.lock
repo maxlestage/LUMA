@@ -1925,6 +1925,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "luma-gpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "luma-color",
+ "luma-core",
+ "luma-image",
+ "luma-project",
+ "luma-render",
+ "pollster 0.4.0",
+ "wgpu",
+]
+
+[[package]]
 name = "luma-image"
 version = "0.1.0"
 dependencies = [
@@ -1977,6 +1991,7 @@ dependencies = [
  "image",
  "luma-color",
  "luma-core",
+ "luma-gpu",
  "luma-image",
  "luma-project",
  "luma-raw",

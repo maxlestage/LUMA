@@ -67,7 +67,40 @@ fn wheel_offset(ok: &OkLab, w: &Wheel) -> (f32, f32, f32) {
     (s * h.cos(), s * h.sin(), w.luminance / 100.0)
 }
 
+/// Les décalages (a, b, L) des quatre roues de l'étalonnage, son milieu et sa fusion.
+pub type GradingParts = ([(f32, f32, f32); 4], f32, f32);
+
+/// Les paramètres préparés de [`ColorStage`], pour refaire le même calcul ailleurs
+/// (shaders du GPU).
+pub struct ColorParts {
+    pub ok: OkLab,
+    pub simple: bool,
+    pub saturation: f32,
+    pub profile_chroma: f32,
+    pub mono: bool,
+    pub vibrance: f32,
+    pub skin_hue: f32,
+    pub centers: [f32; 8],
+    pub hsl: [[f32; 3]; 8],
+    pub grading: Option<GradingParts>,
+}
+
 impl ColorStage {
+    pub fn parts(&self) -> ColorParts {
+        ColorParts {
+            ok: self.ok,
+            simple: self.simple,
+            saturation: self.saturation,
+            profile_chroma: self.profile_chroma,
+            mono: self.mono,
+            vibrance: self.vibrance,
+            skin_hue: self.skin_hue,
+            centers: self.centers,
+            hsl: self.hsl,
+            grading: self.grading.as_ref().map(|g| (g.wheels, g.mid, g.blend)),
+        }
+    }
+
     /// `None` si aucun réglage de couleur n'est actif (passe sautée).
     pub fn new(s: &Settings) -> Option<Self> {
         let g = &s.color_grading;

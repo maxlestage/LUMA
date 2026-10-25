@@ -22,6 +22,8 @@ pub struct Frame {
     pub rgba: Vec<u8>,
     pub histogram: [[u32; 256]; 3],
     pub millis: f32,
+    /// Fini sur le GPU (sinon sur le processeur).
+    pub gpu: bool,
 }
 
 pub enum Event {
@@ -323,6 +325,12 @@ fn render_loop(
     running: Arc<Mutex<Cancel>>,
     repaint: Arc<dyn Fn() + Send + Sync>,
 ) {
+    // Le GPU, s'il y en a un (LUMA_GPU=0 pour tout faire sur le processeur).
+    let gpu = if std::env::var("LUMA_GPU").is_ok_and(|v| v == "0") {
+        None
+    } else {
+        luma_gpu::Gpu::new()
+    };
     while let Ok(mut job) = jobs.recv() {
         // Seule la dernière demande compte.
         while let Ok(newer) = jobs.try_recv() {
@@ -331,20 +339,74 @@ fn render_loop(
         let cancel = Cancel::new();
         *running.lock().expect("annulation") = cancel.clone();
         let start = Instant::now();
-        let Ok(rendered) = job.photo.render(&job.settings, job.size, &cancel) else {
+        let mut timings = luma_core::Timings::default();
+        let Ok(base) = job
+            .photo
+            .base(&job.settings, job.size, &cancel, &mut timings)
+        else {
             continue;
         };
-        let rgb = luma_image::encode8(&rendered.image, OutputSpace::Srgb);
-        let histogram = luma_image::histogram(&rgb);
+        let (w, h) = (base.image.width, base.image.height);
+        let (mut rgba, on_gpu) = match &gpu {
+            Some(g) if g.can_finish(&job.settings, w, h, base.scale) => (
+                g.finish(
+                    &base.image,
+                    base.id,
+                    base.scale,
+                    &job.settings,
+                    OutputSpace::Srgb,
+                ),
+                true,
+            ),
+            _ => {
+                let mut image = (*base.image).clone();
+                if luma_image::finish(&mut image, base.scale, &job.settings, &cancel, &mut timings)
+                    .is_err()
+                {
+                    continue;
+                }
+                (
+                    to_rgba(&luma_image::encode8(&image, OutputSpace::Srgb), false),
+                    false,
+                )
+            }
+        };
+        let histogram = histogram_rgba(&rgba);
+        if job.clipping {
+            clip_overlay(&mut rgba);
+        }
         let frame = Frame {
             generation: job.generation,
-            size: [rendered.image.width, rendered.image.height],
-            rgba: to_rgba(&rgb, job.clipping),
+            size: [w, h],
+            rgba,
             histogram,
             millis: start.elapsed().as_secs_f32() * 1000.0,
+            gpu: on_gpu,
         };
         let _ = sender.send(Event::Rendered(Box::new(frame)));
         repaint();
+    }
+}
+
+/// L'histogramme des trois couches d'une image RGBA.
+pub fn histogram_rgba(rgba: &[u8]) -> [[u32; 256]; 3] {
+    let mut h = [[0u32; 256]; 3];
+    for p in rgba.as_chunks::<4>().0 {
+        for c in 0..3 {
+            h[c][usize::from(p[c])] += 1;
+        }
+    }
+    h
+}
+
+/// L'indicateur d'écrêtage sur une image RGBA (voir [`to_rgba`]).
+pub fn clip_overlay(rgba: &mut [u8]) {
+    for p in rgba.as_chunks_mut::<4>().0 {
+        if p[..3].contains(&255) {
+            p[..3].copy_from_slice(&[255, 40, 40]);
+        } else if p[..3] == [0, 0, 0] {
+            p[..3].copy_from_slice(&[40, 90, 255]);
+        }
     }
 }
 
@@ -398,6 +460,15 @@ mod tests {
             export_path(Path::new("/x/IMG_1.CR3"), &o),
             PathBuf::from("/sortie/IMG_1.tif")
         );
+    }
+
+    #[test]
+    fn overlay_on_rgba_matches_rgb() {
+        let rgb = [255, 10, 10, 0, 0, 0, 100, 100, 100];
+        let mut rgba = to_rgba(&rgb, false);
+        clip_overlay(&mut rgba);
+        assert_eq!(rgba, to_rgba(&rgb, true));
+        assert_eq!(histogram_rgba(&to_rgba(&rgb, false))[0][255], 1);
     }
 
     #[test]
