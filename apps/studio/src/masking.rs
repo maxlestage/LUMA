@@ -105,6 +105,7 @@ pub fn edit(ui: &mut Ui, rect: Rect, mask: &mut Mask, brush: &Brush) -> Change {
                 }
             }
             Shape::Brush { .. } => Some(Grip::Paint),
+            Shape::Full => None,
         }
     };
     if response.drag_started()
@@ -249,6 +250,15 @@ pub fn edit(ui: &mut Ui, rect: Rect, mask: &mut Mask, brush: &Brush) -> Change {
             handle(&p, c, true);
             handle(&p, c + vec2(co, s) * ax, false);
             handle(&p, c + vec2(-s, co) * ay, false);
+        }
+        Shape::Full => {
+            // Toute l'image : un cadre discret suffit.
+            p.rect_stroke(
+                rect.shrink(1.0),
+                0.0,
+                Stroke::new(1.5, Color32::from_white_alpha(90)),
+                egui::StrokeKind::Inside,
+            );
         }
         Shape::Brush { dabs } => {
             if let Some(last) = dabs.last() {

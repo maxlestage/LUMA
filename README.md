@@ -103,16 +103,20 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   - *Panorama* : perspective, cylindrique ou sphérique, exposition compensée, fondu.
   Le résultat est un **DNG** (un vrai RAW) ; le **rognage automatique** est proposé
   comme un recadrage ordinaire, qu'on garde, modifie ou retire.
-- **Films** : 72 looks, avec leur aperçu sur la photo et une intensité réglable.
+- **Films** : 100 looks, avec leur aperçu sur la photo et une intensité réglable.
   *Pellicules couleur* (Portra 160/400/800, Ektar, Gold, ColorPlus, UltraMax,
   Fujicolor C200, Superia, Pro 400H, Velvia, Provia, Astia, Kodachrome, Ektachrome,
   Agfa, Lomography…), *Cinéma* (CineStill 800T, 400D, 50D ; Kodak Vision3 50D, 250D,
-  200T, 500T ; tirages Kodak 2383 et 2393, Fuji 3513 ; Eterna ; Technicolor 2 et 3
-  bandes ; blanchiment sauté ; traitement croisé ; nuit américaine ; Super 8…),
+  200T, 500T ; Vision2 500T ; Eastman 5247 et 5254 ; tirages Kodak 2383 et 2393,
+  Fuji 3513 ; Eterna ; Reala 500D ; Technicolor 2 et 3 bandes ; blanchiment sauté ;
+  rétention d'argent ; traitement croisé ; nuit américaine ; Super 8…),
   *Noir et blanc* (Tri‑X, T‑Max, HP5, FP4, Delta, Pan F, Acros, Neopan, Double‑X,
   Fomapan, infrarouge), *Instantanés et vintage* (Polaroid, Instax, jetable, Lomo,
   Holga, pellicule périmée, sépia, cyanotype, daguerréotype) et *Créatifs*. Ce sont des
   interprétations, pas des copies des émulsions ni des marques.
+- **Films empilés par masques** : chaque masque (radial, linéaire, pinceau, ou « Image
+  entière ») peut porter son propre film avec son intensité ; les films s'empilent dans
+  l'ordre des masques, chacun dans sa zone. Sur le GPU comme à l'export.
 - Les réglages sont enregistrés automatiquement dans un XMP au format Lightroom à côté
   du RAW, qui n'est jamais modifié.
 
