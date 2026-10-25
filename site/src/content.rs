@@ -460,6 +460,213 @@ pub fn format_control(key: &str, v: f64) -> String {
     }
 }
 
+/// Le pied de page : des colonnes de liens (titre, puis libellé et adresse ; une adresse
+/// en `#` est une section de l'accueil, en `/` une page du site, sinon un lien externe).
+pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
+    (
+        "Produit",
+        &[
+            ("Le moteur", "#pipeline"),
+            ("Le labo", "#labo"),
+            ("Mac, iPhone et iPad", "#apple"),
+            ("Tarifs", "#tarifs"),
+            ("Feuille de route", "#roadmap"),
+        ],
+    ),
+    (
+        "Ressources",
+        &[
+            (
+                "Boîtiers pris en charge",
+                "https://github.com/maxlestage/LUMA/blob/master/docs/boitiers.md",
+            ),
+            (
+                "Parité avec Lightroom",
+                "https://github.com/maxlestage/LUMA/blob/master/docs/parite-lightroom.md",
+            ),
+            ("Architecture", "#architecture"),
+            ("Performances", "#performance"),
+            (
+                "Notes de version",
+                "https://github.com/maxlestage/LUMA/releases",
+            ),
+        ],
+    ),
+    (
+        "Assistance",
+        &[
+            ("Abonnement et clé de licence", "/conditions/#abonnement"),
+            (
+                "Gérer mon abonnement",
+                "https://app.lemonsqueezy.com/my-orders",
+            ),
+            (
+                "Signaler un problème",
+                "https://github.com/maxlestage/LUMA/issues",
+            ),
+            ("Code source", "https://github.com/maxlestage/LUMA"),
+            ("Contact", "/mentions-legales/#contact"),
+        ],
+    ),
+    (
+        "Légal",
+        &[
+            ("Mentions légales", "/mentions-legales/"),
+            ("Confidentialité", "/confidentialite/"),
+            ("Conditions d'abonnement", "/conditions/"),
+            ("Aucun cookie", "/confidentialite/#cookies"),
+        ],
+    ),
+];
+
+/// Une page légale : adresse, titre, chapeau, et ses sections (ancre, titre,
+/// paragraphes). Un paragraphe entre `[[…]]` est à compléter par l'éditeur.
+pub struct Legal {
+    pub path: &'static str,
+    pub title: &'static str,
+    pub lede: &'static str,
+    pub sections: &'static [(&'static str, &'static str, &'static [&'static str])],
+}
+
+pub const LEGAL: [Legal; 3] = [
+    Legal {
+        path: "/mentions-legales/",
+        title: "Mentions légales",
+        lede: "Qui publie LÜMA, qui l'héberge, et à qui écrire.",
+        sections: &[
+            (
+                "editeur",
+                "Éditeur",
+                &[
+                    "[[Nom ou raison sociale, forme juridique, capital, adresse du siège, numéro SIREN ou RCS, numéro de TVA intracommunautaire.]]",
+                    "[[Directeur de la publication : prénom et nom.]]",
+                ],
+            ),
+            (
+                "contact",
+                "Contact",
+                &[
+                    "[[Adresse électronique de contact.]]",
+                    "Pour un problème dans l'app : le suivi public des problèmes, sur GitHub (github.com/maxlestage/LUMA/issues).",
+                ],
+            ),
+            (
+                "hebergement",
+                "Hébergement",
+                &[
+                    "Le site est hébergé par GitHub Pages : GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États‑Unis.",
+                    "Les paiements et les abonnements sont traités par Lemon Squeezy, revendeur officiel de LÜMA (« merchant of record »).",
+                ],
+            ),
+            (
+                "marques",
+                "Marques et noms de pellicules",
+                &[
+                    "LÜMA, son logo et son interface sont la propriété de leur éditeur.",
+                    "Les noms de pellicules et de procédés cités dans les films de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) sont des marques de leurs propriétaires. Ils disent l'inspiration d'un rendu, sans lien avec ces marques ni copie de leurs produits. Lightroom est une marque d'Adobe.",
+                ],
+            ),
+        ],
+    },
+    Legal {
+        path: "/confidentialite/",
+        title: "Confidentialité",
+        lede: "Vos photos restent chez vous. LÜMA ne vous suit pas.",
+        sections: &[
+            (
+                "photos",
+                "Vos photos",
+                &[
+                    "LÜMA développe vos photos sur votre appareil. Aucune photo, aucun réglage, aucune métadonnée n'est envoyé ailleurs : ni à l'éditeur, ni à un service tiers.",
+                    "Les réglages sont écrits à côté de vos RAW, dans des fichiers XMP que vous gardez.",
+                ],
+            ),
+            (
+                "licence",
+                "Abonnement",
+                &[
+                    "Pour vérifier un abonnement, l'app envoie à Lemon Squeezy votre clé de licence et le nom de votre appareil (pour que vous voyiez où elle est activée), au plus une fois par jour. Rien d'autre.",
+                    "Lors d'un achat, Lemon Squeezy traite votre nom, votre courriel et votre paiement, selon sa propre politique de confidentialité ; l'éditeur reçoit le courriel associé à l'abonnement.",
+                ],
+            ),
+            (
+                "mesure",
+                "Aucune mesure d'audience",
+                &[
+                    "Ni l'app ni le site ne contiennent de traceur, de publicité ou de mesure d'audience.",
+                ],
+            ),
+            (
+                "cookies",
+                "Aucun cookie",
+                &[
+                    "Le site ne dépose aucun cookie. Installé comme une app (PWA), il garde une copie de ses pages dans votre navigateur, pour s'ouvrir hors ligne : vous pouvez l'effacer à tout moment dans les réglages du navigateur.",
+                    "Le site charge ses polices depuis Google Fonts : votre navigateur contacte alors les serveurs de Google. Il est hébergé par GitHub Pages, qui tient des journaux techniques (adresse IP) pour la sécurité du service.",
+                ],
+            ),
+            (
+                "droits",
+                "Vos droits",
+                &[
+                    "Conformément au RGPD, vous pouvez demander l'accès, la rectification ou l'effacement des données liées à votre abonnement, à l'adresse de contact des mentions légales. Vous pouvez aussi saisir la CNIL.",
+                ],
+            ),
+        ],
+    },
+    Legal {
+        path: "/conditions/",
+        title: "Conditions d'abonnement",
+        lede: "Quatorze jours pour essayer, puis au mois ou à l'an. Sans surprise.",
+        sections: &[
+            (
+                "essai",
+                "Essai gratuit",
+                &[
+                    "LÜMA se télécharge librement. Au premier lancement commence un essai de 14 jours, complet, sans carte bancaire. À la fin de l'essai, l'app demande un abonnement pour continuer à développer vos photos ; vos fichiers et vos réglages restent à vous.",
+                ],
+            ),
+            (
+                "abonnement",
+                "Abonnement et clé de licence",
+                &[
+                    "Deux formules : Mensuel, 9,99 € par mois, et Annuel, 79,99 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.",
+                    "Après le paiement, votre clé de licence arrive par courriel. Saisissez‑la dans LÜMA (puce « Essai » en haut de l'app) : elle s'active sur vos appareils, jusqu'à trois à la fois. « Retirer de cet appareil » la libère pour un autre.",
+                    "L'app revérifie l'abonnement une fois par jour quand elle est en ligne, et reste utilisable 14 jours sans connexion.",
+                ],
+            ),
+            (
+                "paiement",
+                "Paiement",
+                &[
+                    "Les paiements sont encaissés par Lemon Squeezy, revendeur officiel de LÜMA, qui établit les factures et applique la TVA de votre pays ; ses conditions de vente s'appliquent à la transaction.",
+                ],
+            ),
+            (
+                "resiliation",
+                "Résiliation et remboursement",
+                &[
+                    "Vous pouvez résilier à tout moment depuis votre compte client Lemon Squeezy (lien « Gérer mon abonnement »). L'abonnement reste actif jusqu'à la fin de la période payée, puis LÜMA revient à l'écran Premium.",
+                    "LÜMA étant un contenu numérique fourni dès l'activation, avec votre accord, le droit de rétractation ne s'applique plus une fois la clé activée (article L221‑28 du Code de la consommation). Les remboursements suivent la politique de Lemon Squeezy.",
+                ],
+            ),
+            (
+                "evolutions",
+                "Mises à jour",
+                &[
+                    "Toutes les mises à jour de LÜMA sont comprises dans l'abonnement, sur Mac, iPhone et iPad. Une modification des prix est annoncée au moins 30 jours à l'avance et ne s'applique qu'au renouvellement suivant.",
+                ],
+            ),
+            (
+                "droit",
+                "Droit applicable",
+                &[
+                    "Ces conditions sont soumises au droit français. En cas de litige, une solution amiable est recherchée d'abord ; à défaut, vous pouvez recourir gratuitement à un médiateur de la consommation.",
+                ],
+            ),
+        ],
+    },
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
