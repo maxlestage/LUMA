@@ -22,6 +22,7 @@ pub mod curve;
 pub mod detail;
 pub mod effects;
 pub mod geometry;
+pub mod lens;
 pub mod local;
 pub mod tone;
 
@@ -63,6 +64,7 @@ pub fn develop_base(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel
     // L'étape d'entrée lit la source (en cache, partagée) et écrit l'image de travail.
     let mut img = t.time("entrée", || input_stage(cam, input, s));
     cancel.check()?;
+    t.time("défrangeage", || lens::defringe(&mut img, &s.lens, input.scale));
     t.time("bruit", || detail::noise_reduction(&mut img, &s.detail, input.scale));
     cancel.check()?;
     t.time("tonalité locale", || {
@@ -99,6 +101,8 @@ pub fn base_key(s: &Settings) -> Settings {
         clarity: s.clarity,
         texture: s.texture,
         crop: s.crop,
+        lens: s.lens.clone(),
+        transform: s.transform.clone(),
         masks: s.masks.clone(),
         ..d
     }

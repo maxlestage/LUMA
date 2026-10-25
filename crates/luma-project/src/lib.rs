@@ -231,6 +231,75 @@ pub struct Calibration {
     pub blue_saturation: f32,
 }
 
+/// Panneau Corrections de l'objectif (onglet Manuel de Lightroom).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Lens {
+    /// Supprimer l'aberration chromatique (latérale, estimée sur la photo).
+    pub remove_ca: bool,
+    /// Distorsion : −100 à +100 (positif corrige le barillet).
+    pub distortion: f32,
+    /// Vignetage de l'objectif : −100 à +100 (positif éclaircit les coins), milieu 0 à 100.
+    pub vignetting: f32,
+    pub vignetting_midpoint: f32,
+    /// Défrangeage : violet et vert, 0 à 20 comme Lightroom.
+    pub defringe_purple: f32,
+    pub defringe_green: f32,
+}
+
+impl Default for Lens {
+    fn default() -> Self {
+        Self {
+            remove_ca: false,
+            distortion: 0.0,
+            vignetting: 0.0,
+            vignetting_midpoint: 50.0,
+            defringe_purple: 0.0,
+            defringe_green: 0.0,
+        }
+    }
+}
+
+/// Panneau Transformation : perspective et échelle (curseurs manuels de Lightroom).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Transform {
+    /// −100 à +100 : redresse les verticales (positif : le haut s'élargit).
+    pub vertical: f32,
+    /// −100 à +100 : redresse les horizontales.
+    pub horizontal: f32,
+    /// −10 à +10 degrés.
+    pub rotate: f32,
+    /// −100 à +100 : étire en largeur (positif) ou en hauteur.
+    pub aspect: f32,
+    /// 50 à 150 %.
+    pub scale: f32,
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            vertical: 0.0,
+            horizontal: 0.0,
+            rotate: 0.0,
+            aspect: 0.0,
+            scale: 100.0,
+        }
+    }
+}
+
+impl Lens {
+    pub fn is_identity(&self) -> bool {
+        *self == Lens::default()
+    }
+}
+
+impl Transform {
+    pub fn is_identity(&self) -> bool {
+        *self == Transform::default()
+    }
+}
+
 /// Recadrage (bords en fraction de l'image orientée, 0 à 1) et redressement (degrés).
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -286,6 +355,8 @@ pub struct Settings {
     pub effects: Effects,
     pub calibration: Calibration,
     pub crop: Crop,
+    pub lens: Lens,
+    pub transform: Transform,
     /// Panneau Masquage : les retouches locales, dans l'ordre.
     pub masks: Vec<Mask>,
 }
@@ -313,6 +384,8 @@ impl Default for Settings {
             effects: Effects::default(),
             calibration: Calibration::default(),
             crop: Crop::default(),
+            lens: Lens::default(),
+            transform: Transform::default(),
             masks: Vec::new(),
         }
     }
@@ -335,6 +408,16 @@ impl Settings {
             clamp(tint, -150.0, 150.0);
         }
         clamp(&mut s.exposure, -5.0, 5.0);
+        clamp(&mut s.lens.distortion, -100.0, 100.0);
+        clamp(&mut s.lens.vignetting, -100.0, 100.0);
+        clamp(&mut s.lens.vignetting_midpoint, 0.0, 100.0);
+        clamp(&mut s.lens.defringe_purple, 0.0, 20.0);
+        clamp(&mut s.lens.defringe_green, 0.0, 20.0);
+        clamp(&mut s.transform.vertical, -100.0, 100.0);
+        clamp(&mut s.transform.horizontal, -100.0, 100.0);
+        clamp(&mut s.transform.rotate, -10.0, 10.0);
+        clamp(&mut s.transform.aspect, -100.0, 100.0);
+        clamp(&mut s.transform.scale, 50.0, 150.0);
         for m in &mut s.masks {
             m.local.clamp();
             clamp(&mut m.amount, 0.0, 100.0);
@@ -520,6 +603,20 @@ impl Settings {
             "grading.blending" => &mut self.color_grading.blending,
             "grading.balance" => &mut self.color_grading.balance,
             "crop.angle" => &mut self.crop.angle,
+            "lens.ca" => {
+                self.lens.remove_ca = v != 0.0;
+                return Ok(());
+            }
+            "lens.distortion" => &mut self.lens.distortion,
+            "lens.vignetting" => &mut self.lens.vignetting,
+            "lens.midpoint" => &mut self.lens.vignetting_midpoint,
+            "defringe.purple" => &mut self.lens.defringe_purple,
+            "defringe.green" => &mut self.lens.defringe_green,
+            "transform.vertical" => &mut self.transform.vertical,
+            "transform.horizontal" => &mut self.transform.horizontal,
+            "transform.rotate" => &mut self.transform.rotate,
+            "transform.aspect" => &mut self.transform.aspect,
+            "transform.scale" => &mut self.transform.scale,
             other => {
                 let parts: Vec<&str> = other.split('.').collect();
                 match parts.as_slice() {
