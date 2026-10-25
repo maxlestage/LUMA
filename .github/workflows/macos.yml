@@ -115,14 +115,30 @@ jobs:
           xcrun simctl io "$udid" screenshot target/ios-iphone.png
           ls -la "$data/Documents"
           echo "--- sortie de l'app ---"; cat target/ios-stdout.txt target/ios-stderr.txt "$data/Documents/LÜMA-erreur.txt" || true
-          # Toujours vivante ?
-          if ! xcrun simctl spawn "$udid" launchctl list | grep -i luma; then
+          # Toujours vivante ? (les apps du simulateur sont des processus du Mac)
+          if ! pgrep -fl luma-studio; then
             echo "L'app s'est arrêtée. Rapports de plantage :"
             ls -t ~/Library/Logs/DiagnosticReports/ | head -5
             f=$(ls -t ~/Library/Logs/DiagnosticReports/luma-studio* 2>/dev/null | head -1)
             [ -n "$f" ] && head -120 "$f"
             exit 1
           fi
+          # L'écran montre bien l'interface (pas un écran noir) : part des pixels
+          # clairs ou colorés dans la capture.
+          xcrun simctl io "$udid" screenshot --type=bmp target/ios-iphone.bmp
+          python3 - <<'PY'
+          import struct
+          data = open("target/ios-iphone.bmp", "rb").read()
+          offset, = struct.unpack_from("<I", data, 10)
+          w, h = struct.unpack_from("<ii", data, 18)
+          bpp, = struct.unpack_from("<H", data, 28)
+          step = bpp // 8
+          px = data[offset:]
+          lit = sum(1 for i in range(0, len(px) - step, step * 97) if max(px[i:i + 3]) > 60)
+          total = len(range(0, len(px) - step, step * 97))
+          print(f"capture {w} × {abs(h)}, {bpp} bits : {100 * lit / total:.1f} % de pixels non sombres")
+          assert lit / total > 0.05, "écran presque noir"
+          PY
 
       - name: Journal de l'app (en cas d'échec)
         if: failure()
