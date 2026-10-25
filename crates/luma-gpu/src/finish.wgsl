@@ -179,7 +179,12 @@ fn color(rgb: vec3<f32>) -> vec3<f32> {
         dh = wi * si + wj * sj;
         c *= max(1.0 + wi * bi.y + wj * bj.y, 0.0);
         let colored = ss(0.01, 0.06, chroma0);
-        l *= exp2(0.6 * (wi * bi.z + wj * bj.z) * colored);
+        // En noir et blanc : le mélange noir et blanc, plus ample (±3 IL).
+        var gain = 0.6;
+        if P[P_MONO] != 0.0 {
+            gain = 1.0;
+        }
+        l *= exp2(gain * (wi * bi.z + wj * bj.z) * colored);
     }
     if P[P_MONO] != 0.0 {
         c = 0.0;

@@ -309,6 +309,13 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         .is_some_and(|v| v.eq_ignore_ascii_case("true"))
     {
         s.profile = Profile::Monochrome;
+        // Le mélange noir et blanc de Lightroom (crs:GrayMixer…) : en noir et blanc, c'est
+        // la luminance du mélangeur.
+        for (i, name) in XMP_COLORS.iter().enumerate() {
+            if let Some(v) = values.scalars.get(&format!("GrayMixer{name}")).and_then(|v| number(v)) {
+                s.hsl.luminance[i] = v;
+            }
+        }
     }
     s.lens.remove_ca = values.scalars.get("AutoLateralCA").is_some_and(|v| v.trim() == "1");
     let wb = values
@@ -419,6 +426,11 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
         if s.lens.remove_ca { "1".into() } else { "0".into() },
     ));
 
+    if s.profile == Profile::Monochrome {
+        for (i, name) in XMP_COLORS.iter().enumerate() {
+            attrs.push((format!("GrayMixer{name}"), fmt_value("GrayMixer", s.hsl.luminance[i])));
+        }
+    }
     let mut out = String::from(
         "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"LÜMA\">\n <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"\"\n",
     );
@@ -601,6 +613,23 @@ mod tests {
         let text = write(&s);
         assert!(text.contains("luma:Masks="));
         assert_eq!(read(&text).unwrap(), s);
+    }
+
+    #[test]
+    fn black_and_white_mix_round_trips_as_lightroom_gray_mixer() {
+        let mut s = Settings {
+            profile: Profile::Monochrome,
+            ..Settings::default()
+        };
+        s.hsl.luminance[0] = 40.0;
+        s.hsl.luminance[5] = -60.0;
+        let text = write(&s);
+        assert!(text.contains("crs:GrayMixerRed=\"+40\""), "{text}");
+        assert!(text.contains("crs:GrayMixerBlue=\"-60\""));
+        let lr = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/" crs:ConvertToGrayscale="True" crs:GrayMixerRed="-30" crs:GrayMixerGreen="+25"/></rdf:RDF></x:xmpmeta>"#;
+        let back = read(lr).unwrap();
+        assert_eq!(back.profile, Profile::Monochrome);
+        assert_eq!((back.hsl.luminance[0], back.hsl.luminance[3]), (-30.0, 25.0));
     }
 
     #[test]

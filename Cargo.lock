@@ -1943,6 +1943,7 @@ dependencies = [
 name = "luma-image"
 version = "0.1.0"
 dependencies = [
+ "image",
  "luma-color",
  "luma-core",
  "luma-project",
