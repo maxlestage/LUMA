@@ -211,3 +211,45 @@ fn panorama_from_three_rotated_views() {
         assert!(covered > 0.85, "couverture {covered}");
     }
 }
+
+#[test]
+fn raw_files_merge_into_a_dng_that_develops() {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus/_DSC0009.ARW");
+    if !src.exists() {
+        return;
+    }
+    let dir = std::env::temp_dir().join("luma-merge-dng");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let paths: Vec<_> = (0..3)
+        .map(|i| {
+            let p = dir.join(format!("pose{i}.ARW"));
+            std::fs::copy(&src, &p).unwrap();
+            p
+        })
+        .collect();
+    let frames = luma_merge::RawFiles {
+        paths: paths.clone(),
+        size: Size::Fit(1200),
+    };
+    let merged = luma_merge::stack(&frames, StackMode::Mean, true, &|_, _| {}, &luma_core::Cancel::new()).unwrap();
+    assert_eq!(merged.used, 3);
+    let template = luma_raw::RawPhoto::open(&paths[1]).unwrap();
+    let out = luma_merge::output_path(&paths[0], "Empilement");
+    merged.save(&out, &template, true).unwrap();
+    assert!(out.ends_with("pose0-Empilement.dng"));
+    assert!(out.with_extension("xmp").exists());
+    // Le DNG se rouvre et se développe comme l'original, au même rendu.
+    let dng = Photo::open(&out).unwrap();
+    let original = Photo::open(&paths[1]).unwrap();
+    let s = luma_project::Settings::default();
+    let a = dng.render(&s, Size::Fit(300), &luma_core::Cancel::new()).unwrap().image;
+    let b = original
+        .render(&s, Size::Fit(300), &luma_core::Cancel::new())
+        .unwrap()
+        .image;
+    assert_eq!((a.width, a.height), (b.width, b.height));
+    let diff = rms(&a, &b, 4);
+    eprintln!("écart DNG / original : {diff:.4}");
+    assert!(diff < 0.02, "{diff}");
+}
