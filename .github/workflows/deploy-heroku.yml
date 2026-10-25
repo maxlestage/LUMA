@@ -1,0 +1,47 @@
+# Déploie le site sur Heroku (buildpack emk/rust) : à chaque push sur master, après
+# chaque Release (pour que le bouton « Télécharger pour Mac » serve la nouvelle app), et
+# à la demande.
+#
+# Secrets du dépôt : HEROKU_API_KEY (heroku authorizations:create) et HEROKU_APP (le
+# nom de l'app Heroku). Sans eux, le workflow ne fait rien.
+
+name: Heroku
+
+on:
+  push:
+    branches: [master]
+    paths: ["site/**", "docs/**", "CHANGELOG.md", "heroku-build.sh", "RustConfig", "Procfile", "app.json"]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: heroku
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Déployer sur Heroku
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - name: git push vers Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP: ${{ secrets.HEROKU_APP }}
+        run: |
+          if [ -z "$HEROKU_API_KEY" ] || [ -z "$HEROKU_APP" ]; then
+            echo "::notice::HEROKU_API_KEY ou HEROKU_APP manquant : rien à déployer."
+            exit 0
+          fi
+          # Un nouveau commit vide n'est pas nécessaire : --force réapplique master, et
+          # Heroku reconstruit (donc récupère la dernière Release) à chaque push.
+          git -c credential.helper= push --force \
+            "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP}.git" \
+            HEAD:refs/heads/main 2>&1 | sed "s/${HEROKU_API_KEY}/***/g"
+          echo "Déployé : https://${HEROKU_APP}.herokuapp.com (ou son domaine)"

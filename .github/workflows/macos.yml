@@ -11,7 +11,10 @@
 name: macOS
 
 on:
+  # Les minutes macOS comptent dix fois sur un dépôt privé : sur master, les pull
+  # requests et à la demande seulement (le moteur, sur Linux, vérifie chaque push).
   push:
+    branches: [master]
     paths-ignore: ["site/**", "docs/**", "*.md"]
   pull_request:
     paths-ignore: ["site/**", "docs/**", "*.md"]

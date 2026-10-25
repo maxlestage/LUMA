@@ -480,8 +480,8 @@ fn cta() -> Element {
         .child(
             div()
                 .class("hero-cta reveal")
-                .child(a().class("btn magnetic").href(format!("{REPO}/blob/master/docs/architecture.md")).child(span().text("Lire l'architecture")))
-                .child(a().class("btn btn-ghost magnetic").href(format!("{REPO}/blob/master/docs/roadmap.md")).child(span().text("Feuille de route détaillée"))),
+                .child(a().class("btn magnetic").href(link("/docs/architecture/")).child(span().text("Lire l'architecture")))
+                .child(a().class("btn btn-ghost magnetic").href(link("/docs/feuille-de-route/")).child(span().text("Feuille de route détaillée"))),
         )
 }
 
@@ -642,6 +642,31 @@ fn site_footer() -> Element {
                 .child(span().text("Fait en France · 100 % Rust · Aucun traceur"))
                 .child(a().href(target("#top")).text("Haut de page ↑")),
         )
+}
+
+/// Une page de documentation (un document du dépôt).
+pub fn doc(site: &Site, origin: &str, page: &super::docs::Doc) -> Page {
+    let body = div()
+        .class("site site--plain")
+        .child(navbar())
+        .child(
+            html::main().child(
+                article()
+                    .class("legal doc")
+                    .child(kicker("Documentation"))
+                    .child(h1().text(page.title))
+                    .child(p().class("lede").text(page.lede))
+                    .child(div().class("doc-body").html(page.html(link))),
+            ),
+        )
+        .child(site_footer());
+    layout(site, origin, &format!("{} — LÜMA", page.title), body).seo(
+        Seo::new()
+            .site_name("LÜMA")
+            .base_url(origin.to_owned())
+            .canonical(page.path)
+            .locale("fr_FR"),
+    )
 }
 
 /// Une page légale (mentions, confidentialité, conditions).
