@@ -43,7 +43,8 @@ Prochaines étapes, dans l'ordre :
    et l'affichage sans relecture (texture partagée avec l'interface) ;
 2. dans l'app : catalogue (plusieurs dossiers, collections, mots‑clés), préréglages ;
 3. masques par IA (sujet, ciel), profils d'objectifs, Upright automatique ;
-4. application iOS, PhotoKit, TestFlight.
+4. iOS : l'app tourne déjà (simulateur, CI) ; restent PhotoKit, les gestes (pincer pour
+   zoomer), l'Apple Pencil pour les masques, la signature et TestFlight.
 
 ## Jalons de validation
 

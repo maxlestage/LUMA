@@ -821,9 +821,7 @@ impl Studio {
                 }
             }
             "open" => {
-                let mut dialog = rfd::FileDialog::new().set_title("Ouvrir un RAW");
-                dialog = dialog.add_filter("RAW", &RAW_EXTENSIONS);
-                if let Some(p) = dialog.pick_file() {
+                if let Some(p) = crate::dialogs::pick_raw() {
                     self.open_path(&p);
                 }
             }
@@ -973,10 +971,9 @@ impl Studio {
                                 None => "LÜMA/, à côté du RAW".into(),
                             };
                             ui.label(RichText::new(text).color(theme::DIM));
-                            if ui.button("Choisir…").clicked()
-                                && let Some(d) = rfd::FileDialog::new()
-                                    .set_title("Dossier d'export")
-                                    .pick_folder()
+                            if crate::dialogs::FOLDER_PICKER
+                                && ui.button("Choisir…").clicked()
+                                && let Some(d) = crate::dialogs::pick_folder("Dossier d'export")
                             {
                                 o.folder = Some(d);
                             }
@@ -1024,48 +1021,77 @@ impl Studio {
             None => {}
         }
 
+        // iPhone (ou fenêtre étroite) : la photo en haut, les panneaux en dessous.
+        let compact = ui.available_width() < 820.0;
         egui::Panel::top("modules")
             .exact_size(40.0)
             .frame(
                 egui::Frame::NONE
                     .fill(theme::BACKGROUND)
-                    .inner_margin(egui::Margin::symmetric(16, 0)),
+                    .inner_margin(egui::Margin::symmetric(if compact { 8 } else { 16 }, 0)),
             )
-            .show(ui, |ui| self.top_bar(ui));
-        egui::Panel::bottom("film")
-            .exact_size(112.0)
-            .frame(
-                egui::Frame::NONE
-                    .fill(theme::BACKGROUND)
-                    .inner_margin(egui::Margin::symmetric(12, 8)),
-            )
-            .show(ui, |ui| self.filmstrip(ui));
-        egui::Panel::left("gauche")
-            .exact_size(250.0)
-            .frame(
-                egui::Frame::NONE
-                    .fill(theme::PANEL)
-                    .inner_margin(egui::Margin::same(12)),
-            )
-            .show(ui, |ui| match self.module {
-                Module::Develop => self.left_panel(ui),
-                Module::Library => self.library_left(ui),
-            });
-        egui::Panel::right("droite")
-            .exact_size(330.0)
-            .frame(
-                egui::Frame::NONE
-                    .fill(theme::PANEL)
-                    .inner_margin(egui::Margin::symmetric(12, 10)),
-            )
-            .show(ui, |ui| {
-                egui::ScrollArea::vertical()
-                    .auto_shrink(false)
-                    .show(ui, |ui| match self.module {
-                        Module::Develop => self.develop_panels(ui),
-                        Module::Library => self.library_right(ui),
-                    });
-            });
+            .show(ui, |ui| self.top_bar(ui, compact));
+        if compact {
+            let height = (ui.available_height() * 0.48).max(200.0);
+            egui::Panel::bottom("panneaux")
+                .exact_size(height)
+                .frame(
+                    egui::Frame::NONE
+                        .fill(theme::PANEL)
+                        .inner_margin(egui::Margin::symmetric(10, 8)),
+                )
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical()
+                        .auto_shrink(false)
+                        .show(ui, |ui| match self.module {
+                            Module::Develop => self.develop_panels(ui),
+                            Module::Library => self.library_right(ui),
+                        });
+                });
+            egui::Panel::bottom("film")
+                .exact_size(76.0)
+                .frame(
+                    egui::Frame::NONE
+                        .fill(theme::BACKGROUND)
+                        .inner_margin(egui::Margin::symmetric(8, 6)),
+                )
+                .show(ui, |ui| self.filmstrip(ui));
+        } else {
+            egui::Panel::bottom("film")
+                .exact_size(112.0)
+                .frame(
+                    egui::Frame::NONE
+                        .fill(theme::BACKGROUND)
+                        .inner_margin(egui::Margin::symmetric(12, 8)),
+                )
+                .show(ui, |ui| self.filmstrip(ui));
+            egui::Panel::left("gauche")
+                .exact_size(250.0)
+                .frame(
+                    egui::Frame::NONE
+                        .fill(theme::PANEL)
+                        .inner_margin(egui::Margin::same(12)),
+                )
+                .show(ui, |ui| match self.module {
+                    Module::Develop => self.left_panel(ui),
+                    Module::Library => self.library_left(ui),
+                });
+            egui::Panel::right("droite")
+                .exact_size(330.0)
+                .frame(
+                    egui::Frame::NONE
+                        .fill(theme::PANEL)
+                        .inner_margin(egui::Margin::symmetric(12, 10)),
+                )
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical()
+                        .auto_shrink(false)
+                        .show(ui, |ui| match self.module {
+                            Module::Develop => self.develop_panels(ui),
+                            Module::Library => self.library_right(ui),
+                        });
+                });
+        }
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(Color32::from_gray(0x2a)))
             .show(ui, |ui| match self.module {
@@ -1077,7 +1103,7 @@ impl Studio {
         }
     }
 
-    fn top_bar(&mut self, ui: &mut Ui) {
+    fn top_bar(&mut self, ui: &mut Ui, compact: bool) {
         ui.horizontal_centered(|ui| {
             ui.label(
                 RichText::new("LÜMA")
@@ -1085,13 +1111,21 @@ impl Studio {
                     .size(15.0)
                     .color(Color32::WHITE),
             );
-            ui.add_space(24.0);
-            for (name, module) in [
-                ("Bibliothèque", Some(Module::Library)),
-                ("Développement", Some(Module::Develop)),
-                ("Carte", None),
-                ("Impression", None),
-            ] {
+            ui.add_space(if compact { 10.0 } else { 24.0 });
+            let modules: &[(&str, Option<Module>)] = if compact {
+                &[
+                    ("Photos", Some(Module::Library)),
+                    ("Retouche", Some(Module::Develop)),
+                ]
+            } else {
+                &[
+                    ("Bibliothèque", Some(Module::Library)),
+                    ("Développement", Some(Module::Develop)),
+                    ("Carte", None),
+                    ("Impression", None),
+                ]
+            };
+            for &(name, module) in modules {
                 let active = module == Some(self.module);
                 let text = RichText::new(name).size(13.0).color(if active {
                     Color32::WHITE
@@ -1123,13 +1157,18 @@ impl Studio {
                 ui.add_space(14.0);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Exporter… (Maj+Cmd+E)").clicked() {
+                let (export, open) = if compact {
+                    ("Exporter", "Ouvrir")
+                } else {
+                    ("Exporter… (Maj+Cmd+E)", "Ouvrir (Cmd+O)")
+                };
+                if ui.button(export).clicked() {
                     self.act("export");
                 }
-                if ui.button("Ouvrir (Cmd+O)").clicked() {
+                if ui.button(open).clicked() {
                     self.act("open");
                 }
-                if self.render_ms > 0.0 {
+                if self.render_ms > 0.0 && !compact {
                     ui.label(
                         RichText::new(format!(
                             "rendu {} ms{}",
