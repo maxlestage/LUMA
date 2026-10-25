@@ -5,6 +5,7 @@
 //! luma develop <raw> [options]      développe et exporte (JPEG, PNG, TIFF)
 //! luma xmp <raw|xmp|json> [options] écrit les réglages au format XMP de Lightroom
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
+//! luma merge <raw>… [options]       empilement ou panorama, en DNG
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -26,6 +27,8 @@ USAGE
                      [--no-sidecar] [--set nom=valeur]…
   luma xmp <raw|f.xmp|f.json> [--set nom=valeur]… [-o f.xmp]
   luma bench <raw> [--size N] [--runs N]
+  luma merge <raw>… [--stack mean|median|max|stars | --pano perspective|cylindrical|spherical]
+                    [--no-align] [--no-crop] [--size N] [-o sortie.dng]
 
 RÉGLAGES (--set)
   exposure contrast highlights shadows whites blacks texture clarity dehaze vibrance
@@ -295,12 +298,109 @@ fn bench(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma merge` : empilement (bruit, médiane, filé, étoiles) ou panorama, en DNG.
+fn merge(args: Vec<String>) -> Result<(), String> {
+    use luma_merge::{Projection, StackMode};
+    let mut paths = Vec::new();
+    let mut stack = Some(StackMode::Mean);
+    let mut pano = Projection::Cylindrical;
+    let (mut align, mut crop, mut size, mut out) = (true, true, Size::Full, None);
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        let mut value = || it.next().ok_or_else(|| format!("{a} : valeur attendue"));
+        match a.as_str() {
+            "--stack" => {
+                stack = Some(match value()?.as_str() {
+                    "mean" | "moyenne" => StackMode::Mean,
+                    "median" | "mediane" => StackMode::Median,
+                    "max" | "maximum" => StackMode::Maximum,
+                    "stars" | "etoiles" => StackMode::Stars,
+                    v => return Err(format!("empilement inconnu « {v} » (mean, median, max, stars)")),
+                })
+            }
+            "--pano" => {
+                stack = None;
+                pano = match value()?.as_str() {
+                    "perspective" => Projection::Perspective,
+                    "cylindrical" | "cylindrique" => Projection::Cylindrical,
+                    "spherical" | "spherique" => Projection::Spherical,
+                    v => return Err(format!("projection inconnue « {v} »")),
+                }
+            }
+            "--no-align" => align = false,
+            "--no-crop" => crop = false,
+            "--size" => size = Size::Fit(value()?.parse().map_err(|_| "--size : nombre attendu")?),
+            "-o" => out = Some(PathBuf::from(value()?)),
+            _ => paths.push(PathBuf::from(a)),
+        }
+    }
+    if paths.len() < 2 {
+        return Err("il faut au moins deux photos".into());
+    }
+    let started = Instant::now();
+    let frames = luma_merge::RawFiles {
+        paths: paths.clone(),
+        size,
+    };
+    let progress = |f: f32, label: &str| eprint!("\r  {label:<32} {:>3.0} %", f * 100.0);
+    let cancel = Cancel::new();
+    let (merged, suffix) = match stack {
+        Some(mode) => (
+            luma_merge::stack(&frames, mode, align, &progress, &cancel).map_err(|e| e.to_string())?,
+            mode.name(),
+        ),
+        None => (
+            luma_merge::panorama(&frames, pano, &progress, &cancel).map_err(|e| e.to_string())?,
+            "Pano",
+        ),
+    };
+    eprintln!();
+    let template = luma_raw::RawPhoto::open(&paths[paths.len() / 2]).map_err(|e| e.to_string())?;
+    let out = out.unwrap_or_else(|| luma_merge::output_path(&paths[0], &suffix.replace('é', "e")));
+    merged.save(&out, &template, crop).map_err(|e| e.to_string())?;
+    println!(
+        "{} ({} × {}, {} photo(s){}) en {:.1} s",
+        out.display(),
+        merged.image.width,
+        merged.image.height,
+        merged.used,
+        if merged.skipped.is_empty() {
+            String::new()
+        } else {
+            format!(", {} écartée(s)", merged.skipped.len())
+        },
+        started.elapsed().as_secs_f32()
+    );
+    if let Some(c) = merged.crop {
+        println!(
+            "  rognage {} : {:.1} % × {:.1} % de l'image",
+            if crop {
+                "proposé dans le XMP"
+            } else {
+                "non appliqué (--no-crop)"
+            },
+            (c.right - c.left) * 100.0,
+            (c.bottom - c.top) * 100.0
+        );
+    }
+    Ok(())
+}
+
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     let Some(command) = args.next() else {
         println!("{USAGE}");
         return ExitCode::SUCCESS;
     };
+    if command == "merge" {
+        return match merge(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     let parsed = match parse(args) {
         Ok(a) => a,
         Err(e) if e.is_empty() => {
