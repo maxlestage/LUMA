@@ -12,7 +12,6 @@ use std::time::Instant;
 
 use luma_color::OutputSpace;
 use luma_core::{Cancel, Timings};
-use luma_project::Settings;
 use luma_render::{Photo, Size};
 
 fn ms(t: Instant) -> f64 {
