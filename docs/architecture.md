@@ -47,6 +47,10 @@ dépend **jamais** de `luma-platform`. Seuls `luma-ui` et `apps/*` voient la pla
 
 ## Workspace Cargo
 
+État actuel : `luma-core`, `luma-color`, `luma-raw`, `luma-project`, `luma-image`,
+`luma-render` et `luma-cli` existent et sont testés (voir le README). Les autres crates
+ci‑dessous sont prévues.
+
 ```
 luma/
 ├── Cargo.toml            workspace, versions épinglées

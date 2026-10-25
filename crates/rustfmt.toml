@@ -1,0 +1,2 @@
+# Style du moteur : lignes jusqu'à 120 colonnes (le site, dans site/, garde le style par défaut).
+max_width = 120
