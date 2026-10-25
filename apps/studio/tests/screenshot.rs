@@ -118,8 +118,17 @@ impl Session {
 
 const NONE: Modifiers = Modifiers::NONE;
 
+/// Une capture à la fois : plusieurs interfaces rendues en même temps sur le GPU
+/// logiciel de Linux (lavapipe) le font parfois planter.
+fn one_at_a_time() -> std::sync::MutexGuard<'static, ()> {
+    static GPU: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    GPU.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 #[test]
 fn develop_module() {
+    let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("developpement") else {
         return;
     };
@@ -133,6 +142,7 @@ fn develop_module() {
 
 #[test]
 fn before_after_and_clipping() {
+    let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("avant") else {
         return;
     };
@@ -142,6 +152,7 @@ fn before_after_and_clipping() {
 
 #[test]
 fn library_ratings_and_flags() {
+    let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("bibliotheque") else {
         return;
     };
@@ -170,6 +181,7 @@ fn library_ratings_and_flags() {
 
 #[test]
 fn crop_tool_and_export_window() {
+    let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("recadrage") else {
         return;
     };
@@ -191,6 +203,7 @@ fn crop_tool_and_export_window() {
 
 #[test]
 fn masks_linear_and_radial() {
+    let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("masques") else {
         return;
     };
@@ -214,6 +227,7 @@ fn masks_linear_and_radial() {
 
 #[test]
 fn iphone_layout() {
+    let _gpu = one_at_a_time();
     // Un iPhone en portrait (points), écran Retina ×3.
     let Some(mut s) = Session::open_sized("iphone", [393.0, 852.0], 3.0) else {
         return;
@@ -223,6 +237,7 @@ fn iphone_layout() {
 
 #[test]
 fn films_and_merge_tools() {
+    let _gpu = one_at_a_time();
     // Une pellicule « mesurée » : ombres froides, hautes lumières chaudes, courbe en S.
     let mut cube = luma_image::cube::Cube::identity(17);
     for p in &mut cube.data {
@@ -255,6 +270,7 @@ fn films_and_merge_tools() {
 
 #[test]
 fn films_stacked_with_masks() {
+    let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("films-empiles") else {
         return;
     };
@@ -281,6 +297,7 @@ fn films_stacked_with_masks() {
 /// sous la photo affichée, son film et ses retouches.
 #[test]
 fn edited_photos_show_their_film() {
+    let _gpu = one_at_a_time();
     let Some(mut s) = Session::open_prepared("modifiees", [1440.0, 900.0], 1.0, |dir| {
         let mut portra = luma_project::presets::find("Portra 400")
             .unwrap()
@@ -306,6 +323,7 @@ fn edited_photos_show_their_film() {
 /// L'accueil, sans photo : le logo sur le fond de LÜMA.
 #[test]
 fn welcome_screen() {
+    let _gpu = one_at_a_time();
     let mut harness = Harness::builder()
         .with_size([1440.0, 900.0])
         .wgpu()
@@ -332,6 +350,7 @@ fn welcome_screen() {
 /// L'écran Premium quand l'essai est fini : les deux formules et la clé.
 #[test]
 fn premium_screen_after_the_trial() {
+    let _gpu = one_at_a_time();
     let dir = std::env::temp_dir().join("luma-premium-licence");
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
