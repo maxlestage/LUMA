@@ -44,7 +44,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
 | Outils | Recadrage et redressement (angle libre), outil à l'écran avec proportions verrouillées (R) | ✅ |
-| | Masques : pinceau, dégradés, sujet, ciel, plage de luminance ou de couleur | ⏳ |
+| | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté | ✅ |
+| | Masques par IA (sujet, ciel), plage de luminance ou de couleur ; lecture des masques des XMP de Lightroom | ⏳ |
 | | Correcteur, tampon, yeux rouges, suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |

@@ -7,7 +7,7 @@
 //!    étalonnage de l'appareil, exposition, hautes lumières saturées neutralisées ;
 //! 2. **bruit** : réduction du bruit de luminance et de couleur ;
 //! 3. **tonalité locale** : Correction du voile, Hautes lumières, Ombres, Clarté,
-//!    Texture ;
+//!    Texture ; puis les retouches locales du panneau Masquage ;
 //! 4. **rendu** : courbe filmique (Contraste, Blancs, Noirs) qui préserve les teintes
 //!    et blanchit doucement les hautes lumières, puis courbe des tonalités ;
 //! 5. **couleur** : Vibrance, Saturation, Mélangeur, Étalonnage des couleurs ;
@@ -22,6 +22,7 @@ pub mod curve;
 pub mod detail;
 pub mod effects;
 pub mod geometry;
+pub mod local;
 pub mod tone;
 
 use luma_color::{self as lc, EncodeLut, Mat3, OutputSpace, luminance};
@@ -69,6 +70,10 @@ pub fn develop_base(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel
         tone::local_tone(&mut img, s);
     });
     cancel.check()?;
+    if !s.masks.is_empty() {
+        t.time("masques", || local::apply(&mut img, &s.masks));
+        cancel.check()?;
+    }
     Ok(img)
 }
 
@@ -94,6 +99,7 @@ pub fn base_key(s: &Settings) -> Settings {
         clarity: s.clarity,
         texture: s.texture,
         crop: s.crop,
+        masks: s.masks.clone(),
         ..d
     }
 }

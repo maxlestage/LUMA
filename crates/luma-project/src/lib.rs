@@ -7,7 +7,10 @@
 //! photographe y retrouve ses repères, et ses fichiers XMP existants se lisent (voir
 //! [`xmp`]).
 
+pub mod masks;
 pub mod xmp;
+
+pub use masks::{Dab, Local, Mask, Shape};
 
 use serde::{Deserialize, Serialize};
 
@@ -283,6 +286,8 @@ pub struct Settings {
     pub effects: Effects,
     pub calibration: Calibration,
     pub crop: Crop,
+    /// Panneau Masquage : les retouches locales, dans l'ordre.
+    pub masks: Vec<Mask>,
 }
 
 impl Default for Settings {
@@ -308,6 +313,7 @@ impl Default for Settings {
             effects: Effects::default(),
             calibration: Calibration::default(),
             crop: Crop::default(),
+            masks: Vec::new(),
         }
     }
 }
@@ -329,6 +335,10 @@ impl Settings {
             clamp(tint, -150.0, 150.0);
         }
         clamp(&mut s.exposure, -5.0, 5.0);
+        for m in &mut s.masks {
+            m.local.clamp();
+            clamp(&mut m.amount, 0.0, 100.0);
+        }
         for v in [
             &mut s.contrast,
             &mut s.highlights,
