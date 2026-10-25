@@ -7,6 +7,7 @@
 //! l'écran. Pour un aperçu, la mosaïque est réduite sans dématriçage (un pixel par
 //! bloc du capteur), ce qui est bien plus rapide et aussi net à cette taille.
 
+pub mod chart;
 pub mod export;
 
 use std::collections::HashMap;
@@ -66,6 +67,22 @@ const CACHE: usize = 3;
 
 /// Bases gardées : la photo et jusqu'à trois films de masques.
 const BASES: usize = 4;
+
+/// La mémoire que les caches d'une photo (sources et bases) peuvent occuper, en octets :
+/// 600 Mo sur iPhone et iPad (où le système ferme une app trop gourmande), 3 Go
+/// ailleurs ; `LUMA_CACHE_MB` la remplace. L'image en cours d'usage est toujours gardée,
+/// même seule au‑delà du budget.
+pub fn memory_budget() -> usize {
+    let mb = std::env::var("LUMA_CACHE_MB")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(if cfg!(target_os = "ios") { 600 } else { 3000 });
+    mb * 1024 * 1024
+}
+
+fn bytes(img: &RgbImage) -> usize {
+    img.data.len() * std::mem::size_of::<[f32; 3]>()
+}
 
 impl Photo {
     pub fn open(path: impl AsRef<Path>) -> Result<Photo> {
@@ -132,6 +149,8 @@ impl Photo {
             cache.remove(0);
         }
         cache.push((size, img.clone()));
+        drop(cache);
+        self.trim(Some(&img));
         img
     }
 
@@ -285,8 +304,49 @@ impl Photo {
             bases.retain(|(s, _, _)| *s == size);
             bases.insert(0, (size, key, base.clone()));
             bases.truncate(BASES);
+            drop(bases);
+            self.trim(Some(&base.image));
         }
         Ok(base)
+    }
+
+    /// La mémoire occupée par les caches de cette photo, en octets.
+    pub fn cached_bytes(&self) -> usize {
+        let s: usize = self.sources.lock().expect("cache").iter().map(|(_, i)| bytes(i)).sum();
+        let b: usize = self
+            .bases
+            .lock()
+            .expect("bases")
+            .iter()
+            .map(|(_, _, b)| bytes(&b.image))
+            .sum();
+        s + b
+    }
+
+    /// Ramène les caches sous [`memory_budget`] : les bases les plus anciennes partent
+    /// d'abord (elles se recalculent vite), puis les sources les plus anciennes. `keep` :
+    /// l'image qu'on vient de produire, gardée quoi qu'il arrive.
+    fn trim(&self, keep: Option<&Arc<RgbImage>>) {
+        self.trim_to(memory_budget(), keep);
+    }
+
+    fn trim_to(&self, budget: usize, keep: Option<&Arc<RgbImage>>) {
+        let kept = |i: &Arc<RgbImage>| keep.is_some_and(|k| Arc::ptr_eq(k, i));
+        while self.cached_bytes() > budget {
+            let mut bases = self.bases.lock().expect("bases");
+            if let Some(i) = bases.iter().rposition(|(_, _, b)| !kept(&b.image)) {
+                bases.remove(i);
+                continue;
+            }
+            drop(bases);
+            let mut sources = self.sources.lock().expect("cache");
+            match sources.iter().position(|(_, i)| !kept(i)) {
+                Some(i) => {
+                    sources.remove(i);
+                }
+                None => break,
+            }
+        }
     }
 }
 
@@ -352,6 +412,29 @@ mod tests {
         };
         let direct = luma_image::develop(&source, &input, &s, &Cancel::new(), &mut t).unwrap();
         assert_eq!(cached.data, direct.data);
+    }
+
+    #[test]
+    fn caches_stay_under_the_memory_budget() {
+        let p = photo();
+        let mut t = Timings::default();
+        for (k, n) in [600, 700, 800, 900].into_iter().enumerate() {
+            let s = Settings {
+                exposure: k as f32 * 0.1,
+                ..Settings::default()
+            };
+            p.base(&s, Size::Fit(n), &Cancel::new(), &mut t).unwrap();
+        }
+        let all = p.cached_bytes();
+        // Un budget de la moitié : les plus anciennes partent, la plus récente reste.
+        let newest = p.bases.lock().unwrap()[0].2.image.clone();
+        p.trim_to(all / 2, Some(&newest));
+        assert!(p.cached_bytes() <= all / 2);
+        assert!(Arc::ptr_eq(&p.bases.lock().unwrap()[0].2.image, &newest));
+        // Un budget nul : seule l'image gardée reste.
+        p.trim_to(0, Some(&newest));
+        assert_eq!(p.cached_bytes(), bytes(&newest));
+        assert!(memory_budget() >= 600 * 1024 * 1024);
     }
 
     #[test]

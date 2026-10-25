@@ -8,6 +8,8 @@
 //! luma merge <raw>… [options]       empilement ou panorama, en DNG
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
 //! luma presets [dossier]            exporte les 100 films en préréglages Lightroom
+//! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
+//! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -33,6 +35,14 @@ USAGE
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
+  luma cameras [--markdown] [--corpus dossier]
+      Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
+      --corpus marque ceux dont un vrai RAW est dans le dossier.
+  luma colorchecker <raw> [--xmp f.xmp]
+      Mesure la fidélité des couleurs d'un boîtier : photographier une charte ColorChecker
+      (24 plages), la recadrer au plus juste dans LÜMA (le XMP garde le recadrage), puis
+      lancer la commande : ΔE 2000 de chaque plage (moins de 2 : invisible ; moins de 5 :
+      bon).
   luma presets [dossier]
       Exporte les 100 films en préréglages Lightroom (.xmp), rangés par famille, dans
       « dossier/Préréglages LÜMA » (dossier courant par défaut).
@@ -409,6 +419,48 @@ fn merge(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma colorchecker` : la fidélité des couleurs sur la photo d'une vraie charte.
+fn colorchecker(a: &Args) -> Result<(), String> {
+    let path = a
+        .positional
+        .first()
+        .ok_or("un RAW de la charte, recadré au plus juste")?;
+    let raw = Path::new(path);
+    let mut s = load_settings(a, Some(raw))?;
+    // La couleur seule : pas de look, pas de courbe (l'étape d'entrée et la balance).
+    let keep = (s.white_balance, s.crop, s.transform.clone(), s.lens.clone());
+    s = Settings::default();
+    (s.white_balance, s.crop, s.transform, s.lens) = keep;
+    let photo = Photo::open(raw).map_err(|e| e.to_string())?;
+    let mut t = luma_core::Timings::default();
+    let base = photo
+        .base(&s, Size::Fit(1600), &Cancel::new(), &mut t)
+        .map_err(|e| e.to_string())?;
+    let de = luma_render::chart::measure_chart(&base.image);
+    println!(
+        "{} {} — ΔE 2000 par plage (charte ColorChecker)",
+        photo.raw().make,
+        photo.raw().model
+    );
+    for row in 0..4 {
+        let line: Vec<String> = (0..6).map(|c| format!("{:5.1}", de[row * 6 + c])).collect();
+        println!("  {}", line.join(" "));
+    }
+    let mean = de.iter().sum::<f32>() / 24.0;
+    let worst = de.iter().copied().fold(0.0, f32::max);
+    println!(
+        "moyenne {mean:.2}, maximum {worst:.2} : {}",
+        if mean < 2.0 {
+            "couleurs fidèles (écart invisible)"
+        } else if mean < 5.0 {
+            "bonne fidélité"
+        } else {
+            "écart visible : vérifier le recadrage, la balance des blancs et l'éclairage"
+        }
+    );
+    Ok(())
+}
+
 /// `luma presets` : les films intégrés en préréglages Lightroom, un dossier par famille.
 fn export_presets(dir: &Path) -> Result<usize, String> {
     use luma_project::presets::PRESETS;
@@ -481,6 +533,39 @@ fn main() -> ExitCode {
         println!("{USAGE}");
         return ExitCode::SUCCESS;
     };
+    if command == "cameras" {
+        let args: Vec<String> = args.collect();
+        let corpus = args
+            .iter()
+            .position(|a| a == "--corpus")
+            .and_then(|i| args.get(i + 1))
+            .map(PathBuf::from);
+        // Les boîtiers du corpus : lus dans les vrais fichiers s'ils sont là.
+        let mut tested: Vec<(String, String)> = luma_raw::cameras::CORPUS
+            .iter()
+            .map(|(a, b)| ((*a).to_owned(), (*b).to_owned()))
+            .collect();
+        if let Some(dir) = corpus
+            && let Ok(entries) = std::fs::read_dir(&dir)
+        {
+            for e in entries.flatten() {
+                if let Ok(raw) = luma_raw::RawPhoto::open(e.path())
+                    && !tested.iter().any(|(m, d)| *m == raw.make && *d == raw.model)
+                {
+                    tested.push((raw.make, raw.model));
+                }
+            }
+        }
+        let tested: Vec<(&str, &str)> = tested.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+        if args.iter().any(|a| a == "--markdown") {
+            print!("{}", luma_raw::cameras::markdown(&tested));
+        } else {
+            for c in luma_raw::cameras::all() {
+                println!("{}\t{}\t{}", c.make, c.model, if c.color { "couleur" } else { "" });
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
     if command == "presets" {
         let dir = PathBuf::from(args.next().unwrap_or_else(|| ".".into()));
         return match export_presets(&dir) {
@@ -530,6 +615,7 @@ fn main() -> ExitCode {
         "info" => info(&parsed),
         "develop" => develop(&parsed),
         "xmp" => to_xmp(&parsed),
+        "colorchecker" => colorchecker(&parsed),
         "bench" => bench(&parsed),
         "-h" | "--help" | "help" => {
             println!("{USAGE}");

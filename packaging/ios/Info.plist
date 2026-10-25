@@ -41,5 +41,7 @@
   <!-- Les RAW arrivent par l'app Fichiers (Sur mon iPhone › LÜMA). -->
   <key>UIFileSharingEnabled</key><true/>
   <key>LSSupportsOpeningDocumentsInPlace</key><true/>
+  <!-- App Store : LÜMA ne chiffre rien elle-même (pas de déclaration d'exportation). -->
+  <key>ITSAppUsesNonExemptEncryption</key><false/>
 </dict>
 </plist>

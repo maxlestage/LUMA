@@ -51,7 +51,11 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace           # tests unitaires + développement de tout le corpus
 scripts/audit-rust.sh
+target/release/luma cameras --markdown --corpus tests/raw-corpus | diff - docs/boitiers.md   # matrice des boîtiers
 ```
+
+Boîtiers pris en charge : [docs/boitiers.md](docs/boitiers.md). Fidélité des couleurs d'un
+boîtier : `luma colorchecker photo.RAW` sur la photo d'une charte ColorChecker recadrée.
 
 ### Réactivité mesurée
 
