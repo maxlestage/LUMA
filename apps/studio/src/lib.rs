@@ -5,6 +5,7 @@
 
 pub mod app;
 pub mod crop;
+pub mod masking;
 pub mod style;
 pub mod widgets;
 pub mod worker;

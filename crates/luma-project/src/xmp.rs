@@ -31,7 +31,7 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 3] = ["xmp:Rating", "xmp:Label", "luma:Pick"];
+const META_KEYS: [&str; 4] = ["xmp:Rating", "xmp:Label", "luma:Pick", "luma:Masks"];
 const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
 
 /// Le drapeau de la Bibliothèque (P, X, U dans Lightroom).
@@ -264,7 +264,7 @@ fn leak(name: String) -> &'static str {
 /// Les réglages d'un document XMP. Ce qui manque garde sa valeur par défaut.
 pub fn read(text: &str) -> luma_core::Result<Settings> {
     let values = parse_values(text)?;
-    if values.scalars.is_empty() && values.lists.is_empty() {
+    if values.scalars.is_empty() && values.lists.is_empty() && !values.meta.contains_key("luma:Masks") {
         return Err(luma_core::Error::Format("aucun réglage crs: dans ce XMP".into()));
     }
     let mut s = Settings::default();
@@ -325,6 +325,13 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         if let Some(points) = values.lists.get(name).and_then(|l| curve(l)) {
             *slot = points;
         }
+    }
+    // Les masques de LÜMA (ceux de Lightroom, dans crs:MaskGroupBasedCorrections, ne
+    // sont pas encore lus).
+    if let Some(json) = values.meta.get("luma:Masks")
+        && let Ok(masks) = serde_json::from_str(json)
+    {
+        s.masks = masks;
     }
     Ok(s.clamped())
 }
@@ -414,6 +421,10 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     }
     if meta.flag == Flag::Pick {
         out.push_str("    luma:Pick=\"True\"\n");
+    }
+    if !s.masks.is_empty() {
+        let json = serde_json::to_string(&s.masks).unwrap_or_default();
+        out.push_str(&format!("    luma:Masks=\"{}\"\n", escape(&json)));
     }
     for (name, value) in &attrs {
         out.push_str(&format!("    crs:{name}=\"{}\"\n", escape(value)));
@@ -546,6 +557,30 @@ mod tests {
         let text = write(&s);
         assert!(text.contains("crs:Exposure2012=\"+0.65\""));
         assert!(text.contains("crs:HueAdjustmentMagenta=\"+12\""));
+        assert_eq!(read(&text).unwrap(), s);
+    }
+
+    #[test]
+    fn masks_round_trip() {
+        let mut s = read(LIGHTROOM).unwrap();
+        let mut sky = crate::Mask::linear();
+        sky.local.exposure = -0.8;
+        sky.local.temperature = -20.0;
+        let mut brush = crate::Mask::brush();
+        brush.local.clarity = 40.0;
+        if let crate::Shape::Brush { dabs } = &mut brush.shape {
+            dabs.push(crate::Dab {
+                x: 0.3,
+                y: 0.4,
+                radius: 0.05,
+                feather: 50.0,
+                flow: 100.0,
+                erase: false,
+            });
+        }
+        s.masks = vec![sky, brush];
+        let text = write(&s);
+        assert!(text.contains("luma:Masks="));
         assert_eq!(read(&text).unwrap(), s);
     }
 

@@ -169,3 +169,26 @@ fn crop_tool_and_export_window() {
     ]);
     s.capture("export");
 }
+
+#[test]
+fn masks_linear_and_radial() {
+    let Some(mut s) = Session::open("masques") else {
+        return;
+    };
+    // Un ciel assombri et refroidi (dégradé linéaire), puis un radial éclairci.
+    s.keys(&[(NONE, Key::M)]);
+    let st = s.studio();
+    st.settings.masks[0].local.exposure = -1.2;
+    st.settings.masks[0].local.temperature = -30.0;
+    s.wait();
+    s.keys(&[(Modifiers::SHIFT, Key::M)]);
+    let st = s.studio();
+    st.settings.masks[1].local.exposure = 0.8;
+    st.settings.masks[1].local.clarity = 30.0;
+    s.wait();
+    s.capture("masques");
+    s.keys(&[(NONE, Key::O)]);
+    s.capture("masques-zone");
+    assert_eq!(s.studio().settings.masks.len(), 2);
+    assert_eq!(s.studio().selected_mask, Some(1));
+}
