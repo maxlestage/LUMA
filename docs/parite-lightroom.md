@@ -13,7 +13,7 @@ retouches existantes.
 | Noms, plages, valeurs par défaut et sens de chaque curseur | Le moteur de rendu : celui d'Adobe est secret. LÜMA a le sien, écrit en Rust ; une même valeur a le même sens et la même amplitude, mais ne donne pas exactement les mêmes pixels |
 | Réglages échangés au format XMP `crs:` (lecture et écriture) | Les profils d'Adobe (« Adobe Couleur »…), protégés : LÜMA propose ses équivalents (Couleur, Neutre, Vif, Monochrome) |
 | Température et teinte sur l'échelle DNG (le même « 5500 K, +10 ») | Les marques et logos |
-| Raccourcis clavier (prévu avec l'interface) | |
+| Raccourcis clavier (`\`, J, Z, copier‑coller, annuler…) | |
 
 Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 
@@ -46,8 +46,9 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Outils | Recadrage et redressement (angle libre) | ✅ |
 | | Masques : pinceau, dégradés, sujet, ciel, plage de luminance ou de couleur | ⏳ |
 | | Correcteur, tampon, yeux rouges, suppression | ⏳ |
-| | Historique, instantanés, copier‑coller et synchronisation des réglages | ⏳ (réglages déjà sérialisables en JSON et XMP) |
-| | Histogramme | 🟡 calculé, affichage avec l'interface |
+| | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
+| | Instantanés, synchronisation sur plusieurs photos | ⏳ |
+| | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), zoom 1:1 | ✅ |
 | | Fusion HDR, panorama | ⏳ |
 
 ## Formats et couleur
@@ -75,7 +76,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 
 | Fonction | État |
 |---|---|
-| Lecture des XMP de Lightroom (sidecar `IMG_0001.xmp`), écriture au même format | ✅ |
+| Lecture des XMP de Lightroom (sidecar `IMG_0001.xmp`), écriture au même format | ✅ enregistrement automatique dans l'app |
+| Film du dossier avec vignettes, navigation ← → | ✅ |
 | Import, catalogue, collections, mots‑clés, notes, drapeaux, filtres | ⏳ |
 | Import d'un catalogue Lightroom (`.lrcat`) | ⏳ |
 

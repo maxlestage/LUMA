@@ -62,6 +62,40 @@ viendra ensuite). Ce ne sont pas encore des mesures sur Mac ni sur iPhone.
 étalonnage, réduction du bruit, vignetage, tous actifs. L'objectif est un aperçu sous
 100 ms (P95) sur Mac Apple Silicon ; la CI publie ces mesures à chaque push.
 
+## LÜMA Studio, l'app Mac
+
+![LÜMA Studio, module Développement](docs/studio.jpg)
+
+`apps/studio` : l'application de développement, en Rust (egui, rendu wgpu sur Metal).
+Mise en page et gestes de Lightroom Classic : navigateur et historique à gauche,
+histogramme et panneaux Base, Courbe des tonalités, Mélangeur de couleurs, Étalonnage
+des couleurs, Détail, Effets, Étalonnage de l'appareil photo et Recadrage à droite, film
+du dossier en bas. Les réglages sont enregistrés automatiquement dans un XMP au format
+Lightroom à côté du RAW, qui n'est jamais modifié.
+
+| Raccourci | Action |
+|---|---|
+| `\` | Avant / après |
+| Cmd+Z, Maj+Cmd+Z | Annuler, rétablir (chaque geste est une étape d'historique) |
+| Maj+Cmd+C, Maj+Cmd+V | Copier, coller les réglages |
+| Maj+Cmd+R | Réinitialiser |
+| Maj+Cmd+E | Exporter (JPEG sRGB pleine définition, dans `LÜMA/` à côté du RAW) |
+| Cmd+O | Ouvrir un RAW (son dossier remplit le film) ; on peut aussi le déposer |
+| ← → | Photo précédente, suivante |
+| Z, J | Zoom 1:1, écrêtage |
+| Double‑clic sur un curseur | Valeur par défaut ; Maj en glissant : réglage fin |
+
+```sh
+cargo run --release -p luma-studio -- ~/Photos/2026-10      # un dossier ou un RAW
+scripts/bundle-macos.sh                                     # sur Mac : target/macos/LÜMA.app
+```
+
+La CI (`.github/workflows/macos.yml`) compile et teste l'app sur Apple Silicon et publie
+`LUMA-macos.zip` (universelle, Apple Silicon et Intel) en artefact à chaque push. L'app
+est signée « ad hoc » : au premier lancement, clic droit → Ouvrir. Un test rend toute
+l'interface sans écran avec un vrai RAW et vérifie que chaque contrôle a un nom pour
+VoiceOver.
+
 ## Le site
 
 Le site est une app [Paquets](https://github.com/maxlestage/Paquets) : du Rust de bout en bout.

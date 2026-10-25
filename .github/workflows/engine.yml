@@ -1,4 +1,4 @@
-# Le moteur de LÜMA (crates/) à chaque push et pull request :
+# Le moteur de LÜMA (crates/) et l'app (apps/) à chaque push et pull request :
 #
 # - format et clippy, sans avertissement ;
 # - audit « 100 % Rust » du graphe de dépendances réel ;
@@ -44,8 +44,18 @@ jobs:
       - name: Corpus de RAW (téléchargement)
         run: scripts/fetch-corpus.sh
 
+      # Le test de l'interface (apps/studio) la rend sans écran : Vulkan logiciel.
+      - name: Vulkan logiciel (lavapipe)
+        run: sudo apt-get update -q && sudo apt-get install -yq mesa-vulkan-drivers
+
       - name: Tests
         run: cargo test --workspace
+
+      - name: Captures de LÜMA Studio
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures-linux
+          path: target/studio-*.png
 
       - name: Réactivité
         run: |

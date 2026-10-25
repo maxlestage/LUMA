@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>LÜMA</string>
+  <key>CFBundleDisplayName</key><string>LÜMA</string>
+  <key>CFBundleIdentifier</key><string>app.luma.studio</string>
+  <key>CFBundleExecutable</key><string>luma-studio</string>
+  <key>CFBundleIconFile</key><string>LUMA</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>@VERSION@</string>
+  <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>CFBundleDevelopmentRegion</key><string>fr</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.photography</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+</dict>
+</plist>
