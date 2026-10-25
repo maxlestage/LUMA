@@ -4,6 +4,7 @@
 //! aucun calcul d'image : le travail est confié à [`worker`], en arrière‑plan.
 
 pub mod app;
+pub mod crop;
 pub mod style;
 pub mod widgets;
 pub mod worker;
