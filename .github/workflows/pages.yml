@@ -1,0 +1,101 @@
+# Publie le site sur GitHub Pages à chaque push sur master (et à la demande).
+#
+# - build : vérifications (fmt, clippy serveur et WebAssembly, tests), bundle du
+#   navigateur, puis export statique du site par le serveur Paquets lui-même, liens
+#   sous /<dépôt> ;
+# - deploy : publication de l'export sur GitHub Pages (master seulement ; une pull
+#   request ne fait que les vérifications et la construction).
+
+name: GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Paquets et ses paquets (Vitesse, Securite, Memoire, Active) sont des dépôts privés :
+  # Cargo les récupère par git, qui demande ses identifiants GitHub à un assistant lisant
+  # le secret REPOS_TOKEN, un jeton qui peut les lire. Le jeton n'apparaît dans aucune URL.
+  REPOS_TOKEN: ${{ secrets.REPOS_TOKEN }}
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  GIT_CONFIG_COUNT: ${{ secrets.REPOS_TOKEN != '' && 1 || 0 }}
+  GIT_CONFIG_KEY_0: credential.https://github.com.helper
+  GIT_CONFIG_VALUE_0: '!f() { test "$1" = get && echo username=x-access-token && echo "password=$REPOS_TOKEN"; }; f'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Vérifier et construire le site
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: site
+
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy (serveur)
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy (WebAssembly)
+        run: cargo clippy --lib --target wasm32-unknown-unknown -- -D warnings
+      - name: Tests
+        run: cargo test
+
+      - name: Bundle du navigateur (îlots et animations)
+        run: |
+          cargo build --lib --target wasm32-unknown-unknown --profile wasm-release
+          # wasm-bindgen doit être la version de Cargo.lock.
+          version=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"$/\1/p')
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${version}/wasm-bindgen-${version}-x86_64-unknown-linux-musl.tar.gz" \
+            | tar -xz --strip-components=1 -C "$HOME/.local/bin" \
+            || cargo install wasm-bindgen-cli --version "$version" --locked --root "$HOME/.local"
+          "$HOME/.local/bin/wasm-bindgen" --target web --no-typescript --out-dir pkg \
+            target/wasm32-unknown-unknown/wasm-release/luma_site.wasm
+
+      - name: Export statique
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          cargo run --release -- export dist
+          test -f dist/index.html && test -f dist/pkg/luma_site_bg.wasm
+
+      - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    name: Publier sur GitHub Pages
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
