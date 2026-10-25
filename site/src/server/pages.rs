@@ -70,7 +70,7 @@ fn navbar() -> Element {
         .class("nav")
         .child(
             a().class("brand")
-                .href("#top")
+                .href(link("/"))
                 .attr("aria-label", "LÜMA, accueil")
                 .child(span().class("brand-mark").html(BRAND_SVG))
                 .child(span().text("LÜMA")),
@@ -79,11 +79,14 @@ fn navbar() -> Element {
             nav()
                 .class("links")
                 .attr("aria-label", "Sections")
-                .children(NAV.iter().map(|&(href, label)| a().href(href).text(label))),
+                .children(
+                    NAV.iter()
+                        .map(|&(href, label)| a().href(target(href)).text(label)),
+                ),
         )
         .child(
             a().class("btn btn-small magnetic")
-                .href("#tarifs")
+                .href(target("#tarifs"))
                 .child(span().text("Télécharger")),
         )
         .child(
@@ -566,12 +569,126 @@ fn pricing() -> Element {
         )
 }
 
+/// L'adresse d'un lien du site : une section de l'accueil (`#…`), une page (`/…`), ou
+/// une adresse externe telle quelle.
+fn target(href: &str) -> String {
+    if href.starts_with('#') {
+        format!("{}{href}", link("/"))
+    } else if href.starts_with('/') {
+        link(href)
+    } else {
+        href.to_owned()
+    }
+}
+
 fn site_footer() -> Element {
+    type Column = (&'static str, &'static [(&'static str, &'static str)]);
+    let column = |(title, links): Column| {
+        div()
+            .class("footer-col")
+            .child(p().class("footer-title").text(title))
+            .child(ul().children(links.iter().map(|&(label, href)| {
+                let external = href.starts_with("http");
+                let mut a = a().href(target(href)).text(label);
+                if external {
+                    a = a.attr("target", "_blank").attr("rel", "noopener");
+                }
+                li().child(a)
+            })))
+    };
     footer()
         .class("footer")
-        .child(span().text("© 2026 LÜMA"))
-        .child(span().text("Fait avec Rust et Paquets, pour la lumière."))
-        .child(a().href("#top").text("Haut de page ↑"))
+        .child(
+            div()
+                .class("footer-top")
+                .child(
+                    div()
+                        .class("footer-brand")
+                        .child(
+                            a().class("brand")
+                                .href(link("/"))
+                                .attr("aria-label", "LÜMA, accueil")
+                                .child(span().class("brand-mark").html(BRAND_SVG))
+                                .child(span().text("LÜMA")),
+                        )
+                        .child(p().class("footer-tagline").text(
+                            "L'éditeur photo qui développe la lumière. Écrit en Rust, pour Mac, iPhone et iPad.",
+                        ))
+                        .child(
+                            div()
+                                .class("footer-apps")
+                                .child(
+                                    a().class("store")
+                                        .href(link("/download/LUMA-macos.zip"))
+                                        .attr("download", "")
+                                        .child(span().html(APPLE_SVG))
+                                        .child(span().child(small().text("Télécharger pour")).child(strong().text("Mac"))),
+                                )
+                                .child(
+                                    span()
+                                        .class("store store-soon")
+                                        .attr("aria-disabled", "true")
+                                        .child(span().html(APPLE_SVG))
+                                        .child(span().child(small().text("Bientôt sur")).child(strong().text("l'App Store"))),
+                                ),
+                        ),
+                )
+                .child(div().class("footer-cols").children(FOOTER.iter().map(|c| column(*c)))),
+        )
+        .child(
+            div()
+                .class("footer-bottom")
+                .child(span().text("© 2026 LÜMA. Tous droits réservés."))
+                .child(span().text("Fait en France · 100 % Rust · Aucun traceur"))
+                .child(a().href(target("#top")).text("Haut de page ↑")),
+        )
+}
+
+/// Une page légale (mentions, confidentialité, conditions).
+pub fn legal(site: &Site, origin: &str, page: &Legal) -> Page {
+    let body = div()
+        .class("site site--plain")
+        .child(navbar())
+        .child(
+            html::main().child(
+                article()
+                    .class("legal")
+                    .child(kicker("LÜMA"))
+                    .child(h1().text(page.title))
+                    .child(p().class("lede").text(page.lede))
+                    .child(
+                        nav()
+                            .class("legal-toc")
+                            .attr("aria-label", "Sommaire")
+                            .children(
+                                page.sections
+                                    .iter()
+                                    .map(|(id, title, _)| a().href(format!("#{id}")).text(*title)),
+                            ),
+                    )
+                    .children(page.sections.iter().map(|(id, title, paras)| {
+                        section()
+                            .id(*id)
+                            .child(h2().text(*title))
+                            .children(paras.iter().map(|t| {
+                                match t.strip_prefix("[[").and_then(|t| t.strip_suffix("]]")) {
+                                    Some(todo) => {
+                                        p().class("todo").text(format!("À compléter : {todo}"))
+                                    }
+                                    None => p().text(*t),
+                                }
+                            }))
+                    })),
+            ),
+        )
+        .child(site_footer());
+    layout(site, origin, &format!("{} — LÜMA", page.title), body).seo(
+        Seo::new()
+            .site_name("LÜMA")
+            .base_url(origin.to_owned())
+            .canonical(page.path)
+            .locale("fr_FR"),
+    )
 }
 
 // ----- Pages --------------------------------------------------------------------------
@@ -579,7 +696,7 @@ fn site_footer() -> Element {
 /// Le `<head>` commun : thème sombre, icônes, polices, et le module des scènes 3D.
 fn layout(site: &Site, origin: &str, title: &str, body: Element) -> Page {
     let head = format!(
-        r##"<meta name="theme-color" content="#050507"/><meta name="color-scheme" content="dark"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><link rel="icon" href="{icon}" type="image/svg+xml"/><link rel="apple-touch-icon" href="{touch}"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/><script>document.documentElement.classList.add('js','loading')</script><script type="module" src="{scenes}"></script>"##,
+        r##"<meta name="theme-color" content="#050507"/><meta name="color-scheme" content="dark"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="apple-mobile-web-app-title" content="LÜMA"/><meta name="application-name" content="LÜMA"/><link rel="manifest" href="/manifest.webmanifest"/><script>if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"))</script><link rel="icon" href="{icon}" type="image/svg+xml"/><link rel="apple-touch-icon" href="{touch}"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/><script>document.documentElement.classList.add('js','loading')</script><script type="module" src="{scenes}"></script>"##,
         icon = link("/assets/favicon.svg"),
         touch = link("/assets/apple-touch-icon.png"),
         scenes = link(&format!("/js/scenes.js?v={}", site.versions.scenes)),
@@ -659,6 +776,7 @@ pub fn not_found(site: &Site, origin: &str) -> Page {
                 ),
         ),
     );
+    let body = body.child(site_footer());
     layout(site, origin, "Page introuvable — LÜMA", body)
         .seo(Seo::new().noindex(true))
         .status(404)

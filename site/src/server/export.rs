@@ -63,6 +63,11 @@ pub async fn export(out: &Path, base_path: &str, site_url: Option<String>) -> io
         "404.html",
         with_base(&text(get("/404/", 404).await?)?, base).as_bytes(),
     )?;
+    // Les pages légales : un dossier chacune (`/conditions/` → conditions/index.html).
+    for page in &crate::content::LEGAL {
+        let html = with_base(&text(get(page.path, 200).await?)?, base);
+        write(&format!("{}index.html", page.path), html.as_bytes())?;
+    }
     for file in [
         "/photo.svg",
         "/photo-mono.svg",

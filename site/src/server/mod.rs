@@ -124,6 +124,96 @@ fn svg(body: String) -> Response {
         .send(body)
 }
 
+/// Le manifeste de la PWA : nom, icônes, couleurs, raccourcis et captures (pour la
+/// fenêtre d'installation).
+fn manifest() -> String {
+    let icon = |src: &str, size: &str, kind: &str, purpose: &str| {
+        format!(r#"{{"src":"{src}","sizes":"{size}","type":"{kind}","purpose":"{purpose}"}}"#)
+    };
+    let shortcut = |name: &str, short: &str, url: &str, about: &str| {
+        format!(
+            r#"{{"name":"{name}","short_name":"{short}","url":"{url}","description":"{about}","icons":[{{"src":"/assets/icon-192.png","sizes":"192x192","type":"image/png"}}]}}"#
+        )
+    };
+    format!(
+        r##"{{"id":"/","name":"LÜMA — l'éditeur photo","short_name":"LÜMA","description":"{desc}","lang":"fr","dir":"ltr","start_url":"/?source=pwa","scope":"/","display":"standalone","display_override":["window-controls-overlay","standalone"],"orientation":"any","theme_color":"#050507","background_color":"#050507","categories":["photo","productivity","graphics"],"icons":[{icons}],"shortcuts":[{shortcuts}],"screenshots":[{shots}]}}"##,
+        desc = crate::content::DESCRIPTION.replace('"', "'"),
+        icons = [
+            icon("/assets/icon-192.png", "192x192", "image/png", "any"),
+            icon("/assets/icon-512.png", "512x512", "image/png", "any"),
+            icon("/assets/icon-maskable-512.png", "512x512", "image/png", "maskable"),
+            icon("/assets/favicon.svg", "any", "image/svg+xml", "any"),
+        ]
+        .join(","),
+        shortcuts = [
+            shortcut("Télécharger pour Mac", "Télécharger", "/#tarifs", "LÜMA pour Mac, 14 jours d'essai"),
+            shortcut("Tarifs", "Tarifs", "/#tarifs", "LÜMA Premium, au mois ou à l'an"),
+            shortcut("Le labo", "Labo", "/#labo", "Le moteur en direct, dans le navigateur"),
+        ]
+        .join(","),
+        shots = [
+            r#"{"src":"/assets/capture-large.jpg","sizes":"1440x900","type":"image/jpeg","form_factor":"wide","label":"LÜMA : l'éditeur photo qui développe la lumière"}"#,
+            r#"{"src":"/assets/capture-mobile.jpg","sizes":"786x1704","type":"image/jpeg","form_factor":"narrow","label":"LÜMA sur iPhone"}"#,
+        ]
+        .join(","),
+    )
+}
+
+/// Le service worker : les fichiers du site mis de côté pour l'usage hors ligne ; un
+/// nouveau nom de cache à chaque version des styles ou des scripts.
+fn service_worker(site: &Site) -> String {
+    let mut precache = vec![
+        "/".to_owned(),
+        format!("/site.css?v={}", site.versions.css),
+        format!("/js/scenes.js?v={}", site.versions.scenes),
+    ];
+    precache.extend(
+        [
+            "/js/hero.js",
+            "/js/devices.js",
+            "/js/screen.js",
+            "/vendor/three.module.min.js",
+            "/vendor/RoomEnvironment.js",
+            "/vendor/RoundedBoxGeometry.js",
+            "/pkg/luma_site.js",
+            "/pkg/luma_site_bg.wasm",
+            "/photo.svg",
+            "/photo-mono.svg",
+            "/assets/favicon.svg",
+            "/assets/marque.svg",
+            "/assets/icon-192.png",
+            "/assets/icon-512.png",
+            "/assets/apple-touch-icon.png",
+        ]
+        .map(String::from),
+    );
+    precache.extend(crate::content::LEGAL.iter().map(|l| l.path.to_owned()));
+    // Seuls les fichiers présents : `public/…`, le bundle `pkg/…` (absent en
+    // développement), les pages et les SVG servis par le serveur.
+    precache.retain(|u| {
+        let file = u.split('?').next().unwrap_or(u);
+        let rel = file.trim_start_matches('/');
+        file.ends_with('/')
+            || matches!(file, "/photo.svg" | "/photo-mono.svg")
+            || Path::new("public").join(rel).is_file()
+            || (rel.starts_with("pkg/") && Path::new(rel).is_file())
+    });
+    let list = format!(
+        "[{}]",
+        precache
+            .iter()
+            .map(|u| format!("\"{u}\""))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    include_str!("sw.js")
+        .replace(
+            "__VERSION__",
+            &format!("{}-{}", site.versions.css, site.versions.scenes),
+        )
+        .replace("__PRECACHE__", &list)
+}
+
 /// L'application, prête à être lancée ou testée.
 pub fn app(site: Arc<Site>) -> App {
     let mut app = App::new();
@@ -149,8 +239,12 @@ pub fn app(site: Arc<Site>) -> App {
             Response::new()
                 .header("content-type", "application/xml; charset=utf-8")
                 .send(format!(
-                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"><url><loc>{}/</loc></url></urlset>\n",
-                    site.origin(&req)
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"><url><loc>{0}/</loc></url>{1}</urlset>\n",
+                    site.origin(&req),
+                    crate::content::LEGAL
+                        .iter()
+                        .map(|l| format!("<url><loc>{}{}</loc></url>", site.origin(&req), l.path))
+                        .collect::<String>()
                 ))
         }
     });
@@ -166,20 +260,39 @@ pub fn app(site: Arc<Site>) -> App {
                 ))
         }
     });
-    // Installable sur l'écran d'accueil de l'iPhone, de l'iPad et du Mac.
-    app.pwa(
-        Pwa::new("LÜMA")
-            .short_name("LÜMA")
-            .description("L'éditeur photo professionnel écrit en Rust.")
-            .start_url("/")
-            .lang("fr")
-            .theme_color("#050507")
-            .background_color("#050507")
-            .categories(["photo", "productivity"])
-            .icon("/assets/icon-192.png", "192x192", "image/png")
-            .icon("/assets/icon-512.png", "512x512", "image/png")
-            .maskable_icon("/assets/icon-maskable-512.png", "512x512", "image/png"),
-    );
+    // La PWA : installable sur l'écran d'accueil de l'iPhone, de l'iPad et du Mac, et
+    // lisible hors ligne.
+    app.get("/manifest.webmanifest", |_req: Request| async {
+        Response::new()
+            .header("content-type", "application/manifest+json; charset=utf-8")
+            .header("cache-control", "no-cache")
+            .send(manifest())
+    });
+    let worker = site.clone();
+    app.get("/sw.js", move |_req: Request| {
+        let site = worker.clone();
+        async move {
+            Response::new()
+                .header("content-type", "text/javascript; charset=utf-8")
+                .header("cache-control", "no-cache")
+                .send(service_worker(&site))
+        }
+    });
+    // Les pages légales.
+    for page in &crate::content::LEGAL {
+        // Le routeur sert la même page avec ou sans la barre finale.
+        {
+            let site = site.clone();
+            app.get(page.path, move |req: Request| {
+                let site = site.clone();
+                async move {
+                    pages::legal(&site, &site.origin(&req), page)
+                        .into_response()
+                        .header("cache-control", "no-cache")
+                }
+            });
+        }
+    }
     let missing = site.clone();
     app.fallback(move |req: Request| {
         let site = missing.clone();
@@ -233,6 +346,33 @@ mod tests {
             html.contains(r#"<span class="brand-mark"><svg"#),
             "le logo de la barre"
         );
+    }
+
+    #[tokio::test]
+    async fn the_site_is_an_installable_pwa_with_its_legal_pages() {
+        let client = client().await;
+        let res = client.get("/manifest.webmanifest").await;
+        assert_eq!(res.status().as_u16(), 200);
+        let m = res.text();
+        assert!(m.starts_with('{') && m.ends_with('}'));
+        assert!(m.contains(r#""display":"standalone""#));
+        assert_eq!(
+            m.matches(r#""short_name""#).count(),
+            4,
+            "le nom et trois raccourcis"
+        );
+        assert_eq!(m.matches(r#""form_factor""#).count(), 2, "deux captures");
+        let sw = client.get("/sw.js").await.text();
+        assert!(sw.contains("const PRECACHE = [\"/\"") && sw.contains("/site.css?v="));
+        assert!(!sw.contains("__"), "gabarit rempli");
+        let home = client.get("/").await.text();
+        assert!(home.contains(r#"rel="manifest""#) && home.contains("serviceWorker"));
+        assert!(home.contains("footer-cols") && home.contains("Mentions légales"));
+        for path in ["/mentions-legales/", "/confidentialite/", "/conditions/"] {
+            let res = client.get(path).await;
+            assert_eq!(res.status().as_u16(), 200, "{path}");
+            assert!(res.text().contains(r#"class="legal""#), "{path}");
+        }
     }
 
     #[tokio::test]
