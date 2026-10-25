@@ -29,6 +29,10 @@
       "description": "Le lien de paiement Stripe de la formule Annuel.",
       "required": false
     },
+    "LUMA_MAC_NOTARIZED": {
+      "description": "1 si l'app Mac de la dernière Release est signée Developer ID et notariée (la note « Ouvrir quand même » disparaît).",
+      "required": false
+    },
     "LUMA_BILLING_PORTAL": {
       "description": "Le lien de connexion au portail client Stripe (Gérer mon abonnement).",
       "required": false
