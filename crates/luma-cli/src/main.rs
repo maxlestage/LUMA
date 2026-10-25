@@ -11,9 +11,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
-use image::{ExtendedColorType, ImageEncoder};
-use luma_color::{OutputSpace, icc};
-use luma_core::{Cancel, RgbImage};
+use luma_color::OutputSpace;
+use luma_core::Cancel;
 use luma_project::{Settings, xmp};
 use luma_render::{Photo, Size};
 
@@ -175,47 +174,6 @@ fn info(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
-fn write_image(path: &Path, img: &RgbImage, space: OutputSpace, quality: u8, bits: u8) -> Result<(), String> {
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("jpg")
-        .to_ascii_lowercase();
-    let file = std::fs::File::create(path).map_err(|e| format!("{} : {e}", path.display()))?;
-    let writer = std::io::BufWriter::new(file);
-    let (w, h) = (img.width as u32, img.height as u32);
-    let profile = icc::profile(space);
-    let err = |e: image::ImageError| e.to_string();
-    let sixteen = bits == 16 && ext != "jpg" && ext != "jpeg";
-    let (bytes, kind) = if sixteen {
-        let px = luma_image::encode16(img, space);
-        (
-            px.iter().flat_map(|v| v.to_ne_bytes()).collect::<Vec<u8>>(),
-            ExtendedColorType::Rgb16,
-        )
-    } else {
-        (luma_image::encode8(img, space), ExtendedColorType::Rgb8)
-    };
-    match ext.as_str() {
-        "jpg" | "jpeg" => {
-            let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(writer, quality.clamp(1, 100));
-            let _ = enc.set_icc_profile(profile);
-            enc.write_image(&bytes, w, h, kind).map_err(err)
-        }
-        "png" => {
-            let mut enc = image::codecs::png::PngEncoder::new(writer);
-            let _ = enc.set_icc_profile(profile);
-            enc.write_image(&bytes, w, h, kind).map_err(err)
-        }
-        "tif" | "tiff" => {
-            let mut enc = image::codecs::tiff::TiffEncoder::new(writer);
-            let _ = enc.set_icc_profile(profile);
-            enc.write_image(&bytes, w, h, kind).map_err(err)
-        }
-        other => Err(format!("format de sortie inconnu « {other} » (jpg, png, tif)")),
-    }
-}
-
 fn develop(a: &Args) -> Result<(), String> {
     let [path] = a.positional.as_slice() else {
         return Err("develop : un seul fichier RAW".into());
@@ -231,7 +189,7 @@ fn develop(a: &Args) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     let out = a.output.clone().unwrap_or_else(|| path.with_extension("jpg"));
     let t2 = Instant::now();
-    write_image(&out, &rendered.image, a.space, a.quality, a.bits)?;
+    luma_render::export::write(&out, &rendered.image, a.space, a.quality, a.bits)?;
     println!(
         "{} → {} ({} × {})",
         path.display(),

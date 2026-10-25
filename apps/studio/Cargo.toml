@@ -1,0 +1,37 @@
+[package]
+name = "luma-studio"
+description = "LÜMA Studio : l'application de développement photo (macOS d'abord)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "luma-studio"
+path = "src/main.rs"
+
+[dependencies]
+luma-core.workspace = true
+luma-color.workspace = true
+luma-raw.workspace = true
+luma-project.workspace = true
+luma-image.workspace = true
+luma-render.workspace = true
+egui.workspace = true
+wgpu.workspace = true
+rfd.workspace = true
+
+# Sur Mac : l'accessibilité (VoiceOver). Ailleurs : X11 seulement (Wayland compilerait
+# du C, et Linux n'arrive qu'en phase 6).
+[target.'cfg(target_os = "macos")'.dependencies]
+eframe = { workspace = true, features = ["accesskit"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+eframe = { workspace = true, features = ["x11"] }
+
+[dev-dependencies]
+egui_kittest.workspace = true
+image.workspace = true
+
+[lints]
+workspace = true
