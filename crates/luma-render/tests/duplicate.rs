@@ -191,3 +191,20 @@ fn on_a_real_raw_the_duplicate_opens_faster() {
     assert!(worst <= 1, "pleine définition : écart max {worst}/255");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_whole_cache_can_be_emptied() {
+    let (source, dir) = setup("vider");
+    let photo = Photo::new(bayer(600, 400));
+    let _ = render8(&photo, Size::Fit(300));
+    assert!(photo.cached_bytes() > 0);
+    photo.release_caches();
+    assert_eq!(photo.cached_bytes(), 0);
+    photo.write_duplicate(&source, &dir).unwrap();
+    let used = duplicate::usage(&dir);
+    assert!(used > 0);
+    assert_eq!(duplicate::clear(&dir), used);
+    assert_eq!(duplicate::usage(&dir), 0);
+    assert!(!Photo::open_with_duplicates(&source, &dir).is_ok_and(|p| p.from_duplicate()));
+    let _ = std::fs::remove_dir_all(dir.parent().unwrap());
+}

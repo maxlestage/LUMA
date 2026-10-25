@@ -388,6 +388,32 @@ pub fn trim(dir: &Path, budget: u64) {
     }
 }
 
+/// La place que prennent les doublons, en octets.
+pub fn usage(dir: &Path) -> u64 {
+    std::fs::read_dir(dir).map_or(0, |entries| {
+        entries
+            .flatten()
+            .filter_map(|e| e.metadata().ok().filter(|m| m.is_file()).map(|m| m.len()))
+            .sum()
+    })
+}
+
+/// Vide le dossier des doublons (y compris ceux à moitié écrits) ; rend la place
+/// libérée, en octets.
+pub fn clear(dir: &Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return 0;
+    };
+    entries
+        .flatten()
+        .filter(|e| e.path().extension().is_some_and(|x| x == "lumadup" || x == "tmp"))
+        .filter_map(|e| {
+            let len = e.metadata().ok()?.len();
+            std::fs::remove_file(e.path()).ok().map(|()| len)
+        })
+        .sum()
+}
+
 /// La place que les doublons peuvent prendre : `LUMA_DUPLICATES_GB` Go, 20 par défaut
 /// (8 sur iPhone et iPad).
 pub fn budget() -> u64 {

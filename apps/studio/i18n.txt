@@ -2133,3 +2133,36 @@ es = Blanco y negro denso, claridad fuerte, cielos oscuros.
 fr = Ouvrir une photo
 en = Open a photo
 es = Abrir una foto
+
+# Le cache.
+fr = Cache
+en = Cache
+es = Caché
+
+fr = Doublons de travail et aperçus : {size}
+en = Working copies and previews: {size}
+es = Copias de trabajo y vistas previas: {size}
+
+fr = Vider le cache
+en = Clear cache
+es = Vaciar la caché
+
+fr = Supprime les doublons de travail et libère la mémoire des aperçus. Vos photos et vos réglages ne changent pas ; les doublons se refont à la prochaine ouverture.
+en = Deletes the working copies and frees the memory used by previews. Your photos and adjustments don't change; working copies are rebuilt the next time you open a photo.
+es = Elimina las copias de trabajo y libera la memoria de las vistas previas. Tus fotos y tus ajustes no cambian; las copias se rehacen la próxima vez que abras una foto.
+
+fr = Langue et cache
+en = Language and cache
+es = Idioma y caché
+
+fr = Cache vidé : {size} libérés.
+en = Cache cleared: {size} freed.
+es = Caché vaciada: {size} liberados.
+
+fr = Go
+en = GB
+es = GB
+
+fr = Mo
+en = MB
+es = MB

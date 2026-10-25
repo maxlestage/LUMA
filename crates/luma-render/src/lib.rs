@@ -408,6 +408,12 @@ impl Photo {
     /// Ramène les caches sous [`memory_budget`] : les bases les plus anciennes partent
     /// d'abord (elles se recalculent vite), puis les sources les plus anciennes. `keep` :
     /// l'image qu'on vient de produire, gardée quoi qu'il arrive.
+    /// Libère tous les caches de la photo (sources et bases) : ils se recalculent au
+    /// prochain rendu.
+    pub fn release_caches(&self) {
+        self.trim_to(0, None);
+    }
+
     fn trim(&self, keep: Option<&Arc<RgbImage>>) {
         self.trim_to(memory_budget(), keep);
     }

@@ -708,9 +708,9 @@ impl Studio {
                         }
                     }
                 }
-                Event::Duplicated { path, photo } => {
-                    // La photo affichée passe sur son doublon : mêmes réglages, l'aperçu
-                    // se refait depuis lui ; le RAW quitte la mémoire.
+                Event::Reloaded { path, photo } => {
+                    // La photo affichée passe sur son doublon (ou revient à l'original) :
+                    // mêmes réglages, l'aperçu se refait.
                     if self.loading.is_none()
                         && self.photo.is_some()
                         && self.current_path() == Some(path.as_path())
@@ -852,6 +852,73 @@ impl Studio {
     }
 
     /// Les réglages ont changé : le XMP sera écrit dans un instant.
+    /// Le menu de la barre du haut : la langue (appliquée tout de suite, gardée au
+    /// prochain lancement) et le cache (sa taille, et le bouton pour le vider).
+    fn settings_menu(&mut self, ui: &mut Ui) {
+        let current = crate::i18n::lang();
+        let label = RichText::new(current.code().to_uppercase())
+            .size(11.0)
+            .color(theme::DIM);
+        let mut clear = false;
+        let menu = ui.menu_button(label, |ui| {
+            ui.label(RichText::new(tr("Langue")).small().color(theme::DIM));
+            for l in crate::i18n::Lang::ALL {
+                if ui.selectable_label(l == current, l.name()).clicked() {
+                    crate::i18n::choose(l);
+                    ui.close();
+                }
+            }
+            ui.separator();
+            ui.label(RichText::new(tr("Cache")).small().color(theme::DIM));
+            let used = crate::dialogs::duplicates_dir()
+                .map_or(0, |d| luma_render::duplicate::usage(&d))
+                + self.photo.as_ref().map_or(0, |p| p.cached_bytes() as u64);
+            ui.label(trf("Doublons de travail et aperçus : {size}", &[("size", &format_bytes(used))]));
+            if ui
+                .button(tr("Vider le cache"))
+                .on_hover_text(tr(
+                    "Supprime les doublons de travail et libère la mémoire des aperçus. Vos photos et vos réglages ne changent pas ; les doublons se refont à la prochaine ouverture.",
+                ))
+                .clicked()
+            {
+                clear = true;
+                ui.close();
+            }
+        });
+        menu.response
+            .on_hover_text(tr("Langue et cache"))
+            .accessible_name(tr("Langue et cache"));
+        if clear {
+            self.clear_cache();
+        }
+    }
+
+    /// Vide tout le cache : les doublons de travail sur le disque, les aperçus de la
+    /// photo en mémoire, les vignettes. La photo ouverte depuis son doublon est relue
+    /// depuis l'original, sans toucher aux réglages.
+    fn clear_cache(&mut self) {
+        let mut freed =
+            crate::dialogs::duplicates_dir().map_or(0, |d| luma_render::duplicate::clear(&d));
+        if let Some(photo) = &self.photo {
+            freed += photo.cached_bytes() as u64;
+            photo.release_caches();
+            if photo.from_duplicate()
+                && let Some(path) = self.current_path().map(Path::to_path_buf)
+            {
+                self.worker.reload_original(path);
+            }
+        }
+        self.thumbs.clear();
+        for p in &self.folder {
+            self.worker.thumbnail(p.clone());
+        }
+        self.last_request = None;
+        self.status = trf(
+            "Cache vidé : {size} libérés.",
+            &[("size", &format_bytes(freed))],
+        );
+    }
+
     fn touch(&mut self) {
         self.xmp_due = Some(0.0);
     }
@@ -1733,7 +1800,7 @@ impl Studio {
             if ui.add(badge).on_hover_text("LÜMA Premium").clicked() {
                 self.premium_open = true;
             }
-            language_menu(ui);
+            self.settings_menu(ui);
             if !compact {
                 ui.add_space(14.0);
                 if let Some(p) = self.current_path() {
@@ -4102,24 +4169,18 @@ fn summary_text(e: &presets::Summary) -> String {
     parts.join(" — ")
 }
 
-/// Le choix de la langue, dans la barre du haut : il s'applique tout de suite et reste
-/// au prochain lancement.
-fn language_menu(ui: &mut Ui) {
-    let current = crate::i18n::lang();
-    let label = RichText::new(current.code().to_uppercase())
-        .size(11.0)
-        .color(theme::DIM);
-    let menu = ui.menu_button(label, |ui| {
-        for l in crate::i18n::Lang::ALL {
-            if ui.selectable_label(l == current, l.name()).clicked() {
-                crate::i18n::choose(l);
-                ui.close();
-            }
-        }
-    });
-    menu.response
-        .on_hover_text(tr("Langue"))
-        .accessible_name(tr("Langue"));
+/// Une taille en octets, lisible : « 3,2 Go », « 640 Mo ».
+fn format_bytes(bytes: u64) -> String {
+    let mb = bytes as f64 / (1024.0 * 1024.0);
+    if mb >= 1024.0 {
+        format!(
+            "{} {}",
+            format_value((mb / 1024.0) as f32, 1, false),
+            tr("Go")
+        )
+    } else {
+        format!("{} {}", format_value(mb as f32, 0, false), tr("Mo"))
+    }
 }
 
 /// Les préréglages `.xmp` d'un dossier (nom tiré du fichier s'il n'en a pas), triés.
