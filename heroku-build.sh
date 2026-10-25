@@ -56,18 +56,17 @@ echo "       îlots prêts dans site/pkg"
 echo "-----> L'app à télécharger (dernière Release)"
 repo="${LUMA_REPO:-maxlestage/LUMA}"
 mkdir -p public/download
-if [ -n "${REPOS_TOKEN:-}" ]; then
-  api="https://api.github.com/repos/$repo/releases/latest"
-  # L'identifiant de l'asset LUMA-macos.zip : la ligne "url" de l'asset précède son nom.
-  asset=$(curl -sSf -H "Authorization: Bearer $REPOS_TOKEN" -H "Accept: application/vnd.github+json" "$api" \
-    | tr ',' '\n' | grep -E '"(url|name)"' \
-    | awk -F'"' '/"url"/ { url = $4 } /"name": *"LUMA-macos.zip"|"name":"LUMA-macos.zip"/ { print url; exit }') || asset=""
-  if [ -n "$asset" ] && curl -sSfL -H "Authorization: Bearer $REPOS_TOKEN" -H "Accept: application/octet-stream" \
-      -o public/download/LUMA-macos.zip "$asset"; then
-    echo "       public/download/LUMA-macos.zip ($(du -h public/download/LUMA-macos.zip | cut -f1))"
-  else
-    echo "       pas de Release lisible : le bouton de téléchargement mènera à une page introuvable"
-  fi
+# Avec un jeton si le dépôt est privé ; sans, si les Releases sont publiques.
+auth=()
+[ -n "${REPOS_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $REPOS_TOKEN")
+api="https://api.github.com/repos/$repo/releases/latest"
+# L'identifiant de l'asset LUMA-macos.zip : la ligne "url" de l'asset précède son nom.
+asset=$(curl -sSf "${auth[@]}" -H "Accept: application/vnd.github+json" "$api" \
+  | tr ',' '\n' | grep -E '"(url|name)"' \
+  | awk -F'"' '/"url"/ { url = $4 } /"name": *"LUMA-macos.zip"|"name":"LUMA-macos.zip"/ { print url; exit }') || asset=""
+if [ -n "$asset" ] && curl -sSfL "${auth[@]}" -H "Accept: application/octet-stream" \
+    -o public/download/LUMA-macos.zip "$asset"; then
+  echo "       public/download/LUMA-macos.zip ($(du -h public/download/LUMA-macos.zip | cut -f1))"
 else
-  echo "       pas de REPOS_TOKEN : pas de téléchargement"
+  echo "       pas de Release lisible (dépôt privé sans REPOS_TOKEN ?) : le bouton de téléchargement mènera à une page introuvable"
 fi
