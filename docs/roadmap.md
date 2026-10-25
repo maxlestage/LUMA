@@ -16,6 +16,28 @@ C'est une estimation, pas une garantie.
 | 5. 1.0 | M19–M24 | Mac App Store et App Store, accessibilité, migration, documentation | — |
 | 6. Expansion | M25–M36 | Vidéo (timeline, étalonnage), tethering, impression | Applications Windows, Linux et Android sur le même moteur |
 
+## Avancement
+
+**M0 – M3, faisabilité : le moteur de développement existe.** Fait :
+
+- workspace Cargo (`crates/`), règle « 100 % Rust » vérifiée en CI sur le graphe de
+  dépendances réel ;
+- lecture des RAW Bayer, X‑Trans et DNG linéaire (ProRAW), couleur au sens DNG,
+  dématriçage Malvar‑He‑Cutler et X‑Trans ;
+- module Développement de Lightroom repris panneau par panneau (voir
+  [`parite-lightroom.md`](parite-lightroom.md)), lecture et écriture des XMP `crs:` ;
+- export JPEG, PNG, TIFF 8/16 bits en sRGB ou Display P3 avec profil ICC ;
+- 5 boîtiers développés à chaque push (Sony, Canon, Nikon, Fujifilm, iPhone), mesures
+  de réactivité publiées.
+
+Prochaines étapes, dans l'ordre :
+
+1. rendu GPU : les étapes par pixel en shaders WGSL sur `wgpu` (Metal), pour passer sous
+   les 100 ms sur Mac et sur iPhone ;
+2. application macOS minimale (fenêtre, ouverture d'un RAW, panneau Base, avant/après) ;
+3. masques (pinceau, dégradés) et corrections d'objectif ;
+4. application iOS, PhotoKit, TestFlight.
+
 ## Jalons de validation
 
 - **M3** : un RAW s'ouvre, se règle et s'exporte sur Mac et sur iPhone, sans dépendance interdite.

@@ -1,0 +1,87 @@
+# LÜMA face à Lightroom Classic : la parité, fonction par fonction
+
+LÜMA reprend le **flux de travail** de Lightroom Classic : les mêmes modules, les mêmes
+panneaux, les mêmes curseurs avec les mêmes noms, plages et valeurs par défaut, et la
+lecture des fichiers XMP de Lightroom. Un photographe y retrouve ses repères et ses
+retouches existantes.
+
+## Ce que « à l'identique » veut dire, et ce qu'il ne peut pas vouloir dire
+
+| Repris tel quel | Volontairement différent |
+|---|---|
+| Organisation en modules (Bibliothèque, Développement, Export…) et en panneaux | L'apparence : LÜMA a sa propre identité visuelle, pas celle d'Adobe |
+| Noms, plages, valeurs par défaut et sens de chaque curseur | Le moteur de rendu : celui d'Adobe est secret. LÜMA a le sien, écrit en Rust ; une même valeur a le même sens et la même amplitude, mais ne donne pas exactement les mêmes pixels |
+| Réglages échangés au format XMP `crs:` (lecture et écriture) | Les profils d'Adobe (« Adobe Couleur »…), protégés : LÜMA propose ses équivalents (Couleur, Neutre, Vif, Monochrome) |
+| Température et teinte sur l'échelle DNG (le même « 5500 K, +10 ») | Les marques et logos |
+| Raccourcis clavier (prévu avec l'interface) | |
+
+Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
+
+## Module Développement
+
+| Panneau | Fonction | État |
+|---|---|---|
+| Profil | Couleur, Neutre, Vif, Monochrome ; lecture de `crs:CameraProfile` | ✅ |
+| | Profils créatifs, profils fabricant (« Camera Standard »…) | ⏳ |
+| Base | Balance des blancs telle quelle, température et teinte (échelle DNG) | ✅ |
+| | Balance automatique, préréglages (lumière du jour, tungstène…), pipette | ⏳ |
+| | Exposition, Contraste | ✅ |
+| | Hautes lumières, Ombres (adaptatifs à l'image, comme le processus 2012) | ✅ |
+| | Blancs, Noirs | 🟡 fixes, pas encore adaptatifs à l'image |
+| | Texture, Clarté, Correction du voile | ✅ |
+| | Vibrance, Saturation | ✅ |
+| Courbe des tonalités | Paramétrique (4 régions, 3 séparations) | ✅ |
+| | Courbes à points : luminosité, rouge, vert, bleu | ✅ |
+| Mélangeur de couleurs | Teinte, saturation, luminance de 8 couleurs | ✅ |
+| | Mélange noir et blanc, outil de ciblage direct | ⏳ |
+| Étalonnage des couleurs | Ombres, tons moyens, hautes lumières, global ; fusion, balance | ✅ |
+| Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
+| | Réduction du bruit de luminance et de couleur | ✅ |
+| | Débruitage par IA, super‑résolution | ⏳ |
+| Corrections de l'objectif | Profils (distorsion, vignetage), aberrations chromatiques | ⏳ |
+| Transformation | Upright, perspective | ⏳ |
+| Effets | Vignetage après recadrage (gain, milieu, arrondi, contour progressif, hautes lumières) | ✅ |
+| | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
+| Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
+| Outils | Recadrage et redressement (angle libre) | ✅ |
+| | Masques : pinceau, dégradés, sujet, ciel, plage de luminance ou de couleur | ⏳ |
+| | Correcteur, tampon, yeux rouges, suppression | ⏳ |
+| | Historique, instantanés, copier‑coller et synchronisation des réglages | ⏳ (réglages déjà sérialisables en JSON et XMP) |
+| | Histogramme | 🟡 calculé, affichage avec l'interface |
+| | Fusion HDR, panorama | ⏳ |
+
+## Formats et couleur
+
+| Fonction | État |
+|---|---|
+| RAW Bayer : Sony ARW, Canon CR3, Nikon NEF (et les autres formats lus par rawler) | ✅ 3 boîtiers vérifiés en continu |
+| RAW X‑Trans (Fujifilm) | ✅ dématriçage dédié |
+| DNG linéaire, Apple ProRAW (avec `BaselineExposure`) | ✅ |
+| Couleur DNG : deux matrices interpolées selon la température | ✅ |
+| Pipeline en virgule flottante 32 bits, espace de travail Rec. 2020 linéaire | ✅ |
+| Hautes lumières saturées au capteur rendues neutres (pas de ciel rose) | ✅ |
+| Orientation EXIF | ✅ |
+
+## Export
+
+| Fonction | État |
+|---|---|
+| JPEG (qualité), PNG et TIFF 8 ou 16 bits | ✅ |
+| sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
+| Redimensionnement (côté long) | ✅ |
+| Netteté de sortie, filigrane, copie des métadonnées EXIF | ⏳ |
+
+## Bibliothèque et interopérabilité
+
+| Fonction | État |
+|---|---|
+| Lecture des XMP de Lightroom (sidecar `IMG_0001.xmp`), écriture au même format | ✅ |
+| Import, catalogue, collections, mots‑clés, notes, drapeaux, filtres | ⏳ |
+| Import d'un catalogue Lightroom (`.lrcat`) | ⏳ |
+
+## Ce qui est déjà mieux, ou le sera
+
+- **Rien n'est envoyé nulle part** : pas de compte, pas de cloud obligatoire.
+- **100 % Rust, vérifié** : `scripts/audit-rust.sh` contrôle le graphe de dépendances à
+  chaque build (170 crates, aucune liaison native ni compilateur C).
+- **Mesuré, pas promis** : `luma bench` et la CI publient les temps de rendu réels.
