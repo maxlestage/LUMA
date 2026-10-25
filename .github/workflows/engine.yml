@@ -51,6 +51,11 @@ jobs:
       - name: Tests
         run: cargo test --workspace
 
+      - name: Matrice des boîtiers à jour (docs/boitiers.md)
+        run: |
+          cargo run -q -p luma-cli -- cameras --markdown --corpus tests/raw-corpus > /tmp/boitiers.md
+          diff -u docs/boitiers.md /tmp/boitiers.md || { echo "docs/boitiers.md n'est pas à jour : luma cameras --markdown --corpus tests/raw-corpus > docs/boitiers.md"; exit 1; }
+
       - name: Captures de LÜMA Studio
         uses: actions/upload-artifact@v4
         with:

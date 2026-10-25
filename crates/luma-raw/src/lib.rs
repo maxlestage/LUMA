@@ -13,6 +13,7 @@
 //! - réduction 2×2 (Bayer) ou 3×3 (X‑Trans) sans dématriçage, pour des aperçus
 //!   instantanés.
 
+pub mod cameras;
 mod demosaic;
 pub mod dng;
 
