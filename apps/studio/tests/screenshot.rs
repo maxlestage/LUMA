@@ -206,3 +206,22 @@ fn iphone_layout() {
     };
     s.capture("iphone");
 }
+
+#[test]
+fn films_and_merge_tools() {
+    let Some(mut s) = Session::open("films") else {
+        return;
+    };
+    s.studio().tool = luma_studio::app::Tool::Films;
+    // Les aperçus des préréglages arrivent un à un.
+    for _ in 0..200 {
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(30));
+    }
+    s.capture("films");
+    let st = s.studio();
+    st.tool = luma_studio::app::Tool::Merge;
+    st.selected = [0, 1, 2].into_iter().collect();
+    s.wait();
+    s.capture("fusion");
+}

@@ -1,33 +1,37 @@
-//! LÜMA Studio : l'état de l'application et la mise en page du module Développement.
+//! LÜMA Studio : l'état de l'application et son interface.
 //!
-//! Comme dans Lightroom Classic :
+//! L'interface ne ressemble à aucune autre : la photo occupe tout l'écran, et les
+//! outils flottent dessus dans des îlots de verre fumé. À gauche, le rail des outils
+//! (Bibliothèque, Lumière, Couleur, Détail, Masques, Films, Géométrie, Fusion) ; à
+//! droite, l'inspecteur de l'outil choisi, et lui seul ; en bas, la table lumineuse du
+//! dossier. L'anneau spectral de LÜMA marque ce qui est actif.
 //!
-//! - en haut, les modules ; à gauche, le navigateur et l'historique ; au centre, la
-//!   photo ; à droite, les panneaux de réglage ; en bas, le film du dossier ;
-//! - chaque geste terminé (curseur relâché, valeur saisie) crée une étape d'historique ;
-//! - les réglages sont enregistrés automatiquement dans un XMP à côté du RAW, au format
-//!   de Lightroom : rien n'est jamais écrit dans l'original ;
-//! - les raccourcis : `\` avant/après, ⌘Z et ⇧⌘Z annuler et rétablir, ⇧⌘C et ⇧⌘V
-//!   copier et coller les réglages, ⇧⌘R réinitialiser, ⇧⌘E exporter, ⌘O ouvrir,
-//!   ← et → photo précédente et suivante, J écrêtage, Z zoom 1:1.
+//! Les gestes et les réglages restent ceux que connaissent les photographes : mêmes
+//! curseurs que Lightroom, historique, XMP enregistré à côté du RAW, raccourcis (`\`
+//! avant/après, ⌘Z, ⇧⌘C et ⇧⌘V, ⇧⌘E exporter, ← →, J écrêtage, Z zoom 1:1, G, D, M,
+//! Maj+M, K, R, W, O).
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use egui::{
-    Color32, ColorImage, Key, Modifiers, RichText, TextureHandle, TextureOptions, Ui, pos2, vec2,
+    Color32, ColorImage, Key, Modifiers, Rect, RichText, TextureHandle, TextureOptions, Ui, pos2,
+    vec2,
 };
 use luma_color::OutputSpace;
+use luma_project::presets::{self, PRESETS};
 use luma_project::xmp::{Flag, Meta};
 use luma_project::{Crop, Mask, Profile, Settings, Shape, WhiteBalance};
 use luma_render::{Photo, Size};
 
 use crate::crop;
+use crate::icons::{self, Icon};
 use crate::masking;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
 use crate::worker::{
-    Event, ExportJob, ExportOptions, Format, Worker, read_meta, read_sidecar, write_sidecar,
+    Event, ExportJob, ExportOptions, Format, MergeJob, MergeKind, Worker, read_meta, read_sidecar,
+    write_sidecar,
 };
 
 /// Les extensions RAW reconnues dans un dossier.
@@ -266,6 +270,81 @@ pub enum Module {
     Develop,
 }
 
+/// Les outils du rail.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Tool {
+    Library,
+    Light,
+    Color,
+    Detail,
+    Masks,
+    Films,
+    Geometry,
+    Merge,
+}
+
+impl Tool {
+    pub const ALL: [Tool; 8] = [
+        Tool::Library,
+        Tool::Light,
+        Tool::Color,
+        Tool::Detail,
+        Tool::Masks,
+        Tool::Films,
+        Tool::Geometry,
+        Tool::Merge,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Tool::Library => "Bibliothèque",
+            Tool::Light => "Lumière",
+            Tool::Color => "Couleur",
+            Tool::Detail => "Détail",
+            Tool::Masks => "Masques",
+            Tool::Films => "Films",
+            Tool::Geometry => "Géométrie",
+            Tool::Merge => "Fusion",
+        }
+    }
+
+    fn subtitle(self) -> &'static str {
+        match self {
+            Tool::Library => "Trier, noter, choisir",
+            Tool::Light => "Profil, balance, tonalité, courbe",
+            Tool::Color => "Mélangeur, étalonnage, calibration",
+            Tool::Detail => "Netteté, bruit, vignetage, grain",
+            Tool::Masks => "Retouches locales",
+            Tool::Films => "Pellicules et looks",
+            Tool::Geometry => "Recadrage, objectif, perspective",
+            Tool::Merge => "Empilements et panoramas",
+        }
+    }
+
+    fn icon(self) -> Icon {
+        match self {
+            Tool::Library => Icon::Library,
+            Tool::Light => Icon::Light,
+            Tool::Color => Icon::Color,
+            Tool::Detail => Icon::Detail,
+            Tool::Masks => Icon::Masks,
+            Tool::Films => Icon::Films,
+            Tool::Geometry => Icon::Geometry,
+            Tool::Merge => Icon::Merge,
+        }
+    }
+
+    fn key(self) -> &'static str {
+        match self {
+            Tool::Library => "G",
+            Tool::Light => "D",
+            Tool::Masks => "M, Maj+M, K",
+            Tool::Geometry => "R",
+            _ => "",
+        }
+    }
+}
+
 /// Le filtre de la Bibliothèque, appliqué aussi au film et à ← →.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum FlagFilter {
@@ -330,6 +409,22 @@ pub struct Studio {
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
     mask_overlay: Option<(Mask, TextureHandle)>,
+    /// L'outil choisi dans le rail.
+    pub tool: Tool,
+    /// Les photos choisies dans le film ou la grille (⌘‑clic, Maj‑clic), pour la fusion.
+    pub selected: BTreeSet<usize>,
+    merge_stack: bool,
+    stack_mode: luma_merge::StackMode,
+    stack_align: bool,
+    projection: luma_merge::Projection,
+    auto_crop: bool,
+    merge_full: bool,
+    merging: Option<(f32, String, luma_core::Cancel)>,
+    /// Films : le préréglage choisi, son intensité, et les réglages d'avant.
+    preset: Option<(usize, f32, Settings)>,
+    previews: Vec<Option<TextureHandle>>,
+    previews_tag: u64,
+    previews_for: Option<PathBuf>,
     /// La pipette de balance des blancs (W) attend un clic sur la photo.
     eyedropper: bool,
     /// Le nom de la dernière balance personnalisée (« Auto » ou « Personnalisée »).
@@ -378,6 +473,19 @@ impl Studio {
             brush: masking::Brush::default(),
             show_mask: false,
             mask_overlay: None,
+            tool: Tool::Light,
+            selected: BTreeSet::new(),
+            merge_stack: true,
+            stack_mode: luma_merge::StackMode::Mean,
+            stack_align: true,
+            projection: luma_merge::Projection::Cylindrical,
+            auto_crop: true,
+            merge_full: true,
+            merging: None,
+            preset: None,
+            previews: Vec::new(),
+            previews_tag: 0,
+            previews_for: None,
             eyedropper: false,
             wb_label: "Personnalisée",
         }
@@ -497,6 +605,7 @@ impl Studio {
                             }
                             self.history_pos = self.history.len() - 1;
                             self.selected_mask = None;
+                            self.preset = None;
                             let raw = photo.raw();
                             let e = &raw.exif;
                             let mut info = format!("{} {}", raw.make, raw.model);
@@ -548,6 +657,40 @@ impl Studio {
                     let name = format!("vignette {}", path.display());
                     self.thumbs
                         .insert(path, ctx.load_texture(name, image, TextureOptions::LINEAR));
+                }
+                Event::MergeProgress { fraction, label } => {
+                    if let Some(m) = &mut self.merging {
+                        m.0 = fraction;
+                        m.1 = label;
+                    }
+                }
+                Event::Merged { result } => {
+                    self.merging = None;
+                    match result {
+                        Ok(path) => {
+                            self.status = format!("Fusion enregistrée : {}", file_name(&path));
+                            self.selected.clear();
+                            self.tool = Tool::Light;
+                            self.module = Module::Develop;
+                            self.open_path(&path);
+                        }
+                        Err(e) => self.status = format!("Fusion impossible : {e}"),
+                    }
+                }
+                Event::Preview {
+                    tag,
+                    index,
+                    size,
+                    rgba,
+                } => {
+                    if tag == self.previews_tag && index < self.previews.len() {
+                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        self.previews[index] = Some(ctx.load_texture(
+                            format!("préréglage {index}"),
+                            image,
+                            TextureOptions::LINEAR,
+                        ));
+                    }
                 }
                 Event::Exported {
                     done,
@@ -769,11 +912,12 @@ impl Studio {
                 }
             }
             "export_now" => self.export_now(),
-            "library" => {
-                self.crop_tool = None;
-                self.module = Module::Library;
+            "library" => self.set_tool(Tool::Library),
+            "develop" => {
+                if self.tool == Tool::Library {
+                    self.set_tool(Tool::Light);
+                }
             }
-            "develop" => self.module = Module::Develop,
             "pick" => self.set_meta(|m| m.flag = Flag::Pick),
             "reject" => self.set_meta(|m| m.flag = Flag::Reject),
             "unflag" => self.set_meta(|m| m.flag = Flag::None),
@@ -790,7 +934,7 @@ impl Studio {
                 if self.crop_tool.is_some() {
                     self.act("crop_done");
                 } else if self.photo.is_some() {
-                    self.module = Module::Develop;
+                    self.set_tool(Tool::Geometry);
                     self.zoom = false;
                     self.crop_tool = Some(CropTool {
                         saved: self.settings.crop,
@@ -820,8 +964,7 @@ impl Studio {
                     _ => Mask::brush(),
                 };
                 let label = format!("Nouveau masque : {}", mask.name.to_lowercase());
-                self.crop_tool = None;
-                self.module = Module::Develop;
+                self.set_tool(Tool::Masks);
                 self.zoom = false;
                 self.settings.masks.push(mask);
                 self.selected_mask = Some(self.settings.masks.len() - 1);
@@ -1040,216 +1183,293 @@ impl Studio {
             None => {}
         }
 
-        // iPhone (ou fenêtre étroite) : la photo en haut, les panneaux en dessous.
-        let compact = ui.available_width() < 820.0;
-        egui::Panel::top("modules")
-            .exact_size(40.0)
-            .frame(
-                egui::Frame::NONE
-                    .fill(theme::BACKGROUND)
-                    .inner_margin(egui::Margin::symmetric(if compact { 8 } else { 16 }, 0)),
-            )
-            .show(ui, |ui| self.top_bar(ui, compact));
+        let full = ui.max_rect();
+        ui.painter().rect_filled(full, 0.0, theme::BACKGROUND);
+        // iPhone (ou fenêtre étroite) : la photo en haut, la barre d'outils, puis
+        // l'inspecteur en feuille.
+        let compact = full.width() < 820.0;
+        let m = if compact { 8.0 } else { 14.0 };
+        let top = Rect::from_min_size(full.min + vec2(m, m), vec2(full.width() - 2.0 * m, 50.0));
+        self.island(ui, top, |s, ui| s.top_island(ui, compact));
         if compact {
-            let height = (ui.available_height() * 0.48).max(200.0);
-            egui::Panel::bottom("panneaux")
-                .exact_size(height)
-                .frame(
-                    egui::Frame::NONE
-                        .fill(theme::PANEL)
-                        .inner_margin(egui::Margin::symmetric(10, 8)),
-                )
-                .show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .auto_shrink(false)
-                        .show(ui, |ui| match self.module {
-                            Module::Develop => self.develop_panels(ui),
-                            Module::Library => self.library_right(ui),
-                        });
-                });
-            egui::Panel::bottom("film")
-                .exact_size(76.0)
-                .frame(
-                    egui::Frame::NONE
-                        .fill(theme::BACKGROUND)
-                        .inner_margin(egui::Margin::symmetric(8, 6)),
-                )
-                .show(ui, |ui| self.filmstrip(ui));
+            let stage = Rect::from_min_max(
+                pos2(full.min.x, top.max.y + m),
+                pos2(full.max.x, top.max.y + m + full.height() * 0.38),
+            );
+            let bar = Rect::from_min_size(
+                pos2(full.min.x + m, stage.max.y + m),
+                vec2(full.width() - 2.0 * m, 60.0),
+            );
+            let sheet = Rect::from_min_max(
+                pos2(full.min.x + m, bar.max.y + m),
+                pos2(full.max.x - m, full.max.y - m),
+            );
+            self.stage(ui, stage);
+            self.island(ui, bar, |s, ui| s.rail(ui, true));
+            self.island(ui, sheet, |s, ui| s.inspector(ui));
         } else {
-            egui::Panel::bottom("film")
-                .exact_size(112.0)
-                .frame(
-                    egui::Frame::NONE
-                        .fill(theme::BACKGROUND)
-                        .inner_margin(egui::Margin::symmetric(12, 8)),
-                )
-                .show(ui, |ui| self.filmstrip(ui));
-            egui::Panel::left("gauche")
-                .exact_size(250.0)
-                .frame(
-                    egui::Frame::NONE
-                        .fill(theme::PANEL)
-                        .inner_margin(egui::Margin::same(12)),
-                )
-                .show(ui, |ui| match self.module {
-                    Module::Develop => self.left_panel(ui),
-                    Module::Library => self.library_left(ui),
-                });
-            egui::Panel::right("droite")
-                .exact_size(330.0)
-                .frame(
-                    egui::Frame::NONE
-                        .fill(theme::PANEL)
-                        .inner_margin(egui::Margin::symmetric(12, 10)),
-                )
-                .show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .auto_shrink(false)
-                        .show(ui, |ui| match self.module {
-                            Module::Develop => self.develop_panels(ui),
-                            Module::Library => self.library_right(ui),
-                        });
-                });
+            let rail_h = Tool::ALL.len() as f32 * 60.0 + 28.0;
+            let rail = Rect::from_min_size(pos2(full.min.x + m, top.max.y + m), vec2(68.0, rail_h));
+            let inspector = Rect::from_min_max(
+                pos2(full.max.x - m - 366.0, top.max.y + m),
+                pos2(full.max.x - m, full.max.y - m),
+            );
+            let film = Rect::from_min_max(
+                pos2(rail.max.x + m, full.max.y - m - 108.0),
+                pos2(inspector.min.x - m, full.max.y - m),
+            );
+            let stage = Rect::from_min_max(
+                pos2(rail.max.x + m, top.max.y + m),
+                pos2(inspector.min.x - m, film.min.y - m),
+            );
+            self.stage(ui, stage);
+            self.island(ui, rail, |s, ui| s.rail(ui, false));
+            self.island(ui, inspector, |s, ui| s.inspector(ui));
+            self.island(ui, film, |s, ui| s.filmstrip(ui));
         }
-        egui::CentralPanel::default()
-            .frame(egui::Frame::NONE.fill(Color32::from_gray(0x2a)))
-            .show(ui, |ui| match self.module {
-                Module::Develop => self.viewer(ui),
-                Module::Library => self.grid(ui),
-            });
         if self.export_open {
             self.export_window(&ctx);
         }
     }
 
-    fn top_bar(&mut self, ui: &mut Ui, compact: bool) {
+    /// Un îlot de verre fumé à `rect`, son contenu dessiné par `f`.
+    fn island(&mut self, ui: &mut Ui, rect: Rect, f: impl FnOnce(&mut Self, &mut Ui)) {
+        let radius = egui::CornerRadius::same(18);
+        let shadow = egui::Shadow {
+            offset: [0, 10],
+            blur: 30,
+            spread: 0,
+            color: Color32::from_black_alpha(150),
+        };
+        let painter = ui.painter();
+        painter.add(shadow.as_shape(rect, radius));
+        painter.rect(
+            rect,
+            radius,
+            theme::PANEL,
+            egui::Stroke::new(1.0, theme::GLASS_EDGE),
+            egui::StrokeKind::Inside,
+        );
+        let inner = rect.shrink(12.0);
+        ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
+            ui.set_clip_rect(inner.expand(4.0));
+            f(self, ui);
+        });
+    }
+
+    /// La scène : la photo (ou la grille de la Bibliothèque), sans cadre.
+    fn stage(&mut self, ui: &mut Ui, rect: Rect) {
+        ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
+            ui.set_clip_rect(rect);
+            match self.module {
+                Module::Develop => self.viewer(ui),
+                Module::Library => self.grid(ui),
+            }
+        });
+    }
+
+    fn set_tool(&mut self, tool: Tool) {
+        if self.tool == tool {
+            return;
+        }
+        if tool != Tool::Geometry && self.crop_tool.is_some() {
+            self.act("crop_done");
+        }
+        if tool != Tool::Masks {
+            self.selected_mask = None;
+        }
+        self.eyedropper = false;
+        self.tool = tool;
+        self.module = if tool == Tool::Library {
+            Module::Library
+        } else {
+            Module::Develop
+        };
+    }
+
+    /// L'îlot du haut : la marque, la photo, les gestes d'ensemble.
+    fn top_island(&mut self, ui: &mut Ui, compact: bool) {
         ui.horizontal_centered(|ui| {
-            ui.label(
-                RichText::new("LÜMA")
-                    .strong()
-                    .size(15.0)
-                    .color(Color32::WHITE),
-            );
-            ui.add_space(if compact { 10.0 } else { 24.0 });
-            let modules: &[(&str, Option<Module>)] = if compact {
-                &[
-                    ("Photos", Some(Module::Library)),
-                    ("Retouche", Some(Module::Develop)),
-                ]
-            } else {
-                &[
-                    ("Bibliothèque", Some(Module::Library)),
-                    ("Développement", Some(Module::Develop)),
-                    ("Carte", None),
-                    ("Impression", None),
-                ]
-            };
-            for &(name, module) in modules {
-                let active = module == Some(self.module);
-                let text = RichText::new(name).size(13.0).color(if active {
-                    Color32::WHITE
-                } else {
-                    theme::DIM
-                });
-                let r = ui.add(egui::Label::new(text).sense(egui::Sense::click()));
-                if active {
-                    let rect = r.rect;
-                    ui.painter().line_segment(
-                        [
-                            pos2(rect.min.x, rect.max.y + 3.0),
-                            pos2(rect.max.x, rect.max.y + 3.0),
-                        ],
-                        egui::Stroke::new(2.0, theme::ACCENT),
-                    );
-                } else if let Some(m) = module {
-                    let key = if m == Module::Library { "G" } else { "D" };
-                    if r.on_hover_text(key).clicked() {
-                        self.act(if m == Module::Library {
-                            "library"
-                        } else {
-                            "develop"
-                        });
-                    }
-                } else {
-                    r.on_hover_text("Bientôt");
-                }
+            let (r, _) = ui.allocate_exact_size(vec2(26.0, 26.0), egui::Sense::hover());
+            widgets::spectral_ring(ui.painter(), r.center(), 10.0, 3.5, 1.0);
+            ui.painter()
+                .circle_filled(r.center(), 4.0, Color32::from_rgb(0xff, 0xf3, 0xd6));
+            ui.label(RichText::new("LÜMA").strong().size(17.0).color(theme::TEXT));
+            if !compact {
                 ui.add_space(14.0);
+                if let Some(p) = self.current_path() {
+                    ui.label(RichText::new(file_name(p)).size(12.5).color(theme::DIM));
+                }
+                if self.render_ms > 0.0 {
+                    let chip = format!(
+                        "{} ms{}",
+                        format_value(self.render_ms, 0, false),
+                        if self.render_gpu { " · GPU" } else { "" }
+                    );
+                    egui::Frame::new()
+                        .fill(theme::SECTION)
+                        .corner_radius(10)
+                        .inner_margin(egui::Margin::symmetric(8, 2))
+                        .show(ui, |ui| {
+                            ui.label(RichText::new(chip).size(11.0).color(theme::DIM))
+                        });
+                }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let (export, open) = if compact {
-                    ("Exporter", "Ouvrir")
-                } else {
-                    ("Exporter… (Maj+Cmd+E)", "Ouvrir (Cmd+O)")
-                };
-                if ui.button(export).clicked() {
+                if icon_button(
+                    ui,
+                    Icon::Export,
+                    if compact { "" } else { "Exporter" },
+                    false,
+                )
+                .on_hover_text("Maj+Cmd+E")
+                .clicked()
+                {
                     self.act("export");
                 }
-                if ui.button(open).clicked() {
+                if icon_button(ui, Icon::Open, if compact { "" } else { "Ouvrir" }, false)
+                    .on_hover_text("Cmd+O")
+                    .clicked()
+                {
                     self.act("open");
                 }
-                if self.render_ms > 0.0 && !compact {
-                    ui.label(
-                        RichText::new(format!(
-                            "rendu {} ms{}",
-                            format_value(self.render_ms, 0, false),
-                            if self.render_gpu { " · GPU" } else { "" }
-                        ))
-                        .size(11.0)
-                        .color(theme::DIM),
-                    );
+                ui.add_space(6.0);
+                if !compact {
+                    ui.spacing_mut().item_spacing.x = 12.0;
+                    for (label, action, tip) in [
+                        ("Réinitialiser", "reset", "Maj+Cmd+R"),
+                        ("Coller", "paste", "Maj+Cmd+V"),
+                        ("Copier", "copy", "Maj+Cmd+C"),
+                        ("Rétablir", "redo", "Maj+Cmd+Z"),
+                        ("Annuler", "undo", "Cmd+Z"),
+                    ] {
+                        if ui
+                            .add(egui::Button::new(RichText::new(label).size(12.0)).frame(false))
+                            .on_hover_text(tip)
+                            .clicked()
+                        {
+                            self.act(action);
+                        }
+                    }
+                }
+                let label = if self.before { "Avant" } else { "Après" };
+                if ui
+                    .selectable_label(self.before, label)
+                    .on_hover_text("\\ : avant / après")
+                    .clicked()
+                {
+                    self.act("before");
                 }
             });
         });
     }
 
-    fn left_panel(&mut self, ui: &mut Ui) {
-        section_title(ui, "Navigateur");
-        if let Some(t) = &self.texture {
-            let w = ui.available_width();
-            let [iw, ih] = self.image_size;
-            let h = w * ih as f32 / iw.max(1) as f32;
-            let (rect, _) = ui.allocate_exact_size(vec2(w, h.min(200.0)), egui::Sense::hover());
-            ui.painter().image(
-                t.id(),
-                fit(rect, iw, ih),
-                egui::Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+    /// Le rail des outils (vertical ; horizontal sur iPhone).
+    fn rail(&mut self, ui: &mut Ui, horizontal: bool) {
+        let mut clicked = None;
+        let size = if horizontal {
+            (ui.available_width() / Tool::ALL.len() as f32).min(52.0)
+        } else {
+            44.0
+        };
+        let mut draw = |ui: &mut Ui| {
+            for tool in Tool::ALL {
+                let (rect, r) = ui.allocate_exact_size(vec2(size, size), egui::Sense::click());
+                let active = self.tool == tool;
+                let p = ui.painter();
+                if active {
+                    p.circle_filled(
+                        rect.center(),
+                        size * 0.46,
+                        Color32::from_rgb(0x24, 0x22, 0x1e),
+                    );
+                    widgets::spectral_ring(p, rect.center(), size * 0.46, 2.2, 1.0);
+                } else if r.hovered() {
+                    p.circle_filled(rect.center(), size * 0.44, theme::SECTION);
+                }
+                let color = if active {
+                    Color32::WHITE
+                } else if r.hovered() {
+                    theme::TEXT
+                } else {
+                    theme::DIM
+                };
+                icons::paint(p, tool.icon(), rect.shrink(size * 0.27), color);
+                let tip = if tool.key().is_empty() {
+                    tool.name().to_owned()
+                } else {
+                    format!("{} ({})", tool.name(), tool.key())
+                };
+                if r.on_hover_text(tip).clicked() {
+                    clicked = Some(tool);
+                }
+                if !horizontal {
+                    ui.add_space(12.0);
+                }
+            }
+        };
+        if horizontal {
+            ui.horizontal_centered(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                draw(ui)
+            });
+        } else {
+            ui.vertical_centered(draw);
+        }
+        if let Some(t) = clicked {
+            self.set_tool(t);
+        }
+    }
+
+    /// L'inspecteur : l'outil choisi, et lui seul.
+    fn inspector(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            let (r, _) = ui.allocate_exact_size(vec2(30.0, 30.0), egui::Sense::hover());
+            widgets::spectral_ring(ui.painter(), r.center(), 14.0, 2.0, 0.9);
+            icons::paint(
+                ui.painter(),
+                self.tool.icon(),
+                r.shrink(8.0),
                 Color32::WHITE,
             );
-        }
-        ui.add_space(12.0);
-        ui.horizontal(|ui| {
-            if ui.button("Copier").on_hover_text("Maj+Cmd+C").clicked() {
-                self.act("copy");
-            }
-            if ui
-                .add_enabled(self.clipboard.is_some(), egui::Button::new("Coller"))
-                .on_hover_text("Maj+Cmd+V")
-                .clicked()
-            {
-                self.act("paste");
-            }
-            if ui
-                .button("Réinitialiser")
-                .on_hover_text("Maj+Cmd+R")
-                .clicked()
-            {
-                self.act("reset");
-            }
+            ui.vertical(|ui| {
+                ui.label(
+                    RichText::new(self.tool.name())
+                        .size(19.0)
+                        .strong()
+                        .color(theme::TEXT),
+                );
+                ui.label(
+                    RichText::new(self.tool.subtitle())
+                        .size(11.5)
+                        .color(theme::DIM),
+                );
+            });
         });
         ui.add_space(8.0);
-        let label = if self.before {
-            "Avant (\\)"
-        } else {
-            "Après (\\)"
-        };
-        if ui.selectable_label(self.before, label).clicked() {
-            self.act("before");
-        }
-        ui.add_space(12.0);
-        section_title(ui, "Historique");
-        let mut restore = None;
         egui::ScrollArea::vertical()
-            .id_salt("historique")
+            .auto_shrink(false)
+            .show(ui, |ui| match self.tool {
+                Tool::Library => {
+                    self.library_right(ui);
+                    ui.add_space(12.0);
+                    self.library_left(ui);
+                }
+                Tool::Merge => self.merge_panel(ui),
+                Tool::Films => {
+                    widgets::histogram(ui, &self.histogram, &mut self.clipping);
+                    ui.add_space(8.0);
+                    self.films_panel(ui);
+                }
+                _ => self.develop_panels(ui),
+            });
+    }
+
+    /// L'historique (outil Lumière).
+    fn history_panel(&mut self, ui: &mut Ui) {
+        let mut restore = None;
+        egui::CollapsingHeader::new(RichText::new("Historique").strong())
+            .default_open(false)
             .show(ui, |ui| {
                 for (i, (label, _)) in self.history.iter().enumerate().rev() {
                     let current = i == self.history_pos;
@@ -1267,6 +1487,277 @@ impl Studio {
             });
         if let Some(i) = restore {
             self.restore(i);
+        }
+    }
+
+    /// Films : les pellicules et les looks, avec leur aperçu sur la photo.
+    fn films_panel(&mut self, ui: &mut Ui) {
+        let Some(photo) = self.photo.clone() else {
+            ui.label(RichText::new("Ouvrez une photo pour essayer les films.").color(theme::DIM));
+            return;
+        };
+        // Les réglages sans film : ceux d'avant le préréglage choisi.
+        let base = self
+            .preset
+            .as_ref()
+            .map_or_else(|| self.settings.clone(), |p| p.2.clone());
+        if self.previews_for.as_deref() != self.current_path()
+            || self.previews.len() != PRESETS.len()
+        {
+            self.previews_tag += 1;
+            self.previews = vec![None; PRESETS.len()];
+            self.previews_for = self.current_path().map(Path::to_path_buf);
+            let all = PRESETS.iter().map(|p| p.applied(&base, 1.0)).collect();
+            self.worker.previews(photo, all, self.previews_tag);
+        }
+        if let Some((i, amount, base)) = self.preset.clone() {
+            let mut percent = amount * 100.0;
+            let spec = SliderSpec {
+                label: "Intensité",
+                min: 0.0,
+                max: 100.0,
+                default: 100.0,
+                decimals: 0,
+                track: Track::Gradient(&theme::SPECTRUM),
+                log: false,
+            };
+            let c = widgets::slider(ui, &spec, &mut percent);
+            if c.changed {
+                let amount = percent / 100.0;
+                self.settings = PRESETS[i].applied(&base, amount);
+                self.preset = Some((i, amount, base.clone()));
+                self.touch();
+            }
+            if c.committed {
+                self.commit(format!(
+                    "{} à {} %",
+                    PRESETS[i].name,
+                    format_value(percent, 0, false)
+                ));
+            }
+            if ui.button("Retirer le film").clicked() {
+                self.settings = base;
+                self.preset = None;
+                self.commit("Sans film".into());
+                self.touch();
+            }
+            ui.add_space(6.0);
+        }
+        let mut choose = None;
+        let width = ((ui.available_width() - 10.0) / 2.0).floor();
+        for group in [
+            presets::Group::ColorFilm,
+            presets::Group::BlackAndWhiteFilm,
+            presets::Group::Creative,
+        ] {
+            sub_title(ui, group.name());
+            let items: Vec<usize> = (0..PRESETS.len())
+                .filter(|&k| PRESETS[k].group == group)
+                .collect();
+            for row in items.chunks(2) {
+                ui.horizontal(|ui| {
+                    for &k in row {
+                        let (rect, r) = ui.allocate_exact_size(
+                            vec2(width, width * 0.72 + 20.0),
+                            egui::Sense::click(),
+                        );
+                        let image = Rect::from_min_size(rect.min, vec2(width, width * 0.72));
+                        let p = ui.painter();
+                        match &self.previews[k] {
+                            Some(t) => {
+                                let [w, h] = t.size();
+                                p.rect_filled(image, 10.0, Color32::from_gray(0x10));
+                                p.image(
+                                    t.id(),
+                                    fit(image, w, h),
+                                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                                    Color32::WHITE,
+                                );
+                            }
+                            None => {
+                                p.rect_filled(image, 10.0, theme::SECTION);
+                            }
+                        }
+                        let active = self.preset.as_ref().is_some_and(|x| x.0 == k);
+                        if active {
+                            p.rect_stroke(
+                                image.expand(2.0),
+                                11.0,
+                                egui::Stroke::new(2.0, theme::ACCENT),
+                                egui::StrokeKind::Outside,
+                            );
+                        } else if r.hovered() {
+                            p.rect_stroke(
+                                image,
+                                10.0,
+                                egui::Stroke::new(1.0, theme::TEXT),
+                                egui::StrokeKind::Outside,
+                            );
+                        }
+                        p.text(
+                            pos2(rect.min.x + 2.0, image.max.y + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            PRESETS[k].name,
+                            egui::FontId::proportional(12.0),
+                            if active { theme::ACCENT } else { theme::TEXT },
+                        );
+                        if r.on_hover_text(PRESETS[k].description).clicked() {
+                            choose = Some(k);
+                        }
+                    }
+                });
+                ui.add_space(4.0);
+            }
+        }
+        if let Some(k) = choose {
+            let amount = self.preset.as_ref().map_or(1.0, |p| p.1);
+            self.settings = PRESETS[k].applied(&base, amount);
+            self.preset = Some((k, amount, base));
+            self.commit(format!("Film : {}", PRESETS[k].name));
+            self.touch();
+        }
+    }
+
+    /// Fusion : empilements et panoramas des photos choisies.
+    fn merge_panel(&mut self, ui: &mut Ui) {
+        let n = self.selected.len();
+        ui.label(
+            RichText::new(match n {
+                0 => "Choisissez les photos dans le film : Cmd‑clic pour en ajouter une, Maj‑clic pour une suite.".to_owned(),
+                1 => "Une photo choisie : ajoutez‑en d'autres (Cmd‑clic, Maj‑clic).".to_owned(),
+                n => format!("{n} photos choisies."),
+            })
+            .color(theme::DIM),
+        );
+        ui.horizontal(|ui| {
+            if ui.button("Tout le dossier").clicked() {
+                self.selected = self.visible().into_iter().collect();
+            }
+            if n > 0 && ui.button("Vider").clicked() {
+                self.selected.clear();
+            }
+        });
+        ui.add_space(10.0);
+        ui.horizontal(|ui| {
+            for (stack, icon, label) in [
+                (true, Icon::Stack, "Empilement"),
+                (false, Icon::Panorama, "Panorama"),
+            ] {
+                if big_choice(ui, icon, label, self.merge_stack == stack).clicked() {
+                    self.merge_stack = stack;
+                }
+            }
+        });
+        ui.add_space(8.0);
+        if self.merge_stack {
+            use luma_merge::StackMode as S;
+            for (mode, text) in [
+                (S::Mean, "Moins de bruit, poses longues simulées"),
+                (S::Median, "Ce qui bouge disparaît (passants, voitures)"),
+                (S::Maximum, "Filé d'étoiles, traînées de phares, éclairs"),
+                (
+                    S::Stars,
+                    "Suit le ciel qui tourne, rejette satellites et avions",
+                ),
+            ] {
+                ui.horizontal(|ui| {
+                    ui.radio_value(
+                        &mut self.stack_mode,
+                        mode,
+                        RichText::new(mode.name()).strong(),
+                    );
+                    ui.label(RichText::new(text).size(11.5).color(theme::DIM));
+                });
+            }
+            ui.add_space(4.0);
+            let stars = self.stack_mode == luma_merge::StackMode::Stars;
+            ui.add_enabled_ui(!stars, |ui| {
+                let mut align = self.stack_align || stars;
+                ui.checkbox(&mut align, "Aligner les poses (à main levée)");
+                if !stars {
+                    self.stack_align = align;
+                }
+            });
+        } else {
+            use luma_merge::Projection as P;
+            ui.horizontal(|ui| {
+                for p in [P::Perspective, P::Cylindrical, P::Spherical] {
+                    ui.selectable_value(&mut self.projection, p, p.name());
+                }
+            });
+            ui.label(
+                RichText::new(match self.projection {
+                    P::Perspective => {
+                        "Les droites restent droites (architecture) ; jusqu'à 120° environ."
+                    }
+                    P::Cylindrical => {
+                        "Les verticales restent droites : le choix des panoramas horizontaux."
+                    }
+                    P::Spherical => {
+                        "Pour les très grands angles et les panoramas sur plusieurs rangées."
+                    }
+                })
+                .size(11.5)
+                .color(theme::DIM),
+            );
+        }
+        ui.add_space(8.0);
+        ui.checkbox(&mut self.auto_crop, "Rogner automatiquement");
+        ui.label(
+            RichText::new("Le rognage est un recadrage ordinaire : on peut le modifier ou le retirer ensuite (Géométrie).")
+                .size(11.0)
+                .color(theme::DIM),
+        );
+        ui.checkbox(
+            &mut self.merge_full,
+            "Pleine définition (sinon 2048 px, plus rapide)",
+        );
+        ui.add_space(10.0);
+        if let Some((fraction, label, cancel)) = &self.merging {
+            ui.add(
+                egui::ProgressBar::new(*fraction)
+                    .text(label.clone())
+                    .fill(theme::ACCENT),
+            );
+            if ui.button("Annuler la fusion").clicked() {
+                cancel.cancel();
+            }
+            return;
+        }
+        let go = ui.add_enabled(
+            n >= 2,
+            egui::Button::new(
+                RichText::new(format!("Fusionner {} photos", n.max(2)))
+                    .strong()
+                    .color(Color32::BLACK),
+            )
+            .fill(theme::ACCENT)
+            .min_size(vec2(ui.available_width(), 36.0))
+            .corner_radius(12),
+        );
+        if go.clicked() {
+            let paths: Vec<PathBuf> = self
+                .selected
+                .iter()
+                .filter_map(|&i| self.folder.get(i).cloned())
+                .collect();
+            let kind = if self.merge_stack {
+                MergeKind::Stack(self.stack_mode, self.stack_align)
+            } else {
+                MergeKind::Panorama(self.projection)
+            };
+            let cancel = luma_core::Cancel::new();
+            self.merging = Some((0.0, "Préparation".into(), cancel.clone()));
+            self.flush_xmp();
+            self.worker.merge(
+                MergeJob {
+                    paths,
+                    kind,
+                    auto_crop: self.auto_crop,
+                    full_size: self.merge_full,
+                },
+                cancel,
+            );
         }
     }
 
@@ -1454,6 +1945,14 @@ impl Studio {
                             if meta.flag == Flag::Reject {
                                 painter.rect_filled(rect, 4.0, Color32::from_black_alpha(120));
                             }
+                            if self.selected.contains(&i) {
+                                painter.rect_stroke(
+                                    rect,
+                                    4.0,
+                                    egui::Stroke::new(2.0, Color32::from_rgb(0x8b, 0x7b, 0xff)),
+                                    egui::StrokeKind::Inside,
+                                );
+                            }
                             if r.double_clicked() {
                                 open = Some(i);
                             } else if r.clicked() {
@@ -1465,23 +1964,25 @@ impl Studio {
                     ui.add_space(10.0);
                 }
             });
-        if let Some(i) = clicked.or(open) {
+        if let Some(i) = open {
+            self.selected.clear();
             self.select(i);
-        }
-        if open.is_some() {
-            self.module = Module::Develop;
+            self.set_tool(Tool::Light);
+        } else if let Some(i) = clicked {
+            self.click_photo(i, ui);
         }
     }
 
     fn filmstrip(&mut self, ui: &mut Ui) {
         let mut clicked = None;
+        let thumb_h = (ui.available_height() - 4.0).clamp(36.0, 84.0);
         egui::ScrollArea::horizontal()
             .id_salt("film")
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     for i in self.visible() {
                         let path = &self.folder[i];
-                        let h = 84.0;
+                        let h = thumb_h;
                         let (w, tex) = match self.thumbs.get(path) {
                             Some(t) => {
                                 let s = t.size();
@@ -1510,10 +2011,23 @@ impl Studio {
                                 painter.rect_filled(rect, 2.0, Color32::from_black_alpha(130));
                             }
                         }
+                        if self.selected.contains(&i) {
+                            painter.rect_stroke(
+                                rect.expand(1.0),
+                                6.0,
+                                egui::Stroke::new(1.5, Color32::from_rgb(0x8b, 0x7b, 0xff)),
+                                egui::StrokeKind::Outside,
+                            );
+                            painter.circle_filled(
+                                rect.right_top() + vec2(-9.0, 9.0),
+                                6.0,
+                                Color32::from_rgb(0x8b, 0x7b, 0xff),
+                            );
+                        }
                         if Some(i) == self.current {
                             painter.rect_stroke(
-                                rect.expand(2.0),
-                                2.0,
+                                rect.expand(3.0),
+                                7.0,
                                 egui::Stroke::new(2.0, theme::ACCENT),
                                 egui::StrokeKind::Outside,
                             );
@@ -1521,11 +2035,35 @@ impl Studio {
                         if r.on_hover_text(file_name(path)).clicked() {
                             clicked = Some(i);
                         }
-                        ui.add_space(4.0);
+                        ui.add_space(8.0);
                     }
                 });
             });
         if let Some(i) = clicked {
+            self.click_photo(i, ui);
+        }
+    }
+
+    /// Un clic sur une vignette : ⌘ l'ajoute à la sélection (ou l'en retire), Maj
+    /// sélectionne la suite depuis la photo affichée, sinon on l'affiche.
+    fn click_photo(&mut self, i: usize, ui: &Ui) {
+        let m = ui.input(|i| i.modifiers);
+        if m.command {
+            if !self.selected.remove(&i) {
+                self.selected.insert(i);
+                if let Some(c) = self.current {
+                    self.selected.insert(c);
+                }
+            }
+        } else if m.shift
+            && let Some(c) = self.current
+        {
+            let visible = self.visible();
+            let (a, b) = (c.min(i), c.max(i));
+            self.selected
+                .extend(visible.into_iter().filter(|v| (a..=b).contains(v)));
+        } else {
+            self.selected.clear();
             self.select(i);
         }
     }
@@ -1577,7 +2115,7 @@ impl Studio {
             }
         } else if let Some(i) = self
             .selected_mask
-            .filter(|i| *i < self.settings.masks.len())
+            .filter(|i| *i < self.settings.masks.len() && self.tool == Tool::Masks)
         {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
@@ -1716,15 +2254,33 @@ impl Studio {
         let editing = self.selected_mask.is_some();
         egui::CollapsingHeader::new(RichText::new("Masquage").strong())
             .open(editing.then_some(true))
-            .default_open(!self.settings.masks.is_empty())
+            .default_open(true)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    for (label, key, action) in [
-                        ("Linéaire", "M", "mask_linear"),
-                        ("Radial", "Maj+M", "mask_radial"),
-                        ("Pinceau", "K", "mask_brush"),
+                    for (icon, label, key, action) in [
+                        (
+                            Icon::Radial,
+                            "Radial",
+                            "Maj+M : un cercle, plein effet au centre",
+                            "mask_radial",
+                        ),
+                        (
+                            Icon::Linear,
+                            "Linéaire",
+                            "M : trois traits, plein effet, milieu, plus d'effet",
+                            "mask_linear",
+                        ),
+                        (
+                            Icon::Brush,
+                            "Pinceau",
+                            "K : peindre, Option pour gommer",
+                            "mask_brush",
+                        ),
                     ] {
-                        if ui.button(format!("+ {label}")).on_hover_text(key).clicked() {
+                        if big_choice(ui, icon, label, false)
+                            .on_hover_text(key)
+                            .clicked()
+                        {
                             self.act(action);
                         }
                     }
@@ -1871,390 +2427,416 @@ impl Studio {
             .on_hover_text("Clic ou J : afficher l'écrêtage");
         ui.add_space(6.0);
 
-        self.masks_panel(ui, &mut commits);
+        if self.tool == Tool::Masks {
+            self.masks_panel(ui, &mut commits);
+        }
 
-        egui::CollapsingHeader::new(RichText::new("Base").strong())
-            .default_open(true)
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("Profil").color(theme::DIM));
-                    let names = [
-                        (Profile::Color, "Couleur"),
-                        (Profile::Neutral, "Neutre"),
-                        (Profile::Vivid, "Vif"),
-                        (Profile::Monochrome, "Monochrome"),
-                    ];
-                    let current = names
-                        .iter()
-                        .find(|n| n.0 == self.settings.profile)
-                        .map_or("Couleur", |n| n.1);
-                    egui::ComboBox::from_id_salt("profil")
-                        .selected_text(current)
-                        .show_ui(ui, |ui| {
-                            for (p, name) in names {
-                                if ui
-                                    .selectable_value(&mut self.settings.profile, p, name)
-                                    .changed()
-                                {
-                                    commits.push(format!("Profil : {name}"));
-                                }
-                            }
-                        })
-                        .response
-                        .accessible_name("Profil");
-                });
-                ui.add_space(4.0);
-                let as_shot = self.photo.as_ref().map(|p| p.as_shot());
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("Balance des blancs").color(theme::DIM));
-                    let current = match self.settings.white_balance {
-                        WhiteBalance::AsShot => "Telle quelle",
-                        WhiteBalance::Custom { temperature, tint } => WB_PRESETS
+        if self.tool == Tool::Light {
+            egui::CollapsingHeader::new(RichText::new("Base").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Profil").color(theme::DIM));
+                        let names = [
+                            (Profile::Color, "Couleur"),
+                            (Profile::Neutral, "Neutre"),
+                            (Profile::Vivid, "Vif"),
+                            (Profile::Monochrome, "Monochrome"),
+                        ];
+                        let current = names
                             .iter()
-                            .find(|p| p.1 == temperature && p.2 == tint)
-                            .map_or(self.wb_label, |p| p.0),
-                    };
-                    let mut choice: Option<&'static str> = None;
-                    egui::ComboBox::from_id_salt("balance")
-                        .selected_text(current)
-                        .show_ui(ui, |ui| {
-                            for name in ["Telle quelle", "Auto"]
-                                .into_iter()
-                                .chain(WB_PRESETS.iter().map(|p| p.0))
-                            {
-                                if ui.selectable_label(current == name, name).clicked() {
-                                    choice = Some(name);
+                            .find(|n| n.0 == self.settings.profile)
+                            .map_or("Couleur", |n| n.1);
+                        egui::ComboBox::from_id_salt("profil")
+                            .selected_text(current)
+                            .show_ui(ui, |ui| {
+                                for (p, name) in names {
+                                    if ui
+                                        .selectable_value(&mut self.settings.profile, p, name)
+                                        .changed()
+                                    {
+                                        commits.push(format!("Profil : {name}"));
+                                    }
+                                }
+                            })
+                            .response
+                            .accessible_name("Profil");
+                    });
+                    ui.add_space(4.0);
+                    let as_shot = self.photo.as_ref().map(|p| p.as_shot());
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Balance des blancs").color(theme::DIM));
+                        let current = match self.settings.white_balance {
+                            WhiteBalance::AsShot => "Telle quelle",
+                            WhiteBalance::Custom { temperature, tint } => WB_PRESETS
+                                .iter()
+                                .find(|p| p.1 == temperature && p.2 == tint)
+                                .map_or(self.wb_label, |p| p.0),
+                        };
+                        let mut choice: Option<&'static str> = None;
+                        egui::ComboBox::from_id_salt("balance")
+                            .selected_text(current)
+                            .show_ui(ui, |ui| {
+                                for name in ["Telle quelle", "Auto"]
+                                    .into_iter()
+                                    .chain(WB_PRESETS.iter().map(|p| p.0))
+                                {
+                                    if ui.selectable_label(current == name, name).clicked() {
+                                        choice = Some(name);
+                                    }
+                                }
+                            })
+                            .response
+                            .accessible_name("Balance des blancs");
+                        let picking = self.eyedropper;
+                        if ui
+                            .selectable_label(picking, "Pipette")
+                            .on_hover_text("W : cliquez un gris de la photo")
+                            .clicked()
+                        {
+                            self.eyedropper = !picking;
+                        }
+                        match choice {
+                            Some("Telle quelle") => {
+                                self.settings.white_balance = WhiteBalance::AsShot;
+                                commits.push("Balance : telle quelle".into());
+                            }
+                            Some("Auto") => {
+                                if let Some(photo) = &self.photo {
+                                    let t = photo.auto_white_balance();
+                                    self.settings.white_balance = WhiteBalance::Custom {
+                                        temperature: t.temperature,
+                                        tint: t.tint,
+                                    };
+                                    self.wb_label = "Auto";
+                                    commits.push("Balance : auto".into());
                                 }
                             }
-                        })
-                        .response
-                        .accessible_name("Balance des blancs");
-                    let picking = self.eyedropper;
-                    if ui
-                        .selectable_label(picking, "Pipette")
-                        .on_hover_text("W : cliquez un gris de la photo")
-                        .clicked()
-                    {
-                        self.eyedropper = !picking;
-                    }
-                    match choice {
-                        Some("Telle quelle") => {
-                            self.settings.white_balance = WhiteBalance::AsShot;
-                            commits.push("Balance : telle quelle".into());
-                        }
-                        Some("Auto") => {
-                            if let Some(photo) = &self.photo {
-                                let t = photo.auto_white_balance();
-                                self.settings.white_balance = WhiteBalance::Custom {
-                                    temperature: t.temperature,
-                                    tint: t.tint,
-                                };
-                                self.wb_label = "Auto";
-                                commits.push("Balance : auto".into());
+                            Some(name) => {
+                                if let Some(p) = WB_PRESETS.iter().find(|p| p.0 == name) {
+                                    self.settings.white_balance = WhiteBalance::Custom {
+                                        temperature: p.1,
+                                        tint: p.2,
+                                    };
+                                    commits.push(format!("Balance : {}", name.to_lowercase()));
+                                }
                             }
+                            None => {}
                         }
-                        Some(name) => {
-                            if let Some(p) = WB_PRESETS.iter().find(|p| p.0 == name) {
-                                self.settings.white_balance = WhiteBalance::Custom {
-                                    temperature: p.1,
-                                    tint: p.2,
-                                };
-                                commits.push(format!("Balance : {}", name.to_lowercase()));
-                            }
-                        }
-                        None => {}
-                    }
-                });
-                let (mut temperature, mut tint) = match (self.settings.white_balance, as_shot) {
-                    (WhiteBalance::Custom { temperature, tint }, _) => (temperature, tint),
-                    (WhiteBalance::AsShot, Some(t)) => (t.temperature, t.tint),
-                    (WhiteBalance::AsShot, None) => (5500.0, 0.0),
-                };
-                let default_t = as_shot.map_or(5500.0, |t| t.temperature.round());
-                let default_tint = as_shot.map_or(0.0, |t| t.tint.round());
-                let ts = SliderSpec {
-                    label: "Temp.",
-                    min: 2000.0,
-                    max: 50000.0,
-                    default: default_t,
-                    decimals: 0,
-                    track: Track::Gradient(&widgets::TEMPERATURE),
-                    log: true,
-                };
-                let tn = SliderSpec {
-                    label: "Teinte",
-                    min: -150.0,
-                    max: 150.0,
-                    default: default_tint,
-                    decimals: 0,
-                    track: Track::Gradient(&widgets::TINT),
-                    log: false,
-                };
-                let mut c = widgets::slider(ui, &ts, &mut temperature);
-                let c2 = widgets::slider(ui, &tn, &mut tint);
-                c.merge(c2);
-                if c.changed {
-                    self.wb_label = "Personnalisée";
-                    self.settings.white_balance = WhiteBalance::Custom { temperature, tint };
-                    self.touch();
-                }
-                if c.committed {
-                    commits.push(format!(
-                        "Balance : {} K, {}",
-                        format_value(temperature, 0, false),
-                        format_value(tint, 0, true)
-                    ));
-                }
-                sub_title(ui, "Tonalité");
-                let l = self.fields(ui, &TONE);
-                keep(l, &mut commits);
-                sub_title(ui, "Présence");
-                let l = self.fields(ui, &PRESENCE);
-                keep(l, &mut commits);
-            });
-
-        egui::CollapsingHeader::new(RichText::new("Courbe des tonalités").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                curve_preview(ui, &self.settings);
-                let l = self.fields(ui, &CURVE);
-                keep(l, &mut commits);
-            });
-
-        egui::CollapsingHeader::new(RichText::new("Mélangeur de couleurs").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    for (i, name) in ["Teinte", "Saturation", "Luminance"].iter().enumerate() {
-                        ui.selectable_value(&mut self.hsl_tab, i, *name);
-                    }
-                });
-                let kind = ["Teinte", "Saturation", "Luminance"][self.hsl_tab];
-                for (i, name) in HSL_NAMES.iter().enumerate() {
-                    let value = match self.hsl_tab {
-                        0 => &mut self.settings.hsl.hue[i],
-                        1 => &mut self.settings.hsl.saturation[i],
-                        _ => &mut self.settings.hsl.luminance[i],
+                    });
+                    let (mut temperature, mut tint) = match (self.settings.white_balance, as_shot) {
+                        (WhiteBalance::Custom { temperature, tint }, _) => (temperature, tint),
+                        (WhiteBalance::AsShot, Some(t)) => (t.temperature, t.tint),
+                        (WhiteBalance::AsShot, None) => (5500.0, 0.0),
                     };
-                    let colors: &'static [Color32] = hsl_track(self.hsl_tab, i);
-                    let spec = SliderSpec {
-                        label: name,
+                    let default_t = as_shot.map_or(5500.0, |t| t.temperature.round());
+                    let default_tint = as_shot.map_or(0.0, |t| t.tint.round());
+                    let ts = SliderSpec {
+                        label: "Temp.",
+                        min: 2000.0,
+                        max: 50000.0,
+                        default: default_t,
+                        decimals: 0,
+                        track: Track::Gradient(&widgets::TEMPERATURE),
+                        log: true,
+                    };
+                    let tn = SliderSpec {
+                        label: "Teinte",
+                        min: -150.0,
+                        max: 150.0,
+                        default: default_tint,
+                        decimals: 0,
+                        track: Track::Gradient(&widgets::TINT),
+                        log: false,
+                    };
+                    let mut c = widgets::slider(ui, &ts, &mut temperature);
+                    let c2 = widgets::slider(ui, &tn, &mut tint);
+                    c.merge(c2);
+                    if c.changed {
+                        self.wb_label = "Personnalisée";
+                        self.settings.white_balance = WhiteBalance::Custom { temperature, tint };
+                        self.touch();
+                    }
+                    if c.committed {
+                        commits.push(format!(
+                            "Balance : {} K, {}",
+                            format_value(temperature, 0, false),
+                            format_value(tint, 0, true)
+                        ));
+                    }
+                    sub_title(ui, "Tonalité");
+                    let l = self.fields(ui, &TONE);
+                    keep(l, &mut commits);
+                    sub_title(ui, "Présence");
+                    let l = self.fields(ui, &PRESENCE);
+                    keep(l, &mut commits);
+                });
+        }
+
+        if self.tool == Tool::Light {
+            egui::CollapsingHeader::new(RichText::new("Courbe des tonalités").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    curve_preview(ui, &self.settings);
+                    let l = self.fields(ui, &CURVE);
+                    keep(l, &mut commits);
+                });
+        }
+
+        if self.tool == Tool::Color {
+            egui::CollapsingHeader::new(RichText::new("Mélangeur de couleurs").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        for (i, name) in ["Teinte", "Saturation", "Luminance"].iter().enumerate() {
+                            ui.selectable_value(&mut self.hsl_tab, i, *name);
+                        }
+                    });
+                    let kind = ["Teinte", "Saturation", "Luminance"][self.hsl_tab];
+                    for (i, name) in HSL_NAMES.iter().enumerate() {
+                        let value = match self.hsl_tab {
+                            0 => &mut self.settings.hsl.hue[i],
+                            1 => &mut self.settings.hsl.saturation[i],
+                            _ => &mut self.settings.hsl.luminance[i],
+                        };
+                        let colors: &'static [Color32] = hsl_track(self.hsl_tab, i);
+                        let spec = SliderSpec {
+                            label: name,
+                            min: -100.0,
+                            max: 100.0,
+                            default: 0.0,
+                            decimals: 0,
+                            track: Track::Gradient(colors),
+                            log: false,
+                        };
+                        let c = widgets::slider(ui, &spec, value);
+                        let v = *value;
+                        if c.changed {
+                            self.touch();
+                        }
+                        if c.committed {
+                            commits.push(format!(
+                                "{kind} {} {}",
+                                name.to_lowercase(),
+                                format_value(v, 0, true)
+                            ));
+                        }
+                    }
+                });
+        }
+
+        if self.tool == Tool::Color {
+            egui::CollapsingHeader::new(RichText::new("Étalonnage des couleurs").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        for (i, name) in ["Ombres", "Tons moyens", "Hautes lum.", "Global"]
+                            .iter()
+                            .enumerate()
+                        {
+                            ui.selectable_value(&mut self.grading_tab, i, *name);
+                        }
+                    });
+                    let names = ["Ombres", "Tons moyens", "Hautes lumières", "Global"];
+                    let g = &mut self.settings.color_grading;
+                    let wheel = match self.grading_tab {
+                        0 => &mut g.shadows,
+                        1 => &mut g.midtones,
+                        2 => &mut g.highlights,
+                        _ => &mut g.global,
+                    };
+                    let mut c = Change::default();
+                    ui.vertical_centered(|ui| {
+                        c.merge(widgets::color_wheel(
+                            ui,
+                            names[self.grading_tab],
+                            &mut wheel.hue,
+                            &mut wheel.saturation,
+                            150.0,
+                        ));
+                    });
+                    let lum = SliderSpec {
+                        label: "Luminance",
                         min: -100.0,
                         max: 100.0,
                         default: 0.0,
                         decimals: 0,
-                        track: Track::Gradient(colors),
+                        track: Track::Plain,
                         log: false,
                     };
-                    let c = widgets::slider(ui, &spec, value);
-                    let v = *value;
+                    c.merge(widgets::slider(ui, &lum, &mut wheel.luminance));
+                    let (h, s, l) = (wheel.hue, wheel.saturation, wheel.luminance);
+                    let blend = SliderSpec {
+                        label: "Fusion",
+                        min: 0.0,
+                        max: 100.0,
+                        default: 50.0,
+                        decimals: 0,
+                        track: Track::Plain,
+                        log: false,
+                    };
+                    let balance = SliderSpec {
+                        label: "Balance",
+                        min: -100.0,
+                        max: 100.0,
+                        default: 0.0,
+                        decimals: 0,
+                        track: Track::Plain,
+                        log: false,
+                    };
+                    c.merge(widgets::slider(ui, &blend, &mut g.blending));
+                    c.merge(widgets::slider(ui, &balance, &mut g.balance));
                     if c.changed {
                         self.touch();
                     }
                     if c.committed {
                         commits.push(format!(
-                            "{kind} {} {}",
-                            name.to_lowercase(),
-                            format_value(v, 0, true)
+                            "Étalonnage {} : {h:.0}°, {s:.0}, {}",
+                            names[self.grading_tab].to_lowercase(),
+                            format_value(l, 0, true)
                         ));
                     }
-                }
-            });
+                });
+        }
 
-        egui::CollapsingHeader::new(RichText::new("Étalonnage des couleurs").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    for (i, name) in ["Ombres", "Tons moyens", "Hautes lum.", "Global"]
-                        .iter()
-                        .enumerate()
+        if self.tool == Tool::Detail {
+            egui::CollapsingHeader::new(RichText::new("Détail").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    sub_title(ui, "Accentuation");
+                    let l = self.fields(ui, &SHARPEN);
+                    keep(l, &mut commits);
+                    sub_title(ui, "Réduction du bruit");
+                    let l = self.fields(ui, &NOISE);
+                    keep(l, &mut commits);
+                });
+        }
+
+        if self.tool == Tool::Geometry {
+            egui::CollapsingHeader::new(RichText::new("Corrections de l'objectif").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    if ui
+                        .checkbox(
+                            &mut self.settings.lens.remove_ca,
+                            "Supprimer l'aberration chromatique",
+                        )
+                        .changed()
                     {
-                        ui.selectable_value(&mut self.grading_tab, i, *name);
+                        commits.push(if self.settings.lens.remove_ca {
+                            "Aberration chromatique supprimée".into()
+                        } else {
+                            "Aberration chromatique gardée".into()
+                        });
                     }
+                    let l = self.fields(ui, &LENS);
+                    keep(l, &mut commits);
                 });
-                let names = ["Ombres", "Tons moyens", "Hautes lumières", "Global"];
-                let g = &mut self.settings.color_grading;
-                let wheel = match self.grading_tab {
-                    0 => &mut g.shadows,
-                    1 => &mut g.midtones,
-                    2 => &mut g.highlights,
-                    _ => &mut g.global,
-                };
-                let mut c = Change::default();
-                ui.vertical_centered(|ui| {
-                    c.merge(widgets::color_wheel(
-                        ui,
-                        names[self.grading_tab],
-                        &mut wheel.hue,
-                        &mut wheel.saturation,
-                        150.0,
-                    ));
+        }
+
+        if self.tool == Tool::Geometry {
+            egui::CollapsingHeader::new(RichText::new("Transformation").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    let l = self.fields(ui, &TRANSFORM);
+                    keep(l, &mut commits);
                 });
-                let lum = SliderSpec {
-                    label: "Luminance",
-                    min: -100.0,
-                    max: 100.0,
-                    default: 0.0,
-                    decimals: 0,
-                    track: Track::Plain,
-                    log: false,
-                };
-                c.merge(widgets::slider(ui, &lum, &mut wheel.luminance));
-                let (h, s, l) = (wheel.hue, wheel.saturation, wheel.luminance);
-                let blend = SliderSpec {
-                    label: "Fusion",
-                    min: 0.0,
-                    max: 100.0,
-                    default: 50.0,
-                    decimals: 0,
-                    track: Track::Plain,
-                    log: false,
-                };
-                let balance = SliderSpec {
-                    label: "Balance",
-                    min: -100.0,
-                    max: 100.0,
-                    default: 0.0,
-                    decimals: 0,
-                    track: Track::Plain,
-                    log: false,
-                };
-                c.merge(widgets::slider(ui, &blend, &mut g.blending));
-                c.merge(widgets::slider(ui, &balance, &mut g.balance));
-                if c.changed {
-                    self.touch();
-                }
-                if c.committed {
-                    commits.push(format!(
-                        "Étalonnage {} : {h:.0}°, {s:.0}, {}",
-                        names[self.grading_tab].to_lowercase(),
-                        format_value(l, 0, true)
-                    ));
-                }
-            });
+        }
 
-        egui::CollapsingHeader::new(RichText::new("Détail").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                sub_title(ui, "Accentuation");
-                let l = self.fields(ui, &SHARPEN);
-                keep(l, &mut commits);
-                sub_title(ui, "Réduction du bruit");
-                let l = self.fields(ui, &NOISE);
-                keep(l, &mut commits);
-            });
-
-        egui::CollapsingHeader::new(RichText::new("Corrections de l'objectif").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                if ui
-                    .checkbox(
-                        &mut self.settings.lens.remove_ca,
-                        "Supprimer l'aberration chromatique",
-                    )
-                    .changed()
-                {
-                    commits.push(if self.settings.lens.remove_ca {
-                        "Aberration chromatique supprimée".into()
-                    } else {
-                        "Aberration chromatique gardée".into()
-                    });
-                }
-                let l = self.fields(ui, &LENS);
-                keep(l, &mut commits);
-            });
-
-        egui::CollapsingHeader::new(RichText::new("Transformation").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                let l = self.fields(ui, &TRANSFORM);
-                keep(l, &mut commits);
-            });
-
-        egui::CollapsingHeader::new(RichText::new("Effets").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                sub_title(ui, "Vignetage après recadrage");
-                let l = self.fields(ui, &VIGNETTE);
-                keep(l, &mut commits);
-                sub_title(ui, "Grain");
-                let l = self.fields(ui, &GRAIN);
-                keep(l, &mut commits);
-            });
-
-        egui::CollapsingHeader::new(RichText::new("Étalonnage de l'appareil photo").strong())
-            .default_open(false)
-            .show(ui, |ui| {
-                let l = self.fields(ui, &CALIBRATION);
-                keep(l, &mut commits);
-            });
-
-        let cropping = self.crop_tool.is_some();
-        egui::CollapsingHeader::new(RichText::new("Recadrage").strong())
-            .open(cropping.then_some(true))
-            .default_open(false)
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    let label = if cropping {
-                        "Terminer (R)"
-                    } else {
-                        "Outil Recadrage (R)"
-                    };
-                    if ui.selectable_label(cropping, label).clicked() {
-                        self.act("crop");
-                    }
-                    if ui.button("Réinitialiser").clicked() {
-                        self.settings.crop = Crop::default();
-                        commits.push("Recadrage réinitialisé".into());
-                    }
+        if self.tool == Tool::Detail {
+            egui::CollapsingHeader::new(RichText::new("Effets").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    sub_title(ui, "Vignetage après recadrage");
+                    let l = self.fields(ui, &VIGNETTE);
+                    keep(l, &mut commits);
+                    sub_title(ui, "Grain");
+                    let l = self.fields(ui, &GRAIN);
+                    keep(l, &mut commits);
                 });
-                if let Some(tool) = &mut self.crop_tool {
+        }
+
+        if self.tool == Tool::Color {
+            egui::CollapsingHeader::new(RichText::new("Étalonnage de l'appareil photo").strong())
+                .default_open(true)
+                .show(ui, |ui| {
+                    let l = self.fields(ui, &CALIBRATION);
+                    keep(l, &mut commits);
+                });
+        }
+
+        if self.tool == Tool::Geometry {
+            let cropping = self.crop_tool.is_some();
+            egui::CollapsingHeader::new(RichText::new("Recadrage").strong())
+                .open(cropping.then_some(true))
+                .default_open(true)
+                .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("Proportions").color(theme::DIM));
-                        let before = tool.aspect;
-                        egui::ComboBox::from_id_salt("proportions")
-                            .selected_text(crop::ASPECTS[tool.aspect].0)
-                            .show_ui(ui, |ui| {
-                                for (k, (name, _)) in crop::ASPECTS.iter().enumerate() {
-                                    ui.selectable_value(&mut tool.aspect, k, *name);
-                                }
-                            })
-                            .response
-                            .accessible_name("Proportions");
-                        if tool.aspect != before
-                            && let Some(photo) = &self.photo
-                        {
-                            let (w, h) = photo.full_size();
-                            crop::constrain(
-                                &mut self.settings.crop,
-                                crop::ASPECTS[tool.aspect].1,
-                                w as f32 / h as f32,
-                            );
-                            self.xmp_due = Some(0.0);
+                        let label = if cropping {
+                            "Terminer (R)"
+                        } else {
+                            "Outil Recadrage (R)"
+                        };
+                        if ui.selectable_label(cropping, label).clicked() {
+                            self.act("crop");
+                        }
+                        if ui.button("Réinitialiser").clicked() {
+                            self.settings.crop = Crop::default();
+                            commits.push("Recadrage réinitialisé".into());
                         }
                     });
-                }
-                let angle = SliderSpec {
-                    label: "Angle",
-                    min: -45.0,
-                    max: 45.0,
-                    default: 0.0,
-                    decimals: 1,
-                    track: Track::Plain,
-                    log: false,
-                };
-                let c = widgets::slider(ui, &angle, &mut self.settings.crop.angle);
-                if c.changed {
-                    self.touch();
-                }
-                if c.committed {
-                    commits.push(format!(
-                        "Angle {}",
-                        format_value(self.settings.crop.angle, 1, true)
-                    ));
-                }
-            });
+                    if let Some(tool) = &mut self.crop_tool {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new("Proportions").color(theme::DIM));
+                            let before = tool.aspect;
+                            egui::ComboBox::from_id_salt("proportions")
+                                .selected_text(crop::ASPECTS[tool.aspect].0)
+                                .show_ui(ui, |ui| {
+                                    for (k, (name, _)) in crop::ASPECTS.iter().enumerate() {
+                                        ui.selectable_value(&mut tool.aspect, k, *name);
+                                    }
+                                })
+                                .response
+                                .accessible_name("Proportions");
+                            if tool.aspect != before
+                                && let Some(photo) = &self.photo
+                            {
+                                let (w, h) = photo.full_size();
+                                crop::constrain(
+                                    &mut self.settings.crop,
+                                    crop::ASPECTS[tool.aspect].1,
+                                    w as f32 / h as f32,
+                                );
+                                self.xmp_due = Some(0.0);
+                            }
+                        });
+                    }
+                    let angle = SliderSpec {
+                        label: "Angle",
+                        min: -45.0,
+                        max: 45.0,
+                        default: 0.0,
+                        decimals: 1,
+                        track: Track::Plain,
+                        log: false,
+                    };
+                    let c = widgets::slider(ui, &angle, &mut self.settings.crop.angle);
+                    if c.changed {
+                        self.touch();
+                    }
+                    if c.committed {
+                        commits.push(format!(
+                            "Angle {}",
+                            format_value(self.settings.crop.angle, 1, true)
+                        ));
+                    }
+                });
+        }
 
+        if self.tool == Tool::Light {
+            ui.add_space(8.0);
+            self.history_panel(ui);
+        }
         for label in commits {
             self.touch();
             self.commit(label);
@@ -2328,6 +2910,82 @@ fn curve_preview(ui: &mut Ui, s: &Settings) {
         points,
         egui::Stroke::new(1.5, Color32::from_gray(0xe0)),
     ));
+}
+
+/// Un bouton icône (et texte), sans cadre lourd.
+fn icon_button(ui: &mut Ui, icon: Icon, label: &str, active: bool) -> egui::Response {
+    let galley = (!label.is_empty()).then(|| {
+        ui.painter().layout_no_wrap(
+            label.to_owned(),
+            egui::FontId::proportional(13.0),
+            theme::TEXT,
+        )
+    });
+    let w = 30.0 + galley.as_ref().map_or(0.0, |g| g.size().x + 8.0);
+    let (rect, r) = ui.allocate_exact_size(vec2(w, 30.0), egui::Sense::click());
+    let p = ui.painter();
+    if r.hovered() || active {
+        p.rect_filled(rect, 10.0, theme::SECTION);
+    }
+    icons::paint(
+        p,
+        icon,
+        Rect::from_min_size(rect.min + vec2(7.0, 7.0), vec2(16.0, 16.0)),
+        if active { theme::ACCENT } else { theme::TEXT },
+    );
+    if let Some(g) = galley {
+        p.galley(
+            pos2(rect.min.x + 30.0, rect.center().y - g.size().y / 2.0),
+            g,
+            theme::TEXT,
+        );
+    }
+    r
+}
+
+/// Un grand choix illustré (Empilement / Panorama, masques).
+fn big_choice(ui: &mut Ui, icon: Icon, label: &str, active: bool) -> egui::Response {
+    let (rect, r) = ui.allocate_exact_size(vec2(96.0, 74.0), egui::Sense::click());
+    let p = ui.painter();
+    p.rect_filled(
+        rect,
+        14.0,
+        if active {
+            Color32::from_rgb(0x2a, 0x24, 0x1a)
+        } else {
+            theme::SECTION
+        },
+    );
+    if active {
+        p.rect_stroke(
+            rect,
+            14.0,
+            egui::Stroke::new(1.5, theme::ACCENT),
+            egui::StrokeKind::Inside,
+        );
+    } else if r.hovered() {
+        p.rect_stroke(
+            rect,
+            14.0,
+            egui::Stroke::new(1.0, theme::DIM),
+            egui::StrokeKind::Inside,
+        );
+    }
+    let color = if active { theme::ACCENT } else { theme::TEXT };
+    icons::paint(
+        p,
+        icon,
+        Rect::from_center_size(rect.center() - vec2(0.0, 10.0), vec2(30.0, 30.0)),
+        color,
+    );
+    p.text(
+        pos2(rect.center().x, rect.max.y - 10.0),
+        egui::Align2::CENTER_BOTTOM,
+        label,
+        egui::FontId::proportional(12.5),
+        color,
+    );
+    r
 }
 
 /// Les étoiles et le drapeau en bas d'une vignette.

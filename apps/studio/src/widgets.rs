@@ -6,17 +6,21 @@ use egui::{
     Color32, Mesh, Pos2, Rect, Response, Sense, Shape, Stroke, StrokeKind, Ui, Vec2, pos2, vec2,
 };
 
-/// Les couleurs de l'interface : gris neutres (la photo est la seule couleur à l'écran)
-/// et l'accent spectral de LÜMA, réservé à ce qui est actif.
+/// Les couleurs de LÜMA : une encre profonde sous la photo, des îlots de verre fumé
+/// qui flottent dessus, et l'anneau spectral de l'icône réservé à ce qui est actif.
 pub mod theme {
     use egui::Color32;
-    pub const BACKGROUND: Color32 = Color32::from_rgb(0x11, 0x11, 0x13);
-    pub const PANEL: Color32 = Color32::from_rgb(0x1d, 0x1d, 0x20);
-    pub const SECTION: Color32 = Color32::from_rgb(0x26, 0x26, 0x2a);
-    pub const TRACK: Color32 = Color32::from_rgb(0x52, 0x52, 0x58);
-    pub const TEXT: Color32 = Color32::from_rgb(0xc9, 0xc9, 0xcf);
-    pub const DIM: Color32 = Color32::from_rgb(0x82, 0x82, 0x8a);
-    pub const ACCENT: Color32 = Color32::from_rgb(0xff, 0xcf, 0x4a);
+    /// Le fond, sous la photo.
+    pub const BACKGROUND: Color32 = Color32::from_rgb(0x0b, 0x0c, 0x10);
+    /// Les îlots (verre fumé, presque opaque).
+    pub const PANEL: Color32 = Color32::from_rgba_premultiplied(0x15, 0x16, 0x1d, 0xf0);
+    pub const GLASS_EDGE: Color32 = Color32::from_rgba_premultiplied(0x2a, 0x2b, 0x36, 0x60);
+    pub const SECTION: Color32 = Color32::from_rgb(0x20, 0x22, 0x2c);
+    pub const TRACK: Color32 = Color32::from_rgb(0x3b, 0x3d, 0x4a);
+    pub const TEXT: Color32 = Color32::from_rgb(0xec, 0xe8, 0xe1);
+    pub const DIM: Color32 = Color32::from_rgb(0x8d, 0x8c, 0x98);
+    /// L'ambre de LÜMA : poignées, valeurs actives.
+    pub const ACCENT: Color32 = Color32::from_rgb(0xff, 0xb5, 0x47);
     pub const SPECTRUM: [Color32; 5] = [
         Color32::from_rgb(0xff, 0x6b, 0x3d),
         Color32::from_rgb(0xff, 0xcf, 0x4a),
@@ -24,6 +28,25 @@ pub mod theme {
         Color32::from_rgb(0x4a, 0xa8, 0xff),
         Color32::from_rgb(0x8b, 0x7b, 0xff),
     ];
+}
+
+/// L'anneau spectral de LÜMA (la teinte fait le tour), de rayon `radius`.
+pub fn spectral_ring(painter: &egui::Painter, center: Pos2, radius: f32, width: f32, alpha: f32) {
+    let n = 72;
+    let mut mesh = Mesh::default();
+    for k in 0..=n {
+        let a = k as f32 / n as f32 * std::f32::consts::TAU;
+        let color = hue_color(a.to_degrees() + 200.0, 0.62, 1.0).gamma_multiply(alpha);
+        let d = vec2(a.cos(), a.sin());
+        mesh.colored_vertex(center + d * (radius - width / 2.0), color);
+        mesh.colored_vertex(center + d * (radius + width / 2.0), color);
+        if k > 0 {
+            let i = (k * 2) as u32;
+            mesh.add_triangle(i - 2, i - 1, i);
+            mesh.add_triangle(i - 1, i, i + 1);
+        }
+    }
+    painter.add(Shape::mesh(mesh));
 }
 
 /// Une couleur de la roue chromatique (teinte en degrés, TSV pleine saturation).

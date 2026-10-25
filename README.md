@@ -83,16 +83,29 @@ CI sur un Mac Apple Silicon de GitHub (GPU virtualisé) :
 
 ## LÜMA Studio, l'app Mac
 
-![LÜMA Studio, module Développement](docs/studio.jpg)
+![LÜMA Studio](docs/studio.jpg)
 
-`apps/studio` : l'application de développement, en Rust (egui, rendu wgpu sur Metal).
-Deux modules, comme dans Lightroom Classic. **Bibliothèque** : grille du dossier, notes
-de 0 à 5 étoiles, drapeaux retenue / rejetée, filtre appliqué aussi au film, métadonnées
-EXIF. **Développement** : navigateur et historique à gauche,
-histogramme et panneaux Base, Courbe des tonalités, Mélangeur de couleurs, Étalonnage
-des couleurs, Détail, Effets, Étalonnage de l'appareil photo et Recadrage à droite, film
-du dossier en bas. Les réglages sont enregistrés automatiquement dans un XMP au format
-Lightroom à côté du RAW, qui n'est jamais modifié.
+`apps/studio` : l'application, en Rust (egui, rendu wgpu sur Metal). Une interface qui
+ne ressemble à aucune autre : la photo occupe tout l'écran, les outils flottent dessus
+dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil actif.
+
+- **Rail des outils** : Bibliothèque (grille, notes, drapeaux, filtre), Lumière
+  (profil, balance des blancs, tonalité, courbe, historique), Couleur (mélangeur,
+  étalonnage, calibration), Détail (netteté, bruit, vignetage, grain), Masques (radial
+  ⭕, linéaire ☰, pinceau), Films (pellicules et looks avec aperçu sur la photo et
+  intensité), Géométrie (recadrage, objectif, perspective), Fusion.
+- **Fusion** : choisir les photos dans le film (⌘‑clic, Maj‑clic), puis
+  - *Empilement* : moyenne (moins de bruit), médiane (ce qui bouge disparaît), maximum
+    (filé d'étoiles, traînées lumineuses), **étoiles** (alignement sur le ciel qui
+    tourne, rejet des satellites et avions) ;
+  - *Panorama* : perspective, cylindrique ou sphérique, exposition compensée, fondu.
+  Le résultat est un **DNG** (un vrai RAW) ; le **rognage automatique** est proposé
+  comme un recadrage ordinaire, qu'on garde, modifie ou retire.
+- **Films** : Portra 400, Ektar 100, Gold 200, Velvia 50, Provia 100F, Pro 400H,
+  Superia 400, CineStill 800T, Kodachrome 64, Ektachrome E100, Tri‑X 400, HP5 Plus,
+  Delta 100, Acros 100 (interprétations), et des looks créatifs.
+- Les réglages sont enregistrés automatiquement dans un XMP au format Lightroom à côté
+  du RAW, qui n'est jamais modifié.
 
 | Raccourci | Action |
 |---|---|
