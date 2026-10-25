@@ -30,6 +30,7 @@ use luma_color::{self as lc, EncodeLut, Mat3, OutputSpace, luminance};
 use luma_core::{Cancel, Result, RgbImage, Timings};
 use luma_project::Settings;
 use rayon::prelude::*;
+use std::sync::Arc;
 
 use crate::curve::{Filmic, Lut};
 
@@ -53,7 +54,14 @@ pub struct Input {
 /// Développe `cam` (RGB caméra linéaire, déjà orientée et recadrée).
 pub fn develop(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
     let base = develop_base(cam, input, s, cancel, t)?;
-    finish_layers(&base, input.scale, s, cancel, t)
+    finish_layers(
+        &base,
+        input.scale,
+        s,
+        &mut |look, t| develop_base(cam, input, look, cancel, t).map(Arc::new),
+        cancel,
+        t,
+    )
 }
 
 /// Les étapes de voisinage du début (entrée, bruit, tonalité locale) : leur résultat
@@ -145,13 +153,40 @@ pub fn look_layers(s: &Settings) -> Vec<(&luma_project::Mask, Settings, f32)> {
         .collect()
 }
 
-/// [`finish`], puis les films des masques : chacun est rendu à partir de la même base
-/// et fondu, dans l'ordre des masques, selon leur zone et l'intensité du film.
-pub fn finish_layers(base: &RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
+/// Le film d'un masque a‑t‑il besoin de sa propre base ? Oui s'il change un réglage
+/// des étapes de voisinage (hautes lumières, ombres, clarté, texture, correction du
+/// voile) : il est alors complet dans sa zone, comme posé sur toute la photo.
+pub fn needs_own_base(s: &Settings, look: &Settings) -> bool {
+    base_key(look) != base_key(s)
+}
+
+/// [`finish`], puis les films des masques, fondus dans l'ordre des masques selon leur
+/// zone et l'intensité du film. Chaque film part de la même base, sauf s'il touche aux
+/// étapes de voisinage ([`needs_own_base`]) : `base_for` donne alors la base de ses
+/// réglages (développée, ou prise dans un cache).
+pub fn finish_layers(
+    base: &RgbImage,
+    scale: f32,
+    s: &Settings,
+    base_for: &mut dyn FnMut(&Settings, &mut Timings) -> Result<Arc<RgbImage>>,
+    cancel: &Cancel,
+    t: &mut Timings,
+) -> Result<RgbImage> {
     let mut out = base.clone();
     finish(&mut out, scale, s, cancel, t)?;
     for (mask, look, k) in look_layers(s) {
-        let mut alt = base.clone();
+        let mut alt = if needs_own_base(s, &look) {
+            let own = base_for(&look, t)?;
+            // Même recadrage, même taille : sinon (ne devrait pas arriver), la base commune.
+            if (own.width, own.height) == (base.width, base.height) {
+                Arc::unwrap_or_clone(own)
+            } else {
+                base.clone()
+            }
+        } else {
+            base.clone()
+        };
+        cancel.check()?;
         finish(&mut alt, scale, &look, cancel, t)?;
         let weights = t.time("films des masques", || local::weights(mask, out.width, out.height));
         out.data
@@ -328,37 +363,48 @@ mod tests {
     #[test]
     fn mask_films_stack_where_their_masks_are() {
         use luma_project::{Look, Mask, Shape};
-        let base = RgbImage::from_fn(40, 30, |x, _| [0.05 + x as f32 * 0.01, 0.12, 0.06]);
+        let cam = RgbImage::from_fn(40, 30, |x, y| [0.02 + x as f32 * 0.012, 0.12 - y as f32 * 0.003, 0.06]);
         let mut t = Timings::default();
         let cancel = Cancel::new();
-        let tri_x = luma_project::presets::find("Tri-X 400").unwrap();
+        let with_film = |name: &str, mut mask: Mask| {
+            let mut s = Settings::default();
+            mask.look = Some(Look {
+                name: name.into(),
+                amount: 100.0,
+            });
+            s.masks.push(mask);
+            s
+        };
 
-        // Un film sur toute l'image à 100 % = ce film appliqué globalement.
-        let mut s = Settings::default();
-        let mut full = Mask::full();
-        full.look = Some(Look {
-            name: "Tri-X 400".into(),
-            amount: 100.0,
-        });
-        s.masks.push(full);
-        let layered = finish_layers(&base, 1.0, &s, &cancel, &mut t).unwrap();
-        let mut direct = base.clone();
-        finish(
-            &mut direct,
-            1.0,
-            &tri_x.applied(&Settings::default(), 1.0),
-            &cancel,
-            &mut t,
-        )
-        .unwrap();
-        for (a, b) in layered.data.iter().zip(&direct.data) {
-            for c in 0..3 {
-                assert!((a[c] - b[c]).abs() < 1e-5);
+        // Un film sur toute l'image à 100 % = ce film appliqué globalement, y compris ses
+        // hautes lumières, ses ombres et sa clarté (Tri-X : clarté ; Haute clé : ombres).
+        for name in ["Tri-X 400", "Haute clé", "Portra 400"] {
+            let film = luma_project::presets::find(name).unwrap();
+            let s = with_film(name, Mask::full());
+            let layered = develop(&cam, &gray_input(), &s, &cancel, &mut t).unwrap();
+            let global = film.applied(&Settings::default(), 1.0);
+            let direct = develop(&cam, &gray_input(), &global, &cancel, &mut t).unwrap();
+            for (a, b) in layered.data.iter().zip(&direct.data) {
+                for c in 0..3 {
+                    assert!((a[c] - b[c]).abs() < 1e-5, "{name}");
+                }
             }
+            assert!(needs_own_base(&s, &global), "{name}");
         }
+        // Les ombres de Haute clé agissent bien dans la zone : le film rendu depuis la
+        // base commune (sans ses ombres) est plus sombre.
+        let s = with_film("Haute clé", Mask::full());
+        let base = develop_base(&cam, &gray_input(), &s, &cancel, &mut t).unwrap();
+        let mut shared = base.clone();
+        let global = luma_project::presets::find("Haute clé")
+            .unwrap()
+            .applied(&Settings::default(), 1.0);
+        finish(&mut shared, 1.0, &global, &cancel, &mut t).unwrap();
+        let layered = develop(&cam, &gray_input(), &s, &cancel, &mut t).unwrap();
+        let lum = |img: &RgbImage| img.data.iter().map(|p| luminance(*p)).sum::<f32>();
+        assert!(lum(&layered) > lum(&shared) * 1.02);
 
         // Dans un cercle seulement : le centre est en noir et blanc, le coin en couleur.
-        let mut s = Settings::default();
         let mut radial = Mask::radial();
         radial.shape = Shape::Radial {
             center: (0.5, 0.5),
@@ -366,12 +412,8 @@ mod tests {
             angle: 0.0,
             feather: 0.0,
         };
-        radial.look = Some(Look {
-            name: "Tri-X 400".into(),
-            amount: 100.0,
-        });
-        s.masks.push(radial);
-        let out = finish_layers(&base, 1.0, &s, &cancel, &mut t).unwrap();
+        let s = with_film("Tri-X 400", radial);
+        let out = develop(&cam, &gray_input(), &s, &cancel, &mut t).unwrap();
         let center = out.data[15 * 40 + 20];
         let corner = out.data[0];
         assert!(
@@ -379,7 +421,7 @@ mod tests {
             "{center:?}"
         );
         assert!((corner[1] - corner[0]).abs() > 0.01, "{corner:?}");
-        // La base (cache) ne dépend pas des films des masques.
+        // La base de la photo ne dépend pas des films des masques.
         assert_eq!(base_key(&s), base_key(&Settings::default()));
     }
 

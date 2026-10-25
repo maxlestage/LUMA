@@ -49,8 +49,10 @@ pub struct Base {
 
 /// Une photo ouverte dans le moteur.
 pub struct Photo {
-    /// La dernière base : taille, clé ([`luma_image::base_key`]) et image.
-    base: Mutex<Option<(Size, Settings, Base)>>,
+    /// Les dernières bases (la plus récente en tête) : taille, clé
+    /// ([`luma_image::base_key`]) et image. Plusieurs : celle de la photo et celles des
+    /// films de masques qui ont leurs propres hautes lumières, ombres ou clarté.
+    bases: Mutex<Vec<(Size, Settings, Base)>>,
     raw: RawPhoto,
     /// Images caméra orientées, par taille. Bornées : au plus [`CACHE`] tailles.
     sources: Mutex<Vec<(Size, Arc<RgbImage>)>>,
@@ -62,6 +64,9 @@ pub struct Photo {
 
 const CACHE: usize = 3;
 
+/// Bases gardées : la photo et jusqu'à trois films de masques.
+const BASES: usize = 4;
+
 impl Photo {
     pub fn open(path: impl AsRef<Path>) -> Result<Photo> {
         Ok(Self::new(RawPhoto::open(path)?))
@@ -69,7 +74,7 @@ impl Photo {
 
     pub fn new(raw: RawPhoto) -> Photo {
         Photo {
-            base: Mutex::new(None),
+            bases: Mutex::new(Vec::new()),
             ca: Mutex::new(None),
             raw,
             sources: Mutex::new(Vec::new()),
@@ -149,7 +154,14 @@ impl Photo {
     pub fn render(&self, settings: &Settings, size: Size, cancel: &Cancel) -> Result<Rendered> {
         let mut timings = Timings::default();
         let base = self.base(settings, size, cancel, &mut timings)?;
-        let image = luma_image::finish_layers(&base.image, base.scale, settings, cancel, &mut timings)?;
+        let image = luma_image::finish_layers(
+            &base.image,
+            base.scale,
+            settings,
+            &mut |look, t| self.base(look, size, cancel, t).map(|b| b.image),
+            cancel,
+            &mut timings,
+        )?;
         Ok(Rendered { image, timings })
     }
 
@@ -230,11 +242,14 @@ impl Photo {
     pub fn base(&self, settings: &Settings, size: Size, cancel: &Cancel, timings: &mut Timings) -> Result<Base> {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let key = luma_image::base_key(settings);
-        if let Some((s, k, b)) = &*self.base.lock().expect("base")
-            && *s == size
-            && *k == key
         {
-            return Ok(b.clone());
+            let mut bases = self.bases.lock().expect("bases");
+            if let Some(i) = bases.iter().position(|(s, k, _)| *s == size && *k == key) {
+                let hit = bases.remove(i);
+                let b = hit.2.clone();
+                bases.insert(0, hit);
+                return Ok(b);
+            }
         }
         let source = self.source(size, timings);
         cancel.check()?;
@@ -265,7 +280,11 @@ impl Photo {
         // Pleine définition (export) : trop gros pour être gardé ; les petits rendus
         // (vignettes, aperçus des préréglages) ne chassent pas la base de l'aperçu.
         if !matches!(size, Size::Full | Size::Fit(..=400)) {
-            *self.base.lock().expect("base") = Some((size, key, base.clone()));
+            let mut bases = self.bases.lock().expect("bases");
+            // Une seule taille d'aperçu à la fois : les bases d'une autre taille partent.
+            bases.retain(|(s, _, _)| *s == size);
+            bases.insert(0, (size, key, base.clone()));
+            bases.truncate(BASES);
         }
         Ok(base)
     }
@@ -333,6 +352,34 @@ mod tests {
         };
         let direct = luma_image::develop(&source, &input, &s, &Cancel::new(), &mut t).unwrap();
         assert_eq!(cached.data, direct.data);
+    }
+
+    #[test]
+    fn mask_films_with_their_own_tones_keep_their_base_in_cache() {
+        use luma_project::{Look, Mask};
+        let p = photo();
+        let mut s = Settings::default();
+        let mut m = Mask::full();
+        m.look = Some(Look {
+            name: "Haute clé".into(),
+            amount: 100.0,
+        });
+        s.masks.push(m);
+        let size = Size::Fit(600);
+        let layered = p.render(&s, size, &Cancel::new()).unwrap();
+        // Le film est complet (ses ombres comprises), comme posé sur toute la photo.
+        let global = luma_project::presets::find("Haute clé")
+            .unwrap()
+            .applied(&Settings::default(), 1.0);
+        let direct = p.render(&global, size, &Cancel::new()).unwrap();
+        assert_eq!(layered.image.data, direct.image.data);
+        // La base de la photo et celle du film restent en cache : rien n'est redéveloppé.
+        let again = p.render(&s, size, &Cancel::new()).unwrap();
+        assert!(
+            again.timings.steps.iter().all(|(name, _)| *name != "entrée"),
+            "{:?}",
+            again.timings.steps
+        );
     }
 
     #[test]
