@@ -36,24 +36,68 @@ fn main() -> eframe::Result {
             .then(luma_studio::dialogs::documents)
             .flatten()
     });
-    let viewport = egui::ViewportBuilder::default()
+    journal("démarrage");
+    let mut viewport = egui::ViewportBuilder::default()
         .with_title("LÜMA")
-        .with_inner_size([1440.0, 900.0])
-        .with_min_inner_size([1024.0, 640.0])
         .with_drag_and_drop(true);
+    if !cfg!(target_os = "ios") {
+        viewport = viewport
+            .with_inner_size([1440.0, 900.0])
+            .with_min_inner_size([1024.0, 640.0]);
+    }
+    // Le GPU : on demande ce que l'adaptateur offre vraiment, pas les limites par
+    // défaut de wgpu (que le Metal du simulateur iOS, par exemple, n'atteint pas).
+    let mut setup = eframe::egui_wgpu::WgpuSetupCreateNew::without_display_handle();
+    setup.device_descriptor = std::sync::Arc::new(|adapter| {
+        journal(&format!(
+            "GPU : {} ({:?})",
+            adapter.get_info().name,
+            adapter.get_info().backend
+        ));
+        wgpu::DeviceDescriptor {
+            label: Some("LÜMA"),
+            required_limits: adapter.limits(),
+            ..Default::default()
+        }
+    });
     let options = eframe::NativeOptions {
         viewport,
+        wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
+            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(setup),
+            ..Default::default()
+        },
         ..Default::default()
     };
-    eframe::run_native(
+    let result = eframe::run_native(
         "LÜMA",
         options,
         Box::new(move |cc| {
+            journal("interface créée");
             let mut studio = Studio::new(&cc.egui_ctx);
             if let Some(path) = &arg {
                 studio.open_path(path);
             }
             Ok(Box::new(App(studio)))
         }),
-    )
+    );
+    journal(&format!("fin : {result:?}"));
+    result
+}
+
+/// Le journal de démarrage : sur la sortie d'erreur, et sur iPhone et iPad dans
+/// `Documents/LÜMA-journal.txt` (lisible dans l'app Fichiers).
+fn journal(message: &str) {
+    eprintln!("LÜMA : {message}");
+    if cfg!(target_os = "ios")
+        && let Some(dir) = luma_studio::dialogs::documents()
+    {
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dir.join("LÜMA-journal.txt"))
+        {
+            let _ = writeln!(f, "{message}");
+        }
+    }
 }
