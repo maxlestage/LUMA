@@ -37,12 +37,43 @@ pub enum Event {
         size: [usize; 2],
         rgba: Vec<u8>,
     },
+    /// L'avancement d'une fusion (empilement, panorama).
+    MergeProgress {
+        fraction: f32,
+        label: String,
+    },
+    /// La fusion est enregistrée (son DNG) ou a échoué.
+    Merged {
+        result: Result<PathBuf, String>,
+    },
+    /// L'aperçu d'un préréglage sur la photo affichée.
+    Preview {
+        tag: u64,
+        index: usize,
+        size: [usize; 2],
+        rgba: Vec<u8>,
+    },
     /// Une photo de l'export est écrite (ou a échoué) : `done` sur `total`.
     Exported {
         done: usize,
         total: usize,
         result: Result<PathBuf, String>,
     },
+}
+
+/// Ce qu'on fusionne.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum MergeKind {
+    Stack(luma_merge::StackMode, bool),
+    Panorama(luma_merge::Projection),
+}
+
+/// Une fusion à faire : les RAW, le type, le rognage automatique, la taille.
+pub struct MergeJob {
+    pub paths: Vec<PathBuf>,
+    pub kind: MergeKind,
+    pub auto_crop: bool,
+    pub full_size: bool,
 }
 
 /// Le format de fichier de l'export.
@@ -290,6 +321,89 @@ impl Worker {
 
     pub fn thumbnail(&self, path: PathBuf) {
         let _ = self.thumbs.send(path);
+    }
+
+    /// Fusionne des RAW en un DNG, à côté du premier.
+    pub fn merge(&self, job: MergeJob, cancel: Cancel) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-fusion".into())
+            .spawn(move || {
+                let progress_sender = sender.clone();
+                let progress_repaint = repaint.clone();
+                let last = Mutex::new(Instant::now());
+                let progress = move |fraction: f32, label: &str| {
+                    // Au plus vingt nouvelles par seconde.
+                    let mut l = last.lock().expect("avancement");
+                    if l.elapsed().as_millis() > 50 || fraction >= 1.0 {
+                        *l = Instant::now();
+                        let _ = progress_sender.send(Event::MergeProgress {
+                            fraction,
+                            label: label.to_owned(),
+                        });
+                        progress_repaint();
+                    }
+                };
+                let result = (|| -> Result<PathBuf, String> {
+                    let size = if job.full_size {
+                        Size::Full
+                    } else {
+                        Size::Fit(2048)
+                    };
+                    let frames = luma_merge::RawFiles {
+                        paths: job.paths.clone(),
+                        size,
+                    };
+                    let (merged, suffix) = match job.kind {
+                        MergeKind::Stack(mode, align) => (
+                            luma_merge::stack(&frames, mode, align, &progress, &cancel)
+                                .map_err(|e| e.to_string())?,
+                            match mode {
+                                luma_merge::StackMode::Stars => "Etoiles",
+                                luma_merge::StackMode::Median => "Mediane",
+                                luma_merge::StackMode::Maximum => "Maximum",
+                                luma_merge::StackMode::Mean => "Empilement",
+                            },
+                        ),
+                        MergeKind::Panorama(p) => (
+                            luma_merge::panorama(&frames, p, &progress, &cancel)
+                                .map_err(|e| e.to_string())?,
+                            "Pano",
+                        ),
+                    };
+                    let reference = &job.paths[job.paths.len() / 2];
+                    let template =
+                        luma_raw::RawPhoto::open(reference).map_err(|e| e.to_string())?;
+                    let out = luma_merge::output_path(&job.paths[0], suffix);
+                    merged
+                        .save(&out, &template, job.auto_crop)
+                        .map_err(|e| e.to_string())?;
+                    Ok(out)
+                })();
+                let _ = sender.send(Event::Merged { result });
+                repaint();
+            })
+            .expect("fil de fusion");
+    }
+
+    /// Les aperçus des préréglages (petits rendus), dans l'ordre.
+    pub fn previews(&self, photo: Arc<Photo>, settings: Vec<Settings>, tag: u64) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::spawn(move || {
+            for (index, s) in settings.iter().enumerate() {
+                let Ok(r) = photo.render(s, Size::Fit(240), &Cancel::new()) else {
+                    continue;
+                };
+                let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
+                let _ = sender.send(Event::Preview {
+                    tag,
+                    index,
+                    size: [r.image.width, r.image.height],
+                    rgba: to_rgba(&rgb, false),
+                });
+                repaint();
+            }
+        });
     }
 
     /// Exporte les photos l'une après l'autre, en arrière-plan.
