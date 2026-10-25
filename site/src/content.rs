@@ -306,7 +306,7 @@ pub const PERF: [Perf; 4] = [
     Perf {
         name: "Aperçu après réglage",
         unit: "ms",
-        mac: 6.2,
+        mac: 6.8,
         decimals: 1,
         mac_target: 100,
         phone_target: 150,
@@ -315,16 +315,16 @@ pub const PERF: [Perf; 4] = [
     Perf {
         name: "Ouverture d'une photo",
         unit: "ms",
-        mac: 547.0,
+        mac: 244.0,
         decimals: 0,
         mac_target: 500,
         phone_target: 800,
-        note: Some(("La première fois, depuis le RAW : {v} ms.", 547.0)),
+        note: Some(("La première fois, depuis le RAW : {v} ms.", 513.0)),
     },
     Perf {
         name: "Vignette",
         unit: "ms",
-        mac: 210.0,
+        mac: 450.0,
         decimals: 0,
         mac_target: 150,
         phone_target: 250,
@@ -337,7 +337,7 @@ pub const PERF: [Perf; 4] = [
         decimals: 0,
         mac_target: 500,
         phone_target: 300,
-        note: Some(("Depuis le RAW, sans doublon : {v} Mo.", 157.0)),
+        note: Some(("Depuis le RAW, sans doublon : {v} Mo.", 163.0)),
     },
 ];
 
