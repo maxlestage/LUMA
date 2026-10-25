@@ -66,6 +66,17 @@ un niveau d'écart sur 255, vérifié à chaque push sur Metal et sur Vulkan). L
 publie le temps de finition mesuré sur Metal ; l'app affiche « GPU » à côté du temps de
 rendu. `LUMA_GPU=0` force le processeur.
 
+Finition d'un aperçu 2048 px quand on règle une couleur ou le contraste, mesurée par la
+CI sur un Mac Apple Silicon de GitHub (GPU virtualisé) :
+
+| Boîtier | Processeur | GPU (Metal) |
+|---|---|---|
+| Sony A7 III (ARW) | 130 ms | 8,4 ms |
+| Canon EOS R5 (CR3) | 151 ms | 7,7 ms |
+| Nikon Z 6 (NEF) | 100 ms | 7,0 ms |
+| Fujifilm X‑T3 (RAF) | 104 ms | 7,2 ms |
+| iPhone 12 Pro (ProRAW) | 228 ms | 9,4 ms |
+
 « Lourds » : Hautes lumières, Ombres, Clarté, Texture, Voile, Vibrance, mélangeur,
 étalonnage, réduction du bruit, vignetage, tous actifs. L'objectif est un aperçu sous
 100 ms (P95) sur Mac Apple Silicon ; la CI publie ces mesures à chaque push.
@@ -109,6 +120,14 @@ La CI (`.github/workflows/macos.yml`) compile et teste l'app sur Apple Silicon e
 est signée « ad hoc » : au premier lancement, clic droit → Ouvrir. Un test rend toute
 l'interface sans écran avec un vrai RAW et vérifie que chaque contrôle a un nom pour
 VoiceOver.
+
+## Sur iPhone et iPad
+
+La même app, compilée pour iOS (`scripts/bundle-ios.sh sim|device`) : sur un écran étroit,
+la photo occupe le haut et les panneaux le bas. Les RAW arrivent par l'app Fichiers (Sur
+mon iPhone › LÜMA) ; l'app s'ouvre sur ce dossier. La CI lance l'app dans le simulateur
+iOS avec de vrais RAW et publie sa capture d'écran. Pour un iPhone réel, l'app doit être
+signée avec un compte développeur Apple.
 
 ## Le site
 

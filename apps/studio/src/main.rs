@@ -1,4 +1,5 @@
-//! `luma-studio [fichier RAW | dossier]` : ouvre LÜMA Studio.
+//! `luma-studio [fichier RAW | dossier]` : ouvre LÜMA Studio (sur iPhone et iPad, le
+//! dossier Documents de l'app).
 
 use luma_studio::Studio;
 
@@ -17,6 +18,12 @@ impl eframe::App for App {
 
 fn main() -> eframe::Result {
     let arg = std::env::args_os().nth(1).map(std::path::PathBuf::from);
+    // Sur iPhone et iPad, l'app s'ouvre sur son dossier Documents.
+    let arg = arg.or_else(|| {
+        cfg!(target_os = "ios")
+            .then(luma_studio::dialogs::documents)
+            .flatten()
+    });
     let viewport = egui::ViewportBuilder::default()
         .with_title("LÜMA")
         .with_inner_size([1440.0, 900.0])

@@ -34,12 +34,17 @@ struct Session {
 
 impl Session {
     fn open(name: &str) -> Option<Self> {
+        Self::open_sized(name, [1440.0, 900.0], 1.0)
+    }
+
+    fn open_sized(name: &str, size: [f32; 2], scale: f32) -> Option<Self> {
         let Some(raw) = corpus_copy(name) else {
             eprintln!("corpus absent (scripts/fetch-corpus.sh) : capture ignorée");
             return None;
         };
         let harness = Harness::builder()
-            .with_size([1440.0, 900.0])
+            .with_size(size)
+            .with_pixels_per_point(scale)
             .wgpu()
             .build_ui_state(
                 move |ui, studio: &mut Option<Studio>| {
@@ -191,4 +196,13 @@ fn masks_linear_and_radial() {
     s.capture("masques-zone");
     assert_eq!(s.studio().settings.masks.len(), 2);
     assert_eq!(s.studio().selected_mask, Some(1));
+}
+
+#[test]
+fn iphone_layout() {
+    // Un iPhone en portrait (points), écran Retina ×3.
+    let Some(mut s) = Session::open_sized("iphone", [393.0, 852.0], 3.0) else {
+        return;
+    };
+    s.capture("iphone");
 }
