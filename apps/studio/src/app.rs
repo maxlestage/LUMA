@@ -708,6 +708,17 @@ impl Studio {
                         }
                     }
                 }
+                Event::Duplicated { path, photo } => {
+                    // La photo affichée passe sur son doublon : mêmes réglages, l'aperçu
+                    // se refait depuis lui ; le RAW quitte la mémoire.
+                    if self.loading.is_none()
+                        && self.photo.is_some()
+                        && self.current_path() == Some(path.as_path())
+                    {
+                        self.photo = Some(photo);
+                        self.last_request = None;
+                    }
+                }
                 Event::Rendered(frame) => {
                     if frame.generation < self.shown {
                         continue;

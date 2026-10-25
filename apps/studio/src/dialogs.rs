@@ -2,7 +2,7 @@
 //! iPhone et iPad, l'app travaille dans son dossier Documents, que l'app Fichiers
 //! remplit (Sur mon iPhone › LÜMA).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(not(target_os = "ios"))]
 use crate::i18n::tr;
@@ -61,6 +61,33 @@ pub fn films_dir() -> Option<PathBuf> {
     };
     std::fs::create_dir_all(&dir).ok()?;
     Some(dir)
+}
+
+/// Le dossier des doublons de travail (voir `luma_render::duplicate`) : un cache, que
+/// le système peut vider. Mac : `~/Library/Caches/LÜMA/Doublons` ; iPhone et iPad :
+/// `Library/Caches/Doublons` ; `LUMA_DUPLICATES_DIR` le remplace.
+pub fn duplicates_dir() -> Option<PathBuf> {
+    if let Some(d) = std::env::var_os("LUMA_DUPLICATES_DIR") {
+        return Some(PathBuf::from(d));
+    }
+    let home = PathBuf::from(std::env::var_os("HOME")?);
+    Some(if cfg!(target_os = "ios") {
+        home.join("Library/Caches/Doublons")
+    } else if cfg!(target_os = "macos") {
+        home.join("Library/Caches/LÜMA/Doublons")
+    } else {
+        std::env::var_os("XDG_CACHE_HOME")
+            .map_or_else(|| home.join(".cache"), PathBuf::from)
+            .join("luma/doublons")
+    })
+}
+
+/// Ouvre une photo par son doublon de travail s'il existe, sinon par l'original.
+pub fn open_photo(path: &Path) -> luma_core::Result<luma_render::Photo> {
+    match duplicates_dir() {
+        Some(dir) => luma_render::Photo::open_with_duplicates(path, &dir),
+        None => luma_render::Photo::open(path),
+    }
 }
 
 /// Le dossier de LÜMA, au‑dessus de Films : celui de `licence.json`, de `langue.txt`…
