@@ -1,0 +1,6 @@
+# L'image du site n'a besoin que des sources : pas des constructions locales.
+target/
+site/target/
+site/pkg/
+site/dist/
+**/.git

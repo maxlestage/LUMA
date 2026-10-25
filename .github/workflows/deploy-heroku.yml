@@ -1,16 +1,20 @@
-# Déploie le site sur Heroku (buildpack emk/rust) : à chaque push sur master, après
-# chaque Release (pour que le bouton « Télécharger pour Mac » serve la nouvelle app), et
-# à la demande.
+# Déploie le site sur Heroku : l'image Docker est construite ici, sur GitHub (où les
+# dépôts privés de Paquets sont lisibles et où le temps de compilation n'est pas
+# limité), avec l'app Mac de la dernière Release dedans, puis poussée dans le registre
+# de Heroku et lancée. Heroku ne compile rien : il démarre l'image.
 #
-# Secrets du dépôt : HEROKU_API_KEY (heroku authorizations:create) et HEROKU_APP (le
-# nom de l'app Heroku). Sans eux, le workflow ne fait rien.
+# À chaque push du site sur master, après chaque Release (pour que le bouton
+# « Télécharger pour Mac » serve la nouvelle app), et à la demande.
+#
+# Secrets du dépôt : HEROKU_API_KEY (Heroku → Account settings → API Key) et HEROKU_APP
+# (le nom de l'app, ex. luma-app). Sans eux, le workflow échoue et dit lesquels manquent.
 
 name: Heroku
 
 on:
   push:
     branches: [master]
-    paths: ["site/**", "docs/**", "CHANGELOG.md", "heroku-build.sh", "RustConfig", "Procfile", "app.json"]
+    paths: ["site/**", "crates/luma-licence/**", "crates/luma-i18n/**", "docs/**", "CHANGELOG.md", "Dockerfile", ".dockerignore", ".github/workflows/deploy-heroku.yml"]
   workflow_run:
     workflows: [Release]
     types: [completed]
@@ -22,26 +26,69 @@ concurrency:
 
 jobs:
   deploy:
-    name: Déployer sur Heroku
+    name: Construire l'image et la lancer sur Heroku
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      HEROKU_APP: ${{ secrets.HEROKU_APP }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: master
-          fetch-depth: 0
-      - name: git push vers Heroku
+          # Après une Release : master ; à la demande : la branche choisie (pour vérifier
+          # que l'image se construit).
+          ref: ${{ github.event_name == 'workflow_run' && 'master' || github.ref }}
+      - name: L'app à télécharger (dernière Release)
         env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          HEROKU_APP: ${{ secrets.HEROKU_APP }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$HEROKU_API_KEY" ] || [ -z "$HEROKU_APP" ]; then
-            echo "::notice::HEROKU_API_KEY ou HEROKU_APP manquant : rien à déployer."
-            exit 0
+          mkdir -p site/public/download
+          if gh release download --repo "${{ github.repository }}" --pattern LUMA-macos.zip --dir site/public/download --clobber; then
+            ls -la site/public/download
+          else
+            echo "::warning::Pas de Release avec LUMA-macos.zip : lancez Actions → Release ; le bouton Télécharger mènera à une page introuvable."
           fi
-          # Un nouveau commit vide n'est pas nécessaire : --force réapplique master, et
-          # Heroku reconstruit (donc récupère la dernière Release) à chaque push.
-          git -c credential.helper= push --force \
-            "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP}.git" \
-            HEAD:refs/heads/main 2>&1 | sed "s/${HEROKU_API_KEY}/***/g"
-          echo "Déployé : https://${HEROKU_APP}.herokuapp.com (ou son domaine)"
+      - name: Image Docker
+        env:
+          REPOS_TOKEN: ${{ secrets.REPOS_TOKEN }}
+        run: |
+          docker build --build-arg REPOS_TOKEN="$REPOS_TOKEN" -t "registry.heroku.com/$HEROKU_APP/web" .
+      - name: Secrets Heroku
+        run: |
+          missing=""
+          [ -n "$HEROKU_API_KEY" ] || missing="$missing HEROKU_API_KEY"
+          [ -n "$HEROKU_APP" ] || missing="$missing HEROKU_APP"
+          if [ -n "$missing" ]; then
+            echo "::error::Secrets manquants :$missing (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+      - name: Pousser l'image et la lancer
+        run: |
+          api() {
+            curl -sSf -X "$1" "https://api.heroku.com$2" \
+              -H "Accept: application/vnd.heroku+json; version=3" \
+              -H "Authorization: Bearer $HEROKU_API_KEY" \
+              -H "Content-Type: application/json" ${3:+-d "$3"}
+          }
+          # L'app doit être sur la pile « container » (une image, pas un buildpack).
+          if ! api GET "/apps/$HEROKU_APP" | grep -q '"build_stack":{[^}]*"name":"container"'; then
+            echo "Passage de l'app sur la pile container"
+            api PATCH "/apps/$HEROKU_APP" '{"build_stack":"container"}' >/dev/null
+          fi
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+          docker push "registry.heroku.com/$HEROKU_APP/web"
+          image=$(docker inspect "registry.heroku.com/$HEROKU_APP/web" --format='{{.Id}}')
+          api PATCH "/apps/$HEROKU_APP/formation" \
+            "{\"updates\":[{\"type\":\"web\",\"quantity\":1,\"docker_image\":\"$image\"}]}" >/dev/null
+          url=$(api GET "/apps/$HEROKU_APP" | sed -n 's/.*"web_url":"\([^"]*\)".*/\1/p')
+          echo "Lancé : $url"
+          echo "url=$url" >> "$GITHUB_ENV"
+      - name: Le site répond
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || true)
+            [ "$code" = 200 ] && { echo "$url → 200"; exit 0; }
+            sleep 10
+          done
+          echo "::error::$url ne répond pas 200 (dernier code : $code) : heroku logs --tail -a $HEROKU_APP"
+          exit 1
