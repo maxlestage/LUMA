@@ -139,8 +139,7 @@ fn library_ratings_and_flags() {
     // Les notes sont dans les XMP, lisibles par Lightroom.
     s.studio().flush_xmp();
     let dir = std::env::temp_dir().join("luma-studio-bibliotheque");
-    let rejected =
-        luma_studio::worker::read_meta(&s.studio().current_path().unwrap().to_path_buf());
+    let rejected = luma_studio::worker::read_meta(s.studio().current_path().unwrap());
     assert_eq!(rejected.flag, luma_project::xmp::Flag::Reject);
     let first = luma_studio::app::scan(&dir)
         .into_iter()
