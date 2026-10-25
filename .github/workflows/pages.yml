@@ -142,7 +142,9 @@ jobs:
 
   deploy:
     name: Publier sur GitHub Pages
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    # !cancelled() : publier même quand le job de l'app Mac a été sauté (téléchargement
+    # fermé) ; GitHub sauterait sinon tout ce qui en dépend.
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' }}
     needs: build
     runs-on: ubuntu-latest
     environment:
