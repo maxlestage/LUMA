@@ -6,8 +6,20 @@
   "buildpacks": [{ "url": "emk/rust" }],
   "env": {
     "REPOS_TOKEN": {
-      "description": "Jeton GitHub capable de lire les dépôts privés de Paquets, Vitesse, Securite, Memoire et Active.",
+      "description": "Jeton GitHub (lecture seule) capable de lire les dépôts privés LUMA (sa dernière Release, l'app à télécharger), Paquets, Vitesse, Securite, Memoire et Active.",
       "required": true
+    },
+    "SITE_URL": {
+      "description": "L'adresse publique du site (ex. https://luma.app), pour les liens absolus, le sitemap et les aperçus de partage.",
+      "required": false
+    },
+    "LUMA_CHECKOUT_MONTHLY": {
+      "description": "Le lien de paiement Lemon Squeezy de la formule Mensuel (boutons S'abonner).",
+      "required": false
+    },
+    "LUMA_CHECKOUT_ANNUAL": {
+      "description": "Le lien de paiement Lemon Squeezy de la formule Annuel.",
+      "required": false
     }
   },
   "success_url": "/"

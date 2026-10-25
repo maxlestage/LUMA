@@ -3,7 +3,6 @@
 
 pub const TITLE: &str = "LÜMA — La lumière, développée en Rust";
 pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel écrit en Rust : RAW, couleur 32 bits flottants sur le GPU, 100 films, vos vraies pellicules mesurées, masques. Mac, iPhone et iPad. 14 jours d'essai.";
-pub const REPO: &str = "https://github.com/maxlestage/LUMA";
 
 pub const NAV: [(&str, &str); 6] = [
     ("#pipeline", "Moteur"),
@@ -476,20 +475,11 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
     (
         "Ressources",
         &[
-            (
-                "Boîtiers pris en charge",
-                "https://github.com/maxlestage/LUMA/blob/master/docs/boitiers.md",
-            ),
-            (
-                "Parité avec Lightroom",
-                "https://github.com/maxlestage/LUMA/blob/master/docs/parite-lightroom.md",
-            ),
-            ("Architecture", "#architecture"),
+            ("Boîtiers pris en charge", "/docs/boitiers/"),
+            ("Parité avec Lightroom", "/docs/parite-lightroom/"),
+            ("Architecture", "/docs/architecture/"),
             ("Performances", "#performance"),
-            (
-                "Notes de version",
-                "https://github.com/maxlestage/LUMA/releases",
-            ),
+            ("Notes de version", "/nouveautes/"),
         ],
     ),
     (
@@ -500,11 +490,7 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
                 "Gérer mon abonnement",
                 "https://app.lemonsqueezy.com/my-orders",
             ),
-            (
-                "Signaler un problème",
-                "https://github.com/maxlestage/LUMA/issues",
-            ),
-            ("Code source", "https://github.com/maxlestage/LUMA"),
+            ("Signaler un problème", "/mentions-legales/#contact"),
             ("Contact", "/mentions-legales/#contact"),
         ],
     ),
@@ -547,7 +533,7 @@ pub const LEGAL: [Legal; 3] = [
                 "Contact",
                 &[
                     "[[Adresse électronique de contact.]]",
-                    "Pour un problème dans l'app : le suivi public des problèmes, sur GitHub (github.com/maxlestage/LUMA/issues).",
+                    "Pour un problème dans l'app : écrivez à l'adresse de contact, avec la version de LÜMA et, si possible, le RAW concerné.",
                 ],
             ),
             (

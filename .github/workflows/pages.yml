@@ -40,6 +40,9 @@ env:
 jobs:
   mac-app:
     name: LÜMA.app à télécharger
+    # GitHub Pages sur un dépôt privé demande un compte payant : le site est alors sur
+    # Heroku (deploy-heroku.yml), et ce workflow ne publie rien.
+    if: ${{ !github.event.repository.private }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +64,7 @@ jobs:
   build:
     name: Vérifier et construire le site
     needs: mac-app
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     defaults:
       run:

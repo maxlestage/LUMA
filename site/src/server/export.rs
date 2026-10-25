@@ -68,6 +68,10 @@ pub async fn export(out: &Path, base_path: &str, site_url: Option<String>) -> io
         let html = with_base(&text(get(page.path, 200).await?)?, base);
         write(&format!("{}index.html", page.path), html.as_bytes())?;
     }
+    for doc in &super::docs::DOCS {
+        let html = with_base(&text(get(doc.path, 200).await?)?, base);
+        write(&format!("{}index.html", doc.path), html.as_bytes())?;
+    }
     for file in [
         "/photo.svg",
         "/photo-mono.svg",

@@ -44,14 +44,15 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
    - `LUMA_CHECKOUT_MONTHLY` : le lien de la variante Mensuel ;
    - `LUMA_CHECKOUT_ANNUAL` : le lien de la variante Annuel ;
    - `LUMA_STORE_ID` : l'identifiant de la boutique (seules ses clés seront acceptées).
-5. Relancer le workflow **GitHub Pages** et créer une nouvelle version (étiquette `v…`) :
-   les boutons « S'abonner » du site et de l'app s'activent. Sans ces variables, ils
-   affichent « Bientôt disponible ».
+5. Pour le site sur Heroku : `heroku config:set LUMA_CHECKOUT_MONTHLY=… LUMA_CHECKOUT_ANNUAL=…`
+   (effet immédiat). Pour l'app : créer une nouvelle version (Actions → Release) ; ses
+   boutons « S'abonner » s'activent. Sans ces variables, ils affichent « Bientôt
+   disponible ».
 
 ## Télécharger
 
-- **Site** : le bouton « Télécharger pour Mac » de la section Tarifs ; l'app est
-  construite par le workflow GitHub Pages (job `mac-app`) et publiée avec le site.
+- **Site** : le bouton « Télécharger pour Mac » de la section Tarifs ; au déploiement
+  sur Heroku, `heroku-build.sh` récupère l'app de la dernière Release (même privée).
 - **Releases GitHub** : Actions → Release → Run workflow (version `0.1.0`…), ou une étiquette `v…` (`git tag v0.1.0 && git push origin
   v0.1.0`) construit et publie l'app Mac universelle, l'app iPhone et iPad non signée,
   et la ligne de commande pour Mac et Linux (`.github/workflows/release.yml`).

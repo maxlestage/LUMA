@@ -3,6 +3,7 @@
 //! `public/` et le bundle du navigateur de `pkg/` (trouvés par Paquets dans le dossier
 //! courant).
 
+pub mod docs;
 pub mod export;
 pub mod pages;
 pub mod photo;
@@ -188,6 +189,7 @@ fn service_worker(site: &Site) -> String {
         .map(String::from),
     );
     precache.extend(crate::content::LEGAL.iter().map(|l| l.path.to_owned()));
+    precache.extend(docs::DOCS.iter().map(|d| d.path.to_owned()));
     // Seuls les fichiers présents : `public/…`, le bundle `pkg/…` (absent en
     // développement), les pages et les SVG servis par le serveur.
     precache.retain(|u| {
@@ -243,7 +245,9 @@ pub fn app(site: Arc<Site>) -> App {
                     site.origin(&req),
                     crate::content::LEGAL
                         .iter()
-                        .map(|l| format!("<url><loc>{}{}</loc></url>", site.origin(&req), l.path))
+                        .map(|l| l.path)
+                        .chain(docs::DOCS.iter().map(|d| d.path))
+                        .map(|p| format!("<url><loc>{}{p}</loc></url>", site.origin(&req)))
                         .collect::<String>()
                 ))
         }
@@ -278,6 +282,18 @@ pub fn app(site: Arc<Site>) -> App {
                 .send(service_worker(&site))
         }
     });
+    // La documentation (docs/*.md du dépôt, qui peut rester privé).
+    for doc in &docs::DOCS {
+        let site = site.clone();
+        app.get(doc.path, move |req: Request| {
+            let site = site.clone();
+            async move {
+                pages::doc(&site, &site.origin(&req), doc)
+                    .into_response()
+                    .header("cache-control", "no-cache")
+            }
+        });
+    }
     // Les pages légales.
     for page in &crate::content::LEGAL {
         // Le routeur sert la même page avec ou sans la barre finale.
@@ -367,11 +383,26 @@ mod tests {
         assert!(!sw.contains("__"), "gabarit rempli");
         let home = client.get("/").await.text();
         assert!(home.contains(r#"rel="manifest""#) && home.contains("serviceWorker"));
+        assert!(
+            !home.contains("github.com/maxlestage/LUMA"),
+            "le dépôt est privé"
+        );
         assert!(home.contains("footer-cols") && home.contains("Mentions légales"));
-        for path in ["/mentions-legales/", "/confidentialite/", "/conditions/"] {
+        for path in [
+            "/mentions-legales/",
+            "/confidentialite/",
+            "/conditions/",
+            "/docs/boitiers/",
+            "/docs/feuille-de-route/",
+            "/nouveautes/",
+        ] {
             let res = client.get(path).await;
             assert_eq!(res.status().as_u16(), 200, "{path}");
-            assert!(res.text().contains(r#"class="legal""#), "{path}");
+            assert!(res.text().contains(r#"class="legal"#), "{path}");
+            assert!(
+                !res.text().contains("github.com/maxlestage/LUMA"),
+                "{path} : dépôt privé"
+            );
         }
     }
 
