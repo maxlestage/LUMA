@@ -21,10 +21,11 @@ panneaux, mêmes curseurs, mêmes plages, et il lit les fichiers XMP de Lightroo
 | `luma-color` | Matrices, espaces (sRGB, Display P3, Rec. 2020, ProPhoto), température DNG, OKLab, profils ICC |
 | `luma-raw` | Lecture des RAW (rawler), normalisation, couleur DNG, dématriçage Bayer et X‑Trans |
 | `luma-project` | Les réglages (calqués sur Lightroom), JSON et XMP `crs:` |
-| `luma-image` | Le développement : tonalité locale, rendu filmique, courbes, couleur, détail, effets, géométrie |
-| `luma-render` | Une photo ouverte : sources et « base » (étapes de voisinage) en cache, rendu annulable |
-| `luma-gpu` | Les étapes par pixel (rendu, couleur, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test |
-| `luma-cli` | `luma` : info, développement et export, XMP, mesures |
+| `luma-image` | Le développement : tonalité locale, rendu filmique, courbes, couleur, LUT 3D, détail, effets, géométrie |
+| `luma-render` | Une photo ouverte : sources et « bases » (étapes de voisinage, celle de la photo et celles des films de masques) en cache, rendu annulable |
+| `luma-merge` | Empilements, panoramas (coins, RANSAC, projections, fondus), DNG ; mesure d'une vraie pellicule en LUT 3D |
+| `luma-gpu` | Les étapes par pixel (rendu, couleur, LUT 3D, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test, les 100 films compris |
+| `luma-cli` | `luma` : info, développement et export, XMP, mesures, fusion, mesure d'une pellicule |
 
 ```sh
 cargo build --release
@@ -35,6 +36,8 @@ target/release/luma xmp photo.NEF --set clarity=20 -o photo.xmp      # réglages
 target/release/luma bench photo.RAF                                   # réactivité mesurée
 target/release/luma merge ciel_*.ARW --stack stars                     # empilement d'étoiles → DNG
 target/release/luma merge pano_*.CR3 --pano cylindrical --no-crop      # panorama sans rognage
+target/release/luma film-lut photo.ARW scan.tif -o MaPortra.cube       # mesure une vraie pellicule
+target/release/luma develop photo.ARW --lut MaPortra.cube:80 -o p.jpg   # ce film, à 80 %
 ```
 
 ### Vérifier
@@ -112,11 +115,22 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   rétention d'argent ; traitement croisé ; nuit américaine ; Super 8…),
   *Noir et blanc* (Tri‑X, T‑Max, HP5, FP4, Delta, Pan F, Acros, Neopan, Double‑X,
   Fomapan, infrarouge), *Instantanés et vintage* (Polaroid, Instax, jetable, Lomo,
-  Holga, pellicule périmée, sépia, cyanotype, daguerréotype) et *Créatifs*. Ce sont des
-  interprétations, pas des copies des émulsions ni des marques.
+  Holga, pellicule périmée, sépia, cyanotype, daguerréotype) et *Créatifs*. Chaque
+  émulsion a sa signature (croisement des couches, mélange noir et blanc spectral :
+  l'orthochromatique ne voit pas le rouge, le Retro 80S assombrit le bleu). Les 100 films
+  sont vérifiés par la machine à chaque test : rendus sur une mire et mesurés en OKLab,
+  chacun se distingue du rendu neutre et de tous les autres, aucun n'écrase l'image ; la
+  planche‑contact est publiée par la CI.
+- **Mes pellicules** : le rendu *exact* d'une vraie pellicule. On photographie la même
+  scène en numérique et sur film, on choisit le scan : LÜMA aligne les deux images et
+  mesure le film couleur par couleur, en LUT 3D (`.cube`). On peut aussi importer
+  n'importe quelle LUT `.cube` (Resolve, Lightroom…). Ces films s'utilisent comme les
+  autres : intensité, aperçu, masques, GPU, export.
 - **Films empilés par masques** : chaque masque (radial, linéaire, pinceau, ou « Image
   entière ») peut porter son propre film avec son intensité ; les films s'empilent dans
-  l'ordre des masques, chacun dans sa zone. Sur le GPU comme à l'export.
+  l'ordre des masques, chacun dans sa zone, *complets* : leurs hautes lumières, ombres
+  et clarté agissent aussi localement (chaque film a sa base de développement, gardée en
+  cache). Sur le GPU comme à l'export.
 - Les réglages sont enregistrés automatiquement dans un XMP au format Lightroom à côté
   du RAW, qui n'est jamais modifié.
 

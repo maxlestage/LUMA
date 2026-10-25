@@ -1,6 +1,7 @@
 // Les étapes par pixel de la fin du développement, sur le GPU : rendu (courbe filmique,
 // courbes des tonalités), couleur (OKLab : vibrance, saturation, mélangeur,
-// étalonnage), effets (vignetage, grain), puis encodage vers l'espace de sortie.
+// étalonnage), film mesuré (LUT 3D), effets (vignetage, grain), puis encodage vers
+// l'espace de sortie.
 //
 // C'est le double, ligne à ligne, du code Rust de luma-image (lib.rs, color.rs,
 // effects.rs) : les tests de luma-gpu comparent les deux sorties.
@@ -299,10 +300,11 @@ fn effects(p0: vec3<f32>, x: u32, y: u32) -> vec3<f32> {
     return p;
 }
 
-// Vers l'espace de sortie, dans le gamut, par rapprochement du gris (to_output).
-fn to_output(p: vec3<f32>) -> vec3<f32> {
+// Vers un espace (matrice à la position m), dans son gamut, par rapprochement du gris
+// (to_output).
+fn into_gamut(m: u32, p: vec3<f32>) -> vec3<f32> {
     let y = clamp(lum(p), 0.0, 1.0);
-    var c = mat(P_OUTPUT, p);
+    var c = mat(m, p);
     let lo = min(c.x, min(c.y, c.z));
     if lo < 0.0 && y > lo {
         c = vec3<f32>(y) + (c - vec3<f32>(y)) * (y / (y - lo));
@@ -312,6 +314,70 @@ fn to_output(p: vec3<f32>) -> vec3<f32> {
         c = vec3<f32>(y) + (c - vec3<f32>(y)) * ((1.0 - y) / (hi - y));
     }
     return clamp(c, vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
+fn to_output(p: vec3<f32>) -> vec3<f32> {
+    return into_gamut(P_OUTPUT, p);
+}
+
+// Une couleur de la LUT 3D (cube.rs), le rouge variant le plus vite.
+fn cube_at(i: vec3<u32>, n: u32) -> vec3<f32> {
+    let o = T_CUBE + 3u * (i.x + i.y * n + i.z * n * n);
+    return vec3<f32>(T[o], T[o + 1u], T[o + 2u]);
+}
+
+// Le film mesuré (cube.rs, Stage::apply) : sRGB encodé, LUT par interpolation
+// tétraédrique, retour à l'espace de travail, fondu selon l'intensité.
+fn film_lut(p: vec3<f32>) -> vec3<f32> {
+    let n = u32(P[P_CUBE]);
+    let lin = into_gamut(P_TO_SRGB, p);
+    var i = vec3<u32>(0u);
+    var f = vec3<f32>(0.0);
+    for (var c = 0u; c < 3u; c++) {
+        let lo = P[P_CUBE_MIN + c];
+        let hi = P[P_CUBE_MAX + c];
+        let t = clamp((lut(T_ENCODE, lin[c]) - lo) / (hi - lo), 0.0, 1.0) * f32(n - 1u);
+        let k = min(u32(t), n - 2u);
+        i[c] = k;
+        f[c] = t - f32(k);
+    }
+    let c000 = cube_at(i, n);
+    let c111 = cube_at(i + vec3<u32>(1u, 1u, 1u), n);
+    var a: vec3<f32>;
+    var b: vec3<f32>;
+    var w: vec3<f32>;
+    if f.x >= f.y {
+        if f.y >= f.z {
+            a = cube_at(i + vec3<u32>(1u, 0u, 0u), n);
+            b = cube_at(i + vec3<u32>(1u, 1u, 0u), n);
+            w = vec3<f32>(f.x - f.y, f.y - f.z, f.z);
+        } else if f.x >= f.z {
+            a = cube_at(i + vec3<u32>(1u, 0u, 0u), n);
+            b = cube_at(i + vec3<u32>(1u, 0u, 1u), n);
+            w = vec3<f32>(f.x - f.z, f.z - f.y, f.y);
+        } else {
+            a = cube_at(i + vec3<u32>(0u, 0u, 1u), n);
+            b = cube_at(i + vec3<u32>(1u, 0u, 1u), n);
+            w = vec3<f32>(f.z - f.x, f.x - f.y, f.y);
+        }
+    } else if f.z >= f.y {
+        a = cube_at(i + vec3<u32>(0u, 0u, 1u), n);
+        b = cube_at(i + vec3<u32>(0u, 1u, 1u), n);
+        w = vec3<f32>(f.z - f.y, f.y - f.x, f.x);
+    } else if f.z >= f.x {
+        a = cube_at(i + vec3<u32>(0u, 1u, 0u), n);
+        b = cube_at(i + vec3<u32>(0u, 1u, 1u), n);
+        w = vec3<f32>(f.y - f.z, f.z - f.x, f.x);
+    } else {
+        a = cube_at(i + vec3<u32>(0u, 1u, 0u), n);
+        b = cube_at(i + vec3<u32>(1u, 1u, 0u), n);
+        w = vec3<f32>(f.y - f.x, f.x - f.z, f.z);
+    }
+    let w0 = 1.0 - w.x - w.y - w.z;
+    let enc = w0 * c000 + w.x * a + w.y * b + w.z * c111;
+    let out = vec3<f32>(lut(T_DECODE, enc.x), lut(T_DECODE, enc.y), lut(T_DECODE, enc.z));
+    let film = mat(P_FROM_SRGB, out);
+    return p + (film - p) * P[P_CUBE + 1u];
 }
 
 fn byte(v: f32) -> u32 {
@@ -330,6 +396,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     p = render(p);
     if P[P_COLOR] != 0.0 {
         p = color(p);
+    }
+    if P[P_CUBE] != 0.0 {
+        p = film_lut(p);
     }
     p = effects(p, index % width, index / width);
     let o = to_output(p);

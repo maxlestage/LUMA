@@ -53,6 +53,11 @@ pub enum Event {
         size: [usize; 2],
         rgba: Vec<u8>,
     },
+    /// Une pellicule est mesurée : le nom du film, et l'écart (OKLab × 100) entre le
+    /// numérique et la pellicule, avant et après.
+    Measured {
+        result: Result<(String, f32, f32), String>,
+    },
     /// Une photo de l'export est écrite (ou a échoué) : `done` sur `total`.
     Exported {
         done: usize,
@@ -324,6 +329,46 @@ impl Worker {
     }
 
     /// Fusionne des RAW en un DNG, à côté du premier.
+    /// Mesure une pellicule : `photo` en numérique (son rendu neutre) et `scan`, la même
+    /// scène sur film. La LUT est enregistrée dans `dir` et chargée.
+    pub fn measure_film(&self, photo: Arc<Photo>, scan: PathBuf, dir: PathBuf) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-mesure".into())
+            .spawn(move || {
+                let result = (|| -> Result<(String, f32, f32), String> {
+                    use luma_merge::film;
+                    let pair = film::Pair {
+                        digital: film::reference(&photo).map_err(|e| e.to_string())?,
+                        film: film::load_scan(&scan).map_err(|e| e.to_string())?,
+                        aligned: false,
+                    };
+                    let stem = scan.file_stem().map_or_else(
+                        || "Pellicule".to_owned(),
+                        |s| s.to_string_lossy().into_owned(),
+                    );
+                    // Un nom libre : « Portra », « Portra 2 »…
+                    let mut name = stem.clone();
+                    let mut k = 2;
+                    while dir.join(format!("{name}.cube")).exists()
+                        || luma_image::cube::get(&name).is_some()
+                    {
+                        name = format!("{stem} {k}");
+                        k += 1;
+                    }
+                    let m = film::measure(&[pair], 33, &name).map_err(|e| e.to_string())?;
+                    let path = dir.join(format!("{name}.cube"));
+                    std::fs::write(&path, m.cube.to_text())
+                        .map_err(|e| format!("{} : {e}", path.display()))?;
+                    luma_image::cube::register(&name, m.cube);
+                    Ok((name, m.before, m.after))
+                })();
+                let _ = sender.send(Event::Measured { result });
+                repaint();
+            })
+            .expect("fil de mesure");
+    }
+
     pub fn merge(&self, job: MergeJob, cancel: Cancel) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::Builder::new()

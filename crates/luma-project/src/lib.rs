@@ -360,6 +360,9 @@ pub struct Settings {
     pub transform: Transform,
     /// Panneau Masquage : les retouches locales, dans l'ordre.
     pub masks: Vec<Mask>,
+    /// Un film mesuré sur une vraie pellicule ou une LUT 3D importée (`.cube`) : son nom
+    /// et son intensité (0 à 100).
+    pub lut: Option<Look>,
 }
 
 impl Default for Settings {
@@ -388,6 +391,7 @@ impl Default for Settings {
             lens: Lens::default(),
             transform: Transform::default(),
             masks: Vec::new(),
+            lut: None,
         }
     }
 }
@@ -422,6 +426,12 @@ impl Settings {
         for m in &mut s.masks {
             m.local.clamp();
             clamp(&mut m.amount, 0.0, 100.0);
+            if let Some(l) = &mut m.look {
+                clamp(&mut l.amount, 0.0, 100.0);
+            }
+        }
+        if let Some(l) = &mut s.lut {
+            clamp(&mut l.amount, 0.0, 100.0);
         }
         for v in [
             &mut s.contrast,

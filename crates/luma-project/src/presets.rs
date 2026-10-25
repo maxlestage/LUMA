@@ -5,8 +5,12 @@
 //! masques de la photo restent ceux de l'utilisateur. Son intensité (0 à 100 %) fait un
 //! fondu entre les réglages actuels et le look complet.
 //!
-//! Les pellicules sont des interprétations : leurs noms disent l'inspiration (couleurs,
-//! contraste, grain caractéristiques), pas une copie des émulsions ni des marques.
+//! Les pellicules intégrées sont des interprétations : leurs noms disent l'inspiration
+//! (croisement des couches, contraste, grain, sensibilité spectrale des noir et blanc),
+//! pas une copie des émulsions ni des marques. Elles sont vérifiées par la machine
+//! (`luma-image/tests/presets.rs`). Pour le rendu exact d'une vraie pellicule, LÜMA la
+//! mesure sur un scan (`luma_merge::film`) : c'est un film « mesuré », une LUT 3D
+//! appliquée par [`with_lut`].
 
 use crate::{Profile, Settings, Wheel};
 
@@ -63,6 +67,18 @@ pub fn find(name: &str) -> Option<&'static Preset> {
     PRESETS.iter().find(|p| p.name == name)
 }
 
+/// Les réglages `current` avec le film mesuré (LUT) `name`, à `amount` (0 à 1) : comme
+/// un préréglage, il remplace le look en place au lieu de s'y ajouter.
+pub fn with_lut(current: &Settings, name: &str, amount: f32) -> Settings {
+    let mut target = current.clone();
+    reset_look(&mut target);
+    target.lut = Some(crate::Look {
+        name: name.to_string(),
+        amount: 100.0,
+    });
+    blend(current, &target, amount)
+}
+
 /// Remet à zéro ce qu'un look définit, pour que deux préréglages ne s'additionnent pas.
 fn reset_look(s: &mut Settings) {
     let d = Settings::default();
@@ -87,6 +103,7 @@ fn reset_look(s: &mut Settings) {
     s.effects.grain_amount = 0.0;
     s.effects.grain_size = d.effects.grain_size;
     s.effects.grain_roughness = d.effects.grain_roughness;
+    s.lut = None;
 }
 
 /// Le fondu entre deux réglages : chaque nombre est interpolé ; ce qui ne s'interpole
@@ -121,7 +138,24 @@ pub fn blend(from: &Settings, to: &Settings, amount: f32) -> Settings {
     let (Ok(a), Ok(b)) = (serde_json::to_value(from), serde_json::to_value(to)) else {
         return to.clone();
     };
-    serde_json::from_value(mix(&a, &b, f64::from(amount))).unwrap_or_else(|_| to.clone())
+    let mut out: Settings = serde_json::from_value(mix(&a, &b, f64::from(amount))).unwrap_or_else(|_| to.clone());
+    // Le film mesuré (LUT) s'efface ou apparaît par son intensité, au lieu de basculer.
+    let fade = |l: &crate::Look, k: f32| crate::Look {
+        name: l.name.clone(),
+        amount: l.amount * k,
+    };
+    out.lut = match (&from.lut, &to.lut) {
+        (None, None) => None,
+        (Some(a), None) => Some(fade(a, 1.0 - amount)),
+        (None, Some(b)) => Some(fade(b, amount)),
+        (Some(a), Some(b)) if a.name == b.name => Some(crate::Look {
+            name: b.name.clone(),
+            amount: a.amount + (b.amount - a.amount) * amount,
+        }),
+        (Some(a), Some(_)) if amount < 0.5 => Some(fade(a, 1.0 - 2.0 * amount)),
+        (Some(_), Some(b)) => Some(fade(b, 2.0 * amount - 1.0)),
+    };
+    out
 }
 
 fn wheel(hue: f32, saturation: f32, luminance: f32) -> Wheel {
@@ -1577,6 +1611,23 @@ mod tests {
         }
         let tri_x = PRESETS.iter().find(|p| p.name == "Tri-X 400").unwrap();
         assert_eq!(tri_x.applied(&s, 1.0).profile, Profile::Monochrome);
+    }
+
+    #[test]
+    fn a_measured_film_replaces_the_look_and_fades_by_its_amount() {
+        let s = PRESETS[0].applied(&Settings::default(), 1.0);
+        let full = with_lut(&s, "Ma Portra", 1.0);
+        assert_eq!(
+            full.lut.as_ref().map(|l| (l.name.as_str(), l.amount)),
+            Some(("Ma Portra", 100.0))
+        );
+        assert_eq!(full.contrast, 0.0, "le film intégré est remplacé");
+        let half = with_lut(&s, "Ma Portra", 0.5);
+        assert_eq!(half.lut.as_ref().map(|l| l.amount), Some(50.0));
+        // Un film intégré remplace la LUT, qui s'efface en douceur.
+        let back = PRESETS[1].applied(&full, 0.25);
+        assert_eq!(back.lut.as_ref().map(|l| l.amount), Some(75.0));
+        assert_eq!(PRESETS[1].applied(&full, 1.0).lut, None);
     }
 
     #[test]

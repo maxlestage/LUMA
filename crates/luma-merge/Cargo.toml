@@ -11,6 +11,8 @@ luma-core.workspace = true
 luma-color.workspace = true
 luma-raw.workspace = true
 luma-project.workspace = true
+luma-image.workspace = true
+image.workspace = true
 luma-render.workspace = true
 rayon.workspace = true
 

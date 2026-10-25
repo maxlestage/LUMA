@@ -209,6 +209,19 @@ fn iphone_layout() {
 
 #[test]
 fn films_and_merge_tools() {
+    // Une pellicule « mesurée » : ombres froides, hautes lumières chaudes, courbe en S.
+    let mut cube = luma_image::cube::Cube::identity(17);
+    for p in &mut cube.data {
+        let s = |v: f32| v * v * (3.0 - 2.0 * v) * 0.7 + v * 0.3;
+        let l = (p[0] + p[1] + p[2]) / 3.0;
+        *p = [
+            s(p[0]) + 0.05 * l,
+            s(p[1]) + 0.02,
+            s(p[2]) + 0.06 * (1.0 - l) - 0.04 * l,
+        ]
+        .map(|v| v.clamp(0.0, 1.0));
+    }
+    luma_image::cube::register("Ma Portra 400 (scan)", cube);
     let Some(mut s) = Session::open("films") else {
         return;
     };
