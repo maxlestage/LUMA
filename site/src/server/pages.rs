@@ -83,8 +83,8 @@ fn navbar() -> Element {
         )
         .child(
             a().class("btn btn-small magnetic")
-                .href("#labo")
-                .child(span().text("Essayer le labo")),
+                .href("#tarifs")
+                .child(span().text("Télécharger")),
         )
         .child(
             button()
@@ -482,6 +482,90 @@ fn cta() -> Element {
         )
 }
 
+/// Tarifs et téléchargement : LÜMA Premium, 14 jours d'essai, puis au mois ou à l'an.
+/// Les liens de paiement viennent de `LUMA_CHECKOUT_MONTHLY` et `LUMA_CHECKOUT_ANNUAL`
+/// (Lemon Squeezy) ; sans eux, les boutons attendent.
+fn pricing() -> Element {
+    type Plan = (
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static str,
+    );
+    let card = |(name, price, period, note, var): Plan, best: bool| {
+        let url = std::env::var(var)
+            .ok()
+            .filter(|u| u.starts_with("https://"));
+        let button = match url {
+            Some(u) => a()
+                .class(if best {
+                    "btn magnetic"
+                } else {
+                    "btn btn-ghost magnetic"
+                })
+                .href(u)
+                .child(span().text("S'abonner")),
+            None => span()
+                .class("btn btn-ghost btn-disabled")
+                .attr("aria-disabled", "true")
+                .child(span().text("Bientôt disponible")),
+        };
+        div()
+            .class(if best {
+                "plan plan-best reveal"
+            } else {
+                "plan reveal"
+            })
+            .child(
+                p().class("plan-name")
+                    .text(name)
+                    .child(best.then(|| span().class("plan-tag").text("Le plus avantageux"))),
+            )
+            .child(
+                p().class("plan-price")
+                    .text(price)
+                    .child(span().text(format!(" {period}"))),
+            )
+            .child(p().class("plan-note").text(note))
+            .child(button)
+    };
+    section()
+        .class("pricing")
+        .id("tarifs")
+        .child(section_head(
+            "LÜMA Premium",
+            heading(h2, "Quatorze jours pour ", "essayer", ", puis à vous de choisir."),
+            Some(p().class("lede").text(
+                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an ; la clé de licence arrive par courriel, et se saisit dans l'app.",
+            )),
+        ))
+        .child(
+            div()
+                .class("download reveal")
+                .child(
+                    a().class("btn magnetic")
+                        .href(link("/download/LUMA-macos.zip"))
+                        .attr("download", "")
+                        .child(span().html(APPLE_SVG))
+                        .child(span().text("Télécharger pour Mac")),
+                )
+                .child(p().class("download-note").text(
+                    "Apple Silicon et Intel, macOS 11 ou plus récent. Premier lancement : clic droit sur LÜMA, puis Ouvrir.",
+                )),
+        )
+        .child(
+            div()
+                .class("plans")
+                .child(card(PLANS[0], false))
+                .child(card(PLANS[1], true)),
+        )
+        .child(
+            ul().class("premium-list reveal")
+                .children(PREMIUM.iter().map(|f| li().text(*f))),
+        )
+}
+
 fn site_footer() -> Element {
     footer()
         .class("footer")
@@ -547,6 +631,7 @@ pub fn home(site: &Site, origin: &str) -> Page {
                 .child(performance())
                 .child(roadmap())
                 .child(rust())
+                .child(pricing())
                 .child(cta()),
         )
         .child(site_footer());

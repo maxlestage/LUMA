@@ -226,6 +226,9 @@ mod tests {
         );
         assert!(html.contains("cargo deny --target aarch64-apple-ios check"));
         assert!(html.contains("/js/scenes.js?v="));
+        assert!(html.contains(r#"id="tarifs""#));
+        assert!(html.contains("79,99 €") && html.contains("9,99 €"));
+        assert!(html.contains("/download/LUMA-macos.zip"));
         assert!(
             html.contains(r#"<span class="brand-mark"><svg"#),
             "le logo de la barre"

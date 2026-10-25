@@ -5,12 +5,42 @@ pub const TITLE: &str = "LÜMA — La lumière, développée en Rust";
 pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel écrit en Rust : RAW, couleur 32 bits flottants, masques, IA locale. macOS et iOS d'abord.";
 pub const REPO: &str = "https://github.com/maxlestage/LUMA";
 
-pub const NAV: [(&str, &str); 5] = [
+pub const NAV: [(&str, &str); 6] = [
     ("#pipeline", "Moteur"),
     ("#labo", "Labo"),
     ("#apple", "Apple"),
     ("#architecture", "Architecture"),
     ("#roadmap", "Feuille de route"),
+    ("#tarifs", "Tarifs"),
+];
+
+/// LÜMA Premium : les formules (nom, prix, période, note, variable du lien de
+/// paiement). Les mêmes que dans l'app (`luma-licence`).
+pub const PLANS: [(&str, &str, &str, &str, &str); 2] = [
+    (
+        "Mensuel",
+        "9,99 €",
+        "par mois",
+        "Sans engagement, résiliable à tout moment.",
+        "LUMA_CHECKOUT_MONTHLY",
+    ),
+    (
+        "Annuel",
+        "79,99 €",
+        "par an",
+        "Deux mois offerts : 6,67 € par mois.",
+        "LUMA_CHECKOUT_ANNUAL",
+    ),
+];
+
+/// Ce que LÜMA Premium comprend (comme dans l'app).
+pub const PREMIUM: [&str; 6] = [
+    "Le développement RAW complet, sur le GPU",
+    "100 films, vos préréglages, et vos pellicules mesurées",
+    "Masques, films empilés, recadrage et géométrie",
+    "Empilements, ciel étoilé, panoramas en DNG",
+    "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
+    "Mac, iPhone et iPad, et toutes les mises à jour",
 ];
 
 pub const MARQUEE: [&str; 9] = [
