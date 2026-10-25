@@ -2,7 +2,7 @@
 //! (serveur et navigateur).
 
 pub const TITLE: &str = "LÜMA — La lumière, développée en Rust";
-pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel écrit en Rust : RAW, couleur 32 bits flottants, masques, IA locale. macOS et iOS d'abord.";
+pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel écrit en Rust : RAW, couleur 32 bits flottants sur le GPU, 100 films, vos vraies pellicules mesurées, masques. Mac, iPhone et iPad. 14 jours d'essai.";
 pub const REPO: &str = "https://github.com/maxlestage/LUMA";
 
 pub const NAV: [(&str, &str); 6] = [
@@ -50,7 +50,7 @@ pub const MARQUEE: [&str; 9] = [
     "HDR / EDR",
     "Metal",
     "Apple Pencil",
-    "Masques IA locaux",
+    "100 films · LUT 3D",
     "Non destructif",
     "Zéro cloud obligatoire",
 ];

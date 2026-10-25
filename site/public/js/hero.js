@@ -1,6 +1,6 @@
-// Hero 3D : un objectif photo (fût métallique, bague moletée, diaphragme à 9 lamelles,
-// lentille frontale traitée) dans lequel s'engouffre un flux de lumière spectrale.
-// Le défilement ouvre le diaphragme, accélère la lumière et fait entrer la caméra.
+// Hero 3D : l'anneau de lumière du logo de LÜMA (l'éclipse), dans lequel s'engouffre un
+// flux de lumière aux couleurs du logo. Le défilement avive le halo, accélère la
+// lumière et fait entrer la caméra dans l'anneau.
 
 import * as THREE from '../vendor/three.module.min.js';
 import { RoomEnvironment } from '../vendor/RoomEnvironment.js';
@@ -32,123 +32,80 @@ function glowTexture() {
   return t;
 }
 
-function buildLens() {
+// Les couleurs de l'anneau du logo (luma-brand, STOPS) : angle depuis midi, sens horaire.
+const RING_STOPS = [
+  [0, 0x7a62ff], [40, 0x2f5cff], [90, 0x4cc6ff], [135, 0x5a86ff], [165, 0x9d58ff],
+  [195, 0xe85cb0], [228, 0xff7838], [268, 0xffc466], [305, 0xf6cfae], [335, 0xb08cf0], [360, 0x7a62ff],
+];
+
+// Une table de 360 couleurs (lumière linéaire), comme ring_color de luma-brand.
+function ringTexture() {
+  const data = new Uint8Array(360 * 4);
+  const lin = (v) => Math.pow(v / 255, 2.2);
+  for (let a = 0; a < 360; a++) {
+    let k = RING_STOPS.findIndex((s) => s[0] >= a);
+    k = Math.max(1, k < 0 ? RING_STOPS.length - 1 : k);
+    const [a0, c0] = RING_STOPS[k - 1], [a1, c1] = RING_STOPS[k];
+    const t = (a - a0) / Math.max(a1 - a0, 1e-6);
+    for (let i = 0; i < 3; i++) {
+      const sh = 16 - 8 * i;
+      const v = lin((c0 >> sh) & 255) * (1 - t) + lin((c1 >> sh) & 255) * t;
+      data[a * 4 + i] = Math.round(Math.pow(v, 1 / 2.2) * 255);
+    }
+    data[a * 4 + 3] = 255;
+  }
+  const tex = new THREE.DataTexture(data, 360, 1, THREE.RGBAFormat);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.magFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// L'anneau de lumière du logo, en croissant : le même dessin que luma-brand (disque
+// intérieur décalé vers le haut à droite, tube plus clair en dedans, halo), sur un
+// plan, en lumière additive.
+function buildRing() {
   const lens = new THREE.Group();
-  const metal = new THREE.MeshStandardMaterial({ color: 0x15151a, metalness: 0.9, roughness: 0.32 });
-  const satin = new THREE.MeshStandardMaterial({ color: 0x2a2a31, metalness: 1, roughness: 0.22 });
-  const rubber = new THREE.MeshStandardMaterial({ color: 0x0b0b0e, metalness: 0.2, roughness: 0.75 });
-
-  // Fût : profil tourné autour de l'axe (y), puis basculé vers la caméra (z).
-  const body = new THREE.Group();
-  const profile = [
-    [0.86, -2.6], [1.0, -2.6], [1.06, -2.42], [1.16, -2.3], [1.16, -1.5], [1.24, -1.44],
-    [1.24, -0.42], [1.2, -0.34], [1.34, -0.26], [1.36, -0.04], [1.32, 0.02], [1.1, 0.03], [1.04, -0.06],
-  ].map(([r, y]) => new THREE.Vector2(r, y));
-  body.add(new THREE.Mesh(new THREE.LatheGeometry(profile, 160), metal));
-
-  // Bague de mise au point moletée
-  const grip = new THREE.CylinderGeometry(1.29, 1.29, 0.82, 360, 1, true);
-  const p = grip.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i), a = Math.atan2(z, x);
-    const k = 1 + (Math.sin(a * 120) > 0 ? 0.012 : -0.004);
-    p.setX(i, x * k); p.setZ(i, z * k);
-  }
-  grip.computeVertexNormals();
-  const gripMesh = new THREE.Mesh(grip, rubber);
-  gripMesh.position.y = -0.92;
-  body.add(gripMesh);
-
-  // Bague satinée et liseré spectral, la signature de LÜMA
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.08, 160, 1, true), satin);
-  ring.position.y = -1.42; body.add(ring);
-  const accentGeo = new THREE.TorusGeometry(1.365, 0.014, 10, 260);
-  const colors = [];
-  const ap = accentGeo.attributes.position, col = new THREE.Color();
-  for (let i = 0; i < ap.count; i++) {
-    spectrum(Math.atan2(ap.getY(i), ap.getX(i)) / (Math.PI * 2) + 0.5, col);
-    colors.push(col.r, col.g, col.b);
-  }
-  accentGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  const accent = new THREE.Mesh(accentGeo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
-  accent.rotation.x = Math.PI / 2; accent.position.y = -0.16;
-  body.add(accent);
-  body.rotation.x = Math.PI / 2;
-  lens.add(body);
-
-  // Lueur intérieure, visible à travers le diaphragme
-  const glow = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.6, 2.6),
-    new THREE.MeshBasicMaterial({ map: glowTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
-  );
-  glow.position.z = -0.75;
-  lens.add(glow);
-
-  // Diaphragme : 9 lamelles qui pivotent autour du bord.
-  const N = 9;
-  const shape = new THREE.Shape();
-  shape.moveTo(0, 0);
-  shape.quadraticCurveTo(0.85, 0.06, 1.75, 0);
-  shape.lineTo(1.75, -0.72);
-  shape.quadraticCurveTo(0.9, -0.66, 0, -0.62);
-  shape.closePath();
-  const bladeGeo = new THREE.ShapeGeometry(shape, 12);
-  const bladeMat = new THREE.MeshStandardMaterial({ color: 0x0e0e12, metalness: 0.7, roughness: 0.42, side: THREE.DoubleSide });
-  // Les lamelles dépassent du cercle quand elles s'ouvrent : on les découpe à r = 1.05,
-  // dans le repère du diaphragme, pour qu'elles restent dans le fût.
-  const uInv = { value: new THREE.Matrix4() };
-  bladeMat.onBeforeCompile = (sh) => {
-    sh.uniforms.uInv = uInv;
-    sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace(
-      '#include <project_vertex>', '#include <project_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = 'uniform mat4 uInv;\nvarying vec3 vWP;\n' + sh.fragmentShader.replace(
-      'void main() {', 'void main() {\n if (length((uInv * vec4(vWP, 1.0)).xy) > 1.05) discard;');
-  };
-  const iris = new THREE.Group();
-  const blades = [];
-  for (let i = 0; i < N; i++) {
-    const theta = (i / N) * Math.PI * 2;
-    const pivot = new THREE.Group();
-    pivot.position.set(Math.cos(theta) * 1.02, Math.sin(theta) * 1.02, -0.32 - i * 0.004);
-    const blade = new THREE.Mesh(bladeGeo, bladeMat);
-    pivot.add(blade);
-    pivot.userData.theta = theta;
-    iris.add(pivot);
-    blades.push(pivot);
-  }
-  lens.add(iris);
-  const tube = new THREE.Mesh(new THREE.CylinderGeometry(1.04, 1.04, 0.9, 120, 1, true), rubber.clone());
-  tube.material.side = THREE.BackSide;
-  tube.rotation.x = Math.PI / 2; tube.position.z = -0.5;
-  lens.add(tube);
-  // Cache‑lamelles : un anneau devant le diaphragme pour masquer le bord extérieur.
-  const lip = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.36, 160), metal);
-  lip.position.z = -0.08;
-  lens.add(lip);
-
-  // Lentille frontale, traitement multicouche irisé
-  const thetaLen = Math.asin(1.06 / 2.2);
-  const glassGeo = new THREE.SphereGeometry(2.2, 96, 24, 0, Math.PI * 2, 0, thetaLen);
-  const glass = new THREE.Mesh(glassGeo, new THREE.MeshPhysicalMaterial({
-    color: 0x1a1a2e, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.32,
-    clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 1, iridescenceIOR: 1.7,
-    iridescenceThicknessRange: [180, 640], envMapIntensity: 2.6, depthWrite: false,
-  }));
-  glass.rotation.x = Math.PI / 2;
-  glass.position.z = -2.2 * Math.cos(thetaLen) - 0.06;
-  lens.add(glass);
-
-  function setAperture(open) {
-    // open ∈ [0, 1] : rayon d'ouverture ≈ cos(φ) (voir la géométrie des lamelles).
-    const r = lerp(0.1, 0.94, open);
-    const phi = Math.acos(r);
-    for (const b of blades) b.rotation.z = b.userData.theta + Math.PI / 2 + phi;
-  }
-  function sync() {
-    iris.updateWorldMatrix(true, false);
-    uInv.value.copy(iris.matrixWorld).invert();
-  }
-  setAperture(0.2);
+  const mat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uRing: { value: ringTexture() }, uTime: { value: 0 }, uOpen: { value: 0 } },
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */`
+      uniform sampler2D uRing; uniform float uTime, uOpen;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = vUv - 0.5;
+        float r = 0.25;
+        float d = length(p);
+        float deg = degrees(atan(p.x, p.y));
+        if (deg < 0.0) deg += 360.0;
+        vec3 col = texture2D(uRing, vec2(deg / 360.0, 0.5)).rgb;
+        // L'éclat : or et bleu plus vifs, et une lente respiration.
+        float e = 0.78 + 0.22 * abs(sin(2.0 * (radians(deg) - 0.35)));
+        e *= 1.0 + 0.08 * sin(uTime * 0.9 + radians(deg) * 2.0);
+        vec2 o = vec2(0.10, 0.09) * r;
+        float inner = 0.82 * r;
+        float di = length(p - o);
+        float aa = fwidth(d) * 1.2;
+        float body = (1.0 - smoothstep(r - aa, r + aa, d)) * smoothstep(inner - aa, inner + aa, di);
+        float frac = clamp((di - inner) / max((r - d) + (di - inner), 1e-5), 0.0, 1.0);
+        float core = 0.5 + 1.05 * exp(-pow((frac - 0.4) / 0.38, 2.0));
+        vec3 light = col * body * core * e;
+        float thick = smoothstep(0.0, 1.0, max((-(p.x * 0.75) + p.y * 0.66) / r, 0.0));
+        light += body * exp(-pow((frac - 0.42) / 0.22, 2.0)) * thick * 0.4;
+        float outGlow = exp(-pow(max(d - r, 0.0) / (0.15 * r * (1.0 + uOpen)), 2.0)) * smoothstep(0.86 * r, r, d);
+        float inGlow = exp(-pow(max(inner - di, 0.0) / (0.12 * r), 2.0)) * (1.0 - smoothstep(inner - aa, inner + aa, di));
+        light += col * (0.5 * outGlow * (1.0 - body) + 0.14 * inGlow) * e * (1.0 + uOpen * 0.6);
+        gl_FragColor = vec4(light * 0.72, 1.0);
+      }`,
+  });
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 6.4), mat);
+  lens.add(plane);
+  function setAperture(open) { mat.uniforms.uOpen.value = open; }
+  function sync(t) { mat.uniforms.uTime.value = t; }
   return { lens, setAperture, sync };
 }
 
@@ -195,7 +152,7 @@ function buildLight(count) {
       varying float vHue; varying float vA;
       vec3 spec(float t) {
         t = fract(t);
-        vec3 c0 = vec3(1.0, .42, .24), c1 = vec3(1.0, .81, .29), c2 = vec3(.29, .95, .78), c3 = vec3(.29, .66, 1.0), c4 = vec3(.55, .48, 1.0);
+        vec3 c0 = vec3(1.0, .47, .22), c1 = vec3(1.0, .77, .40), c2 = vec3(.91, .36, .69), c3 = vec3(.30, .78, 1.0), c4 = vec3(.48, .38, 1.0);
         float f = t * 5.0;
         if (f < 1.0) return mix(c0, c1, f);
         if (f < 2.0) return mix(c1, c2, f - 1.0);
@@ -240,7 +197,7 @@ export function initHero(canvas, { reduced = false } = {}) {
   const rimA = new THREE.PointLight(0xff6b3d, 30, 12); rimA.position.set(-3, 2.5, 1); scene.add(rimA);
   const rimB = new THREE.PointLight(0x8b7bff, 30, 12); rimB.position.set(3, -2.5, 1); scene.add(rimB);
 
-  const { lens, setAperture, sync } = buildLens();
+  const { lens, setAperture, sync } = buildRing();
   const holder = new THREE.Group();
   holder.add(lens);
   scene.add(holder);
@@ -259,7 +216,7 @@ export function initHero(canvas, { reduced = false } = {}) {
     camera.updateProjectionMatrix();
     const narrow = camera.aspect < 1.05;
     layout = narrow
-      ? { x: 0, y: 1.25 + (1 / camera.aspect - 1) * 0.6, s: 0.62 }
+      ? { x: 0, y: 1.2 + (1 / camera.aspect - 1) * 0.6, s: 0.5 }
       : { x: clamp(1.45 * camera.aspect, 1.9, 3.1), y: -0.1, s: 0.9 };
   }
   resize();
@@ -300,9 +257,9 @@ export function initHero(canvas, { reduced = false } = {}) {
     const s = layout.s * lerp(1, 1.9, p) * lerp(0.85, 1, state.intro);
     holder.position.set(lerp(layout.x, 0, p), lerp(layout.y, 0, p), lerp(0, 2.2, p));
     holder.scale.setScalar(s);
-    lens.rotation.y = lerp(-0.62 + state.mx * 0.25 + (reduced ? 0 : Math.sin(t * 0.35) * 0.06), 0, p);
-    lens.rotation.x = lerp(0.18 + state.my * 0.18, 0, p);
-    lens.rotation.z = t * 0.03;
+    // L'anneau suit un peu la souris, en restant face à nous.
+    lens.rotation.y = lerp(state.mx * 0.22 + (reduced ? 0 : Math.sin(t * 0.35) * 0.05), 0, p);
+    lens.rotation.x = lerp(state.my * 0.16, 0, p);
 
     // Lumière : accélère avec le défilement.
     const u = light.material.uniforms;
@@ -316,7 +273,7 @@ export function initHero(canvas, { reduced = false } = {}) {
     camera.position.x = state.mx * 0.25;
     camera.position.y = -state.my * 0.18;
     camera.lookAt(0, 0, 0);
-    sync();
+    sync(t);
     renderer.render(scene, camera);
   }
   frame();
