@@ -13,6 +13,7 @@ publish = false
 
 [workspace.dependencies]
 luma-core = { path = "crates/luma-core" }
+luma-brand = { path = "crates/luma-brand" }
 luma-color = { path = "crates/luma-color" }
 luma-raw = { path = "crates/luma-raw" }
 luma-project = { path = "crates/luma-project" }

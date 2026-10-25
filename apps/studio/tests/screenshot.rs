@@ -299,3 +299,23 @@ fn edited_photos_show_their_film() {
     );
     s.capture("modifiees");
 }
+
+/// L'accueil, sans photo : le logo sur le fond de LÜMA.
+#[test]
+fn welcome_screen() {
+    let mut harness = Harness::builder()
+        .with_size([1440.0, 900.0])
+        .wgpu()
+        .build_ui_state(
+            |ui, studio: &mut Option<Studio>| {
+                studio.get_or_insert_with(|| Studio::new(ui.ctx())).ui(ui);
+            },
+            None,
+        );
+    for _ in 0..5 {
+        harness.step();
+    }
+    let image = harness.render().expect("rendu de l'interface");
+    let out = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/studio-accueil.png");
+    image.save(&out).unwrap();
+}

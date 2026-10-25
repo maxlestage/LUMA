@@ -1,0 +1,13 @@
+[package]
+name = "luma-brand"
+description = "La marque de LÜMA : le logo (anneau de lumière et « LÜMA »), les icônes et le fond, dessinés par le code."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dev-dependencies]
+image.workspace = true
+
+[lints]
+workspace = true
