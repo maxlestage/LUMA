@@ -1,0 +1,11 @@
+//! LÜMA Studio : l'application de développement photo, sur le moteur de LÜMA.
+//!
+//! L'interface est dessinée par egui et affichée par wgpu (Metal sur Mac). Elle ne fait
+//! aucun calcul d'image : le travail est confié à [`worker`], en arrière‑plan.
+
+pub mod app;
+pub mod style;
+pub mod widgets;
+pub mod worker;
+
+pub use app::Studio;

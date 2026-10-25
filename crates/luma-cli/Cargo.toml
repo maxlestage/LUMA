@@ -17,7 +17,6 @@ luma-raw.workspace = true
 luma-project.workspace = true
 luma-image.workspace = true
 luma-render.workspace = true
-image.workspace = true
 rayon.workspace = true
 
 [lints]

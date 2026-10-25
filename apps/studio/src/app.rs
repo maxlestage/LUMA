@@ -1,0 +1,1343 @@
+//! LÜMA Studio : l'état de l'application et la mise en page du module Développement.
+//!
+//! Comme dans Lightroom Classic :
+//!
+//! - en haut, les modules ; à gauche, le navigateur et l'historique ; au centre, la
+//!   photo ; à droite, les panneaux de réglage ; en bas, le film du dossier ;
+//! - chaque geste terminé (curseur relâché, valeur saisie) crée une étape d'historique ;
+//! - les réglages sont enregistrés automatiquement dans un XMP à côté du RAW, au format
+//!   de Lightroom : rien n'est jamais écrit dans l'original ;
+//! - les raccourcis : `\` avant/après, ⌘Z et ⇧⌘Z annuler et rétablir, ⇧⌘C et ⇧⌘V
+//!   copier et coller les réglages, ⇧⌘R réinitialiser, ⇧⌘E exporter, ⌘O ouvrir,
+//!   ← et → photo précédente et suivante, J écrêtage, Z zoom 1:1.
+
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use egui::{
+    Color32, ColorImage, Key, Modifiers, RichText, TextureHandle, TextureOptions, Ui, pos2, vec2,
+};
+use luma_project::{Profile, Settings, WhiteBalance, xmp};
+use luma_render::{Photo, Size};
+
+use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
+use crate::worker::{Event, Worker, sidecar_path};
+
+/// Les extensions RAW reconnues dans un dossier.
+pub const RAW_EXTENSIONS: [&str; 20] = [
+    "arw", "cr2", "cr3", "crw", "nef", "nrw", "raf", "dng", "orf", "rw2", "pef", "srw", "3fr",
+    "iiq", "erf", "kdc", "dcr", "mos", "mef", "rwl",
+];
+
+pub fn is_raw(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| RAW_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+}
+
+/// Les RAW d'un dossier, triés par nom.
+pub fn scan(dir: &Path) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .map(|d| {
+            d.flatten()
+                .map(|e| e.path())
+                .filter(|p| p.is_file() && is_raw(p))
+                .collect()
+        })
+        .unwrap_or_default();
+    files.sort();
+    files
+}
+
+/// Un réglage du panneau : son curseur et l'endroit où il vit dans les réglages.
+struct Field {
+    spec: SliderSpec,
+    get: fn(&mut Settings) -> &mut f32,
+}
+
+const fn field(
+    label: &'static str,
+    min: f32,
+    max: f32,
+    default: f32,
+    decimals: usize,
+    get: fn(&mut Settings) -> &mut f32,
+) -> Field {
+    Field {
+        spec: SliderSpec {
+            label,
+            min,
+            max,
+            default,
+            decimals,
+            track: Track::Plain,
+            log: false,
+        },
+        get,
+    }
+}
+
+const TONE: [Field; 6] = [
+    field("Exposition", -5.0, 5.0, 0.0, 2, |s| &mut s.exposure),
+    field("Contraste", -100.0, 100.0, 0.0, 0, |s| &mut s.contrast),
+    field("Hautes lumières", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.highlights
+    }),
+    field("Ombres", -100.0, 100.0, 0.0, 0, |s| &mut s.shadows),
+    field("Blancs", -100.0, 100.0, 0.0, 0, |s| &mut s.whites),
+    field("Noirs", -100.0, 100.0, 0.0, 0, |s| &mut s.blacks),
+];
+const PRESENCE: [Field; 5] = [
+    field("Texture", -100.0, 100.0, 0.0, 0, |s| &mut s.texture),
+    field("Clarté", -100.0, 100.0, 0.0, 0, |s| &mut s.clarity),
+    field("Correction du voile", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.dehaze
+    }),
+    field("Vibrance", -100.0, 100.0, 0.0, 0, |s| &mut s.vibrance),
+    field("Saturation", -100.0, 100.0, 0.0, 0, |s| &mut s.saturation),
+];
+const CURVE: [Field; 7] = [
+    field("Hautes lumières", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.tone_curve.highlights
+    }),
+    field("Tons clairs", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.tone_curve.lights
+    }),
+    field("Tons foncés", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.tone_curve.darks
+    }),
+    field("Ombres", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.tone_curve.shadows
+    }),
+    field("Séparation ombres", 10.0, 70.0, 25.0, 0, |s| {
+        &mut s.tone_curve.shadow_split
+    }),
+    field("Séparation tons moyens", 20.0, 80.0, 50.0, 0, |s| {
+        &mut s.tone_curve.midtone_split
+    }),
+    field("Séparation hautes lum.", 30.0, 90.0, 75.0, 0, |s| {
+        &mut s.tone_curve.highlight_split
+    }),
+];
+const SHARPEN: [Field; 4] = [
+    field("Gain", 0.0, 150.0, 40.0, 0, |s| {
+        &mut s.detail.sharpen_amount
+    }),
+    field("Rayon", 0.5, 3.0, 1.0, 1, |s| &mut s.detail.sharpen_radius),
+    field("Détail", 0.0, 100.0, 25.0, 0, |s| {
+        &mut s.detail.sharpen_detail
+    }),
+    field("Masquage", 0.0, 100.0, 0.0, 0, |s| {
+        &mut s.detail.sharpen_masking
+    }),
+];
+const NOISE: [Field; 6] = [
+    field("Luminance", 0.0, 100.0, 0.0, 0, |s| {
+        &mut s.detail.luminance_nr
+    }),
+    field("Détail lum.", 0.0, 100.0, 50.0, 0, |s| {
+        &mut s.detail.luminance_nr_detail
+    }),
+    field("Contraste lum.", 0.0, 100.0, 0.0, 0, |s| {
+        &mut s.detail.luminance_nr_contrast
+    }),
+    field("Couleur", 0.0, 100.0, 25.0, 0, |s| &mut s.detail.color_nr),
+    field("Détail coul.", 0.0, 100.0, 50.0, 0, |s| {
+        &mut s.detail.color_nr_detail
+    }),
+    field("Lissage", 0.0, 100.0, 50.0, 0, |s| {
+        &mut s.detail.color_nr_smoothness
+    }),
+];
+const VIGNETTE: [Field; 5] = [
+    field("Gain", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.effects.vignette_amount
+    }),
+    field("Milieu", 0.0, 100.0, 50.0, 0, |s| {
+        &mut s.effects.vignette_midpoint
+    }),
+    field("Arrondi", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.effects.vignette_roundness
+    }),
+    field("Contour progressif", 0.0, 100.0, 50.0, 0, |s| {
+        &mut s.effects.vignette_feather
+    }),
+    field("Hautes lumières", 0.0, 100.0, 0.0, 0, |s| {
+        &mut s.effects.vignette_highlights
+    }),
+];
+const GRAIN: [Field; 3] = [
+    field("Gain", 0.0, 100.0, 0.0, 0, |s| &mut s.effects.grain_amount),
+    field("Taille", 0.0, 100.0, 25.0, 0, |s| &mut s.effects.grain_size),
+    field("Rugosité", 0.0, 100.0, 50.0, 0, |s| {
+        &mut s.effects.grain_roughness
+    }),
+];
+const CALIBRATION: [Field; 7] = [
+    field("Teinte des ombres", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.calibration.shadows_tint
+    }),
+    field("Rouge, teinte", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.calibration.red_hue
+    }),
+    field("Rouge, saturation", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.calibration.red_saturation
+    }),
+    field("Vert, teinte", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.calibration.green_hue
+    }),
+    field("Vert, saturation", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.calibration.green_saturation
+    }),
+    field("Bleu, teinte", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.calibration.blue_hue
+    }),
+    field("Bleu, saturation", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.calibration.blue_saturation
+    }),
+];
+
+const HSL_NAMES: [&str; 8] = [
+    "Rouge",
+    "Orange",
+    "Jaune",
+    "Vert",
+    "Bleu-vert",
+    "Bleu",
+    "Violet",
+    "Magenta",
+];
+const HSL_HUES: [f32; 8] = [0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 270.0, 300.0];
+
+/// Ce qui a été demandé au rendu, pour ne pas redemander la même chose.
+#[derive(PartialEq)]
+struct Request {
+    path: PathBuf,
+    settings: Settings,
+    size: Size,
+    clipping: bool,
+}
+
+pub struct Studio {
+    worker: Worker,
+    folder: Vec<PathBuf>,
+    current: Option<usize>,
+    photo: Option<Arc<Photo>>,
+    loading: Option<PathBuf>,
+    pub settings: Settings,
+    history: Vec<(String, Settings)>,
+    history_pos: usize,
+    clipboard: Option<Settings>,
+    texture: Option<TextureHandle>,
+    image_size: [usize; 2],
+    histogram: [[u32; 256]; 3],
+    generation: u64,
+    shown: u64,
+    last_request: Option<Request>,
+    render_ms: f32,
+    before: bool,
+    clipping: bool,
+    zoom: bool,
+    thumbs: HashMap<PathBuf, TextureHandle>,
+    status: String,
+    xmp_due: Option<f64>,
+    grading_tab: usize,
+    hsl_tab: usize,
+}
+
+impl Studio {
+    pub fn new(ctx: &egui::Context) -> Self {
+        crate::style::apply(ctx);
+        let repaint_ctx = ctx.clone();
+        Self {
+            worker: Worker::new(move || repaint_ctx.request_repaint()),
+            folder: Vec::new(),
+            current: None,
+            photo: None,
+            loading: None,
+            settings: Settings::default(),
+            history: Vec::new(),
+            history_pos: 0,
+            clipboard: None,
+            texture: None,
+            image_size: [0, 0],
+            histogram: [[0; 256]; 3],
+            generation: 0,
+            shown: 0,
+            last_request: None,
+            render_ms: 0.0,
+            before: false,
+            clipping: false,
+            zoom: false,
+            thumbs: HashMap::new(),
+            status: "Ouvrez un RAW ou un dossier (Cmd+O), ou déposez-le dans la fenêtre.".into(),
+            xmp_due: None,
+            grading_tab: 0,
+            hsl_tab: 0,
+        }
+    }
+
+    /// Ouvre un fichier (et son dossier dans le film) ou un dossier.
+    pub fn open_path(&mut self, path: &Path) {
+        let (dir, file) = if path.is_dir() {
+            (path.to_path_buf(), None)
+        } else {
+            (
+                path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+                Some(path.to_path_buf()),
+            )
+        };
+        self.folder = scan(&dir);
+        if let Some(f) = &file
+            && !self.folder.contains(f)
+        {
+            self.folder.push(f.clone());
+        }
+        for p in &self.folder {
+            if !self.thumbs.contains_key(p) {
+                self.worker.thumbnail(p.clone());
+            }
+        }
+        let index = file
+            .and_then(|f| self.folder.iter().position(|p| *p == f))
+            .or(if self.folder.is_empty() {
+                None
+            } else {
+                Some(0)
+            });
+        match index {
+            Some(i) => self.select(i),
+            None => self.status = format!("Aucun RAW dans {}", dir.display()),
+        }
+    }
+
+    /// La photo actuellement développée.
+    pub fn current_path(&self) -> Option<&Path> {
+        self.current
+            .and_then(|i| self.folder.get(i))
+            .map(PathBuf::as_path)
+    }
+
+    /// Prête : photo chargée et dernier rendu affiché.
+    pub fn is_idle(&self) -> bool {
+        self.loading.is_none()
+            && self.photo.is_some()
+            && self.shown == self.generation
+            && self.texture.is_some()
+    }
+
+    fn select(&mut self, index: usize) {
+        if index >= self.folder.len() || self.current == Some(index) && self.photo.is_some() {
+            return;
+        }
+        self.flush_xmp();
+        self.current = Some(index);
+        let path = self.folder[index].clone();
+        self.status = format!("Ouverture de {}…", file_name(&path));
+        self.loading = Some(path.clone());
+        self.worker.open(path);
+    }
+
+    fn handle_events(&mut self, ctx: &egui::Context) {
+        for event in self.worker.poll() {
+            match event {
+                Event::Loaded { path, result } => {
+                    if self.loading.as_ref() != Some(&path) {
+                        continue;
+                    }
+                    self.loading = None;
+                    match result {
+                        Ok((photo, sidecar)) => {
+                            let from_xmp = sidecar.is_some();
+                            self.settings = sidecar.map(|s| *s).unwrap_or_default();
+                            self.history = vec![("Importation".into(), Settings::default())];
+                            if from_xmp {
+                                self.history
+                                    .push(("Réglages XMP".into(), self.settings.clone()));
+                            }
+                            self.history_pos = self.history.len() - 1;
+                            let raw = photo.raw();
+                            let e = &raw.exif;
+                            let mut info = format!("{} {}", raw.make, raw.model);
+                            if let Some(iso) = e.iso {
+                                info += &format!(" · ISO {iso}");
+                            }
+                            if let Some(f) = e.focal_length {
+                                info += &format!(" · {f:.0} mm");
+                            }
+                            if let Some(a) = e.aperture {
+                                info += &format!(" · f/{}", format_value(a, 1, false));
+                            }
+                            if let Some(t) = e.exposure_time {
+                                info += &if t < 1.0 {
+                                    format!(" · 1/{:.0} s", 1.0 / t)
+                                } else {
+                                    format!(" · {t:.1} s")
+                                };
+                            }
+                            self.status = info;
+                            self.photo = Some(photo);
+                            self.zoom = false;
+                        }
+                        Err(e) => {
+                            self.status = format!("Impossible d'ouvrir {} : {e}", file_name(&path))
+                        }
+                    }
+                }
+                Event::Rendered(frame) => {
+                    if frame.generation < self.shown {
+                        continue;
+                    }
+                    self.shown = frame.generation;
+                    self.render_ms = frame.millis;
+                    self.histogram = frame.histogram;
+                    self.image_size = frame.size;
+                    let image = ColorImage::from_rgba_unmultiplied(frame.size, &frame.rgba);
+                    match &mut self.texture {
+                        Some(t) => t.set(image, TextureOptions::LINEAR),
+                        None => {
+                            self.texture =
+                                Some(ctx.load_texture("photo", image, TextureOptions::LINEAR))
+                        }
+                    }
+                }
+                Event::Thumbnail { path, size, rgba } => {
+                    let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    let name = format!("vignette {}", path.display());
+                    self.thumbs
+                        .insert(path, ctx.load_texture(name, image, TextureOptions::LINEAR));
+                }
+                Event::Exported { result } => {
+                    self.status = match result {
+                        Ok(p) => format!("Exporté : {}", p.display()),
+                        Err(e) => format!("Échec de l'export : {e}"),
+                    };
+                }
+            }
+        }
+    }
+
+    /// Une étape d'historique (curseur relâché, choix fait).
+    fn commit(&mut self, label: String) {
+        self.history.truncate(self.history_pos + 1);
+        if self
+            .history
+            .last()
+            .is_some_and(|(_, s)| *s == self.settings)
+        {
+            return;
+        }
+        self.history.push((label, self.settings.clone()));
+        self.history_pos = self.history.len() - 1;
+    }
+
+    fn restore(&mut self, pos: usize) {
+        if let Some((_, s)) = self.history.get(pos) {
+            self.settings = s.clone();
+            self.history_pos = pos;
+            self.touch();
+        }
+    }
+
+    /// Les réglages ont changé : le XMP sera écrit dans un instant.
+    fn touch(&mut self) {
+        self.xmp_due = Some(0.0);
+    }
+
+    /// Écrit le XMP à côté du RAW (format Lightroom).
+    pub fn flush_xmp(&mut self) {
+        if self.xmp_due.take().is_none() {
+            return;
+        }
+        if let Some(path) = self.current_path().map(Path::to_path_buf) {
+            let target = sidecar_path(&path);
+            if let Err(e) = std::fs::write(&target, xmp::write(&self.settings)) {
+                self.status = format!("XMP non enregistré ({}) : {e}", target.display());
+            }
+        }
+    }
+
+    fn request_render(&mut self, viewport_px: f32) {
+        let (Some(photo), Some(path)) = (&self.photo, self.current_path()) else {
+            return;
+        };
+        // Tailles par paliers de 512 px : le cache de sources sert d'un rendu à l'autre.
+        let size = if self.zoom {
+            Size::Full
+        } else {
+            Size::Fit(((viewport_px / 512.0).ceil().max(1.0) * 512.0) as usize)
+        };
+        let settings = if self.before {
+            Settings::default()
+        } else {
+            self.settings.clone()
+        };
+        let request = Request {
+            path: path.to_path_buf(),
+            settings,
+            size,
+            clipping: self.clipping,
+        };
+        if self.last_request.as_ref() == Some(&request) {
+            return;
+        }
+        self.generation += 1;
+        self.worker.render(
+            photo.clone(),
+            request.settings.clone(),
+            size,
+            self.generation,
+            self.clipping,
+        );
+        self.last_request = Some(request);
+    }
+
+    fn shortcuts(&mut self, ctx: &egui::Context) {
+        let typing = ctx.memory(|m| m.focused().is_some());
+        let cmd_shift = Modifiers::COMMAND | Modifiers::SHIFT;
+        let mut action: Option<&str> = None;
+        ctx.input_mut(|i| {
+            if i.consume_key(cmd_shift, Key::Z) {
+                action = Some("redo");
+            } else if i.consume_key(Modifiers::COMMAND, Key::Z) {
+                action = Some("undo");
+            } else if i.consume_key(cmd_shift, Key::C) {
+                action = Some("copy");
+            } else if i.consume_key(cmd_shift, Key::V) {
+                action = Some("paste");
+            } else if i.consume_key(cmd_shift, Key::R) {
+                action = Some("reset");
+            } else if i.consume_key(cmd_shift, Key::E) {
+                action = Some("export");
+            } else if i.consume_key(Modifiers::COMMAND, Key::O) {
+                action = Some("open");
+            } else if !typing {
+                if i.consume_key(Modifiers::NONE, Key::Backslash) {
+                    action = Some("before");
+                } else if i.consume_key(Modifiers::NONE, Key::ArrowLeft) {
+                    action = Some("prev");
+                } else if i.consume_key(Modifiers::NONE, Key::ArrowRight) {
+                    action = Some("next");
+                } else if i.consume_key(Modifiers::NONE, Key::J) {
+                    action = Some("clipping");
+                } else if i.consume_key(Modifiers::NONE, Key::Z) {
+                    action = Some("zoom");
+                }
+            }
+        });
+        if let Some(a) = action {
+            self.act(a);
+        }
+    }
+
+    fn act(&mut self, action: &str) {
+        match action {
+            "undo" if self.history_pos > 0 => self.restore(self.history_pos - 1),
+            "redo" if self.history_pos + 1 < self.history.len() => {
+                self.restore(self.history_pos + 1)
+            }
+            "copy" => {
+                self.clipboard = Some(self.settings.clone());
+                self.status = "Réglages copiés.".into();
+            }
+            "paste" => {
+                if let Some(s) = self.clipboard.clone() {
+                    self.settings = s;
+                    self.commit("Coller les réglages".into());
+                    self.touch();
+                }
+            }
+            "reset" => {
+                self.settings = Settings::default();
+                self.commit("Réinitialiser".into());
+                self.touch();
+            }
+            "export" => {
+                if let (Some(photo), Some(path)) = (
+                    self.photo.clone(),
+                    self.current_path().map(Path::to_path_buf),
+                ) {
+                    self.status = format!("Export de {}…", file_name(&path));
+                    self.worker.export(photo, self.settings.clone(), path);
+                }
+            }
+            "open" => {
+                let mut dialog = rfd::FileDialog::new().set_title("Ouvrir un RAW");
+                dialog = dialog.add_filter("RAW", &RAW_EXTENSIONS);
+                if let Some(p) = dialog.pick_file() {
+                    self.open_path(&p);
+                }
+            }
+            "before" => self.before = !self.before,
+            "prev" => {
+                if let Some(i) = self.current.filter(|i| *i > 0) {
+                    self.select(i - 1);
+                }
+            }
+            "next" => {
+                if let Some(i) = self.current {
+                    self.select(i + 1);
+                }
+            }
+            "clipping" => self.clipping = !self.clipping,
+            "zoom" => self.zoom = !self.zoom,
+            _ => {}
+        }
+    }
+
+    /// Toute l'interface.
+    pub fn ui(&mut self, ui: &mut Ui) {
+        let ctx = ui.ctx().clone();
+        self.handle_events(&ctx);
+        self.shortcuts(&ctx);
+        let dropped: Vec<PathBuf> = ctx.input(|i| {
+            i.raw
+                .dropped_files
+                .iter()
+                .map(|f| f.path().to_path_buf())
+                .filter(|p| !p.as_os_str().is_empty())
+                .collect()
+        });
+        if let Some(p) = dropped.first() {
+            self.open_path(p);
+        }
+        // Le XMP s'écrit une seconde après le dernier changement.
+        let now = ctx.input(|i| i.time);
+        match self.xmp_due {
+            Some(0.0) => self.xmp_due = Some(now + 1.0),
+            Some(t) if now >= t => self.flush_xmp(),
+            Some(t) => ctx.request_repaint_after(std::time::Duration::from_secs_f64(t - now)),
+            None => {}
+        }
+
+        egui::Panel::top("modules")
+            .exact_size(40.0)
+            .frame(
+                egui::Frame::NONE
+                    .fill(theme::BACKGROUND)
+                    .inner_margin(egui::Margin::symmetric(16, 0)),
+            )
+            .show(ui, |ui| self.top_bar(ui));
+        egui::Panel::bottom("film")
+            .exact_size(112.0)
+            .frame(
+                egui::Frame::NONE
+                    .fill(theme::BACKGROUND)
+                    .inner_margin(egui::Margin::symmetric(12, 8)),
+            )
+            .show(ui, |ui| self.filmstrip(ui));
+        egui::Panel::left("gauche")
+            .exact_size(250.0)
+            .frame(
+                egui::Frame::NONE
+                    .fill(theme::PANEL)
+                    .inner_margin(egui::Margin::same(12)),
+            )
+            .show(ui, |ui| self.left_panel(ui));
+        egui::Panel::right("droite")
+            .exact_size(330.0)
+            .frame(
+                egui::Frame::NONE
+                    .fill(theme::PANEL)
+                    .inner_margin(egui::Margin::symmetric(12, 10)),
+            )
+            .show(ui, |ui| {
+                egui::ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .show(ui, |ui| self.develop_panels(ui));
+            });
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(Color32::from_gray(0x2a)))
+            .show(ui, |ui| self.viewer(ui));
+    }
+
+    fn top_bar(&mut self, ui: &mut Ui) {
+        ui.horizontal_centered(|ui| {
+            ui.label(
+                RichText::new("LÜMA")
+                    .strong()
+                    .size(15.0)
+                    .color(Color32::WHITE),
+            );
+            ui.add_space(24.0);
+            for (name, active) in [
+                ("Bibliothèque", false),
+                ("Développement", true),
+                ("Carte", false),
+                ("Impression", false),
+            ] {
+                let text = RichText::new(name).size(13.0).color(if active {
+                    Color32::WHITE
+                } else {
+                    theme::DIM
+                });
+                let r = ui.add(egui::Label::new(text).sense(egui::Sense::click()));
+                if active {
+                    let rect = r.rect;
+                    ui.painter().line_segment(
+                        [
+                            pos2(rect.min.x, rect.max.y + 3.0),
+                            pos2(rect.max.x, rect.max.y + 3.0),
+                        ],
+                        egui::Stroke::new(2.0, theme::ACCENT),
+                    );
+                } else {
+                    r.on_hover_text("Bientôt");
+                }
+                ui.add_space(14.0);
+            }
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("Exporter (Maj+Cmd+E)").clicked() {
+                    self.act("export");
+                }
+                if ui.button("Ouvrir (Cmd+O)").clicked() {
+                    self.act("open");
+                }
+                if self.render_ms > 0.0 {
+                    ui.label(
+                        RichText::new(format!(
+                            "rendu {} ms",
+                            format_value(self.render_ms, 0, false)
+                        ))
+                        .size(11.0)
+                        .color(theme::DIM),
+                    );
+                }
+            });
+        });
+    }
+
+    fn left_panel(&mut self, ui: &mut Ui) {
+        section_title(ui, "Navigateur");
+        if let Some(t) = &self.texture {
+            let w = ui.available_width();
+            let [iw, ih] = self.image_size;
+            let h = w * ih as f32 / iw.max(1) as f32;
+            let (rect, _) = ui.allocate_exact_size(vec2(w, h.min(200.0)), egui::Sense::hover());
+            ui.painter().image(
+                t.id(),
+                fit(rect, iw, ih),
+                egui::Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        }
+        ui.add_space(12.0);
+        ui.horizontal(|ui| {
+            if ui.button("Copier").on_hover_text("Maj+Cmd+C").clicked() {
+                self.act("copy");
+            }
+            if ui
+                .add_enabled(self.clipboard.is_some(), egui::Button::new("Coller"))
+                .on_hover_text("Maj+Cmd+V")
+                .clicked()
+            {
+                self.act("paste");
+            }
+            if ui
+                .button("Réinitialiser")
+                .on_hover_text("Maj+Cmd+R")
+                .clicked()
+            {
+                self.act("reset");
+            }
+        });
+        ui.add_space(8.0);
+        let label = if self.before {
+            "Avant (\\)"
+        } else {
+            "Après (\\)"
+        };
+        if ui.selectable_label(self.before, label).clicked() {
+            self.act("before");
+        }
+        ui.add_space(12.0);
+        section_title(ui, "Historique");
+        let mut restore = None;
+        egui::ScrollArea::vertical()
+            .id_salt("historique")
+            .show(ui, |ui| {
+                for (i, (label, _)) in self.history.iter().enumerate().rev() {
+                    let current = i == self.history_pos;
+                    let text = RichText::new(label).size(12.0).color(if current {
+                        Color32::WHITE
+                    } else if i > self.history_pos {
+                        theme::DIM
+                    } else {
+                        theme::TEXT
+                    });
+                    if ui.selectable_label(current, text).clicked() {
+                        restore = Some(i);
+                    }
+                }
+            });
+        if let Some(i) = restore {
+            self.restore(i);
+        }
+    }
+
+    fn filmstrip(&mut self, ui: &mut Ui) {
+        let mut clicked = None;
+        egui::ScrollArea::horizontal()
+            .id_salt("film")
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for (i, path) in self.folder.iter().enumerate() {
+                        let h = 84.0;
+                        let (w, tex) = match self.thumbs.get(path) {
+                            Some(t) => {
+                                let s = t.size();
+                                (h * s[0] as f32 / s[1].max(1) as f32, Some(t))
+                            }
+                            None => (h * 1.5, None),
+                        };
+                        let (rect, r) = ui.allocate_exact_size(vec2(w, h), egui::Sense::click());
+                        let painter = ui.painter();
+                        match tex {
+                            Some(t) => {
+                                painter.image(
+                                    t.id(),
+                                    rect,
+                                    egui::Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                                    Color32::WHITE,
+                                );
+                            }
+                            None => {
+                                painter.rect_filled(rect, 2.0, theme::SECTION);
+                            }
+                        }
+                        if Some(i) == self.current {
+                            painter.rect_stroke(
+                                rect.expand(2.0),
+                                2.0,
+                                egui::Stroke::new(2.0, theme::ACCENT),
+                                egui::StrokeKind::Outside,
+                            );
+                        }
+                        if r.on_hover_text(file_name(path)).clicked() {
+                            clicked = Some(i);
+                        }
+                        ui.add_space(4.0);
+                    }
+                });
+            });
+        if let Some(i) = clicked {
+            self.select(i);
+        }
+    }
+
+    fn viewer(&mut self, ui: &mut Ui) {
+        let rect = ui.max_rect();
+        let ppp = ui.ctx().pixels_per_point();
+        self.request_render(rect.width().max(rect.height()) * ppp);
+        let painter = ui.painter_at(rect);
+        let Some(t) = &self.texture else {
+            painter.text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                &self.status,
+                egui::FontId::proportional(15.0),
+                theme::DIM,
+            );
+            return;
+        };
+        let [iw, ih] = self.image_size;
+        let uv = egui::Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+        if self.zoom && matches!(self.last_request.as_ref().map(|r| r.size), Some(Size::Full)) {
+            // 1:1 : un pixel de l'image par pixel de l'écran, on se déplace en glissant.
+            let size = vec2(iw as f32, ih as f32) / ppp;
+            egui::ScrollArea::both().id_salt("zoom").show(ui, |ui| {
+                let (r, resp) = ui.allocate_exact_size(size, egui::Sense::click());
+                ui.painter().image(t.id(), r, uv, Color32::WHITE);
+                if resp.clicked() {
+                    self.zoom = false;
+                }
+            });
+        } else {
+            let target = fit(rect.shrink(18.0), iw, ih);
+            painter.image(t.id(), target, uv, Color32::WHITE);
+            let r = ui.interact(target, ui.scope_id().with("photo"), egui::Sense::click());
+            if r.on_hover_text("Clic ou Z : zoom 1:1").clicked() {
+                self.zoom = true;
+            }
+        }
+        let mut badges = Vec::new();
+        if self.before {
+            badges.push("Avant");
+        }
+        if self.loading.is_some() || self.shown != self.generation {
+            badges.push("Rendu…");
+        }
+        if self.clipping {
+            badges.push("Écrêtage (J)");
+        }
+        for (k, b) in badges.iter().enumerate() {
+            let p = rect.min + vec2(24.0, 24.0 + k as f32 * 26.0);
+            let galley = painter.layout_no_wrap(
+                b.to_string(),
+                egui::FontId::proportional(12.0),
+                Color32::WHITE,
+            );
+            let bg = egui::Rect::from_min_size(p, galley.size() + vec2(16.0, 8.0));
+            painter.rect_filled(bg, 10.0, Color32::from_black_alpha(170));
+            painter.galley(p + vec2(8.0, 4.0), galley, Color32::WHITE);
+        }
+        let status = painter.layout_no_wrap(
+            self.status.clone(),
+            egui::FontId::proportional(11.5),
+            theme::DIM,
+        );
+        painter.galley(
+            pos2(rect.min.x + 20.0, rect.max.y - 20.0),
+            status,
+            theme::DIM,
+        );
+    }
+
+    fn fields(&mut self, ui: &mut Ui, fields: &[Field]) -> Option<String> {
+        let mut label = None;
+        for f in fields {
+            let value = (f.get)(&mut self.settings);
+            let change = widgets::slider(ui, &f.spec, value);
+            let v = *value;
+            if change.changed {
+                self.touch();
+            }
+            if change.committed {
+                label = Some(format!(
+                    "{} {}",
+                    f.spec.label,
+                    format_value(v, f.spec.decimals, f.spec.min < 0.0)
+                ));
+            }
+        }
+        label
+    }
+
+    fn develop_panels(&mut self, ui: &mut Ui) {
+        let mut commits: Vec<String> = Vec::new();
+        let keep = |l: Option<String>, commits: &mut Vec<String>| {
+            if let Some(l) = l {
+                commits.push(l);
+            }
+        };
+
+        section_title(ui, "Histogramme");
+        widgets::histogram(ui, &self.histogram, &mut self.clipping)
+            .on_hover_text("Clic ou J : afficher l'écrêtage");
+        ui.add_space(6.0);
+
+        egui::CollapsingHeader::new(RichText::new("Base").strong())
+            .default_open(true)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Profil").color(theme::DIM));
+                    let names = [
+                        (Profile::Color, "Couleur"),
+                        (Profile::Neutral, "Neutre"),
+                        (Profile::Vivid, "Vif"),
+                        (Profile::Monochrome, "Monochrome"),
+                    ];
+                    let current = names
+                        .iter()
+                        .find(|n| n.0 == self.settings.profile)
+                        .map_or("Couleur", |n| n.1);
+                    egui::ComboBox::from_id_salt("profil")
+                        .selected_text(current)
+                        .show_ui(ui, |ui| {
+                            for (p, name) in names {
+                                if ui
+                                    .selectable_value(&mut self.settings.profile, p, name)
+                                    .changed()
+                                {
+                                    commits.push(format!("Profil : {name}"));
+                                }
+                            }
+                        })
+                        .response
+                        .accessible_name("Profil");
+                });
+                ui.add_space(4.0);
+                let as_shot = self.photo.as_ref().map(|p| p.as_shot());
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Balance des blancs").color(theme::DIM));
+                    let mut custom =
+                        matches!(self.settings.white_balance, WhiteBalance::Custom { .. });
+                    egui::ComboBox::from_id_salt("balance")
+                        .selected_text(if custom {
+                            "Personnalisée"
+                        } else {
+                            "Telle quelle"
+                        })
+                        .show_ui(ui, |ui| {
+                            if ui
+                                .selectable_value(&mut custom, false, "Telle quelle")
+                                .changed()
+                            {
+                                self.settings.white_balance = WhiteBalance::AsShot;
+                                commits.push("Balance : telle quelle".into());
+                            }
+                            ui.selectable_value(&mut custom, true, "Personnalisée");
+                        })
+                        .response
+                        .accessible_name("Balance des blancs");
+                });
+                let (mut temperature, mut tint) = match (self.settings.white_balance, as_shot) {
+                    (WhiteBalance::Custom { temperature, tint }, _) => (temperature, tint),
+                    (WhiteBalance::AsShot, Some(t)) => (t.temperature, t.tint),
+                    (WhiteBalance::AsShot, None) => (5500.0, 0.0),
+                };
+                let default_t = as_shot.map_or(5500.0, |t| t.temperature.round());
+                let default_tint = as_shot.map_or(0.0, |t| t.tint.round());
+                let ts = SliderSpec {
+                    label: "Temp.",
+                    min: 2000.0,
+                    max: 50000.0,
+                    default: default_t,
+                    decimals: 0,
+                    track: Track::Gradient(&widgets::TEMPERATURE),
+                    log: true,
+                };
+                let tn = SliderSpec {
+                    label: "Teinte",
+                    min: -150.0,
+                    max: 150.0,
+                    default: default_tint,
+                    decimals: 0,
+                    track: Track::Gradient(&widgets::TINT),
+                    log: false,
+                };
+                let mut c = widgets::slider(ui, &ts, &mut temperature);
+                let c2 = widgets::slider(ui, &tn, &mut tint);
+                c.merge(c2);
+                if c.changed {
+                    self.settings.white_balance = WhiteBalance::Custom { temperature, tint };
+                    self.touch();
+                }
+                if c.committed {
+                    commits.push(format!(
+                        "Balance : {} K, {}",
+                        format_value(temperature, 0, false),
+                        format_value(tint, 0, true)
+                    ));
+                }
+                sub_title(ui, "Tonalité");
+                let l = self.fields(ui, &TONE);
+                keep(l, &mut commits);
+                sub_title(ui, "Présence");
+                let l = self.fields(ui, &PRESENCE);
+                keep(l, &mut commits);
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Courbe des tonalités").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                curve_preview(ui, &self.settings);
+                let l = self.fields(ui, &CURVE);
+                keep(l, &mut commits);
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Mélangeur de couleurs").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for (i, name) in ["Teinte", "Saturation", "Luminance"].iter().enumerate() {
+                        ui.selectable_value(&mut self.hsl_tab, i, *name);
+                    }
+                });
+                let kind = ["Teinte", "Saturation", "Luminance"][self.hsl_tab];
+                for (i, name) in HSL_NAMES.iter().enumerate() {
+                    let value = match self.hsl_tab {
+                        0 => &mut self.settings.hsl.hue[i],
+                        1 => &mut self.settings.hsl.saturation[i],
+                        _ => &mut self.settings.hsl.luminance[i],
+                    };
+                    let colors: &'static [Color32] = hsl_track(self.hsl_tab, i);
+                    let spec = SliderSpec {
+                        label: name,
+                        min: -100.0,
+                        max: 100.0,
+                        default: 0.0,
+                        decimals: 0,
+                        track: Track::Gradient(colors),
+                        log: false,
+                    };
+                    let c = widgets::slider(ui, &spec, value);
+                    let v = *value;
+                    if c.changed {
+                        self.touch();
+                    }
+                    if c.committed {
+                        commits.push(format!(
+                            "{kind} {} {}",
+                            name.to_lowercase(),
+                            format_value(v, 0, true)
+                        ));
+                    }
+                }
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Étalonnage des couleurs").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for (i, name) in ["Ombres", "Tons moyens", "Hautes lum.", "Global"]
+                        .iter()
+                        .enumerate()
+                    {
+                        ui.selectable_value(&mut self.grading_tab, i, *name);
+                    }
+                });
+                let names = ["Ombres", "Tons moyens", "Hautes lumières", "Global"];
+                let g = &mut self.settings.color_grading;
+                let wheel = match self.grading_tab {
+                    0 => &mut g.shadows,
+                    1 => &mut g.midtones,
+                    2 => &mut g.highlights,
+                    _ => &mut g.global,
+                };
+                let mut c = Change::default();
+                ui.vertical_centered(|ui| {
+                    c.merge(widgets::color_wheel(
+                        ui,
+                        names[self.grading_tab],
+                        &mut wheel.hue,
+                        &mut wheel.saturation,
+                        150.0,
+                    ));
+                });
+                let lum = SliderSpec {
+                    label: "Luminance",
+                    min: -100.0,
+                    max: 100.0,
+                    default: 0.0,
+                    decimals: 0,
+                    track: Track::Plain,
+                    log: false,
+                };
+                c.merge(widgets::slider(ui, &lum, &mut wheel.luminance));
+                let (h, s, l) = (wheel.hue, wheel.saturation, wheel.luminance);
+                let blend = SliderSpec {
+                    label: "Fusion",
+                    min: 0.0,
+                    max: 100.0,
+                    default: 50.0,
+                    decimals: 0,
+                    track: Track::Plain,
+                    log: false,
+                };
+                let balance = SliderSpec {
+                    label: "Balance",
+                    min: -100.0,
+                    max: 100.0,
+                    default: 0.0,
+                    decimals: 0,
+                    track: Track::Plain,
+                    log: false,
+                };
+                c.merge(widgets::slider(ui, &blend, &mut g.blending));
+                c.merge(widgets::slider(ui, &balance, &mut g.balance));
+                if c.changed {
+                    self.touch();
+                }
+                if c.committed {
+                    commits.push(format!(
+                        "Étalonnage {} : {h:.0}°, {s:.0}, {}",
+                        names[self.grading_tab].to_lowercase(),
+                        format_value(l, 0, true)
+                    ));
+                }
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Détail").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                sub_title(ui, "Accentuation");
+                let l = self.fields(ui, &SHARPEN);
+                keep(l, &mut commits);
+                sub_title(ui, "Réduction du bruit");
+                let l = self.fields(ui, &NOISE);
+                keep(l, &mut commits);
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Effets").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                sub_title(ui, "Vignetage après recadrage");
+                let l = self.fields(ui, &VIGNETTE);
+                keep(l, &mut commits);
+                sub_title(ui, "Grain");
+                let l = self.fields(ui, &GRAIN);
+                keep(l, &mut commits);
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Étalonnage de l'appareil photo").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                let l = self.fields(ui, &CALIBRATION);
+                keep(l, &mut commits);
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Recadrage").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                let angle = SliderSpec {
+                    label: "Angle",
+                    min: -45.0,
+                    max: 45.0,
+                    default: 0.0,
+                    decimals: 1,
+                    track: Track::Plain,
+                    log: false,
+                };
+                let c = widgets::slider(ui, &angle, &mut self.settings.crop.angle);
+                if c.changed {
+                    self.touch();
+                }
+                if c.committed {
+                    commits.push(format!(
+                        "Angle {}",
+                        format_value(self.settings.crop.angle, 1, true)
+                    ));
+                }
+            });
+
+        for label in commits {
+            self.touch();
+            self.commit(label);
+        }
+    }
+}
+
+/// Le dégradé d'un curseur du mélangeur : la teinte voisine, la couleur désaturée ou
+/// assombrie.
+fn hsl_track(tab: usize, band: usize) -> &'static [Color32] {
+    use std::sync::OnceLock;
+    static TRACKS: OnceLock<Vec<Vec<Color32>>> = OnceLock::new();
+    let tracks = TRACKS.get_or_init(|| {
+        let mut all = Vec::new();
+        for t in 0..3 {
+            for (b, hue) in HSL_HUES.iter().enumerate() {
+                let _ = b;
+                let v = match t {
+                    0 => vec![
+                        widgets::hue_color(hue - 30.0, 0.8, 0.9),
+                        widgets::hue_color(*hue, 0.8, 0.9),
+                        widgets::hue_color(hue + 30.0, 0.8, 0.9),
+                    ],
+                    1 => vec![
+                        widgets::hue_color(*hue, 0.0, 0.7),
+                        widgets::hue_color(*hue, 0.9, 0.95),
+                    ],
+                    _ => vec![
+                        widgets::hue_color(*hue, 0.8, 0.25),
+                        widgets::hue_color(*hue, 0.5, 1.0),
+                    ],
+                };
+                all.push(v);
+            }
+        }
+        all
+    });
+    &tracks[tab * 8 + band]
+}
+
+/// L'aperçu de la courbe paramétrique et des courbes à points.
+fn curve_preview(ui: &mut Ui, s: &Settings) {
+    let w = ui.available_width();
+    let (rect, _) = ui.allocate_exact_size(vec2(w, w * 0.6), egui::Sense::hover());
+    let p = ui.painter();
+    p.rect_filled(rect, 3.0, Color32::from_gray(0x16));
+    for k in 1..4 {
+        let x = rect.min.x + rect.width() * k as f32 / 4.0;
+        let y = rect.min.y + rect.height() * k as f32 / 4.0;
+        p.line_segment(
+            [pos2(x, rect.min.y), pos2(x, rect.max.y)],
+            egui::Stroke::new(1.0, Color32::from_gray(0x2a)),
+        );
+        p.line_segment(
+            [pos2(rect.min.x, y), pos2(rect.max.x, y)],
+            egui::Stroke::new(1.0, Color32::from_gray(0x2a)),
+        );
+    }
+    let lut = luma_image::curve::parametric(&s.tone_curve)
+        .then(&luma_image::curve::spline(&s.tone_curve.point));
+    let points: Vec<egui::Pos2> = (0..=64)
+        .map(|i| {
+            let x = i as f32 / 64.0;
+            pos2(
+                rect.min.x + x * rect.width(),
+                rect.max.y - lut.get(x) * rect.height(),
+            )
+        })
+        .collect();
+    p.add(egui::Shape::line(
+        points,
+        egui::Stroke::new(1.5, Color32::from_gray(0xe0)),
+    ));
+}
+
+fn section_title(ui: &mut Ui, title: &str) {
+    ui.label(RichText::new(title).size(11.0).color(theme::DIM).strong());
+    ui.add_space(4.0);
+}
+
+fn sub_title(ui: &mut Ui, title: &str) {
+    ui.add_space(6.0);
+    ui.label(RichText::new(title).size(11.5).color(theme::DIM));
+}
+
+fn file_name(p: &Path) -> String {
+    p.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// Le rectangle de taille `w × h` qui tient dans `area`, centré.
+fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
+    if w == 0 || h == 0 {
+        return area;
+    }
+    let s = (area.width() / w as f32).min(area.height() / h as f32);
+    egui::Rect::from_center_size(area.center(), vec2(w as f32 * s, h as f32 * s))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn raw_extensions() {
+        assert!(is_raw(Path::new("a/IMG_1.CR3")));
+        assert!(is_raw(Path::new("b.dng")));
+        assert!(!is_raw(Path::new("c.jpg")));
+    }
+
+    #[test]
+    fn defaults_of_the_fields_match_the_settings() {
+        let mut s = Settings::default();
+        for f in TONE
+            .iter()
+            .chain(&PRESENCE)
+            .chain(&CURVE)
+            .chain(&SHARPEN)
+            .chain(&NOISE)
+            .chain(&VIGNETTE)
+            .chain(&GRAIN)
+            .chain(&CALIBRATION)
+        {
+            assert_eq!(*(f.get)(&mut s), f.spec.default, "{}", f.spec.label);
+        }
+    }
+
+    #[test]
+    fn fit_keeps_the_aspect_ratio() {
+        let r = fit(
+            egui::Rect::from_min_size(pos2(0.0, 0.0), vec2(200.0, 100.0)),
+            400,
+            400,
+        );
+        assert_eq!(r.size(), vec2(100.0, 100.0));
+        assert_eq!(r.center(), pos2(100.0, 50.0));
+    }
+}
