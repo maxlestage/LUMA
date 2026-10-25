@@ -363,6 +363,9 @@ pub struct Settings {
     /// Un film mesuré sur une vraie pellicule ou une LUT 3D importée (`.cube`) : son nom
     /// et son intensité (0 à 100).
     pub lut: Option<Look>,
+    /// Le film (préréglage) appliqué, pour le savoir d'un coup d'œil : son nom et son
+    /// intensité (0 à 100). Il ne change pas le rendu.
+    pub film: Option<Look>,
 }
 
 impl Default for Settings {
@@ -392,6 +395,7 @@ impl Default for Settings {
             transform: Transform::default(),
             masks: Vec::new(),
             lut: None,
+            film: None,
         }
     }
 }
@@ -430,7 +434,7 @@ impl Settings {
                 clamp(&mut l.amount, 0.0, 100.0);
             }
         }
-        if let Some(l) = &mut s.lut {
+        for l in [&mut s.lut, &mut s.film].into_iter().flatten() {
             clamp(&mut l.amount, 0.0, 100.0);
         }
         for v in [
