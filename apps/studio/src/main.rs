@@ -41,6 +41,8 @@ fn main() -> eframe::Result {
     let lang = luma_studio::i18n::startup();
     luma_studio::i18n::set_lang(lang);
     journal(&format!("langue : {}", lang.code()));
+    // HEIC, AVIF… : le décodeur d'images du système (ImageIO sur Mac, iPhone et iPad).
+    luma_apple::install();
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("LÜMA")
         .with_drag_and_drop(true);

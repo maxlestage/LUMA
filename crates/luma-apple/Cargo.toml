@@ -1,0 +1,28 @@
+[package]
+name = "luma-apple"
+description = "Le décodeur d'images du système d'Apple (ImageIO) : HEIC, HEIF, AVIF… sur Mac, iPhone et iPad."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+luma-raw.workspace = true
+
+[dev-dependencies]
+luma-color.workspace = true
+
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFURL", "CFString", "CFDictionary", "CFNumber", "CFData", "CFCGTypes"] }
+objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "CGImage", "CGColorSpace", "CGContext", "CGBitmapContext", "objc2"] }
+objc2-image-io = { version = "0.3", default-features = false, features = ["std", "CGImageSource", "CGImageProperties", "objc2-core-graphics"] }
+
+# Les appels à ImageIO et à CoreGraphics demandent `unsafe` : ce crate est le seul de
+# LÜMA où il est permis (chaque bloc est justifié) ; le reste des lints est celui du
+# workspace.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+undocumented_unsafe_blocks = "warn"

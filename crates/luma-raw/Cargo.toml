@@ -11,6 +11,11 @@ luma-core.workspace = true
 luma-color.workspace = true
 rawler.workspace = true
 image.workspace = true
+# Les autres formats d'images, en Rust pur.
+jxl-oxide = { version = "0.12", default-features = false, features = ["image"] }
+psd = "0.3"
+hayro-jpeg2000 = "0.4"
+resvg = "0.49"
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 rayon.workspace = true
 
