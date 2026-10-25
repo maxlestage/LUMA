@@ -43,7 +43,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Effets | Vignetage après recadrage (gain, milieu, arrondi, contour progressif, hautes lumières) | ✅ |
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
-| Outils | Recadrage et redressement (angle libre) | ✅ |
+| Outils | Recadrage et redressement (angle libre), outil à l'écran avec proportions verrouillées (R) | ✅ |
 | | Masques : pinceau, dégradés, sujet, ciel, plage de luminance ou de couleur | ⏳ |
 | | Correcteur, tampon, yeux rouges, suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
@@ -70,7 +70,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | JPEG (qualité), PNG et TIFF 8 ou 16 bits | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
 | Redimensionnement (côté long) | ✅ |
-| Netteté de sortie, filigrane, copie des métadonnées EXIF | ⏳ |
+| Fenêtre Exporter : format, qualité, profondeur, espace, taille, dossier ; export de toutes les photos du filtre | ✅ |
+| Netteté de sortie, filigrane, copie des métadonnées EXIF, préréglages d'export | ⏳ |
 
 ## Bibliothèque et interopérabilité
 
@@ -78,7 +79,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 |---|---|
 | Lecture des XMP de Lightroom (sidecar `IMG_0001.xmp`), écriture au même format | ✅ enregistrement automatique dans l'app |
 | Film du dossier avec vignettes, navigation ← → | ✅ |
-| Import, catalogue, collections, mots‑clés, notes, drapeaux, filtres | ⏳ |
+| Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
+| Import, catalogue, collections, mots‑clés, recherche | ⏳ |
 | Import d'un catalogue Lightroom (`.lrcat`) | ⏳ |
 
 ## Ce qui est déjà mieux, ou le sera

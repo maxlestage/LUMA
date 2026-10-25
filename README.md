@@ -67,7 +67,9 @@ viendra ensuite). Ce ne sont pas encore des mesures sur Mac ni sur iPhone.
 ![LÜMA Studio, module Développement](docs/studio.jpg)
 
 `apps/studio` : l'application de développement, en Rust (egui, rendu wgpu sur Metal).
-Mise en page et gestes de Lightroom Classic : navigateur et historique à gauche,
+Deux modules, comme dans Lightroom Classic. **Bibliothèque** : grille du dossier, notes
+de 0 à 5 étoiles, drapeaux retenue / rejetée, filtre appliqué aussi au film, métadonnées
+EXIF. **Développement** : navigateur et historique à gauche,
 histogramme et panneaux Base, Courbe des tonalités, Mélangeur de couleurs, Étalonnage
 des couleurs, Détail, Effets, Étalonnage de l'appareil photo et Recadrage à droite, film
 du dossier en bas. Les réglages sont enregistrés automatiquement dans un XMP au format
@@ -79,7 +81,10 @@ Lightroom à côté du RAW, qui n'est jamais modifié.
 | Cmd+Z, Maj+Cmd+Z | Annuler, rétablir (chaque geste est une étape d'historique) |
 | Maj+Cmd+C, Maj+Cmd+V | Copier, coller les réglages |
 | Maj+Cmd+R | Réinitialiser |
-| Maj+Cmd+E | Exporter (JPEG sRGB pleine définition, dans `LÜMA/` à côté du RAW) |
+| Maj+Cmd+E | Exporter : la photo ou toutes celles du filtre ; JPEG, PNG ou TIFF 8/16 bits ; sRGB, Display P3, Rec. 2020 ou ProPhoto ; taille ; dossier |
+| G, D | Bibliothèque, Développement |
+| 0 à 5 ; P, X, U | Note ; retenir, rejeter, retirer le drapeau (enregistrés dans le XMP, `xmp:Rating` comme Lightroom) |
+| R | Outil Recadrage : poignées, grille des tiers, proportions verrouillées ; Entrée valide, Échap annule |
 | Cmd+O | Ouvrir un RAW (son dossier remplit le film) ; on peut aussi le déposer |
 | ← → | Photo précédente, suivante |
 | Z, J | Zoom 1:1, écrêtage |
