@@ -52,7 +52,7 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
 
 - **Site** : le bouton « Télécharger pour Mac » de la section Tarifs ; l'app est
   construite par le workflow GitHub Pages (job `mac-app`) et publiée avec le site.
-- **Releases GitHub** : chaque étiquette `v…` (ex. `git tag v0.1.0 && git push origin
+- **Releases GitHub** : Actions → Release → Run workflow (version `0.1.0`…), ou une étiquette `v…` (`git tag v0.1.0 && git push origin
   v0.1.0`) construit et publie l'app Mac universelle, l'app iPhone et iPad non signée,
   et la ligne de commande pour Mac et Linux (`.github/workflows/release.yml`).
 - **Signature** : l'app Mac est signée « ad hoc » : au premier lancement, clic droit →
