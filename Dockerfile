@@ -1,7 +1,6 @@
 # Le site de LÜMA, une app Paquets (pages rendues en Rust, îlots et animations en
-# WebAssembly). C'est l'image lancée sur Heroku (construite par
-# .github/workflows/deploy-heroku.yml), ou sur tout hôte Docker. site/public/download/
-# contient l'app Mac quand le workflow l'y a déposée.
+# WebAssembly). Heroku le construit avec le buildpack emk/rust (RustConfig, Procfile) ;
+# cette image est l'autre voie : la stack container (heroku.yml), ou tout hôte Docker.
 #
 #   docker build --build-arg REPOS_TOKEN=… -t luma . && docker run --rm -p 8080:8080 luma
 
