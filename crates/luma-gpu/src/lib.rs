@@ -185,10 +185,15 @@ pub struct Gpu {
     layout: wgpu::BindGroupLayout,
     name: String,
     max_buffer: u64,
-    uploaded: Mutex<Option<Uploaded>>,
+    /// Les bases déjà envoyées, la plus récente en tête : celle de la photo et celles
+    /// des films de masques qui ont la leur.
+    uploaded: Mutex<Vec<Uploaded>>,
 }
 
 const WORKGROUP: u32 = 256;
+
+/// Bases gardées sur le GPU.
+const UPLOADED: usize = 4;
 
 impl Gpu {
     /// Le GPU de la machine, s'il y en a un vrai (sinon tout reste sur le processeur :
@@ -266,7 +271,7 @@ impl Gpu {
             layout,
             name: format!("{} ({:?})", info.name, info.backend),
             max_buffer: limits.max_storage_buffer_binding_size.min(limits.max_buffer_size),
-            uploaded: Mutex::new(None),
+            uploaded: Mutex::new(Vec::new()),
         })
     }
 
@@ -289,10 +294,13 @@ impl Gpu {
         let (w, h) = (base.width, base.height);
         let n = w * h;
         let mut uploaded = self.uploaded.lock().expect("GPU");
-        if uploaded
-            .as_ref()
-            .is_none_or(|u| u.id != id || u.width != w || u.height != h)
+        if let Some(i) = uploaded
+            .iter()
+            .position(|u| u.id == id && u.width == w && u.height == h)
         {
+            let hit = uploaded.remove(i);
+            uploaded.insert(0, hit);
+        } else {
             let input = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("base"),
                 size: (n * 16) as u64,
@@ -313,16 +321,21 @@ impl Gpu {
                 usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
-            *uploaded = Some(Uploaded {
-                id,
-                width: w,
-                height: h,
-                input,
-                output,
-                readback,
-            });
+            uploaded.retain(|u| u.width == w && u.height == h);
+            uploaded.insert(
+                0,
+                Uploaded {
+                    id,
+                    width: w,
+                    height: h,
+                    input,
+                    output,
+                    readback,
+                },
+            );
+            uploaded.truncate(UPLOADED);
         }
-        let u = uploaded.as_ref().expect("base envoyée");
+        let u = &uploaded[0];
 
         let params = params(s, w, h, scale, space).values;
         let tables = tables(s, space);
