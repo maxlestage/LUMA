@@ -11,9 +11,10 @@ use egui::{
 pub mod theme {
     use egui::Color32;
     /// Le fond, sous la photo.
-    pub const BACKGROUND: Color32 = Color32::from_rgb(0x0b, 0x0c, 0x10);
+    pub const BACKGROUND: Color32 = Color32::from_rgb(0x06, 0x06, 0x09);
     /// Les îlots (verre fumé, presque opaque).
-    pub const PANEL: Color32 = Color32::from_rgba_premultiplied(0x15, 0x16, 0x1d, 0xf0);
+    // Du verre fumé : les lueurs du fond passent à travers les îlots.
+    pub const PANEL: Color32 = Color32::from_rgba_premultiplied(0x10, 0x10, 0x16, 0xd6);
     pub const GLASS_EDGE: Color32 = Color32::from_rgba_premultiplied(0x2a, 0x2b, 0x36, 0x60);
     pub const SECTION: Color32 = Color32::from_rgb(0x20, 0x22, 0x2c);
     pub const TRACK: Color32 = Color32::from_rgb(0x3b, 0x3d, 0x4a);

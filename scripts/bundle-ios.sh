@@ -27,8 +27,8 @@ mkdir -p "$app"
 cp "target/$target/release/luma-studio" "$app/luma-studio"
 sed -e "s/@VERSION@/$version/g" -e "s/@PLATFORM@/$platform/g" packaging/ios/Info.plist > "$app/Info.plist"
 
-# Les icônes : dessinées par le code, aux tailles de l'iPhone et de l'iPad.
-cargo run -q --release -p luma-studio --example icon -- "$out/icon.png"
+# Les icônes : le logo de LÜMA (luma-brand), aux tailles de l'iPhone et de l'iPad.
+cargo run -q --release -p luma-studio --example icon -- "$out/icon.png" ios
 for spec in 60x60@2x:120 60x60@3x:180 76x76:76 76x76@2x:152; do
   name=${spec%%:*}; px=${spec##*:}
   sips -z "$px" "$px" "$out/icon.png" --out "$app/AppIcon$name.png" >/dev/null
