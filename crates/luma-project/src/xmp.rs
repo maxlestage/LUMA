@@ -31,7 +31,14 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 4] = ["xmp:Rating", "xmp:Label", "luma:Pick", "luma:Masks"];
+const META_KEYS: [&str; 6] = [
+    "xmp:Rating",
+    "xmp:Label",
+    "luma:Pick",
+    "luma:Masks",
+    "luma:Lut",
+    "luma:LutAmount",
+];
 const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
 
 /// Le drapeau de la Bibliothèque (P, X, U dans Lightroom).
@@ -274,7 +281,11 @@ fn leak(name: String) -> &'static str {
 /// Les réglages d'un document XMP. Ce qui manque garde sa valeur par défaut.
 pub fn read(text: &str) -> luma_core::Result<Settings> {
     let values = parse_values(text)?;
-    if values.scalars.is_empty() && values.lists.is_empty() && !values.meta.contains_key("luma:Masks") {
+    if values.scalars.is_empty()
+        && values.lists.is_empty()
+        && !values.meta.contains_key("luma:Masks")
+        && !values.meta.contains_key("luma:Lut")
+    {
         return Err(luma_core::Error::Format("aucun réglage crs: dans ce XMP".into()));
     }
     let mut s = Settings::default();
@@ -350,6 +361,17 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         && let Ok(masks) = serde_json::from_str(json)
     {
         s.masks = masks;
+    }
+    // Le film mesuré (LUT 3D) : son nom et son intensité.
+    if let Some(name) = values.meta.get("luma:Lut").filter(|n| !n.is_empty()) {
+        s.lut = Some(crate::Look {
+            name: name.clone(),
+            amount: values
+                .meta
+                .get("luma:LutAmount")
+                .and_then(|v| number(v))
+                .unwrap_or(100.0),
+        });
     }
     Ok(s.clamped())
 }
@@ -452,6 +474,10 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     if !s.masks.is_empty() {
         let json = serde_json::to_string(&s.masks).unwrap_or_default();
         out.push_str(&format!("    luma:Masks=\"{}\"\n", escape(&json)));
+    }
+    if let Some(l) = &s.lut {
+        out.push_str(&format!("    luma:Lut=\"{}\"\n", escape(&l.name)));
+        out.push_str(&format!("    luma:LutAmount=\"{}\"\n", l.amount));
     }
     for (name, value) in &attrs {
         out.push_str(&format!("    crs:{name}=\"{}\"\n", escape(value)));
@@ -610,8 +636,13 @@ mod tests {
         s.lens.distortion = 12.0;
         s.transform.vertical = -25.0;
         s.transform.scale = 95.0;
+        s.lut = Some(crate::Look {
+            name: "Ma Portra 400 \"scan\"".into(),
+            amount: 70.0,
+        });
         let text = write(&s);
         assert!(text.contains("luma:Masks="));
+        assert!(text.contains("luma:LutAmount=\"70\""));
         assert_eq!(read(&text).unwrap(), s);
     }
 

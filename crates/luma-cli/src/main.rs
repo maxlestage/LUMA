@@ -6,6 +6,7 @@
 //! luma xmp <raw|xmp|json> [options] écrit les réglages au format XMP de Lightroom
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
 //! luma merge <raw>… [options]       empilement ou panorama, en DNG
+//! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -24,11 +25,17 @@ USAGE
   luma info <raw>…
   luma develop <raw> [-o sortie.jpg|.png|.tif] [--size N] [--space srgb|p3|rec2020|prophoto]
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
-                     [--no-sidecar] [--set nom=valeur]…
+                     [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
   luma xmp <raw|f.xmp|f.json> [--set nom=valeur]… [-o f.xmp]
   luma bench <raw> [--size N] [--runs N]
   luma merge <raw>… [--stack mean|median|max|stars | --pano perspective|cylindrical|spherical]
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
+  luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
+                    [--aligned] [--title nom]
+      Mesure une pellicule : la même scène en numérique (RAW, développé avec les réglages
+      neutres de LÜMA) et sur film (scan JPEG, PNG ou TIFF). Les images sont alignées
+      automatiquement (--aligned si elles se superposent déjà). La LUT obtenue, posée
+      sur n'importe quelle photo, lui donne le rendu de cette pellicule.
 
 RÉGLAGES (--set)
   exposure contrast highlights shadows whites blacks texture clarity dehaze vibrance
@@ -54,6 +61,7 @@ struct Args {
     sidecar: bool,
     sets: Vec<String>,
     runs: usize,
+    lut: Option<String>,
 }
 
 fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
@@ -69,6 +77,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         sidecar: true,
         sets: Vec::new(),
         runs: 20,
+        lut: None,
     };
     while let Some(arg) = it.next() {
         let mut value = |name: &str| it.next().ok_or_else(|| format!("{name} attend une valeur"));
@@ -86,6 +95,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--no-sidecar" => a.sidecar = false,
             "--set" => a.sets.push(value(&arg)?),
             "--runs" => a.runs = value(&arg)?.parse().map_err(|_| "--runs : un nombre")?,
+            "--lut" => a.lut = Some(value(&arg)?),
             "-h" | "--help" => return Err(String::new()),
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => a.positional.push(arg),
@@ -122,6 +132,15 @@ fn load_settings(a: &Args, raw: Option<&Path>) -> Result<Settings, String> {
     };
     for set in &a.sets {
         s.set(set)?;
+    }
+    // --lut film.cube[:intensité] : un film mesuré ou une LUT 3D.
+    if let Some(spec) = &a.lut {
+        let (path, amount) = match spec.rsplit_once(':') {
+            Some((p, v)) if v.parse::<f32>().is_ok() => (p, v.parse().unwrap_or(100.0)),
+            _ => (spec.as_str(), 100.0),
+        };
+        let name = luma_image::cube::load(Path::new(path)).map_err(|e| e.to_string())?;
+        s.lut = Some(luma_project::Look { name, amount });
     }
     Ok(s)
 }
@@ -386,12 +405,74 @@ fn merge(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma film-lut` : mesure une vraie pellicule en LUT 3D.
+fn film_lut(args: Vec<String>) -> Result<(), String> {
+    use luma_merge::film;
+    let (mut out, mut size, mut aligned, mut title) = (None, 33, false, None);
+    let mut paths = Vec::new();
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        let mut value = || it.next().ok_or_else(|| format!("{a} : valeur attendue"));
+        match a.as_str() {
+            "-o" | "--output" => out = Some(PathBuf::from(value()?)),
+            "--size" => size = value()?.parse().map_err(|_| "--size : 17 à 65")?,
+            "--aligned" => aligned = true,
+            "--title" => title = Some(value()?),
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => paths.push(PathBuf::from(a)),
+        }
+    }
+    if paths.is_empty() || paths.len() % 2 != 0 {
+        return Err("il faut des paires : <numérique> <scan> [<numérique> <scan>]…".into());
+    }
+    let started = Instant::now();
+    let pairs = paths
+        .chunks(2)
+        .map(|p| {
+            Ok(film::Pair {
+                digital: film::load_reference(&p[0]).map_err(|e| e.to_string())?,
+                film: film::load_scan(&p[1]).map_err(|e| e.to_string())?,
+                aligned,
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    let out = out.unwrap_or_else(|| paths[1].with_extension("cube"));
+    let title = title.unwrap_or_else(|| {
+        out.file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    });
+    let m = film::measure(&pairs, size, &title).map_err(|e| e.to_string())?;
+    std::fs::write(&out, m.cube.to_text()).map_err(|e| format!("{} : {e}", out.display()))?;
+    println!(
+        "{} : LUT {n}×{n}×{n} mesurée sur {} pixels en {:.1} s",
+        out.display(),
+        m.samples,
+        started.elapsed().as_secs_f32(),
+        n = m.cube.size
+    );
+    println!(
+        "  écart numérique → pellicule : {:.2} ; avec la LUT : {:.2} (OKLab ×100, 1 ≈ à peine visible)",
+        m.before, m.after
+    );
+    Ok(())
+}
+
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     let Some(command) = args.next() else {
         println!("{USAGE}");
         return ExitCode::SUCCESS;
     };
+    if command == "film-lut" {
+        return match film_lut(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if command == "merge" {
         return match merge(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,

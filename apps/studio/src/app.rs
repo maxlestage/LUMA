@@ -420,8 +420,13 @@ pub struct Studio {
     auto_crop: bool,
     merge_full: bool,
     merging: Option<(f32, String, luma_core::Cancel)>,
-    /// Films : le préréglage choisi, son intensité, et les réglages d'avant.
+    /// Films : le film choisi (index dans les préréglages, puis dans `luts`), son
+    /// intensité, et les réglages d'avant.
     preset: Option<(usize, f32, Settings)>,
+    /// Mes pellicules : les films mesurés et les LUT importées (noms des `.cube` chargés).
+    luts: Vec<String>,
+    /// Une mesure de pellicule est en cours.
+    measuring: bool,
     previews: Vec<Option<TextureHandle>>,
     previews_tag: u64,
     previews_for: Option<PathBuf>,
@@ -483,6 +488,13 @@ impl Studio {
             merge_full: true,
             merging: None,
             preset: None,
+            luts: {
+                if let Some(d) = crate::dialogs::films_dir() {
+                    luma_image::cube::load_dir(&d);
+                }
+                luma_image::cube::names()
+            },
+            measuring: false,
             previews: Vec::new(),
             previews_tag: 0,
             previews_for: None,
@@ -690,6 +702,21 @@ impl Studio {
                             image,
                             TextureOptions::LINEAR,
                         ));
+                    }
+                }
+                Event::Measured { result } => {
+                    self.measuring = false;
+                    match result {
+                        Ok((name, before, after)) => {
+                            self.status = format!(
+                                "Pellicule mesurée : « {name} » (écart numérique → film {before:.1}, avec le film {after:.1})"
+                            );
+                            self.refresh_luts();
+                            if let Some(k) = self.luts.iter().position(|n| *n == name) {
+                                self.choose_film(PRESETS.len() + k);
+                            }
+                        }
+                        Err(e) => self.status = format!("Mesure impossible : {e}"),
                     }
                 }
                 Event::Exported {
@@ -1491,6 +1518,48 @@ impl Studio {
         }
     }
 
+    /// Le nombre de films : les préréglages, puis mes pellicules.
+    fn film_count(&self) -> usize {
+        PRESETS.len() + self.luts.len()
+    }
+
+    fn film_name(&self, k: usize) -> &str {
+        PRESETS
+            .get(k)
+            .map_or_else(|| self.luts[k - PRESETS.len()].as_str(), |p| p.name)
+    }
+
+    /// Les réglages `base` avec le film `k`, à `amount` (0 à 1).
+    fn film_applied(&self, k: usize, base: &Settings, amount: f32) -> Settings {
+        match PRESETS.get(k) {
+            Some(p) => p.applied(base, amount),
+            None => presets::with_lut(base, &self.luts[k - PRESETS.len()], amount),
+        }
+    }
+
+    /// Relit le dossier des films (de nouvelles LUT ont pu y arriver).
+    fn refresh_luts(&mut self) {
+        if let Some(d) = crate::dialogs::films_dir() {
+            luma_image::cube::load_dir(&d);
+        }
+        self.luts = luma_image::cube::names();
+        // Les aperçus sont refaits avec la nouvelle liste.
+        self.previews_for = None;
+    }
+
+    /// Choisit le film `k` (à l'intensité en cours).
+    fn choose_film(&mut self, k: usize) {
+        let base = self
+            .preset
+            .as_ref()
+            .map_or_else(|| self.settings.clone(), |p| p.2.clone());
+        let amount = self.preset.as_ref().map_or(1.0, |p| p.1);
+        self.settings = self.film_applied(k, &base, amount);
+        self.preset = Some((k, amount, base));
+        self.commit(format!("Film : {}", self.film_name(k)));
+        self.touch();
+    }
+
     /// Films : les pellicules et les looks, avec leur aperçu sur la photo.
     fn films_panel(&mut self, ui: &mut Ui) {
         let Some(photo) = self.photo.clone() else {
@@ -1503,13 +1572,15 @@ impl Studio {
             .as_ref()
             .map_or_else(|| self.settings.clone(), |p| p.2.clone());
         if self.previews_for.as_deref() != self.current_path()
-            || self.previews.len() != PRESETS.len()
+            || self.previews.len() != self.film_count()
         {
             self.previews_tag += 1;
-            self.previews = vec![None; PRESETS.len()];
+            self.previews = vec![None; self.film_count()];
             self.previews_for = self.current_path().map(Path::to_path_buf);
-            let all = PRESETS.iter().map(|p| p.applied(&base, 1.0)).collect();
-            self.worker.previews(photo, all, self.previews_tag);
+            let all = (0..self.film_count())
+                .map(|k| self.film_applied(k, &base, 1.0))
+                .collect();
+            self.worker.previews(photo.clone(), all, self.previews_tag);
         }
         if let Some((i, amount, base)) = self.preset.clone() {
             let mut percent = amount * 100.0;
@@ -1525,14 +1596,14 @@ impl Studio {
             let c = widgets::slider(ui, &spec, &mut percent);
             if c.changed {
                 let amount = percent / 100.0;
-                self.settings = PRESETS[i].applied(&base, amount);
+                self.settings = self.film_applied(i, &base, amount);
                 self.preset = Some((i, amount, base.clone()));
                 self.touch();
             }
             if c.committed {
                 self.commit(format!(
                     "{} à {} %",
-                    PRESETS[i].name,
+                    self.film_name(i),
                     format_value(percent, 0, false)
                 ));
             }
@@ -1546,11 +1617,30 @@ impl Studio {
         }
         let mut choose = None;
         let width = ((ui.available_width() - 10.0) / 2.0).floor();
-        for group in presets::Group::ALL {
-            sub_title(ui, group.name());
-            let items: Vec<usize> = (0..PRESETS.len())
-                .filter(|&k| PRESETS[k].group == group)
-                .collect();
+        let mut sections: Vec<(&str, Vec<usize>)> = presets::Group::ALL
+            .iter()
+            .map(|&g| {
+                (
+                    g.name(),
+                    (0..PRESETS.len())
+                        .filter(|&k| PRESETS[k].group == g)
+                        .collect(),
+                )
+            })
+            .collect();
+        // Mes pellicules : mesurées sur de vraies pellicules, ou importées.
+        sections.insert(
+            0,
+            (
+                "Mes pellicules",
+                (PRESETS.len()..self.film_count()).collect(),
+            ),
+        );
+        for (title, items) in sections {
+            sub_title(ui, title);
+            if title == "Mes pellicules" {
+                self.my_films(ui, &photo);
+            }
             for row in items.chunks(2) {
                 ui.horizontal(|ui| {
                     for &k in row {
@@ -1594,11 +1684,16 @@ impl Studio {
                         p.text(
                             pos2(rect.min.x + 2.0, image.max.y + 4.0),
                             egui::Align2::LEFT_TOP,
-                            PRESETS[k].name,
+                            self.film_name(k),
                             egui::FontId::proportional(12.0),
                             if active { theme::ACCENT } else { theme::TEXT },
                         );
-                        if r.on_hover_text(PRESETS[k].description).clicked() {
+                        let hint = PRESETS
+                            .get(k)
+                            .map_or("Pellicule mesurée ou LUT 3D importée (.cube).", |p| {
+                                p.description
+                            });
+                        if r.on_hover_text(hint).clicked() {
                             choose = Some(k);
                         }
                     }
@@ -1607,11 +1702,79 @@ impl Studio {
             }
         }
         if let Some(k) = choose {
-            let amount = self.preset.as_ref().map_or(1.0, |p| p.1);
-            self.settings = PRESETS[k].applied(&base, amount);
-            self.preset = Some((k, amount, base));
-            self.commit(format!("Film : {}", PRESETS[k].name));
-            self.touch();
+            self.choose_film(k);
+        }
+    }
+
+    /// Les boutons de « Mes pellicules » : mesurer une vraie pellicule, importer une LUT.
+    fn my_films(&mut self, ui: &mut Ui, photo: &Arc<Photo>) {
+        ui.label(
+            RichText::new(
+                "Le rendu exact d'une vraie pellicule : photographiez la même scène en numérique \
+                 (cette photo) et sur film, puis choisissez le scan. LÜMA aligne les deux images \
+                 et mesure le film, couleur par couleur.",
+            )
+            .size(11.5)
+            .color(theme::DIM),
+        );
+        ui.horizontal_wrapped(|ui| {
+            if crate::dialogs::FOLDER_PICKER {
+                let measure =
+                    ui.add_enabled(!self.measuring, egui::Button::new("Mesurer une pellicule…"));
+                if measure.clicked()
+                    && let Some(scan) = crate::dialogs::pick_scan()
+                    && let Some(dir) = crate::dialogs::films_dir()
+                {
+                    self.measuring = true;
+                    self.status = format!("Mesure de la pellicule : {}…", file_name(&scan));
+                    self.worker.measure_film(photo.clone(), scan, dir);
+                }
+                if ui.button("Importer une LUT…").clicked()
+                    && let Some(path) = crate::dialogs::pick_lut()
+                {
+                    self.import_lut(&path);
+                }
+            } else if ui.button("Actualiser").clicked() {
+                self.refresh_luts();
+            }
+        });
+        if self.measuring {
+            ui.horizontal(|ui| {
+                ui.spinner();
+                ui.label(RichText::new("Alignement et mesure…").color(theme::DIM));
+            });
+        }
+        if !crate::dialogs::FOLDER_PICKER {
+            ui.label(
+                RichText::new("Déposez vos LUT .cube dans LÜMA › Films (app Fichiers).")
+                    .size(11.5)
+                    .color(theme::DIM),
+            );
+        }
+        ui.add_space(4.0);
+    }
+
+    /// Copie une LUT dans le dossier des films et la charge.
+    fn import_lut(&mut self, path: &Path) {
+        let result = (|| -> Result<String, String> {
+            let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+            luma_image::cube::Cube::parse(&text).map_err(|e| e.to_string())?;
+            let dir = crate::dialogs::films_dir().ok_or("pas de dossier Films")?;
+            let dest = dir.join(path.file_name().ok_or("nom de fichier")?);
+            if dest != path {
+                std::fs::write(&dest, text).map_err(|e| e.to_string())?;
+            }
+            luma_image::cube::load(&dest).map_err(|e| e.to_string())
+        })();
+        match result {
+            Ok(name) => {
+                self.status = format!("LUT importée : « {name} »");
+                self.refresh_luts();
+                if let Some(k) = self.luts.iter().position(|n| *n == name) {
+                    self.choose_film(PRESETS.len() + k);
+                }
+            }
+            Err(e) => self.status = format!("LUT illisible : {e}"),
         }
     }
 
@@ -2333,6 +2496,7 @@ impl Studio {
                         self.act("mask_delete");
                     }
                 });
+                let luts = self.luts.clone();
                 let Some(m) = self.settings.masks.get_mut(i) else {
                     return;
                 };
@@ -2352,13 +2516,21 @@ impl Studio {
                     .look
                     .as_ref()
                     .map_or_else(|| "Aucun".to_owned(), |l| l.name.clone());
-                let mut pick: Option<Option<&'static str>> = None;
+                let mut pick: Option<Option<String>> = None;
                 egui::ComboBox::from_id_salt("film-masque")
                     .selected_text(&current)
                     .height(440.0)
                     .show_ui(ui, |ui| {
                         if ui.selectable_label(current == "Aucun", "Aucun").clicked() {
                             pick = Some(None);
+                        }
+                        if !luts.is_empty() {
+                            ui.label(RichText::new("Mes pellicules").size(11.0).color(theme::DIM));
+                            for n in &luts {
+                                if ui.selectable_label(current == *n, n).clicked() {
+                                    pick = Some(Some(n.clone()));
+                                }
+                            }
                         }
                         for group in presets::Group::ALL {
                             ui.label(RichText::new(group.name()).size(11.0).color(theme::DIM));
@@ -2368,7 +2540,7 @@ impl Studio {
                                     .on_hover_text(p.description)
                                     .clicked()
                                 {
-                                    pick = Some(Some(p.name));
+                                    pick = Some(Some(p.name.to_owned()));
                                 }
                             }
                         }
@@ -2378,14 +2550,11 @@ impl Studio {
                 let mut film_changed = false;
                 if let Some(choice) = pick {
                     let amount = m.look.as_ref().map_or(100.0, |l| l.amount);
-                    m.look = choice.map(|n| luma_project::Look {
-                        name: n.into(),
-                        amount,
-                    });
                     commits.push(format!(
                         "Masque {name} : film {}",
-                        choice.unwrap_or("aucun")
+                        choice.as_deref().unwrap_or("aucun")
                     ));
+                    m.look = choice.map(|n| luma_project::Look { name: n, amount });
                     film_changed = true;
                 }
                 if let Some(look) = &mut m.look {
