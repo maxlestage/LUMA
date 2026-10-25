@@ -35,8 +35,22 @@ pub struct Rendered {
     pub timings: Timings,
 }
 
+/// Le résultat des étapes de voisinage ([`luma_image::develop_base`]), gardé en cache :
+/// tant que seuls le contraste, les courbes, les couleurs ou les effets changent, il
+/// resert tel quel.
+#[derive(Clone)]
+pub struct Base {
+    pub image: Arc<RgbImage>,
+    /// Pixels rendus par pixel pleine définition.
+    pub scale: f32,
+    /// Change à chaque nouvelle base (pour savoir quand la renvoyer au GPU).
+    pub id: u64,
+}
+
 /// Une photo ouverte dans le moteur.
 pub struct Photo {
+    /// La dernière base : taille, clé ([`luma_image::base_key`]) et image.
+    base: Mutex<Option<(Size, Settings, Base)>>,
     raw: RawPhoto,
     /// Images caméra orientées, par taille. Bornées : au plus [`CACHE`] tailles.
     sources: Mutex<Vec<(Size, Arc<RgbImage>)>>,
@@ -53,6 +67,7 @@ impl Photo {
 
     pub fn new(raw: RawPhoto) -> Photo {
         Photo {
+            base: Mutex::new(None),
             raw,
             sources: Mutex::new(Vec::new()),
             matrices: Mutex::new(HashMap::new()),
@@ -130,17 +145,43 @@ impl Photo {
     /// deux étapes si l'utilisateur a déjà changé d'avis.
     pub fn render(&self, settings: &Settings, size: Size, cancel: &Cancel) -> Result<Rendered> {
         let mut timings = Timings::default();
-        let source = self.source(size, &mut timings);
+        let base = self.base(settings, size, cancel, &mut timings)?;
+        let mut image = timings.time("copie de la base", || (*base.image).clone());
+        luma_image::finish(&mut image, base.scale, settings, cancel, &mut timings)?;
+        Ok(Rendered { image, timings })
+    }
+
+    /// Les étapes de voisinage, en cache tant que [`luma_image::base_key`] ne change pas.
+    pub fn base(&self, settings: &Settings, size: Size, cancel: &Cancel, timings: &mut Timings) -> Result<Base> {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let key = luma_image::base_key(settings);
+        if let Some((s, k, b)) = &*self.base.lock().expect("base")
+            && *s == size
+            && *k == key
+        {
+            return Ok(b.clone());
+        }
+        let source = self.source(size, timings);
         cancel.check()?;
         let cropped = timings.time("recadrage", || geometry::crop(&source, &settings.crop));
         let cam = cropped.as_ref().unwrap_or(&source);
+        let scale = source.width as f32 / self.full_size().0 as f32;
         let input = Input {
             camera_to_working: self.camera_to_working(&settings.white_balance),
             exposure_bias: self.raw.baseline_exposure,
-            scale: source.width as f32 / self.full_size().0 as f32,
+            scale,
         };
-        let image = luma_image::develop(cam, &input, settings, cancel, &mut timings)?;
-        Ok(Rendered { image, timings })
+        let image = luma_image::develop_base(cam, &input, settings, cancel, timings)?;
+        let base = Base {
+            image: Arc::new(image),
+            scale,
+            id: NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+        };
+        // Pleine définition (export) : trop gros pour être gardé.
+        if size != Size::Full {
+            *self.base.lock().expect("base") = Some((size, key, base.clone()));
+        }
+        Ok(base)
     }
 }
 
@@ -180,6 +221,32 @@ mod tests {
         let b = p.source(Size::Fit(32), &mut t);
         assert!(Arc::ptr_eq(&a, &b));
         assert_eq!(t.steps.len(), steps, "rien n'est recalculé");
+    }
+
+    #[test]
+    fn the_base_is_reused_when_only_colors_change() {
+        let p = photo();
+        let mut s = Settings::default();
+        let mut t = Timings::default();
+        let a = p.base(&s, Size::Fit(32), &Cancel::new(), &mut t).unwrap();
+        s.contrast = 40.0;
+        s.vibrance = 30.0;
+        s.effects.vignette_amount = -20.0;
+        let b = p.base(&s, Size::Fit(32), &Cancel::new(), &mut t).unwrap();
+        assert_eq!(a.id, b.id);
+        s.exposure = 0.5;
+        let c = p.base(&s, Size::Fit(32), &Cancel::new(), &mut t).unwrap();
+        assert_ne!(a.id, c.id);
+        // Le rendu avec base en cache est le même qu'un développement complet.
+        let cached = p.render(&s, Size::Fit(32), &Cancel::new()).unwrap().image;
+        let source = p.source(Size::Fit(32), &mut t);
+        let input = Input {
+            camera_to_working: p.camera_to_working(&s.white_balance),
+            exposure_bias: 0.0,
+            scale: source.width as f32 / p.full_size().0 as f32,
+        };
+        let direct = luma_image::develop(&source, &input, &s, &Cancel::new(), &mut t).unwrap();
+        assert_eq!(cached.data, direct.data);
     }
 
     #[test]

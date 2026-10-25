@@ -14,12 +14,16 @@ fn smoothstep(e0: f32, e1: f32, x: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
+/// Un hachage 32 bits (entiers non signés seulement) : le même calcul exactement sur
+/// le processeur et dans les shaders du GPU.
 #[inline]
-fn hash(x: i64, y: i64) -> f32 {
-    let mut h = (x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F);
-    h ^= h >> 29;
-    h = h.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    h ^= h >> 32;
+pub fn hash(x: i32, y: i32) -> f32 {
+    let mut h = (x as u32).wrapping_mul(0x8DA6_B343) ^ (y as u32).wrapping_mul(0xD816_3841);
+    h ^= h >> 15;
+    h = h.wrapping_mul(0x2C1B_3C6D);
+    h ^= h >> 12;
+    h = h.wrapping_mul(0x297A_2D39);
+    h ^= h >> 15;
     (h & 0xFFFF) as f32 / 65535.0 * 2.0 - 1.0
 }
 
@@ -28,29 +32,61 @@ fn value_noise(x: f32, y: f32) -> f32 {
     let (x0, y0) = (x.floor(), y.floor());
     let (tx, ty) = (x - x0, y - y0);
     let (sx, sy) = (tx * tx * (3.0 - 2.0 * tx), ty * ty * (3.0 - 2.0 * ty));
-    let (xi, yi) = (x0 as i64, y0 as i64);
+    let (xi, yi) = (x0 as i32, y0 as i32);
     let top = hash(xi, yi) + (hash(xi + 1, yi) - hash(xi, yi)) * sx;
     let bottom = hash(xi, yi + 1) + (hash(xi + 1, yi + 1) - hash(xi, yi + 1)) * sx;
     top + (bottom - top) * sy
 }
 
+/// Les grandeurs dérivées des curseurs (aussi utilisées par les shaders du GPU).
+#[derive(Clone, Copy, Debug)]
+pub struct Params {
+    pub vignette: f32,
+    pub circle: f32,
+    pub power: f32,
+    pub inner: f32,
+    pub outer: f32,
+    pub protect: f32,
+    pub grain: f32,
+    pub cell: f32,
+    pub rough: f32,
+}
+
+/// `scale` : pixels rendus par pixel pleine définition.
+pub fn params(e: &Effects, scale: f32) -> Params {
+    let round = e.vignette_roundness / 100.0;
+    let feather = e.vignette_feather / 100.0;
+    let inner = (0.2 + 0.8 * e.vignette_midpoint / 100.0) * (1.0 - 0.7 * feather);
+    Params {
+        vignette: e.vignette_amount / 100.0,
+        circle: round.max(0.0),
+        power: 2.0 + (-round).max(0.0) * 3.0,
+        inner,
+        outer: inner + 0.15 + 0.9 * feather,
+        protect: e.vignette_highlights / 100.0,
+        grain: e.grain_amount / 100.0,
+        cell: (1.0 + e.grain_size / 100.0 * 4.0) / scale.max(1e-3),
+        rough: e.grain_roughness / 100.0,
+    }
+}
+
 /// `scale` : pixels rendus par pixel pleine définition.
 pub fn apply(img: &mut RgbImage, e: &Effects, scale: f32) {
-    let vignette = e.vignette_amount / 100.0;
-    let grain = e.grain_amount / 100.0;
+    let Params {
+        vignette,
+        circle,
+        power,
+        inner,
+        outer,
+        protect,
+        grain,
+        cell,
+        rough,
+    } = params(e, scale);
     if vignette == 0.0 && grain == 0.0 {
         return;
     }
     let (w, h) = (img.width as f32, img.height as f32);
-    let round = e.vignette_roundness / 100.0;
-    let circle = round.max(0.0);
-    let power = 2.0 + (-round).max(0.0) * 3.0;
-    let feather = e.vignette_feather / 100.0;
-    let inner = (0.2 + 0.8 * e.vignette_midpoint / 100.0) * (1.0 - 0.7 * feather);
-    let outer = inner + 0.15 + 0.9 * feather;
-    let protect = e.vignette_highlights / 100.0;
-    let cell = (1.0 + e.grain_size / 100.0 * 4.0) / scale.max(1e-3);
-    let rough = e.grain_roughness / 100.0;
     let width = img.width;
     img.data.par_chunks_mut(width).enumerate().for_each(|(y, row)| {
         let ny = (y as f32 + 0.5) / h * 2.0 - 1.0;

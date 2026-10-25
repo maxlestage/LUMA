@@ -263,6 +263,7 @@ pub struct Studio {
     shown: u64,
     last_request: Option<Request>,
     render_ms: f32,
+    render_gpu: bool,
     before: bool,
     clipping: bool,
     zoom: bool,
@@ -302,6 +303,7 @@ impl Studio {
             shown: 0,
             last_request: None,
             render_ms: 0.0,
+            render_gpu: false,
             before: false,
             clipping: false,
             zoom: false,
@@ -468,6 +470,7 @@ impl Studio {
                     }
                     self.shown = frame.generation;
                     self.render_ms = frame.millis;
+                    self.render_gpu = frame.gpu;
                     self.histogram = frame.histogram;
                     self.image_size = frame.size;
                     let image = ColorImage::from_rgba_unmultiplied(frame.size, &frame.rgba);
@@ -1045,8 +1048,9 @@ impl Studio {
                 if self.render_ms > 0.0 {
                     ui.label(
                         RichText::new(format!(
-                            "rendu {} ms",
-                            format_value(self.render_ms, 0, false)
+                            "rendu {} ms{}",
+                            format_value(self.render_ms, 0, false),
+                            if self.render_gpu { " · GPU" } else { "" }
                         ))
                         .size(11.0)
                         .color(theme::DIM),

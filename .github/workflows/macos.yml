@@ -1,7 +1,8 @@
 # LÜMA Studio sur Mac, à chaque push et pull request :
 #
-# - compilation et tests sur un runner Apple Silicon (le rendu de l'interface passe par
-#   Metal) ;
+# - compilation et tests sur un runner Apple Silicon (le rendu de l'interface et la
+#   finition des photos passent par Metal ; le GPU est comparé au processeur) ;
+# - mesure de la finition sur le GPU, affichée dans le résumé du job ;
 # - fabrication de LÜMA.app, universelle (Apple Silicon et Intel), publiée en artefact
 #   avec les captures de l'interface.
 
@@ -38,6 +39,17 @@ jobs:
 
       - name: Tests (moteur et app)
         run: cargo test --workspace
+
+      - name: Réactivité sur Metal
+        run: |
+          {
+            echo '### Finition d'"'"'un aperçu 2048 px, processeur et GPU (Metal, runner GitHub)'
+            echo '```'
+            for f in tests/raw-corpus/*.{ARW,CR3,NEF,RAF,DNG}; do
+              [ -f "$f" ] && cargo run -q --release -p luma-gpu --example bench -- "$f"
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: LÜMA.app
         run: scripts/bundle-macos.sh
