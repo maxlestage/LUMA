@@ -1,10 +1,12 @@
 // `cargo run --release -p luma-gpu --example measure -- photo.ARW …` : les chiffres de
 // la section Performance du site, mesurés sur de vrais RAW, comme l'app les vit :
 //
-// - ouverture : décodage du RAW jusqu'au premier aperçu 2048 px affiché (cache froid) ;
-// - aperçu après réglage : un curseur bouge, la base est en cache, finition sur le GPU ;
-// - vignette : un RAW jusqu'à sa vignette 320 px (la bibliothèque) ;
-// - mémoire : la mémoire du processus, photo ouverte et aperçu affiché.
+// - vignette : un RAW jamais ouvert jusqu'à sa vignette 320 px (la bibliothèque) ;
+// - ouverture : un RAW jusqu'à son premier aperçu 2048 px (première fois), puis depuis
+//   son doublon de travail (les fois suivantes) ;
+// - aperçu après réglage : un curseur bouge, finition sur le GPU ;
+// - mémoire : ce que la photo retouchée occupe (pixels gardés et caches), depuis le RAW
+//   puis depuis le doublon.
 //
 // Une ligne par photo, puis les médianes ; la dernière ligne (`site:`) se recopie dans
 // `site/src/content.rs` (PERF).
@@ -18,20 +20,23 @@ fn ms(t: Instant) -> f64 {
     t.elapsed().as_secs_f64() * 1000.0
 }
 
-/// La mémoire résidente du processus, en Mo.
-fn rss_mb() -> f64 {
-    let pid = std::process::id().to_string();
-    std::process::Command::new("ps")
-        .args(["-o", "rss=", "-p", &pid])
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<f64>().ok())
-        .map_or(f64::NAN, |kb| kb / 1024.0)
-}
-
 fn median(mut v: Vec<f64>) -> f64 {
     v.sort_by(f64::total_cmp);
     v[v.len() / 2]
+}
+
+/// Ce que la photo occupe : les pixels gardés (le RAW, s'il est là) et ses caches.
+fn memory_mb(p: &Photo) -> f64 {
+    (p.raw().data.len() * 4 + p.cached_bytes()) as f64 / 1024.0 / 1024.0
+}
+
+/// Le premier aperçu 2048 px, comme à l'ouverture dans l'app.
+fn first_preview(photo: &Photo, gpu: &luma_gpu::Gpu) {
+    let s = photo.default_settings();
+    let base = photo
+        .base(&s, Size::Fit(2048), &Cancel::new(), &mut Timings::default())
+        .unwrap();
+    let _ = gpu.finish(&base.image, base.id, base.scale, &s, OutputSpace::DisplayP3);
 }
 
 fn main() {
@@ -39,9 +44,9 @@ fn main() {
     assert!(!paths.is_empty(), "des RAW");
     let gpu = luma_gpu::Gpu::any().expect("un GPU");
     println!("GPU : {}", gpu.name());
-    let (mut open, mut adjust, mut thumb, mut memory) = (vec![], vec![], vec![], vec![]);
+    let dir = std::env::temp_dir().join(format!("luma-measure-{}", std::process::id()));
+    let mut rows: Vec<[f64; 6]> = Vec::new();
     for path in &paths {
-        // Vignette : un RAW jusqu'à 320 px, comme la bibliothèque.
         let t = Instant::now();
         let photo = Photo::open(path).unwrap();
         let s = photo.default_settings();
@@ -49,17 +54,21 @@ fn main() {
         let thumbnail = ms(t);
         drop(photo);
 
-        // Ouverture : décodage, base 2048 px, finition GPU, encodage pour l'écran.
         let t = Instant::now();
         let photo = Photo::open(path).unwrap();
-        let mut s = photo.default_settings();
-        let base = photo
-            .base(&s, Size::Fit(2048), &Cancel::new(), &mut Timings::default())
-            .unwrap();
-        let _ = gpu.finish(&base.image, base.id, base.scale, &s, OutputSpace::DisplayP3);
-        let opened = ms(t);
+        first_preview(&photo, &gpu);
+        let open_raw = ms(t);
+        let mem_raw = memory_mb(&photo);
+        photo.write_duplicate(std::path::Path::new(path), &dir).unwrap();
+        drop(photo);
 
-        // Un curseur qui bouge : contraste, vibrance (base en cache).
+        let t = Instant::now();
+        let photo = Photo::open_with_duplicates(path, &dir).unwrap();
+        assert!(photo.from_duplicate());
+        first_preview(&photo, &gpu);
+        let open_dup = ms(t);
+
+        let mut s = photo.default_settings();
         let mut runs = Vec::new();
         for i in 0..30 {
             s.contrast = i as f32 * 2.0;
@@ -71,18 +80,22 @@ fn main() {
             let _ = gpu.finish(&base.image, base.id, base.scale, &s, OutputSpace::DisplayP3);
             runs.push(ms(t));
         }
-        let adjusted = median(runs);
-        let mem = rss_mb();
+        let adjust = median(runs);
+        let mem_dup = memory_mb(&photo);
         println!(
-            "{path} : ouverture {opened:.0} ms · réglage P50 {adjusted:.1} ms · vignette {thumbnail:.0} ms · mémoire {mem:.0} Mo"
+            "{path} : vignette {thumbnail:.0} ms · ouverture {open_raw:.0} ms (RAW), {open_dup:.0} ms (doublon) · \
+             réglage P50 {adjust:.1} ms · mémoire {mem_raw:.0} Mo (RAW), {mem_dup:.0} Mo (doublon)"
         );
-        open.push(opened);
-        adjust.push(adjusted);
-        thumb.push(thumbnail);
-        memory.push(mem);
-        drop(photo);
+        rows.push([thumbnail, open_raw, open_dup, adjust, mem_raw, mem_dup]);
     }
-    let (o, a, t, m) = (median(open), median(adjust), median(thumb), median(memory));
-    println!("médianes : ouverture {o:.0} ms · réglage {a:.1} ms · vignette {t:.0} ms · mémoire {m:.0} Mo");
-    println!("site: ouverture={o:.0} reglage={a:.1} vignette={t:.0} memoire={m:.0}");
+    let _ = std::fs::remove_dir_all(&dir);
+    let m: [f64; 6] = std::array::from_fn(|k| median(rows.iter().map(|r| r[k]).collect()));
+    println!(
+        "médianes : vignette {:.0} ms · ouverture {:.0} ms (RAW), {:.0} ms (doublon) · réglage {:.1} ms · mémoire {:.0} Mo (RAW), {:.0} Mo (doublon)",
+        m[0], m[1], m[2], m[3], m[4], m[5]
+    );
+    println!(
+        "site: vignette={:.0} ouverture_raw={:.0} ouverture={:.0} reglage={:.1} memoire_raw={:.0} memoire={:.0}",
+        m[0], m[1], m[2], m[3], m[4], m[5]
+    );
 }
