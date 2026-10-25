@@ -248,31 +248,34 @@ Le dépôt peut être privé : le site ne renvoie jamais vers GitHub. La documen
 (`docs/*.md`, `CHANGELOG.md`) est servie par le site (`/docs/…`, `/nouveautes/`), et
 l'app à télécharger est récupérée dans la dernière Release au moment du déploiement.
 
-**Heroku, image construite par GitHub Actions** (la voie principale) : Heroku ne
-compile rien (sa limite de 15 minutes ne suffit pas à construire Rust et WebAssembly) ;
-`.github/workflows/deploy-heroku.yml` construit l'image Docker sur GitHub, avec l'app
-Mac de la dernière Release dedans, la pousse dans le registre de Heroku et la lance.
+**Heroku, buildpack `emk/rust`** (la voie principale) :
 
-1. Sur Heroku : l'app existe déjà (ou `heroku create luma-site`). Ses variables :
-   `SITE_URL` (ex. `https://luma-site.herokuapp.com` ou votre domaine) ; une fois la
-   boutique ouverte (voir [docs/premium.md](docs/premium.md)) : `STRIPE_SECRET_KEY`,
-   `LUMA_LICENCE_SECRET`, `LUMA_CHECKOUT_MONTHLY`, `LUMA_CHECKOUT_ANNUAL`,
-   `LUMA_BILLING_PORTAL`.
-2. Sur GitHub, Settings → Secrets and variables → Actions → **Secrets** :
-   - `HEROKU_API_KEY` : Heroku → Account settings → API Key → Reveal ;
-   - `HEROKU_APP` : le nom de l'app (ce qui précède `.herokuapp.com`, sans le suffixe
-     aléatoire : il se lit dans le tableau de bord Heroku) ;
-   - `REPOS_TOKEN` : un jeton GitHub *fine-grained* en lecture seule (Contents : Read)
-     sur les dépôts Paquets, Vitesse, Securite, Memoire et Active.
-3. Actions → Heroku → Run workflow (puis automatiquement à chaque push du site sur
-   `master` et après chaque Release). Le workflow passe l'app sur la pile `container`,
-   et vérifie à la fin que le site répond.
+1. Créer l'app et choisir le buildpack :
+   ```sh
+   heroku create luma-site
+   heroku buildpacks:set emk/rust -a luma-site
+   ```
+2. Créer un jeton GitHub *fine-grained*, en lecture seule (Contents : Read) sur les
+   dépôts LUMA, Paquets, Vitesse, Securite, Memoire et Active, puis :
+   ```sh
+   heroku config:set REPOS_TOKEN=github_pat_… -a luma-site
+   heroku config:set SITE_URL=https://luma-site.herokuapp.com -a luma-site   # ou votre domaine
+   ```
+   Une fois la boutique ouverte (voir [docs/premium.md](docs/premium.md)) :
+   `heroku config:set LUMA_CHECKOUT_MONTHLY=… LUMA_CHECKOUT_ANNUAL=… -a luma-site`.
+3. Déployer : `git push heroku master:main`, ou automatiquement par GitHub Actions
+   (`.github/workflows/deploy-heroku.yml`) avec les secrets du dépôt `HEROKU_API_KEY`
+   (`heroku authorizations:create`) et `HEROKU_APP` (`luma-site`). Il déploie à chaque
+   push sur `master` qui touche le site, et après chaque Release (nouvelle app à
+   télécharger).
 
-Domaine personnalisé : `heroku domains:add luma.app -a luma-site`.
+Le buildpack installe Rust (`RustConfig`), puis `heroku-build.sh` construit le serveur,
+les îlots WebAssembly, et télécharge `LUMA-macos.zip` de la dernière Release dans
+`site/public/download/` ; le `Procfile` lance le serveur. Domaine personnalisé :
+`heroku domains:add luma.app -a luma-site`.
 
-**Autres voies** : le buildpack `emk/rust` (`RustConfig`, `heroku-build.sh`,
-`Procfile` : compilation sur Heroku, souvent trop longue) ; Docker à la main
-(`docker build --build-arg REPOS_TOKEN=… -t luma .`) ; GitHub Pages (`pages.yml`), qui ne publie que si
+**Autres voies** : Docker (`docker build --build-arg REPOS_TOKEN=… -t luma .`, ou
+`heroku.yml` sur la stack container) ; GitHub Pages (`pages.yml`), qui ne publie que si
 le dépôt est public (Pages sur un dépôt privé demande un compte payant).
 
 **Dépôt privé et CI** : sur un dépôt privé, les minutes macOS de GitHub Actions comptent
