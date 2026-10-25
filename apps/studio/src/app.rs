@@ -237,6 +237,16 @@ const TRANSFORM: [Field; 5] = [
     }),
 ];
 
+/// Les préréglages de balance des blancs de Lightroom (température, teinte).
+const WB_PRESETS: [(&str, f32, f32); 6] = [
+    ("Lumière du jour", 5500.0, 10.0),
+    ("Nuageux", 6500.0, 10.0),
+    ("Ombre", 7500.0, 10.0),
+    ("Tungstène", 2850.0, 0.0),
+    ("Fluorescent", 3800.0, 21.0),
+    ("Flash", 5500.0, 0.0),
+];
+
 const HSL_NAMES: [&str; 8] = [
     "Rouge",
     "Orange",
@@ -320,6 +330,10 @@ pub struct Studio {
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
     mask_overlay: Option<(Mask, TextureHandle)>,
+    /// La pipette de balance des blancs (W) attend un clic sur la photo.
+    eyedropper: bool,
+    /// Le nom de la dernière balance personnalisée (« Auto » ou « Personnalisée »).
+    wb_label: &'static str,
 }
 
 impl Studio {
@@ -364,6 +378,8 @@ impl Studio {
             brush: masking::Brush::default(),
             show_mask: false,
             mask_overlay: None,
+            eyedropper: false,
+            wb_label: "Personnalisée",
         }
     }
 
@@ -680,6 +696,8 @@ impl Studio {
                     action = Some("mask_linear");
                 } else if i.consume_key(Modifiers::NONE, Key::K) {
                     action = Some("mask_brush");
+                } else if i.consume_key(Modifiers::NONE, Key::W) {
+                    action = Some("eyedropper");
                 } else if i.consume_key(Modifiers::NONE, Key::O) {
                     action = Some("mask_overlay");
                 } else if i.consume_key(Modifiers::NONE, Key::Delete)
@@ -811,6 +829,7 @@ impl Studio {
                 self.touch();
             }
             "mask_overlay" => self.show_mask = !self.show_mask,
+            "eyedropper" => self.eyedropper = !self.eyedropper && self.photo.is_some(),
             "mask_delete" => {
                 if let Some(i) = self.selected_mask.take()
                     && i < self.settings.masks.len()
@@ -1589,7 +1608,31 @@ impl Studio {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
             let r = ui.interact(target, ui.scope_id().with("photo"), egui::Sense::click());
-            if r.on_hover_text("Clic ou Z : zoom 1:1").clicked() {
+            if self.eyedropper {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+                if r.clicked()
+                    && let (Some(p), Some(photo)) = (r.interact_pointer_pos(), &self.photo)
+                {
+                    let (nx, ny) = (
+                        (p.x - target.min.x) / target.width(),
+                        (p.y - target.min.y) / target.height(),
+                    );
+                    let t =
+                        photo.white_balance_for(photo.camera_color_at(nx, ny, &self.settings.crop));
+                    self.settings.white_balance = WhiteBalance::Custom {
+                        temperature: t.temperature,
+                        tint: t.tint,
+                    };
+                    self.wb_label = "Personnalisée";
+                    self.eyedropper = false;
+                    self.commit(format!(
+                        "Pipette : {} K, {}",
+                        format_value(t.temperature, 0, false),
+                        format_value(t.tint, 0, true)
+                    ));
+                    self.touch();
+                }
+            } else if r.on_hover_text("Clic ou Z : zoom 1:1").clicked() {
                 self.zoom = true;
             }
         }
@@ -1602,6 +1645,9 @@ impl Studio {
         }
         if self.clipping {
             badges.push("Écrêtage (J)");
+        }
+        if self.eyedropper {
+            badges.push("Pipette : cliquez un gris ou un blanc de la photo");
         }
         if self.crop_tool.is_some() {
             badges.push("Recadrage : Entrée pour valider, Échap pour annuler");
@@ -1852,26 +1898,63 @@ impl Studio {
                 let as_shot = self.photo.as_ref().map(|p| p.as_shot());
                 ui.horizontal(|ui| {
                     ui.label(RichText::new("Balance des blancs").color(theme::DIM));
-                    let mut custom =
-                        matches!(self.settings.white_balance, WhiteBalance::Custom { .. });
+                    let current = match self.settings.white_balance {
+                        WhiteBalance::AsShot => "Telle quelle",
+                        WhiteBalance::Custom { temperature, tint } => WB_PRESETS
+                            .iter()
+                            .find(|p| p.1 == temperature && p.2 == tint)
+                            .map_or(self.wb_label, |p| p.0),
+                    };
+                    let mut choice: Option<&'static str> = None;
                     egui::ComboBox::from_id_salt("balance")
-                        .selected_text(if custom {
-                            "Personnalisée"
-                        } else {
-                            "Telle quelle"
-                        })
+                        .selected_text(current)
                         .show_ui(ui, |ui| {
-                            if ui
-                                .selectable_value(&mut custom, false, "Telle quelle")
-                                .changed()
+                            for name in ["Telle quelle", "Auto"]
+                                .into_iter()
+                                .chain(WB_PRESETS.iter().map(|p| p.0))
                             {
-                                self.settings.white_balance = WhiteBalance::AsShot;
-                                commits.push("Balance : telle quelle".into());
+                                if ui.selectable_label(current == name, name).clicked() {
+                                    choice = Some(name);
+                                }
                             }
-                            ui.selectable_value(&mut custom, true, "Personnalisée");
                         })
                         .response
                         .accessible_name("Balance des blancs");
+                    let picking = self.eyedropper;
+                    if ui
+                        .selectable_label(picking, "Pipette")
+                        .on_hover_text("W : cliquez un gris de la photo")
+                        .clicked()
+                    {
+                        self.eyedropper = !picking;
+                    }
+                    match choice {
+                        Some("Telle quelle") => {
+                            self.settings.white_balance = WhiteBalance::AsShot;
+                            commits.push("Balance : telle quelle".into());
+                        }
+                        Some("Auto") => {
+                            if let Some(photo) = &self.photo {
+                                let t = photo.auto_white_balance();
+                                self.settings.white_balance = WhiteBalance::Custom {
+                                    temperature: t.temperature,
+                                    tint: t.tint,
+                                };
+                                self.wb_label = "Auto";
+                                commits.push("Balance : auto".into());
+                            }
+                        }
+                        Some(name) => {
+                            if let Some(p) = WB_PRESETS.iter().find(|p| p.0 == name) {
+                                self.settings.white_balance = WhiteBalance::Custom {
+                                    temperature: p.1,
+                                    tint: p.2,
+                                };
+                                commits.push(format!("Balance : {}", name.to_lowercase()));
+                            }
+                        }
+                        None => {}
+                    }
                 });
                 let (mut temperature, mut tint) = match (self.settings.white_balance, as_shot) {
                     (WhiteBalance::Custom { temperature, tint }, _) => (temperature, tint),
@@ -1902,6 +1985,7 @@ impl Studio {
                 let c2 = widgets::slider(ui, &tn, &mut tint);
                 c.merge(c2);
                 if c.changed {
+                    self.wb_label = "Personnalisée";
                     self.settings.white_balance = WhiteBalance::Custom { temperature, tint };
                     self.touch();
                 }
