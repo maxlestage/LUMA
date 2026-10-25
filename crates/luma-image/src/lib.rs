@@ -50,6 +50,15 @@ pub struct Input {
 
 /// Développe `cam` (RGB caméra linéaire, déjà orientée et recadrée).
 pub fn develop(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
+    let mut img = develop_base(cam, input, s, cancel, t)?;
+    finish(&mut img, input.scale, s, cancel, t)?;
+    Ok(img)
+}
+
+/// Les étapes de voisinage du début (entrée, bruit, tonalité locale) : leur résultat
+/// ne dépend que des réglages gardés par [`base_key`], et peut être gardé en cache
+/// pendant qu'on règle le contraste, les couleurs ou les effets.
+pub fn develop_base(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
     // L'étape d'entrée lit la source (en cache, partagée) et écrit l'image de travail.
     let mut img = t.time("entrée", || input_stage(cam, input, s));
     cancel.check()?;
@@ -60,7 +69,39 @@ pub fn develop(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: 
         tone::local_tone(&mut img, s);
     });
     cancel.check()?;
-    t.time("rendu", || render_stage(&mut img, s));
+    Ok(img)
+}
+
+/// Les réglages dont dépend [`develop_base`] ; les autres sont remis à leur défaut.
+/// Deux réglages de même clé donnent la même base.
+pub fn base_key(s: &Settings) -> Settings {
+    let d = Settings::default();
+    let mut detail = d.detail.clone();
+    detail.luminance_nr = s.detail.luminance_nr;
+    detail.luminance_nr_detail = s.detail.luminance_nr_detail;
+    detail.luminance_nr_contrast = s.detail.luminance_nr_contrast;
+    detail.color_nr = s.detail.color_nr;
+    detail.color_nr_detail = s.detail.color_nr_detail;
+    detail.color_nr_smoothness = s.detail.color_nr_smoothness;
+    Settings {
+        white_balance: s.white_balance,
+        exposure: s.exposure,
+        calibration: s.calibration.clone(),
+        detail,
+        dehaze: s.dehaze,
+        highlights: s.highlights,
+        shadows: s.shadows,
+        clarity: s.clarity,
+        texture: s.texture,
+        crop: s.crop,
+        ..d
+    }
+}
+
+/// Les étapes par pixel de la fin (rendu, couleur, effets) et l'accentuation. Les
+/// étapes par pixel ont un double sur le GPU (`luma-gpu`).
+pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<()> {
+    t.time("rendu", || render_stage(img, s));
     cancel.check()?;
     t.time("couleur", || {
         if let Some(stage) = color::ColorStage::new(s) {
@@ -68,9 +109,20 @@ pub fn develop(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: 
         }
     });
     cancel.check()?;
-    t.time("accentuation", || detail::sharpen(&mut img, &s.detail, input.scale));
-    t.time("effets", || effects::apply(&mut img, &s.effects, input.scale));
-    Ok(img)
+    t.time("accentuation", || detail::sharpen(img, &s.detail, scale));
+    t.time("effets", || effects::apply(img, &s.effects, scale));
+    Ok(())
+}
+
+/// Les tables de l'étape de rendu, pour le GPU : la courbe filmique (8193 valeurs,
+/// indexées par la racine quatrième de x / 4) et, si elles ne sont pas neutres, les
+/// trois courbes des tonalités (4097 valeurs chacune, en sRGB encodé).
+pub fn render_tables(s: &Settings) -> (Vec<f32>, Option<[Vec<f32>; 3]>) {
+    let filmic = Filmic::with_look(s.contrast, s.whites, s.blacks, s.profile.look().0).table();
+    (
+        filmic.values().to_vec(),
+        tone_luts(s).map(|l| l.map(|lut| lut.values().to_vec())),
+    )
 }
 
 fn input_stage(cam: &RgbImage, input: &Input, s: &Settings) -> RgbImage {

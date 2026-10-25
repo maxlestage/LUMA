@@ -73,8 +73,12 @@ impl Filmic {
 pub struct FilmicTable(Vec<f32>);
 
 impl FilmicTable {
-    const SIZE: usize = 8192;
-    const MAX: f32 = 4.0;
+    pub const SIZE: usize = 8192;
+    pub const MAX: f32 = 4.0;
+
+    pub fn values(&self) -> &[f32] {
+        &self.0
+    }
 
     #[inline]
     pub fn get(&self, x: f32) -> f32 {
@@ -110,6 +114,10 @@ impl Lut {
 
     pub fn identity() -> Self {
         Self::from_fn(|x| x)
+    }
+
+    pub fn values(&self) -> &[f32] {
+        &self.0
     }
 
     pub fn from_fn(f: impl Fn(f32) -> f32) -> Self {

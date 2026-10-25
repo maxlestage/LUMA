@@ -22,7 +22,8 @@ panneaux, mêmes curseurs, mêmes plages, et il lit les fichiers XMP de Lightroo
 | `luma-raw` | Lecture des RAW (rawler), normalisation, couleur DNG, dématriçage Bayer et X‑Trans |
 | `luma-project` | Les réglages (calqués sur Lightroom), JSON et XMP `crs:` |
 | `luma-image` | Le développement : tonalité locale, rendu filmique, courbes, couleur, détail, effets, géométrie |
-| `luma-render` | Une photo ouverte : sources en cache par taille, rendu annulable |
+| `luma-render` | Une photo ouverte : sources et « base » (étapes de voisinage) en cache, rendu annulable |
+| `luma-gpu` | Les étapes par pixel (rendu, couleur, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test |
 | `luma-cli` | `luma` : info, développement et export, XMP, mesures |
 
 ```sh
@@ -57,6 +58,13 @@ viendra ensuite). Ce ne sont pas encore des mesures sur Mac ni sur iPhone.
 | Nikon Z 6 (NEF) | 157 ms | 102 / 113 ms | 230 / 242 ms |
 | Fujifilm X‑T3 (RAF, X‑Trans) | 198 ms | 101 / 109 ms | 246 / 260 ms |
 | iPhone 12 Pro (ProRAW) | 319 ms | 168 / 184 ms | 365 / 380 ms |
+
+**Sur le GPU.** Pendant qu'on règle le contraste, les courbes, les couleurs, l'étalonnage
+ou les effets, la base (bruit, tonalité locale) reste en cache et seule la finition est
+refaite, sur le GPU dans l'app : le résultat est identique à celui du processeur (au plus
+un niveau d'écart sur 255, vérifié à chaque push sur Metal et sur Vulkan). La CI macOS
+publie le temps de finition mesuré sur Metal ; l'app affiche « GPU » à côté du temps de
+rendu. `LUMA_GPU=0` force le processeur.
 
 « Lourds » : Hautes lumières, Ombres, Clarté, Texture, Voile, Vibrance, mélangeur,
 étalonnage, réduction du bruit, vignetage, tous actifs. L'objectif est un aperçu sous

@@ -17,6 +17,7 @@ luma-raw.workspace = true
 luma-project.workspace = true
 luma-image.workspace = true
 luma-render.workspace = true
+luma-gpu.workspace = true
 egui.workspace = true
 wgpu.workspace = true
 rfd.workspace = true
