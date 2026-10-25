@@ -166,6 +166,16 @@ fn curve(items: &[String]) -> Option<Vec<(f32, f32)>> {
 fn fields(s: &mut Settings) -> Vec<(&'static str, &mut f32)> {
     let mut v: Vec<(&'static str, &mut f32)> = vec![
         ("Exposure2012", &mut s.exposure),
+        ("LensManualDistortionAmount", &mut s.lens.distortion),
+        ("VignetteAmount", &mut s.lens.vignetting),
+        ("VignetteMidpoint", &mut s.lens.vignetting_midpoint),
+        ("DefringePurpleAmount", &mut s.lens.defringe_purple),
+        ("DefringeGreenAmount", &mut s.lens.defringe_green),
+        ("PerspectiveVertical", &mut s.transform.vertical),
+        ("PerspectiveHorizontal", &mut s.transform.horizontal),
+        ("PerspectiveRotate", &mut s.transform.rotate),
+        ("PerspectiveAspect", &mut s.transform.aspect),
+        ("PerspectiveScale", &mut s.transform.scale),
         ("Contrast2012", &mut s.contrast),
         ("Highlights2012", &mut s.highlights),
         ("Shadows2012", &mut s.shadows),
@@ -300,6 +310,7 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     {
         s.profile = Profile::Monochrome;
     }
+    s.lens.remove_ca = values.scalars.get("AutoLateralCA").is_some_and(|v| v.trim() == "1");
     let wb = values
         .scalars
         .get("WhiteBalance")
@@ -403,6 +414,10 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
         attrs.push((name.to_owned(), fmt_value(name, *v)));
     }
     attrs.push(("HasCrop".into(), if has_crop { "True".into() } else { "False".into() }));
+    attrs.push((
+        "AutoLateralCA".into(),
+        if s.lens.remove_ca { "1".into() } else { "0".into() },
+    ));
 
     let mut out = String::from(
         "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"LÜMA\">\n <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"\"\n",
@@ -579,6 +594,10 @@ mod tests {
             });
         }
         s.masks = vec![sky, brush];
+        s.lens.remove_ca = true;
+        s.lens.distortion = 12.0;
+        s.transform.vertical = -25.0;
+        s.transform.scale = 95.0;
         let text = write(&s);
         assert!(text.contains("luma:Masks="));
         assert_eq!(read(&text).unwrap(), s);

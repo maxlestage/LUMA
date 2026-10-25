@@ -54,6 +54,8 @@ pub struct Photo {
     raw: RawPhoto,
     /// Images caméra orientées, par taille. Bornées : au plus [`CACHE`] tailles.
     sources: Mutex<Vec<(Size, Arc<RgbImage>)>>,
+    /// L'aberration chromatique latérale estimée (rouge, bleu), une fois par photo.
+    ca: Mutex<Option<(f32, f32)>>,
     /// Les matrices caméra → travail déjà calculées, par balance des blancs.
     matrices: Mutex<HashMap<[u32; 3], luma_color::Mat3>>,
 }
@@ -68,6 +70,7 @@ impl Photo {
     pub fn new(raw: RawPhoto) -> Photo {
         Photo {
             base: Mutex::new(None),
+            ca: Mutex::new(None),
             raw,
             sources: Mutex::new(Vec::new()),
             matrices: Mutex::new(HashMap::new()),
@@ -151,6 +154,18 @@ impl Photo {
         Ok(Rendered { image, timings })
     }
 
+    /// L'aberration chromatique latérale de la photo, estimée une fois sur un aperçu
+    /// (c'est une proportion : elle vaut pour toutes les tailles).
+    pub fn chromatic_aberration(&self, timings: &mut Timings) -> (f32, f32) {
+        if let Some(ca) = *self.ca.lock().expect("ca") {
+            return ca;
+        }
+        let preview = self.source(Size::Fit(1600), timings);
+        let ca = timings.time("aberration chromatique", || luma_image::lens::estimate_ca(&preview));
+        *self.ca.lock().expect("ca") = Some(ca);
+        ca
+    }
+
     /// Les étapes de voisinage, en cache tant que [`luma_image::base_key`] ne change pas.
     pub fn base(&self, settings: &Settings, size: Size, cancel: &Cancel, timings: &mut Timings) -> Result<Base> {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
@@ -163,8 +178,18 @@ impl Photo {
         }
         let source = self.source(size, timings);
         cancel.check()?;
-        let cropped = timings.time("recadrage", || geometry::crop(&source, &settings.crop));
-        let cam = cropped.as_ref().unwrap_or(&source);
+        let ca = if settings.lens.remove_ca {
+            self.chromatic_aberration(timings)
+        } else {
+            (0.0, 0.0)
+        };
+        let corrected = timings.time("objectif", || {
+            luma_image::lens::correct(&source, &settings.lens, &settings.transform, ca)
+        });
+        let source_ref = corrected.as_ref().unwrap_or(&source);
+        cancel.check()?;
+        let cropped = timings.time("recadrage", || geometry::crop(source_ref, &settings.crop));
+        let cam = cropped.as_ref().unwrap_or(source_ref);
         let scale = source.width as f32 / self.full_size().0 as f32;
         let input = Input {
             camera_to_working: self.camera_to_working(&settings.white_balance),

@@ -204,6 +204,39 @@ const CALIBRATION: [Field; 7] = [
     }),
 ];
 
+const LENS: [Field; 5] = [
+    field("Distorsion", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.lens.distortion
+    }),
+    field("Vignetage", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.lens.vignetting
+    }),
+    field("Milieu", 0.0, 100.0, 50.0, 0, |s| {
+        &mut s.lens.vignetting_midpoint
+    }),
+    field("Défrangeage violet", 0.0, 20.0, 0.0, 0, |s| {
+        &mut s.lens.defringe_purple
+    }),
+    field("Défrangeage vert", 0.0, 20.0, 0.0, 0, |s| {
+        &mut s.lens.defringe_green
+    }),
+];
+const TRANSFORM: [Field; 5] = [
+    field("Verticale", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.transform.vertical
+    }),
+    field("Horizontale", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.transform.horizontal
+    }),
+    field("Rotation", -10.0, 10.0, 0.0, 1, |s| &mut s.transform.rotate),
+    field("Proportions", -100.0, 100.0, 0.0, 0, |s| {
+        &mut s.transform.aspect
+    }),
+    field("Échelle", 50.0, 150.0, 100.0, 0, |s| {
+        &mut s.transform.scale
+    }),
+];
+
 const HSL_NAMES: [&str; 8] = [
     "Rouge",
     "Orange",
@@ -1979,6 +2012,33 @@ impl Studio {
                 keep(l, &mut commits);
             });
 
+        egui::CollapsingHeader::new(RichText::new("Corrections de l'objectif").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                if ui
+                    .checkbox(
+                        &mut self.settings.lens.remove_ca,
+                        "Supprimer l'aberration chromatique",
+                    )
+                    .changed()
+                {
+                    commits.push(if self.settings.lens.remove_ca {
+                        "Aberration chromatique supprimée".into()
+                    } else {
+                        "Aberration chromatique gardée".into()
+                    });
+                }
+                let l = self.fields(ui, &LENS);
+                keep(l, &mut commits);
+            });
+
+        egui::CollapsingHeader::new(RichText::new("Transformation").strong())
+            .default_open(false)
+            .show(ui, |ui| {
+                let l = self.fields(ui, &TRANSFORM);
+                keep(l, &mut commits);
+            });
+
         egui::CollapsingHeader::new(RichText::new("Effets").strong())
             .default_open(false)
             .show(ui, |ui| {
@@ -2206,6 +2266,8 @@ mod tests {
         let mut s = Settings::default();
         for f in TONE
             .iter()
+            .chain(&LENS)
+            .chain(&TRANSFORM)
             .chain(&PRESENCE)
             .chain(&CURVE)
             .chain(&SHARPEN)

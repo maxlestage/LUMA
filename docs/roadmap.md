@@ -32,7 +32,8 @@ C'est une estimation, pas une garantie.
 - LÜMA Studio, l'app Mac (`apps/studio`) : module Développement complet, historique,
   XMP automatique, film, raccourcis de Lightroom, Bibliothèque (notes, drapeaux,
   filtre), outil Recadrage, fenêtre Exporter ; finition sur le GPU (Metal), base
-  en cache ; masques linéaire, radial et pinceau ; `LÜMA.app` universelle fabriquée par
+  en cache ; masques linéaire, radial et pinceau ;
+  corrections de l'objectif et transformation ; `LÜMA.app` universelle fabriquée par
   la CI sur un runner Apple Silicon.
 
 Prochaines étapes, dans l'ordre :
@@ -41,7 +42,7 @@ Prochaines étapes, dans l'ordre :
    processeur) ; restent les étapes de voisinage (bruit, tonalité locale, accentuation)
    et l'affichage sans relecture (texture partagée avec l'interface) ;
 2. dans l'app : catalogue (plusieurs dossiers, collections, mots‑clés), préréglages ;
-3. masques par IA (sujet, ciel) et corrections d'objectif ;
+3. masques par IA (sujet, ciel), profils d'objectifs, Upright automatique ;
 4. application iOS, PhotoKit, TestFlight.
 
 ## Jalons de validation
