@@ -24,7 +24,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Profil | Couleur, Neutre, Vif, Monochrome ; lecture de `crs:CameraProfile` | ✅ |
 | | Profils créatifs, profils fabricant (« Camera Standard »…) | ⏳ |
 | Base | Balance des blancs telle quelle, température et teinte (échelle DNG) | ✅ |
-| | Balance automatique, préréglages (lumière du jour, tungstène…), pipette | ⏳ |
+| | Balance automatique, préréglages (lumière du jour, nuageux, ombre, tungstène, fluorescent, flash), pipette (W) | ✅ |
 | | Exposition, Contraste | ✅ |
 | | Hautes lumières, Ombres (adaptatifs à l'image, comme le processus 2012) | ✅ |
 | | Blancs, Noirs | 🟡 fixes, pas encore adaptatifs à l'image |
