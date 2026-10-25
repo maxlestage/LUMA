@@ -38,10 +38,21 @@ impl Session {
     }
 
     fn open_sized(name: &str, size: [f32; 2], scale: f32) -> Option<Self> {
+        Self::open_prepared(name, size, scale, |_| {})
+    }
+
+    /// Comme `open_sized`, après avoir préparé la copie du corpus (des XMP, par exemple).
+    fn open_prepared(
+        name: &str,
+        size: [f32; 2],
+        scale: f32,
+        prepare: impl FnOnce(&Path),
+    ) -> Option<Self> {
         let Some(raw) = corpus_copy(name) else {
             eprintln!("corpus absent (scripts/fetch-corpus.sh) : capture ignorée");
             return None;
         };
+        prepare(raw.parent().unwrap());
         let harness = Harness::builder()
             .with_size(size)
             .with_pixels_per_point(scale)
@@ -261,4 +272,30 @@ fn films_stacked_with_masks() {
     st.selected_mask = Some(1);
     s.wait();
     s.capture("films-empiles");
+}
+
+/// Les photos retouchées se voient : un signe et le nom du film sur les vignettes, et
+/// sous la photo affichée, son film et ses retouches.
+#[test]
+fn edited_photos_show_their_film() {
+    let Some(mut s) = Session::open_prepared("modifiees", [1440.0, 900.0], 1.0, |dir| {
+        let mut portra = luma_project::presets::find("Portra 400")
+            .unwrap()
+            .applied(&luma_project::Settings::default(), 0.8);
+        portra.exposure = 0.3;
+        std::fs::write(dir.join("_DSC0009.xmp"), luma_project::xmp::write(&portra)).unwrap();
+        let tri_x = luma_project::presets::find("Tri-X 400")
+            .unwrap()
+            .applied(&luma_project::Settings::default(), 1.0);
+        for f in luma_studio::app::scan(dir).iter().skip(1).take(1) {
+            std::fs::write(f.with_extension("xmp"), luma_project::xmp::write(&tri_x)).unwrap();
+        }
+    }) else {
+        return;
+    };
+    assert_eq!(
+        s.studio().settings.film.as_ref().map(|f| f.name.as_str()),
+        Some("Portra 400")
+    );
+    s.capture("modifiees");
 }

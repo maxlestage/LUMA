@@ -38,6 +38,7 @@ target/release/luma merge ciel_*.ARW --stack stars                     # empilem
 target/release/luma merge pano_*.CR3 --pano cylindrical --no-crop      # panorama sans rognage
 target/release/luma film-lut photo.ARW scan.tif -o MaPortra.cube       # mesure une vraie pellicule
 target/release/luma develop photo.ARW --lut MaPortra.cube:80 -o p.jpg   # ce film, à 80 %
+target/release/luma presets ~/Desktop                                   # les 100 films en préréglages Lightroom
 ```
 
 ### Vérifier
@@ -126,6 +127,14 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   mesure le film couleur par couleur, en LUT 3D (`.cube`). On peut aussi importer
   n'importe quelle LUT `.cube` (Resolve, Lightroom…). Ces films s'utilisent comme les
   autres : intensité, aperçu, masques, GPU, export.
+- **Mes préréglages** : « Enregistrer » garde le look des réglages actuels (sans
+  l'exposition, la balance ni le recadrage) ; « Importer » accepte les préréglages `.xmp`
+  de Lightroom et Camera Raw. **Export** au format des préréglages Lightroom : clic droit
+  sur un film pour l'exporter seul, ou « Exporter tous les préréglages » pour un dossier
+  rangé par famille (les pellicules mesurées emportent leur `.cube`).
+- **Photo modifiée, d'un coup d'œil** : sous la photo, une étiquette dit son film, son
+  intensité et ce qui a été retouché (« Portra 400 · 80 % — Lumière, 1 masque ») ; sur
+  les vignettes du film et de la grille, un point spectral et le nom du film.
 - **Films empilés par masques** : chaque masque (radial, linéaire, pinceau, ou « Image
   entière ») peut porter son propre film avec son intensité ; les films s'empilent dans
   l'ordre des masques, chacun dans sa zone, *complets* : leurs hautes lumières, ombres

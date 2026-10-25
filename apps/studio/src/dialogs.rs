@@ -92,3 +92,70 @@ pub fn pick_scan() -> Option<PathBuf> {
 pub fn pick_scan() -> Option<PathBuf> {
     None
 }
+
+/// Le dossier de mes préréglages (`.xmp`), à côté du dossier Films : sur Mac
+/// `~/Library/Application Support/LÜMA/Préréglages`, sur iPhone et iPad
+/// `Documents/Préréglages`. `LUMA_PRESETS` le remplace.
+pub fn presets_dir() -> Option<PathBuf> {
+    let dir = match std::env::var_os("LUMA_PRESETS") {
+        Some(d) => PathBuf::from(d),
+        None => films_dir()?
+            .parent()?
+            .join(if cfg!(any(target_os = "macos", target_os = "ios")) {
+                "Préréglages"
+            } else {
+                "presets"
+            }),
+    };
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
+/// Où enregistrer un préréglage exporté. Sur iPhone et iPad : `Documents/Préréglages
+/// exportés`.
+#[cfg(not(target_os = "ios"))]
+pub fn save_preset(name: &str) -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Exporter le préréglage")
+        .set_file_name(format!("{name}.xmp"))
+        .add_filter("Préréglage Lightroom", &["xmp"])
+        .save_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn save_preset(name: &str) -> Option<PathBuf> {
+    Some(export_folder()?.join(format!("{name}.xmp")))
+}
+
+/// Le dossier où exporter tous les préréglages.
+#[cfg(not(target_os = "ios"))]
+pub fn pick_export_folder() -> Option<PathBuf> {
+    pick_folder("Exporter les préréglages dans…")
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_export_folder() -> Option<PathBuf> {
+    export_folder()
+}
+
+#[cfg(target_os = "ios")]
+fn export_folder() -> Option<PathBuf> {
+    let dir = documents()?.join("Préréglages exportés");
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
+/// Des préréglages `.xmp` à importer (de Lightroom, Camera Raw ou LÜMA).
+#[cfg(not(target_os = "ios"))]
+pub fn pick_presets() -> Vec<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Importer des préréglages")
+        .add_filter("Préréglages", &["xmp", "XMP"])
+        .pick_files()
+        .unwrap_or_default()
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_presets() -> Vec<PathBuf> {
+    Vec::new()
+}

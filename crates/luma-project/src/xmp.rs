@@ -31,13 +31,15 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 6] = [
+const META_KEYS: [&str; 8] = [
     "xmp:Rating",
     "xmp:Label",
     "luma:Pick",
     "luma:Masks",
     "luma:Lut",
     "luma:LutAmount",
+    "luma:Film",
+    "luma:FilmAmount",
 ];
 const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
 
@@ -285,6 +287,7 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         && values.lists.is_empty()
         && !values.meta.contains_key("luma:Masks")
         && !values.meta.contains_key("luma:Lut")
+        && !values.meta.contains_key("luma:Film")
     {
         return Err(luma_core::Error::Format("aucun réglage crs: dans ce XMP".into()));
     }
@@ -362,18 +365,118 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     {
         s.masks = masks;
     }
-    // Le film mesuré (LUT 3D) : son nom et son intensité.
-    if let Some(name) = values.meta.get("luma:Lut").filter(|n| !n.is_empty()) {
-        s.lut = Some(crate::Look {
-            name: name.clone(),
-            amount: values
-                .meta
-                .get("luma:LutAmount")
-                .and_then(|v| number(v))
-                .unwrap_or(100.0),
-        });
-    }
+    // Le film mesuré (LUT 3D), et le nom du film appliqué : nom et intensité.
+    let look = |name: &str, amount: &str| {
+        values.meta.get(name).filter(|n| !n.is_empty()).map(|n| crate::Look {
+            name: n.clone(),
+            amount: values.meta.get(amount).and_then(|v| number(v)).unwrap_or(100.0),
+        })
+    };
+    s.lut = look("luma:Lut", "luma:LutAmount");
+    s.film = look("luma:Film", "luma:FilmAmount");
     Ok(s.clamped())
+}
+
+/// Les réglages qu'un préréglage n'emporte pas : ceux de la photo (balance des blancs,
+/// exposition, recadrage, objectif, perspective, détail, calibration).
+fn photo_only(name: &str) -> bool {
+    const KEYS: [&str; 12] = [
+        "WhiteBalance",
+        "Temperature",
+        "Tint",
+        "Exposure2012",
+        "HasCrop",
+        "AutoLateralCA",
+        "LensManualDistortionAmount",
+        "VignetteAmount",
+        "VignetteMidpoint",
+        "ShadowTint",
+        "Sharpness",
+        "ColorNoiseReduction",
+    ];
+    const PREFIXES: [&str; 12] = [
+        "Crop",
+        "Perspective",
+        "Defringe",
+        "Sharpen",
+        "LuminanceSmoothing",
+        "LuminanceNoiseReduction",
+        "ColorNoiseReduction",
+        "RedHue",
+        "RedSaturation",
+        "GreenHue",
+        "GreenSaturation",
+        "Blue",
+    ];
+    KEYS.contains(&name) || PREFIXES.iter().any(|p| name.starts_with(p))
+}
+
+/// Un préréglage au format de Lightroom Classic et Camera Raw (un `.xmp` qu'on importe
+/// dans le panneau Préréglages) : le look de `s` seulement, sous `name`, rangé dans le
+/// groupe `group`.
+pub fn write_preset(name: &str, group: &str, s: &Settings) -> String {
+    let full = write(s);
+    let mut out = String::new();
+    // Un identifiant stable, tiré du nom (Lightroom en veut un par préréglage).
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in format!("{group}/{name}").bytes() {
+        h = (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3);
+    }
+    let uuid = format!("{h:016X}{:016X}", h.rotate_left(29) ^ 0x5bd1_e995_7a3c_c2b1);
+    for line in full.lines() {
+        let t = line.trim_start();
+        if let Some(rest) = t.strip_prefix("crs:")
+            && let Some((key, _)) = rest.split_once('=')
+            && photo_only(key)
+        {
+            continue;
+        }
+        if t.starts_with("xmp:Rating") || t.starts_with("luma:Masks") || t.starts_with("luma:Film") {
+            continue;
+        }
+        if t.starts_with("crs:ProcessVersion") {
+            out.push_str("    crs:PresetType=\"Normal\"\n    crs:Cluster=\"\"\n");
+            out.push_str(&format!("    crs:UUID=\"{uuid}\"\n"));
+            out.push_str("    crs:SupportsAmount2=\"True\"\n    crs:SupportsAmount=\"True\"\n");
+            out.push_str("    crs:SupportsColor=\"True\"\n    crs:SupportsMonochrome=\"True\"\n");
+            out.push_str("    crs:SupportsHighDynamicRange=\"True\"\n    crs:SupportsNormalDynamicRange=\"True\"\n");
+            out.push_str("    crs:SupportsSceneReferred=\"True\"\n    crs:SupportsOutputReferred=\"True\"\n");
+            out.push_str("    crs:RequiresRGBTables=\"False\"\n    crs:CameraModelRestriction=\"\"\n");
+            out.push_str("    crs:Copyright=\"\"\n    crs:ContactInfo=\"\"\n    crs:Version=\"15.0\"\n");
+        }
+        if t == "</rdf:Description>" {
+            for (tag, value) in [("Name", name), ("ShortName", name), ("Group", group)] {
+                out.push_str(&format!(
+                    "   <crs:{tag}>\n    <rdf:Alt>\n     <rdf:li xml:lang=\"x-default\">{}</rdf:li>\n    </rdf:Alt>\n   </crs:{tag}>\n",
+                    escape(value)
+                ));
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
+/// Un préréglage `.xmp` (de LÜMA, de Lightroom ou de Camera Raw) : son nom (ou `None`)
+/// et ses réglages.
+pub fn read_preset(text: &str) -> luma_core::Result<(Option<String>, Settings)> {
+    let settings = read(text)?;
+    // Le nom est dans <crs:Name><rdf:Alt><rdf:li>…</rdf:li>.
+    let name = text.find("<crs:Name>").and_then(|i| {
+        let rest = &text[i..];
+        let start = rest.find("<rdf:li")?;
+        let open = rest[start..].find('>')? + start + 1;
+        let end = rest[open..].find("</rdf:li>")? + open;
+        let raw = rest[open..end].trim();
+        (!raw.is_empty()).then(|| {
+            raw.replace("&quot;", "\"")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&")
+        })
+    });
+    Ok((name, settings))
 }
 
 fn fmt_value(name: &str, v: f32) -> String {
@@ -475,9 +578,11 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
         let json = serde_json::to_string(&s.masks).unwrap_or_default();
         out.push_str(&format!("    luma:Masks=\"{}\"\n", escape(&json)));
     }
-    if let Some(l) = &s.lut {
-        out.push_str(&format!("    luma:Lut=\"{}\"\n", escape(&l.name)));
-        out.push_str(&format!("    luma:LutAmount=\"{}\"\n", l.amount));
+    for (key, look) in [("Lut", &s.lut), ("Film", &s.film)] {
+        if let Some(l) = look {
+            out.push_str(&format!("    luma:{key}=\"{}\"\n", escape(&l.name)));
+            out.push_str(&format!("    luma:{key}Amount=\"{}\"\n", l.amount));
+        }
     }
     for (name, value) in &attrs {
         out.push_str(&format!("    crs:{name}=\"{}\"\n", escape(value)));
@@ -640,10 +745,45 @@ mod tests {
             name: "Ma Portra 400 \"scan\"".into(),
             amount: 70.0,
         });
+        s.film = Some(crate::Look {
+            name: "Portra 400".into(),
+            amount: 80.0,
+        });
         let text = write(&s);
         assert!(text.contains("luma:Masks="));
         assert!(text.contains("luma:LutAmount=\"70\""));
         assert_eq!(read(&text).unwrap(), s);
+    }
+
+    #[test]
+    fn presets_are_written_like_lightroom_and_read_back() {
+        let mut s = crate::presets::find("Kodachrome 64")
+            .unwrap()
+            .applied(&Settings::default(), 1.0);
+        s.exposure = 1.5;
+        s.white_balance = WhiteBalance::Custom {
+            temperature: 3200.0,
+            tint: 5.0,
+        };
+        s.crop.left = 0.2;
+        let text = write_preset("Kodachrome 64 & moi", "LÜMA — Pellicules couleur", &s);
+        for needed in [
+            "crs:PresetType=\"Normal\"",
+            "crs:UUID=",
+            "<crs:Group>",
+            "crs:Contrast2012=",
+        ] {
+            assert!(text.contains(needed), "{needed}");
+        }
+        for photo in ["Exposure2012", "Temperature", "CropLeft", "luma:Film"] {
+            assert!(!text.contains(photo), "{photo}");
+        }
+        let (name, back) = read_preset(&text).unwrap();
+        assert_eq!(name.as_deref(), Some("Kodachrome 64 & moi"));
+        assert_eq!(back.contrast, s.contrast);
+        assert_eq!(back.hsl, s.hsl);
+        assert_eq!(back.tone_curve, s.tone_curve);
+        assert_eq!(back.exposure, 0.0, "l'exposition reste celle de la photo");
     }
 
     #[test]
