@@ -1,3 +1,6 @@
 site/target/
 site/pkg/
 site/dist/
+/target/
+/tests/raw-corpus/*
+!/tests/raw-corpus/README.md

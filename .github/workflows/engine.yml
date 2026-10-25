@@ -1,0 +1,60 @@
+# Le moteur de LÜMA (crates/) à chaque push et pull request :
+#
+# - format et clippy, sans avertissement ;
+# - audit « 100 % Rust » du graphe de dépendances réel ;
+# - tests, dont le développement de vrais RAW (Sony, Canon, Nikon, Fujifilm X-Trans,
+#   iPhone ProRAW) téléchargés depuis raw.pixls.us et gardés en cache ;
+# - mesure de la réactivité (aperçus successifs), affichée dans le résumé du job.
+
+name: Moteur
+
+on:
+  push:
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  pull_request:
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  engine:
+    name: Vérifier, tester, mesurer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Audit 100 % Rust
+        run: scripts/audit-rust.sh
+
+      - name: Corpus de RAW (cache)
+        uses: actions/cache@v4
+        with:
+          path: tests/raw-corpus
+          key: raw-corpus-${{ hashFiles('scripts/fetch-corpus.sh') }}
+      - name: Corpus de RAW (téléchargement)
+        run: scripts/fetch-corpus.sh
+
+      - name: Tests
+        run: cargo test --workspace
+
+      - name: Réactivité
+        run: |
+          cargo build --release -p luma-cli
+          {
+            echo '### Réactivité du moteur (aperçu 2048 px, runner GitHub)'
+            echo '```'
+            for f in tests/raw-corpus/*.{ARW,CR3,NEF,RAF,DNG}; do
+              [ -f "$f" ] && target/release/luma bench "$f" --runs 10
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
