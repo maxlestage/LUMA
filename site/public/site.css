@@ -133,7 +133,9 @@ main, .footer { position: relative; z-index: 1; }
 .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: .82rem; color: var(--muted); padding: 8px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); margin: 0 0 clamp(26px, 5vw, 64px); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px var(--mint); animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .35; } }
-.hero-title { font-size: clamp(5.5rem, 19vw, 17rem); font-weight: 800; letter-spacing: -0.06em; line-height: .85; margin-left: -0.04em; }
+/* Le nom, comme dans le logo : capitales fines, géométriques, très espacées. */
+.hero-title { font-size: clamp(3.6rem, 14vw, 11.5rem); font-weight: 300; letter-spacing: .26em; line-height: 1; margin: .1em -.26em 0 -.02em; }
+.hero-title .ch > span { background: linear-gradient(180deg, #fff 35%, #c9c9d2) !important; -webkit-background-clip: text !important; background-clip: text !important; }
 .split { display: inline-flex; }
 .split .ch { display: inline-block; overflow: hidden; padding: .24em 0 .04em; margin-top: -.24em; }
 .split .ch > span { display: inline-block; padding-top: .24em; margin-top: -.24em; background: linear-gradient(180deg, #fff 30%, #9a9aa3); -webkit-background-clip: text; background-clip: text; color: transparent; }
