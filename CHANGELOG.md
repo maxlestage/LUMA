@@ -1,5 +1,17 @@
 # Nouveautés
 
+## 0.2.0 — octobre 2026
+
+Toutes les images, trois langues, et la boutique.
+
+- **Toutes les images** : JPEG, PNG, TIFF, WebP, GIF, BMP, OpenEXR, HDR, JPEG XL, PSD,
+  JPEG 2000, SVG… et HEIC, HEIF, AVIF de l'iPhone (Mac, iPhone et iPad) ; profil
+  « Original » : l'image s'ouvre telle qu'elle est, tous les outils s'y appliquent.
+- **Trois langues** : français, anglais, espagnol (app et site).
+- **LÜMA Premium par Stripe** : la clé de licence s'affiche aussitôt après le paiement,
+  vérifiée par l'app sans réseau, renouvelée chaque jour.
+- **App Mac prête pour la signature Developer ID** et la notarisation d'Apple.
+
 ## 0.1.0 — octobre 2026
 
 La première version à télécharger : 14 jours d'essai, puis LÜMA Premium.
@@ -8,10 +20,6 @@ La première version à télécharger : 14 jours d'essai, puis LÜMA Premium.
   panneau, moteur 32 bits flottants, finition sur le GPU (Metal), XMP compatibles.
 - **735 boîtiers** reconnus, dont 714 à couleur étalonnée ; tout DNG, dont l'iPhone
   ProRAW.
-- **Toutes les images** : JPEG, PNG, TIFF, WebP, GIF, BMP, OpenEXR, HDR, JPEG XL, PSD,
-  JPEG 2000, SVG… et HEIC, HEIF, AVIF de l'iPhone (Mac, iPhone et iPad) ; profil
-  « Original » : l'image s'ouvre telle qu'elle est, tous les outils s'y appliquent.
-- **Trois langues** : français, anglais, espagnol (app et site).
 - **100 films** vérifiés par la machine (pellicules couleur, cinéma, noir et blanc,
   instantanés) ; **vos vraies pellicules mesurées** sur un scan, en LUT 3D ; import de
   LUT `.cube`.
