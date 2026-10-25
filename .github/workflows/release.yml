@@ -8,7 +8,13 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # À la main (Actions → Release → Run workflow) : la version à publier ; l'étiquette
+  # est créée sur le commit lancé.
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (ex. 0.1.0)"
+        required: true
 
 permissions:
   contents: write
@@ -69,7 +75,6 @@ jobs:
   publish:
     name: Publier la Release
     needs: [apple, linux]
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -79,8 +84,9 @@ jobs:
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
         run: |
+          case "$TAG" in v[0-9]*) ;; *) echo "version invalide : $TAG"; exit 1 ;; esac
           find dist -type f
           notes="LÜMA ${TAG#v} — 14 jours d'essai, puis LÜMA Premium (9,99 € par mois ou 79,99 € par an).
 
@@ -91,5 +97,5 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" $files --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" $files --title "LÜMA ${TAG#v}" --notes "$notes" --repo "$GITHUB_REPOSITORY"
+            gh release create "$TAG" $files --target "$GITHUB_SHA" --title "LÜMA ${TAG#v}" --notes "$notes" --repo "$GITHUB_REPOSITORY"
           fi
