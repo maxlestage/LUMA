@@ -54,6 +54,10 @@ jobs:
               [ -f "$f" ] && cargo run -q --release -p luma-gpu --example bench -- "$f"
             done
             echo '```'
+            echo '### Les chiffres du site (section Performance)'
+            echo '```'
+            cargo run -q --release -p luma-gpu --example measure -- tests/raw-corpus/*.{ARW,CR3,NEF,RAF,DNG}
+            echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: LÜMA.app
