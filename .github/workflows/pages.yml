@@ -42,7 +42,9 @@ jobs:
     name: LÜMA.app à télécharger
     # GitHub Pages sur un dépôt privé demande un compte payant : le site est alors sur
     # Heroku (deploy-heroku.yml), et ce workflow ne publie rien.
-    if: ${{ !github.event.repository.private }}
+    # Tant que le téléchargement est fermé (variable LUMA_DOWNLOADS ≠ 1), le site n'a
+    # pas d'app à servir : ce long job est sauté et le site part en quelques minutes.
+    if: ${{ !github.event.repository.private && vars.LUMA_DOWNLOADS == '1' }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +73,7 @@ jobs:
   build:
     name: Vérifier et construire le site
     needs: mac-app
-    if: ${{ !github.event.repository.private }}
+    if: ${{ always() && !github.event.repository.private && (needs.mac-app.result == 'success' || needs.mac-app.result == 'skipped') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -115,16 +117,19 @@ jobs:
           LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
           # L'app est notariée quand le certificat et la clé d'API Apple sont là.
           LUMA_MAC_NOTARIZED: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.APPLE_API_KEY_ID != '' && '1' || '' }}
+          LUMA_DOWNLOADS: ${{ vars.LUMA_DOWNLOADS }}
         run: |
           cargo run --release -- export dist
           test -f dist/index.html && test -f dist/pkg/luma_site_bg.wasm
 
       # L'app à télécharger, construite par le job mac-app : /download/LUMA-macos.zip.
       - uses: actions/download-artifact@v4
+        if: vars.LUMA_DOWNLOADS == '1'
         with:
           name: telechargement-mac
           path: site/dist/download
       - name: Téléchargement présent
+        if: vars.LUMA_DOWNLOADS == '1'
         run: test -s dist/download/LUMA-macos.zip
 
       - uses: actions/configure-pages@v5
