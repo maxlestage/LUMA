@@ -330,6 +330,9 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 .perf-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; font-size: .9rem; color: var(--muted); }
 .perf-row b { color: var(--text); font-size: 1.4rem; letter-spacing: -0.02em; }
 .perf-row i { font-style: normal; }
+.perf-note { margin: 10px 0 0; font-size: .82rem; color: var(--dim); line-height: 1.45; }
+.perf-phone { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.perf-phone b { font-size: 1.05rem; color: var(--muted); }
 .bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,.07); margin-top: 8px; overflow: hidden; }
 .bar span { display: block; height: 100%; border-radius: inherit; background: var(--spectrum); transform-origin: 0 50%; transform: scaleX(0); transition: transform 1.6s var(--ease-out) .2s; }
 .in .bar span { transform: scaleX(var(--v)); }

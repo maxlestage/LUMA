@@ -240,9 +240,12 @@ mod catalog_tests {
             add(phase);
             add(detail);
         }
-        for (name, unit, _, _) in PERF {
-            add(name);
-            add(unit);
+        for p in &PERF {
+            add(p.name);
+            add(p.unit);
+            if let Some((note, _)) = p.note {
+                add(note);
+            }
         }
         for ph in &ROADMAP {
             add(ph.name);

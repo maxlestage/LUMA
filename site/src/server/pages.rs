@@ -408,45 +408,81 @@ fn architecture(lang: Lang) -> Element {
         .child(island("crates", lang.code(), islands::crates))
 }
 
+/// Un nombre à la manière de la langue : « 6,2 » en français et en espagnol, « 6.2 » en
+/// anglais.
+fn number(lang: Lang, v: f32, decimals: usize) -> String {
+    let s = format!("{v:.decimals$}");
+    if lang == Lang::En {
+        s
+    } else {
+        s.replace('.', ",")
+    }
+}
+
 fn performance(lang: Lang) -> Element {
-    let max = |a: u32, b: u32| f64::from(a.max(b));
-    let cards = PERF.iter().map(|&(name, unit, mac, phone)| {
-        let top = max(mac, phone);
-        let unit = t(lang, unit);
-        let row = |device: &'static str, v: u32| {
-            [
-                div().class("perf-row").child(span().text(device)).child(
-                    b().text("< ")
-                        .child(i().attr("data-count", v.to_string()).text(v.to_string()))
-                        .child(text(format!(" {unit}"))),
-                ),
-                div()
-                    .class("bar")
-                    .child(span().style(format!("--v:{:.2}", f64::from(v) / top))),
-            ]
-        };
+    let sep = if lang == Lang::En { "." } else { "," };
+    let cards = PERF.iter().map(|p| {
+        let unit = t(lang, p.unit);
+        let measured = div()
+            .class("perf-row")
+            .child(span().text(t(lang, "Mac, mesuré")))
+            .child(
+                b().child(
+                    i().attr("data-count", format!("{:.*}", p.decimals, p.mac))
+                        .attr("data-decimals", p.decimals.to_string())
+                        .attr("data-sep", sep)
+                        .text(number(lang, p.mac, p.decimals)),
+                )
+                .child(text(format!(" {unit}"))),
+            );
+        let ratio = (p.mac / p.mac_target as f32).min(1.0);
+        let target = fill(
+            t(lang, "Objectif : moins de {v} {unit}."),
+            &[("v", &p.mac_target.to_string()), ("unit", unit)],
+        );
+        let note = p
+            .note
+            .map(|(n, v)| fill(t(lang, n), &[("v", &number(lang, v, 0))]));
         div()
             .class("perf-card reveal")
-            .child(h3().text(t(lang, name)))
-            .children(row("Mac", mac))
-            .children(row("iPhone", phone))
+            .child(h3().text(t(lang, p.name)))
+            .child(measured)
+            .child(
+                div()
+                    .class("bar")
+                    .child(span().style(format!("--v:{ratio:.2}"))),
+            )
+            .child(p_note(match note {
+                Some(n) => format!("{target} {n}"),
+                None => target,
+            }))
+            .child(
+                div()
+                    .class("perf-row perf-phone")
+                    .child(span().text(t(lang, "iPhone, objectif")))
+                    .child(b().text(format!("< {} {unit}", p.phone_target))),
+            )
     });
+    let adjust = number(lang, PERF[0].mac, PERF[0].decimals);
     section()
         .class("perf")
         .id("performance")
         .child(section_head(
             t(lang, "Performance"),
-            heading(h2, t(lang, "Des objectifs *mesurables*.")),
+            heading(h2, t(lang, "Des chiffres *mesurés*.")),
             Some(p().text(t(lang,
-                "Ce sont des cibles d'ingénierie, pas des résultats. Référence : Mac Apple Silicon 16 Go et iPhone récent, cache chaud et cache froid mesurés séparément.",
+                "Mesurés à chaque version par l'intégration continue, sur un Mac Apple Silicon (machine virtuelle, GPU Metal) et cinq vrais RAW : Sony, Canon, Nikon, Fujifilm, iPhone ProRAW. Ce sont des médianes. Sur iPhone, ce sont encore des objectifs.",
             ))),
         ))
         .child(div().class("perf-grid").children(cards))
         .child(
             div()
                 .class("frame-budget reveal")
-                .child(p().children(rich(t(lang,
-                    "**8,3 ms** : le budget d'une image à 120 Hz. Les aperçus progressifs, les tuiles et l'annulation des calculs devenus inutiles servent à tenir ce budget pendant qu'un curseur bouge.",
+                .child(p().children(rich(&fill(
+                    t(lang,
+                        "**8,3 ms** : le budget d'une image à 120 Hz. Un aperçu après réglage en prend **{v} ms** sur le GPU du Mac : l'image suit le curseur, sans retard.",
+                    ),
+                    &[("v", &adjust)],
                 ))))
                 .child(
                     div()
@@ -455,6 +491,11 @@ fn performance(lang: Lang) -> Element {
                         .children((0..40).map(|k| i().style(format!("--k:{k}")))),
                 ),
         )
+}
+
+/// La ligne d'objectif d'une carte de performance.
+fn p_note(text: String) -> Element {
+    p().class("perf-note").text(text)
 }
 
 fn roadmap(lang: Lang) -> Element {
