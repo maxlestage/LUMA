@@ -1,5 +1,7 @@
 //! Les textes et les données du site, partagés par les pages (serveur) et les îlots
-//! (serveur et navigateur).
+//! (serveur et navigateur). Les textes sont en français : `crate::i18n::t` les traduit.
+
+use crate::i18n::{Lang, t};
 
 pub const TITLE: &str = "LÜMA — La lumière, développée en Rust";
 pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel écrit en Rust : RAW, couleur 32 bits flottants sur le GPU, 100 films, vos vraies pellicules mesurées, masques. Mac, iPhone et iPad. 14 jours d'essai.";
@@ -116,21 +118,19 @@ pub const PIPELINE: [(&str, &str, &str); 5] = [
     ),
 ];
 
-/// Les panneaux de la section Apple : (début du titre, mot en italique, texte).
-pub const APPLE: [(&str, &str, &str); 3] = [
+/// Les panneaux de la section Apple : (titre, texte). Dans un titre, le mot entre `*`
+/// ressort en italique.
+pub const APPLE: [(&str, &str); 3] = [
     (
-        "Conçu pour ",
-        "Apple Silicon",
+        "Conçu pour *Apple Silicon*.",
         "Un seul GPU à dompter au départ : Metal, via wgpu. La mémoire unifiée laisse le RAW décodé passer au GPU sans copie.",
     ),
     (
-        "La couleur, ",
-        "comme elle est",
+        "La couleur, *comme elle est*.",
         "Display P3 partout, HDR (EDR) sur les écrans XDR. Le meilleur terrain pour valider un pipeline 32 bits flottants.",
     ),
     (
-        "Le même moteur, ",
-        "dans ta poche",
+        "Le même moteur, *dans ta poche*.",
         "ProRAW sur iPhone, Apple Pencil sur iPad pour les masques. Le cœur Rust est identique sur Mac, iPhone et iPad : même projet, même rendu.",
     ),
 ];
@@ -449,11 +449,12 @@ pub const PRESETS: [(&str, &str, [f64; 8]); 5] = [
     ("reset", "Original", [0.0; 8]),
 ];
 
-/// La valeur d'un réglage telle qu'affichée : `+0.15 IL`, `-55`.
-pub fn format_control(key: &str, v: f64) -> String {
+/// La valeur d'un réglage telle qu'affichée : `+0.15 IL` (`EV` en anglais et en
+/// espagnol), `-55`.
+pub fn format_control(lang: Lang, key: &str, v: f64) -> String {
     let sign = if v >= 0.0 { "+" } else { "" };
     if key == "exposure" {
-        format!("{sign}{v:.2} IL")
+        format!("{sign}{v:.2} {}", t(lang, "IL"))
     } else {
         format!("{sign}{}", (v * 100.0).round() as i64)
     }
@@ -656,9 +657,10 @@ mod tests {
 
     #[test]
     fn formats_controls() {
-        assert_eq!(format_control("exposure", 0.15), "+0.15 IL");
-        assert_eq!(format_control("highlights", -0.55), "-55");
-        assert_eq!(format_control("sat", 0.0), "+0");
+        assert_eq!(format_control(Lang::Fr, "exposure", 0.15), "+0.15 IL");
+        assert_eq!(format_control(Lang::En, "exposure", -0.2), "-0.20 EV");
+        assert_eq!(format_control(Lang::Fr, "highlights", -0.55), "-55");
+        assert_eq!(format_control(Lang::Es, "sat", 0.0), "+0");
     }
 
     #[test]

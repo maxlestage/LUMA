@@ -15,6 +15,8 @@ use std::sync::{Arc, OnceLock};
 
 use paquets::prelude::*;
 
+use crate::i18n::{self, Lang, t};
+
 static BASE: OnceLock<String> = OnceLock::new();
 
 /// Le chemin sous lequel le site est publié (`BASE_PATH`, ex. `/LUMA` sur GitHub Pages),
@@ -126,20 +128,27 @@ fn svg(body: String) -> Response {
         .send(body)
 }
 
-/// Le manifeste de la PWA : nom, icônes, couleurs, raccourcis et captures (pour la
-/// fenêtre d'installation).
-fn manifest() -> String {
+/// Le manifeste de la PWA dans `lang` : nom, icônes, couleurs, raccourcis et captures
+/// (pour la fenêtre d'installation). L'app installée s'ouvre dans sa langue.
+fn manifest(lang: Lang) -> String {
+    let json = |s: &str| s.replace('"', "'");
     let icon = |src: &str, size: &str, kind: &str, purpose: &str| {
         format!(r#"{{"src":"{src}","sizes":"{size}","type":"{kind}","purpose":"{purpose}"}}"#)
     };
     let shortcut = |name: &str, short: &str, url: &str, about: &str| {
         format!(
-            r#"{{"name":"{name}","short_name":"{short}","url":"{url}","description":"{about}","icons":[{{"src":"/assets/icon-192.png","sizes":"192x192","type":"image/png"}}]}}"#
+            r#"{{"name":"{}","short_name":"{}","url":"{url}","description":"{}","icons":[{{"src":"/assets/icon-192.png","sizes":"192x192","type":"image/png"}}]}}"#,
+            json(name),
+            json(short),
+            json(about),
         )
     };
+    let home = i18n::path(lang, "/");
     format!(
-        r##"{{"id":"/","name":"LÜMA — l'éditeur photo","short_name":"LÜMA","description":"{desc}","lang":"fr","dir":"ltr","start_url":"/?source=pwa","scope":"/","display":"standalone","display_override":["window-controls-overlay","standalone"],"orientation":"any","theme_color":"#050507","background_color":"#050507","categories":["photo","productivity","graphics"],"icons":[{icons}],"shortcuts":[{shortcuts}],"screenshots":[{shots}]}}"##,
-        desc = crate::content::DESCRIPTION.replace('"', "'"),
+        r##"{{"id":"{home}","name":"{name}","short_name":"LÜMA","description":"{desc}","lang":"{code}","dir":"ltr","start_url":"{home}?source=pwa","scope":"/","display":"standalone","display_override":["window-controls-overlay","standalone"],"orientation":"any","theme_color":"#050507","background_color":"#050507","categories":["photo","productivity","graphics"],"icons":[{icons}],"shortcuts":[{shortcuts}],"screenshots":[{shots}]}}"##,
+        name = json(t(lang, "LÜMA — l'éditeur photo")),
+        desc = json(t(lang, crate::content::DESCRIPTION)),
+        code = lang.code(),
         icons = [
             icon("/assets/icon-192.png", "192x192", "image/png", "any"),
             icon("/assets/icon-512.png", "512x512", "image/png", "any"),
@@ -148,14 +157,29 @@ fn manifest() -> String {
         ]
         .join(","),
         shortcuts = [
-            shortcut("Télécharger pour Mac", "Télécharger", "/#tarifs", "LÜMA pour Mac, 14 jours d'essai"),
-            shortcut("Tarifs", "Tarifs", "/#tarifs", "LÜMA Premium, au mois ou à l'an"),
-            shortcut("Le labo", "Labo", "/#labo", "Le moteur en direct, dans le navigateur"),
+            shortcut(
+                t(lang, "Télécharger pour Mac"),
+                t(lang, "Télécharger"),
+                &format!("{home}#tarifs"),
+                t(lang, "LÜMA pour Mac, 14 jours d'essai"),
+            ),
+            shortcut(
+                t(lang, "Tarifs"),
+                t(lang, "Tarifs"),
+                &format!("{home}#tarifs"),
+                t(lang, "LÜMA Premium, au mois ou à l'an"),
+            ),
+            shortcut(
+                t(lang, "Le labo"),
+                t(lang, "Labo"),
+                &format!("{home}#labo"),
+                t(lang, "Le moteur en direct, dans le navigateur"),
+            ),
         ]
         .join(","),
         shots = [
-            r#"{"src":"/assets/capture-large.jpg","sizes":"1440x900","type":"image/jpeg","form_factor":"wide","label":"LÜMA : l'éditeur photo qui développe la lumière"}"#,
-            r#"{"src":"/assets/capture-mobile.jpg","sizes":"786x1704","type":"image/jpeg","form_factor":"narrow","label":"LÜMA sur iPhone"}"#,
+            format!(r#"{{"src":"/assets/capture-large.jpg","sizes":"1440x900","type":"image/jpeg","form_factor":"wide","label":"{}"}}"#, json(t(lang, "LÜMA : l'éditeur photo qui développe la lumière"))),
+            format!(r#"{{"src":"/assets/capture-mobile.jpg","sizes":"786x1704","type":"image/jpeg","form_factor":"narrow","label":"{}"}}"#, json(t(lang, "LÜMA sur iPhone"))),
         ]
         .join(","),
     )
@@ -189,7 +213,17 @@ fn service_worker(site: &Site) -> String {
         ]
         .map(String::from),
     );
-    precache.extend(crate::content::LEGAL.iter().map(|l| l.path.to_owned()));
+    // L'accueil et les pages légales dans chaque langue, la documentation en français.
+    for lang in Lang::ALL {
+        if lang != Lang::Fr {
+            precache.push(i18n::path(lang, "/"));
+        }
+        precache.extend(
+            crate::content::LEGAL
+                .iter()
+                .map(|l| i18n::path(lang, l.path)),
+        );
+    }
     precache.extend(docs::DOCS.iter().map(|d| d.path.to_owned()));
     // Seuls les fichiers présents : `public/…`, le bundle `pkg/…` (absent en
     // développement), les pages et les SVG servis par le serveur.
@@ -238,18 +272,139 @@ fn percent_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// L'application, prête à être lancée ou testée.
+/// Les pages publiques du site, sans préfixe de langue : l'accueil, les pages légales et
+/// la documentation (pour le plan du site).
+pub fn public_pages() -> Vec<&'static str> {
+    std::iter::once("/")
+        .chain(crate::content::LEGAL.iter().map(|l| l.path))
+        .chain(docs::DOCS.iter().map(|d| d.path))
+        .collect()
+}
+
+/// Le plan du site : chaque page dans chaque langue, avec ses traductions.
+fn sitemap(origin: &str) -> String {
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">",
+    );
+    for page in public_pages() {
+        let alternates: String = Lang::ALL
+            .iter()
+            .map(|l| (l.code(), i18n::path(*l, page)))
+            .chain([("x-default", page.to_owned())])
+            .map(|(code, p)| {
+                format!(r#"<xhtml:link rel="alternate" hreflang="{code}" href="{origin}{p}"/>"#)
+            })
+            .collect();
+        for lang in Lang::ALL {
+            xml.push_str(&format!(
+                "<url><loc>{origin}{}</loc>{alternates}</url>",
+                i18n::path(lang, page)
+            ));
+        }
+    }
+    xml.push_str("</urlset>\n");
+    xml
+}
+
+/// La page de la clé de licence (`/licence/`, `/en/licence/`…), dans `lang`.
+fn licence_page(site: &Site, req: &Request, lang: Lang) -> Response {
+    let session = req
+        .query("session_id")
+        .map(|s| s.into_owned())
+        .unwrap_or_default();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    let result = match (stripe::Stripe::from_env(), stripe::signing_key()) {
+        (Some(api), Some(seed)) => stripe::key_for_session(&api, &seed, &session, now),
+        _ => Err("le paiement en ligne n'est pas encore ouvert".into()),
+    };
+    // Le sélecteur de langue garde la session : la clé s'affiche dans l'autre langue.
+    let here = if !session.is_empty()
+        && session
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    {
+        format!("/licence/?session_id={session}")
+    } else {
+        "/licence/".to_owned()
+    };
+    pages::licence(
+        site,
+        &site.origin(req),
+        pages::Here::new(lang, &here),
+        result,
+        stripe::billing_portal(),
+    )
+    .into_response()
+    .header("cache-control", "no-store")
+    .header("vary", "accept-language")
+}
+
+/// L'application, prête à être lancée ou testée. Chaque page existe en français (aux
+/// adresses d'origine), en anglais (`/en/…`) et en espagnol (`/es/…`).
 pub fn app(site: Arc<Site>) -> App {
     let mut app = App::new();
-    let home = site.clone();
-    app.get("/", move |req: Request| {
-        let site = home.clone();
-        async move {
-            pages::home(&site, &site.origin(&req))
-                .into_response()
-                .header("cache-control", "no-cache")
+    for lang in Lang::ALL {
+        let home = site.clone();
+        app.get(&i18n::path(lang, "/"), move |req: Request| {
+            let site = home.clone();
+            async move {
+                pages::home(&site, &site.origin(&req), lang)
+                    .into_response()
+                    .header("cache-control", "no-cache")
+            }
+        });
+        // La PWA : un manifeste par langue, pour que l'app installée s'ouvre dans la
+        // sienne.
+        app.get(
+            &i18n::path(lang, "/manifest.webmanifest"),
+            move |_req: Request| async move {
+                Response::new()
+                    .header("content-type", "application/manifest+json; charset=utf-8")
+                    .header("cache-control", "no-cache")
+                    .send(manifest(lang))
+            },
+        );
+        // La documentation (docs/*.md du dépôt, qui peut rester privé).
+        for doc in &docs::DOCS {
+            let site = site.clone();
+            app.get(&i18n::path(lang, doc.path), move |req: Request| {
+                let site = site.clone();
+                async move {
+                    pages::doc(&site, &site.origin(&req), lang, doc)
+                        .into_response()
+                        .header("cache-control", "no-cache")
+                }
+            });
         }
-    });
+        // Les pages légales (le routeur sert la même page avec ou sans la barre finale).
+        for page in &crate::content::LEGAL {
+            let site = site.clone();
+            app.get(&i18n::path(lang, page.path), move |req: Request| {
+                let site = site.clone();
+                async move {
+                    pages::legal(&site, &site.origin(&req), lang, page)
+                        .into_response()
+                        .header("cache-control", "no-cache")
+                }
+            });
+        }
+        // LÜMA Premium : la page de la clé. Stripe renvoie toujours vers `/licence/`,
+        // sans langue : elle est alors choisie d'après `Accept-Language`, sans
+        // redirection (la session reste dans l'adresse).
+        let premium = site.clone();
+        app.get(&i18n::path(lang, "/licence/"), move |req: Request| {
+            let site = premium.clone();
+            async move {
+                let lang = match lang {
+                    Lang::Fr => i18n::negotiate(req.header("accept-language")),
+                    other => other,
+                };
+                licence_page(&site, &req, lang)
+            }
+        });
+    }
     app.get("/photo.svg", |_req: Request| async {
         svg(photo::svg(false))
     });
@@ -262,16 +417,7 @@ pub fn app(site: Arc<Site>) -> App {
         async move {
             Response::new()
                 .header("content-type", "application/xml; charset=utf-8")
-                .send(format!(
-                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"><url><loc>{0}/</loc></url>{1}</urlset>\n",
-                    site.origin(&req),
-                    crate::content::LEGAL
-                        .iter()
-                        .map(|l| l.path)
-                        .chain(docs::DOCS.iter().map(|d| d.path))
-                        .map(|p| format!("<url><loc>{}{p}</loc></url>", site.origin(&req)))
-                        .collect::<String>()
-                ))
+                .send(sitemap(&site.origin(&req)))
         }
     });
     let robots = site.clone();
@@ -288,12 +434,6 @@ pub fn app(site: Arc<Site>) -> App {
     });
     // La PWA : installable sur l'écran d'accueil de l'iPhone, de l'iPad et du Mac, et
     // lisible hors ligne.
-    app.get("/manifest.webmanifest", |_req: Request| async {
-        Response::new()
-            .header("content-type", "application/manifest+json; charset=utf-8")
-            .header("cache-control", "no-cache")
-            .send(manifest())
-    });
     let worker = site.clone();
     app.get("/sw.js", move |_req: Request| {
         let site = worker.clone();
@@ -304,40 +444,8 @@ pub fn app(site: Arc<Site>) -> App {
                 .send(service_worker(&site))
         }
     });
-    // La documentation (docs/*.md du dépôt, qui peut rester privé).
-    for doc in &docs::DOCS {
-        let site = site.clone();
-        app.get(doc.path, move |req: Request| {
-            let site = site.clone();
-            async move {
-                pages::doc(&site, &site.origin(&req), doc)
-                    .into_response()
-                    .header("cache-control", "no-cache")
-            }
-        });
-    }
-    // LÜMA Premium : la page de la clé (retour de Stripe) et la clé fraîche de l'app.
-    let premium = site.clone();
-    app.get("/licence/", move |req: Request| {
-        let site = premium.clone();
-        async move {
-            let session = req
-                .query("session_id")
-                .map(|s| s.into_owned())
-                .unwrap_or_default();
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0, |d| d.as_secs());
-            let result = match (stripe::Stripe::from_env(), stripe::signing_key()) {
-                (Some(api), Some(seed)) => stripe::key_for_session(&api, &seed, &session, now),
-                _ => Err("le paiement en ligne n'est pas encore ouvert".into()),
-            };
-            pages::licence(&site, &site.origin(&req), result, stripe::billing_portal())
-                .into_response()
-                .header("cache-control", "no-store")
-        }
-    });
-    // « Gérer mon abonnement » : le portail client Stripe.
+    // « Gérer mon abonnement » : le portail client Stripe (une adresse pour toutes les
+    // langues).
     let portal = site.clone();
     app.get("/abonnement/", move |req: Request| {
         let site = portal.clone();
@@ -351,13 +459,16 @@ pub fn app(site: Arc<Site>) -> App {
                 None => pages::licence(
                     &site,
                     &site.origin(&req),
+                    pages::Here::new(i18n::negotiate(req.header("accept-language")), "/licence/"),
                     Err("le portail client n'est pas encore ouvert".into()),
                     None,
                 )
-                .into_response(),
+                .into_response()
+                .header("vary", "accept-language"),
             }
         }
     });
+    // La clé fraîche de l'app (sans langue : l'app lit le JSON).
     app.post("/api/licence", |req: Request| async move {
         let body = req.text().await.unwrap_or_default();
         let key = body
@@ -385,25 +496,14 @@ pub fn app(site: Arc<Site>) -> App {
             .header("cache-control", "no-store")
             .send(json)
     });
-    // Les pages légales.
-    for page in &crate::content::LEGAL {
-        // Le routeur sert la même page avec ou sans la barre finale.
-        {
-            let site = site.clone();
-            app.get(page.path, move |req: Request| {
-                let site = site.clone();
-                async move {
-                    pages::legal(&site, &site.origin(&req), page)
-                        .into_response()
-                        .header("cache-control", "no-cache")
-                }
-            });
-        }
-    }
+    // Introuvable : dans la langue de l'adresse demandée.
     let missing = site.clone();
     app.fallback(move |req: Request| {
         let site = missing.clone();
-        async move { pages::not_found(&site, &site.origin(&req)) }
+        async move {
+            let (lang, _) = i18n::split(req.path());
+            pages::not_found(&site, &site.origin(&req), lang)
+        }
     });
     app
 }
@@ -522,6 +622,192 @@ mod tests {
         let res = client.get("/nulle-part").await;
         assert_eq!(res.status().as_u16(), 404);
         assert!(res.text().contains("Hors "));
+    }
+
+    /// Chaque page publique, sans préfixe de langue, plus la page de la clé.
+    fn every_page() -> Vec<&'static str> {
+        let mut pages = public_pages();
+        pages.push("/licence/");
+        pages
+    }
+
+    #[tokio::test]
+    async fn every_page_exists_in_every_language() {
+        let client = client().await;
+        for page in every_page() {
+            for lang in Lang::ALL {
+                let path = i18n::path(lang, page);
+                let res = client.get(&path).await;
+                assert_eq!(res.status().as_u16(), 200, "{path}");
+                let html = res.text();
+                assert!(
+                    html.contains(&format!(r#"<html lang="{}">"#, lang.code())),
+                    "{path} : <html lang>"
+                );
+                for l in Lang::ALL {
+                    let alt = format!(
+                        r#"<link rel="alternate" hreflang="{}" href="http://localhost{}"/>"#,
+                        l.code(),
+                        i18n::path(l, page)
+                    );
+                    assert!(html.contains(&alt), "{path} : {alt}");
+                    // Le sélecteur de langue, dans la barre et le pied de page.
+                    let switch =
+                        format!(r#"href="{}" hreflang="{}""#, i18n::path(l, page), l.code());
+                    assert!(html.matches(&switch).count() >= 2, "{path} : {switch}");
+                }
+                assert!(html.contains(&format!(
+                    r#"<link rel="alternate" hreflang="x-default" href="http://localhost{page}"/>"#
+                )));
+                if page != "/licence/" {
+                    assert!(
+                        html.contains(&format!(
+                            r#"<link rel="canonical" href="http://localhost{path}"/>"#
+                        )),
+                        "{path} : canonique"
+                    );
+                }
+                assert!(html.contains(&format!(
+                    r#"<meta property="og:locale" content="{}"/>"#,
+                    i18n::locale(lang)
+                )));
+                assert!(html.contains(&format!(
+                    r#"rel="manifest" href="{}""#,
+                    i18n::path(lang, "/manifest.webmanifest")
+                )));
+                assert!(
+                    !html.contains("github.com/maxlestage/LUMA"),
+                    "{path} : dépôt privé"
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn the_english_and_spanish_home_pages_are_translated() {
+        let client = client().await;
+        let en = client.get("/en/").await.text();
+        assert!(en.contains("<title>LÜMA — Light, developed in Rust</title>"));
+        assert!(en.contains("€9.99") && en.contains("€79.99") && en.contains("per month"));
+        assert!(en.contains(r#"data-island="lab" data-props="en""#));
+        assert!(en.contains(r#"data-island="crates" data-props="en""#));
+        assert!(
+            en.contains(r#"href="/en/#tarifs""#) && en.contains(r#"href="/en/docs/architecture/""#)
+        );
+        assert!(en.contains(r#"href="/en/mentions-legales/""#));
+        // Des textes français qui ne doivent pas rester sur la page anglaise.
+        for french in [
+            "Télécharger",
+            "Feuille de route",
+            "Tarifs",
+            "La lumière",
+            "Mentions légales",
+            "Confidentialité",
+            "Tous droits réservés",
+            "Être écrit en Rust",
+            "Exposition",
+            "Hautes lumières",
+            "Bientôt",
+            "par mois",
+            "9,99 €",
+            "Faisabilité",
+            "Le moteur",
+            "cibles prioritaires",
+            "Aucun cookie",
+        ] {
+            assert!(!en.contains(french), "texte français sur /en/ : {french}");
+        }
+        let es = client.get("/es/").await.text();
+        assert!(es.contains("<title>LÜMA — La luz, revelada en Rust</title>"));
+        assert!(es.contains("9,99 €") && es.contains("al mes"));
+        assert!(es.contains(r#"data-props="es""#));
+        for french in [
+            "Télécharger",
+            "Feuille de route",
+            "Tarifs",
+            "Mentions légales",
+            "par mois",
+        ] {
+            assert!(!es.contains(french), "texte français sur /es/ : {french}");
+        }
+        // Le français reste aux adresses d'origine.
+        let fr = client.get("/").await.text();
+        assert!(fr.contains(r#"data-props="fr""#) && fr.contains(r#"href="/#tarifs""#));
+    }
+
+    #[tokio::test]
+    async fn translated_legal_pages_say_the_french_version_prevails() {
+        let client = client().await;
+        let en = client.get("/en/conditions/").await.text();
+        assert!(en.contains("Subscription terms") && en.contains("French version prevails"));
+        assert!(en.contains("L221‑28") && en.contains("French Consumer Code"));
+        assert!(en.contains(r#"href="/conditions/" hreflang="fr""#));
+        let fr = client.get("/conditions/").await.text();
+        assert!(!fr.contains("fait foi"));
+        let es = client.get("/es/docs/boitiers/").await.text();
+        assert!(es.contains("Cámaras compatibles") && es.contains("<th>Marca</th>"));
+    }
+
+    #[tokio::test]
+    async fn the_licence_page_speaks_the_visitors_language() {
+        let client = client().await;
+        let page = |accept: Option<&'static str>| {
+            let client = &client;
+            async move {
+                let mut req = client.get("/licence/?session_id=cs_test_1");
+                if let Some(a) = accept {
+                    req = req.header("accept-language", a);
+                }
+                let res = req.await;
+                assert_eq!(res.status().as_u16(), 200);
+                res.text()
+            }
+        };
+        let fr = page(None).await;
+        assert!(fr.contains(r#"<html lang="fr">"#) && fr.contains("pas encore ouvert"));
+        let es = page(Some("es-ES,es;q=0.9,en;q=0.8")).await;
+        assert!(es.contains(r#"<html lang="es">"#) && es.contains("aún no está disponible"));
+        let en = page(Some("de-DE,de;q=0.9")).await;
+        assert!(en.contains(r#"<html lang="en">"#) && en.contains("online payment isn"));
+        assert!(page(Some("fr-CA")).await.contains(r#"<html lang="fr">"#));
+        // La session reste dans les liens vers les autres langues.
+        assert!(en.contains(r#"href="/es/licence/?session_id=cs_test_1""#));
+        // Les adresses préfixées ne négocient pas.
+        let res = client
+            .get("/es/licence/")
+            .header("accept-language", "en")
+            .await;
+        assert!(res.text().contains(r#"<html lang="es">"#));
+    }
+
+    #[tokio::test]
+    async fn the_sitemap_and_the_pwa_know_every_language() {
+        let client = client().await;
+        let map = client.get("/sitemap.xml").await.text();
+        assert!(map.contains("<loc>http://localhost/en/conditions/</loc>"));
+        assert!(map.contains("<loc>http://localhost/es/docs/architecture/</loc>"));
+        assert!(map.contains(r#"hreflang="x-default" href="http://localhost/nouveautes/""#));
+        assert_eq!(
+            map.matches("<url>").count(),
+            public_pages().len() * Lang::ALL.len()
+        );
+        let en = client.get("/en/manifest.webmanifest").await.text();
+        assert!(en.contains(r#""lang":"en""#) && en.contains(r#""start_url":"/en/?source=pwa""#));
+        assert!(en.contains("Download for Mac") && !en.contains("Télécharger"));
+        let sw = client.get("/sw.js").await.text();
+        assert!(sw.contains("\"/en/\"") && sw.contains("\"/es/conditions/\""));
+    }
+
+    #[tokio::test]
+    async fn unknown_pages_are_404_in_their_language() {
+        let client = client().await;
+        let res = client.get("/en/nowhere").await;
+        assert_eq!(res.status().as_u16(), 404);
+        let html = res.text();
+        assert!(html.contains(r#"<html lang="en">"#) && html.contains("Out of "));
+        let res = client.get("/es/ninguna-parte/").await;
+        assert_eq!(res.status().as_u16(), 404);
+        assert!(res.text().contains("Fuera de "));
     }
 
     #[test]

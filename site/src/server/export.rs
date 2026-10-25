@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::{Site, app, base, set_base, site_dir};
+use crate::i18n::{self, Lang};
 
 /// Écrit le site dans `out`, liens derrière `base_path` (`""` ou `/LUMA`), adresses
 /// absolues sur `site_url`. Renvoie le nombre de fichiers écrits.
@@ -40,10 +41,10 @@ pub async fn export(out: &Path, base_path: &str, site_url: Option<String>) -> io
         written += 1;
         Ok(())
     };
-    let get = |path: &'static str, expected: u16| {
+    let get = |path: String, expected: u16| {
         let client = &client;
         async move {
-            let res = client.get(path).await;
+            let res = client.get(&path).await;
             if res.status().as_u16() != expected {
                 return Err(io::Error::other(format!(
                     "GET {path} : {} au lieu de {expected}",
@@ -56,21 +57,20 @@ pub async fn export(out: &Path, base_path: &str, site_url: Option<String>) -> io
 
     let text = |bytes: Vec<u8>| String::from_utf8(bytes).map_err(io::Error::other);
     write(
-        "index.html",
-        with_base(&text(get("/", 200).await?)?, base).as_bytes(),
-    )?;
-    write(
         "404.html",
-        with_base(&text(get("/404/", 404).await?)?, base).as_bytes(),
+        with_base(&text(get("/404/".into(), 404).await?)?, base).as_bytes(),
     )?;
-    // Les pages légales : un dossier chacune (`/conditions/` → conditions/index.html).
-    for page in &crate::content::LEGAL {
-        let html = with_base(&text(get(page.path, 200).await?)?, base);
-        write(&format!("{}index.html", page.path), html.as_bytes())?;
-    }
-    for doc in &super::docs::DOCS {
-        let html = with_base(&text(get(doc.path, 200).await?)?, base);
-        write(&format!("{}index.html", doc.path), html.as_bytes())?;
+    // Chaque page dans chaque langue : un dossier chacune (`/en/conditions/` →
+    // en/conditions/index.html), avec le manifeste de la PWA de la langue.
+    for lang in Lang::ALL {
+        for page in super::public_pages() {
+            let path = i18n::path(lang, page);
+            let html = with_base(&text(get(path.clone(), 200).await?)?, base);
+            write(&format!("{path}index.html"), html.as_bytes())?;
+        }
+        let manifest = i18n::path(lang, "/manifest.webmanifest");
+        let body = text(get(manifest.clone(), 200).await?)?;
+        write(&manifest, with_base_everywhere(&body, base).as_bytes())?;
     }
     for file in [
         "/photo.svg",
@@ -78,13 +78,11 @@ pub async fn export(out: &Path, base_path: &str, site_url: Option<String>) -> io
         "/sitemap.xml",
         "/robots.txt",
     ] {
-        write(file, &get(file, 200).await?)?;
+        write(file, &get(file.into(), 200).await?)?;
     }
     // La PWA : le manifeste et le service worker contiennent des adresses absolues.
-    for file in ["/manifest.webmanifest", "/sw.js"] {
-        let body = text(get(file, 200).await?)?;
-        write(file, with_base_everywhere(&body, base).as_bytes())?;
-    }
+    let worker = text(get("/sw.js".into(), 200).await?)?;
+    write("/sw.js", with_base_everywhere(&worker, base).as_bytes())?;
     for folder in ["public", "pkg"] {
         let root = dir.join(folder);
         let prefix = if folder == "pkg" { "pkg/" } else { "" };

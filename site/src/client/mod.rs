@@ -32,6 +32,14 @@ pub fn root() -> web_sys::HtmlElement {
         .unchecked_into()
 }
 
+/// La langue de la page (`<html lang="…">`).
+pub fn lang() -> crate::i18n::Lang {
+    root()
+        .get_attribute("lang")
+        .and_then(|l| crate::i18n::Lang::from_code(&l))
+        .unwrap_or_default()
+}
+
 pub fn now() -> f64 {
     window().performance().map_or(0.0, |p| p.now())
 }

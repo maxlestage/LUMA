@@ -243,6 +243,7 @@ pub fn start(canvas: &Element) {
     }
 
     let fps = view.query_selector(".lab-fps").ok().flatten();
+    let unit = crate::i18n::t(super::lang(), "i/s");
     let started = now();
     let (mut frames, mut last_fps) = (0u32, started);
     request_frame(move |time| {
@@ -296,7 +297,7 @@ pub fn start(canvas: &Element) {
         if time - last_fps > 500.0 {
             if let Some(fps) = &fps {
                 let rate = (f64::from(frames) * 1000.0 / (time - last_fps)).round();
-                fps.set_text_content(Some(&format!("{rate} i/s · GPU · Rust")));
+                fps.set_text_content(Some(&format!("{rate} {unit} · GPU · Rust")));
             }
             frames = 0;
             last_fps = time;

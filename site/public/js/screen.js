@@ -1,6 +1,25 @@
 // Images dessinées au canvas 2D : une photo de paysage procédurale (aucun fichier à
 // charger) et les écrans de l'application LÜMA affichés sur le Mac et l'iPhone 3D.
 
+// Les libellés des écrans, dans la langue de la page (`<html lang>`) ; le français sinon.
+const LABELS = {
+  en: {
+    'Bibliothèque': 'Library', 'Développement': 'Develop', 'Masques': 'Masks', 'Export': 'Export',
+    'Lumière': 'Light', 'Exposition': 'Exposure', 'Contraste': 'Contrast', 'Hautes lumières': 'Highlights',
+    'Ombres': 'Shadows', 'Blancs': 'Whites', 'Noirs': 'Blacks', 'Couleur': 'Color', 'Température': 'Temperature',
+    'Teinte': 'Tint', 'Vibrance': 'Vibrance', 'Saturation': 'Saturation', 'Ciel · IA': 'Sky · AI',
+    'Islande_0427.ARW': 'Iceland_0427.ARW',
+  },
+  es: {
+    'Bibliothèque': 'Biblioteca', 'Développement': 'Revelado', 'Masques': 'Máscaras', 'Export': 'Exportar',
+    'Lumière': 'Luz', 'Exposition': 'Exposición', 'Contraste': 'Contraste', 'Hautes lumières': 'Altas luces',
+    'Ombres': 'Sombras', 'Blancs': 'Blancos', 'Noirs': 'Negros', 'Couleur': 'Color',
+    'Température': 'Temperatura', 'Teinte': 'Matiz', 'Vibrance': 'Intensidad', 'Saturation': 'Saturación',
+    'Ciel · IA': 'Cielo · IA', 'Islande_0427.ARW': 'Islandia_0427.ARW',
+  },
+};
+const tr = (text) => (LABELS[document.documentElement.lang] || {})[text] || text;
+
 const rand = (seed) => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
 // Ligne de crête : somme de sinusoïdes, stable pour une graine donnée.
@@ -140,11 +159,11 @@ export function drawDesktopUI(canvas) {
   ctx.fillStyle = '#16161d'; ctx.fillRect(0, 0, W, 38 * s);
   ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc((20 + i * 20) * s, 19 * s, 6 * s, 0, 7); ctx.fill(); });
   ctx.fillStyle = '#fff'; ctx.font = `600 ${13 * s}px -apple-system, Inter, sans-serif`;
-  ctx.textAlign = 'center'; ctx.fillText('LÜMA — Islande_0427.ARW', W / 2, 24 * s); ctx.textAlign = 'left';
+  ctx.textAlign = 'center'; ctx.fillText(`LÜMA — ${tr('Islande_0427.ARW')}`, W / 2, 24 * s); ctx.textAlign = 'left';
   ctx.font = `${12 * s}px -apple-system, Inter, sans-serif`;
   ['Bibliothèque', 'Développement', 'Masques', 'Export'].forEach((t, i) => {
     ctx.fillStyle = i === 1 ? '#fff' : 'rgba(255,255,255,.4)';
-    ctx.fillText(t, W - (420 - i * 100) * s, 24 * s);
+    ctx.fillText(tr(t), W - (420 - i * 100) * s, 24 * s);
   });
 
   // Film
@@ -167,15 +186,15 @@ export function drawDesktopUI(canvas) {
   const rx = 986 * s, rw = 280 * s;
   histogram(ctx, rx, 52 * s, rw, 90 * s);
   ctx.fillStyle = '#fff'; ctx.font = `600 ${13 * s}px -apple-system, Inter, sans-serif`;
-  ctx.fillText('Lumière', rx, 172 * s);
+  ctx.fillText(tr('Lumière'), rx, 172 * s);
   [['Exposition', 0.18], ['Contraste', 0.22], ['Hautes lumières', -0.56], ['Ombres', 0.34], ['Blancs', 0.08], ['Noirs', -0.12]]
-    .forEach(([l, v], i) => slider(ctx, rx, (196 + i * 40) * s, rw, l, v, s));
+    .forEach(([l, v], i) => slider(ctx, rx, (196 + i * 40) * s, rw, tr(l), v, s));
   ctx.fillStyle = '#fff'; ctx.font = `600 ${13 * s}px -apple-system, Inter, sans-serif`;
-  ctx.fillText('Couleur', rx, 452 * s);
-  slider(ctx, rx, 476 * s, rw, 'Température', 0.24, s, ['#4aa8ff', '#ddd', '#ffb03b']);
-  slider(ctx, rx, 516 * s, rw, 'Teinte', 0.06, s, ['#34c759', '#ddd', '#e040fb']);
-  slider(ctx, rx, 556 * s, rw, 'Vibrance', 0.3, s);
-  slider(ctx, rx, 596 * s, rw, 'Saturation', -0.08, s);
+  ctx.fillText(tr('Couleur'), rx, 452 * s);
+  slider(ctx, rx, 476 * s, rw, tr('Température'), 0.24, s, ['#4aa8ff', '#ddd', '#ffb03b']);
+  slider(ctx, rx, 516 * s, rw, tr('Teinte'), 0.06, s, ['#34c759', '#ddd', '#e040fb']);
+  slider(ctx, rx, 556 * s, rw, tr('Vibrance'), 0.3, s);
+  slider(ctx, rx, 596 * s, rw, tr('Saturation'), -0.08, s);
   ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = `${10 * s}px ui-monospace, monospace`;
   ctx.fillText('f32 · Display P3 · Metal', rx, H - 22 * s);
 }
@@ -205,10 +224,10 @@ export function drawPhoneUI(canvas) {
   for (let x = 0; x <= W; x += 6) ctx.lineTo(x, (380 - Math.abs(ridge(x / W, 6, 0.09, 4)) * 470) * s);
   ctx.stroke(); ctx.setLineDash([]);
   ctx.fillStyle = 'rgba(139,123,255,.9)'; roundRect(ctx, 16 * s, 146 * s, 92 * s, 26 * s, 13 * s); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = `600 ${12 * s}px -apple-system, Inter, sans-serif`; ctx.fillText('Ciel · IA', 30 * s, 163 * s);
+  ctx.fillStyle = '#fff'; ctx.font = `600 ${12 * s}px -apple-system, Inter, sans-serif`; ctx.fillText(tr('Ciel · IA'), 30 * s, 163 * s);
 
-  slider(ctx, 24 * s, 636 * s, W - 48 * s, 'Exposition', 0.22, s);
-  slider(ctx, 24 * s, 682 * s, W - 48 * s, 'Température', 0.3, s, ['#4aa8ff', '#ddd', '#ffb03b']);
+  slider(ctx, 24 * s, 636 * s, W - 48 * s, tr('Exposition'), 0.22, s);
+  slider(ctx, 24 * s, 682 * s, W - 48 * s, tr('Température'), 0.3, s, ['#4aa8ff', '#ddd', '#ffb03b']);
   const tools = ['☀', '◐', '◍', '✎', '⬚'];
   tools.forEach((t, i) => {
     const cx = (W / 6) * (i + 1), cy = H - 70 * s;

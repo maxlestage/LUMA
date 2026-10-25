@@ -1,0 +1,1052 @@
+# Les textes des pages du site (serveur seulement). Une entrée par paragraphe : le texte
+# français tel qu'écrit dans le code (ou dans src/content.rs), puis ses traductions.
+# Les textes à trous écrivent {nom} ; dans un titre, le mot entre * ressort en italique ;
+# `…` est du code et **…** du gras. Voir crates/luma-i18n.
+#
+# Anglais : américain. Espagnol : tutoiement, comme le site le fait en français dans ses
+# pages produit. Prix : €9.99 en anglais, 9,99 € en espagnol.
+
+# ----- Le site ------------------------------------------------------------------------
+
+fr = LÜMA — La lumière, développée en Rust
+en = LÜMA — Light, developed in Rust
+es = LÜMA — La luz, revelada en Rust
+
+fr = LÜMA, l'éditeur photo professionnel écrit en Rust : RAW, couleur 32 bits flottants sur le GPU, 100 films, vos vraies pellicules mesurées, masques. Mac, iPhone et iPad. 14 jours d'essai.
+en = LÜMA, the professional photo editor written in Rust: RAW, 32‑bit floating‑point color on the GPU, 100 film looks, your own measured film stocks, masks. Mac, iPhone and iPad. 14‑day free trial.
+es = LÜMA, el editor de fotos profesional escrito en Rust: RAW, color en coma flotante de 32 bits en la GPU, 100 películas, tus propios carretes medidos, máscaras. Mac, iPhone y iPad. 14 días de prueba.
+
+fr = LÜMA — l'éditeur photo
+en = LÜMA — the photo editor
+es = LÜMA — el editor de fotos
+
+fr = LÜMA : l'éditeur photo qui développe la lumière
+en = LÜMA: the photo editor that develops light
+es = LÜMA: el editor de fotos que revela la luz
+
+fr = LÜMA sur iPhone
+en = LÜMA on iPhone
+es = LÜMA en el iPhone
+
+fr = LÜMA pour Mac, 14 jours d'essai
+en = LÜMA for Mac, 14‑day free trial
+es = LÜMA para Mac, 14 días de prueba
+
+fr = LÜMA Premium, au mois ou à l'an
+en = LÜMA Premium, monthly or yearly
+es = LÜMA Premium, mensual o anual
+
+fr = Le moteur en direct, dans le navigateur
+en = The engine, live in your browser
+es = El motor en directo, en el navegador
+
+fr = Labo
+en = Lab
+es = Laboratorio
+
+fr = Langue
+en = Language
+es = Idioma
+
+# ----- Barre de navigation ------------------------------------------------------------
+
+fr = LÜMA, accueil
+en = LÜMA, home
+es = LÜMA, inicio
+
+fr = Sections
+en = Sections
+es = Secciones
+
+fr = Moteur
+en = Engine
+es = Motor
+
+fr = Architecture
+en = Architecture
+es = Arquitectura
+
+fr = Feuille de route
+en = Roadmap
+es = Hoja de ruta
+
+fr = Tarifs
+en = Pricing
+es = Precios
+
+fr = Télécharger
+en = Download
+es = Descargar
+
+fr = Menu
+en = Menu
+es = Menú
+
+# ----- Accueil ------------------------------------------------------------------------
+
+fr = Éditeur photo · Mac, iPhone et iPad · 100 % Rust
+en = Photo editor · Mac, iPhone and iPad · 100% Rust
+es = Editor de fotos · Mac, iPhone y iPad · 100 % Rust
+
+fr = La lumière, *développée* en Rust.
+en = Light, *developed* in Rust.
+es = La luz, *revelada* en Rust.
+
+fr = Un moteur RAW 32 bits flottants sur le GPU, 100 films vérifiés, et vos vraies pellicules mesurées sur un scan. Pas une copie de Lightroom : un concurrent qui se mesure à lui, chiffres à l'appui.
+en = A 32‑bit floating‑point RAW engine on the GPU, 100 verified film looks, and your own film stocks measured from a scan. Not a Lightroom clone: a competitor that takes it on, with the numbers to prove it.
+es = Un motor RAW en coma flotante de 32 bits en la GPU, 100 películas verificadas y tus propios carretes medidos a partir de un escaneo. No es una copia de Lightroom: es un rival que se mide con él, con cifras en la mano.
+
+fr = Télécharger · 14 jours d'essai
+en = Download · 14‑day free trial
+es = Descargar · 14 días de prueba
+
+fr = Voir le moteur en action
+en = See the engine in action
+es = Ver el motor en acción
+
+fr = 32 bits f
+en = 32‑bit float
+es = 32 bits flotante
+
+fr = 100 films
+en = 100 films
+es = 100 películas
+
+fr = Défiler
+en = Scroll
+es = Desplazarse
+
+fr = Fonctions
+en = Features
+es = Funciones
+
+fr = RAW 14 & 16 bits
+en = 14 & 16‑bit RAW
+es = RAW de 14 y 16 bits
+
+fr = Pipeline f32
+en = f32 pipeline
+es = Pipeline f32
+
+fr = 100 films · LUT 3D
+en = 100 films · 3D LUTs
+es = 100 películas · LUT 3D
+
+fr = Non destructif
+en = Non‑destructive
+es = No destructivo
+
+fr = Zéro cloud obligatoire
+en = No cloud required
+es = Sin nube obligatoria
+
+# Le manifeste : les mots précédés de * ressortent en couleur.
+fr = Être écrit en Rust ne rend pas un logiciel meilleur. Ce qui compte, c'est la qualité du moteur *RAW, la rigueur de la *couleur et la *vitesse ressentie sous les doigts. LÜMA veut gagner sur ces trois terrains, et le *prouver.
+en = Being written in Rust doesn't make software better. What matters is the quality of the *RAW engine, the rigor of the *color and the *speed you feel under your fingers. LÜMA aims to win on all three fronts, and to *prove it.
+es = Estar escrito en Rust no hace mejor a un programa. Lo que cuenta es la calidad del motor *RAW, el rigor del *color y la *velocidad que se siente bajo los dedos. LÜMA quiere ganar en esos tres terrenos, y *demostrarlo.
+
+fr = bits
+en = bits
+es = bits
+
+fr = ms
+en = ms
+es = ms
+
+fr = Hz
+en = Hz
+es = Hz
+
+fr = compte
+en = accounts
+es = cuentas
+
+fr = Pipeline en virgule flottante, du capteur à l'export.
+en = Floating‑point pipeline, from sensor to export.
+es = Pipeline en coma flotante, del sensor a la exportación.
+
+fr = Objectif d'aperçu après un réglage (P95, Mac).
+en = Target preview time after an adjustment (P95, Mac).
+es = Objetivo de vista previa tras un ajuste (P95, Mac).
+
+fr = Interface pensée pour ProMotion sur Mac, iPhone et iPad.
+en = An interface designed for ProMotion on Mac, iPhone and iPad.
+es = Una interfaz pensada para ProMotion en Mac, iPhone y iPad.
+
+fr = Aucun compte ni cloud obligatoire. Ta photothèque reste chez toi.
+en = No account, no mandatory cloud. Your photo library stays with you.
+es = Sin cuenta ni nube obligatoria. Tu fototeca se queda contigo.
+
+# Le pipeline.
+fr = Le moteur
+en = The engine
+es = El motor
+
+fr = Un pipeline *non destructif*, couche par couche.
+en = A *non‑destructive* pipeline, layer by layer.
+es = Un pipeline *no destructivo*, capa a capa.
+
+fr = RAW, JPEG ou HEIF. Jamais modifié.
+en = RAW, JPEG or HEIF. Never modified.
+es = RAW, JPEG o HEIF. Nunca se modifica.
+
+fr = Décodage
+en = Decoding
+es = Decodificación
+
+fr = Bayer, X‑Trans, ProRAW, dématriçage, profil caméra.
+en = Bayer, X‑Trans, ProRAW, demosaicing, camera profile.
+es = Bayer, X‑Trans, ProRAW, interpolación cromática, perfil de cámara.
+
+fr = Couleur
+en = Color
+es = Color
+
+fr = Espace linéaire f32, XYZ, Display P3, Rec. 2020.
+en = Linear f32 space, XYZ, Display P3, Rec. 2020.
+es = Espacio lineal f32, XYZ, Display P3, Rec. 2020.
+
+fr = Masques
+en = Masks
+es = Máscaras
+
+fr = Luminance, couleur, pinceau, sujet, ciel.
+en = Luminance, color, brush, subject, sky.
+es = Luminancia, color, pincel, sujeto, cielo.
+
+fr = Rendu
+en = Render
+es = Renderizado
+
+fr = Aperçu en tuiles sur GPU, export pleine précision.
+en = Tiled GPU preview, full‑precision export.
+es = Vista previa en teselas en la GPU, exportación a plena precisión.
+
+# Le labo.
+fr = Le labo
+en = The lab
+es = El laboratorio
+
+fr = Bouge un curseur. *Rien* n'est détruit.
+en = Move a slider. *Nothing* is destroyed.
+es = Mueve un control. *Nada* se destruye.
+
+fr = Cette démo tourne sur le GPU de ton appareil, pilotée par du Rust compilé en WebAssembly : une scène générée en lumière linéaire (le soleil dépasse le blanc), puis exposition, balance des blancs, hautes lumières, ombres et contraste appliqués comme des paramètres. Glisse la barre pour comparer avec l'original. C'est une illustration du principe, pas encore le moteur LÜMA.
+en = This demo runs on your device's GPU, driven by Rust compiled to WebAssembly: a scene generated in linear light (the sun goes beyond white), then exposure, white balance, highlights, shadows and contrast applied as parameters. Drag the bar to compare with the original. It illustrates the principle; it isn't the LÜMA engine yet.
+es = Esta demo se ejecuta en la GPU de tu dispositivo, controlada por Rust compilado a WebAssembly: una escena generada en luz lineal (el sol supera el blanco) y, después, exposición, balance de blancos, altas luces, sombras y contraste aplicados como parámetros. Desliza la barra para comparar con el original. Es una ilustración del principio, todavía no el motor de LÜMA.
+
+# Apple.
+fr = macOS & iOS d'abord
+en = macOS & iOS first
+es = macOS e iOS primero
+
+fr = Conçu pour *Apple Silicon*.
+en = Built for *Apple Silicon*.
+es = Diseñado para *Apple Silicon*.
+
+fr = Un seul GPU à dompter au départ : Metal, via wgpu. La mémoire unifiée laisse le RAW décodé passer au GPU sans copie.
+en = A single GPU to master at first: Metal, through wgpu. Unified memory lets the decoded RAW reach the GPU without a copy.
+es = Una sola GPU que dominar al principio: Metal, mediante wgpu. La memoria unificada permite que el RAW decodificado llegue a la GPU sin copias.
+
+fr = La couleur, *comme elle est*.
+en = Color, *as it really is*.
+es = El color, *tal como es*.
+
+fr = Display P3 partout, HDR (EDR) sur les écrans XDR. Le meilleur terrain pour valider un pipeline 32 bits flottants.
+en = Display P3 everywhere, HDR (EDR) on XDR displays. The best proving ground for a 32‑bit floating‑point pipeline.
+es = Display P3 en todas partes, HDR (EDR) en las pantallas XDR. El mejor terreno para validar un pipeline en coma flotante de 32 bits.
+
+fr = Le même moteur, *dans ta poche*.
+en = The same engine, *in your pocket*.
+es = El mismo motor, *en tu bolsillo*.
+
+fr = ProRAW sur iPhone, Apple Pencil sur iPad pour les masques. Le cœur Rust est identique sur Mac, iPhone et iPad : même projet, même rendu.
+en = ProRAW on iPhone, Apple Pencil on iPad for masks. The Rust core is identical on Mac, iPhone and iPad: same project, same rendering.
+es = ProRAW en el iPhone, Apple Pencil en el iPad para las máscaras. El núcleo en Rust es idéntico en Mac, iPhone y iPad: mismo proyecto, mismo resultado.
+
+# Plateformes.
+fr = Ordre de sortie
+en = Release order
+es = Orden de lanzamiento
+
+fr = Apple en premier. *Les autres suivent*, sur le même cœur.
+en = Apple first. *The others follow*, on the same core.
+es = Apple primero. *Los demás llegan después*, sobre el mismo núcleo.
+
+fr = Windows, Linux et Android sont compilés en intégration continue dès le premier mois : le moteur ne doit rien supposer d'Apple. Leurs applications arrivent en phase 6.
+en = Windows, Linux and Android are built in continuous integration from the very first month: the engine must assume nothing about Apple. Their apps arrive in phase 6.
+es = Windows, Linux y Android se compilan en integración continua desde el primer mes: el motor no debe dar nada por supuesto sobre Apple. Sus aplicaciones llegan en la fase 6.
+
+fr = Phase 1
+en = Phase 1
+es = Fase 1
+
+fr = Phase 3
+en = Phase 3
+es = Fase 3
+
+fr = Phase 6
+en = Phase 6
+es = Fase 6
+
+fr = Apple Silicon, Metal, EDR, Mac App Store.
+en = Apple Silicon, Metal, EDR, Mac App Store.
+es = Apple Silicon, Metal, EDR, Mac App Store.
+
+fr = ProRAW, PhotoKit, Fichiers, TestFlight.
+en = ProRAW, PhotoKit, Files, TestFlight.
+es = ProRAW, PhotoKit, Archivos, TestFlight.
+
+fr = Apple Pencil, gestes, Stage Manager.
+en = Apple Pencil, gestures, Stage Manager.
+es = Apple Pencil, gestos, Stage Manager.
+
+fr = DX12 / Vulkan via wgpu.
+en = DX12 / Vulkan through wgpu.
+es = DX12 / Vulkan mediante wgpu.
+
+fr = Vulkan, Wayland et X11.
+en = Vulkan, Wayland and X11.
+es = Vulkan, Wayland y X11.
+
+fr = Vulkan, NDK, stylet.
+en = Vulkan, NDK, stylus.
+es = Vulkan, NDK, lápiz óptico.
+
+# Architecture.
+fr = Un workspace Cargo. *Une crate*, une responsabilité.
+en = One Cargo workspace. *One crate*, one responsibility.
+es = Un workspace de Cargo. *Un crate*, una responsabilidad.
+
+fr = Le moteur ne dépend jamais de la plateforme. Seules l'interface et les applications voient macOS ou iOS.
+en = The engine never depends on the platform. Only the interface and the apps see macOS or iOS.
+es = El motor nunca depende de la plataforma. Solo la interfaz y las aplicaciones ven macOS o iOS.
+
+# Performance.
+fr = Performance
+en = Performance
+es = Rendimiento
+
+fr = Des objectifs *mesurables*.
+en = *Measurable* targets.
+es = Objetivos *medibles*.
+
+fr = Ce sont des cibles d'ingénierie, pas des résultats. Référence : Mac Apple Silicon 16 Go et iPhone récent, cache chaud et cache froid mesurés séparément.
+en = These are engineering targets, not results. Reference: an Apple Silicon Mac with 16 GB and a recent iPhone, warm and cold cache measured separately.
+es = Son objetivos de ingeniería, no resultados. Referencia: Mac con Apple Silicon y 16 GB, y un iPhone reciente, con caché caliente y caché fría medidas por separado.
+
+fr = Commande simple
+en = Simple command
+es = Comando simple
+
+fr = Aperçu après réglage
+en = Preview after an adjustment
+es = Vista previa tras un ajuste
+
+fr = Vignette
+en = Thumbnail
+es = Miniatura
+
+fr = Mémoire au repos
+en = Memory at idle
+es = Memoria en reposo
+
+fr = Mo
+en = MB
+es = MB
+
+fr = **8,3 ms** : le budget d'une image à 120 Hz. Les aperçus progressifs, les tuiles et l'annulation des calculs devenus inutiles servent à tenir ce budget pendant qu'un curseur bouge.
+en = **8.3 ms**: the time budget of one frame at 120 Hz. Progressive previews, tiles and cancelling work that's no longer needed are how that budget holds while a slider moves.
+es = **8,3 ms**: el presupuesto de una imagen a 120 Hz. Las vistas previas progresivas, las teselas y la cancelación de los cálculos que ya no sirven permiten cumplirlo mientras se mueve un control.
+
+# Feuille de route.
+fr = 24 à 36 mois. *Apple* à chaque étape.
+en = 24 to 36 months. *Apple* at every step.
+es = De 24 a 36 meses. *Apple* en cada etapa.
+
+fr = Faisabilité
+en = Feasibility
+es = Viabilidad
+
+fr = App macOS et iOS minimales en Rust
+en = Minimal macOS and iOS apps in Rust
+es = Apps mínimas para macOS e iOS en Rust
+
+fr = Rendu wgpu sur Metal
+en = wgpu rendering on Metal
+es = Renderizado wgpu sobre Metal
+
+fr = RAW : Sony, Canon, Nikon, Fujifilm, ProRAW
+en = RAW: Sony, Canon, Nikon, Fujifilm, ProRAW
+es = RAW: Sony, Canon, Nikon, Fujifilm, ProRAW
+
+fr = Signature et TestFlight automatisés
+en = Automated signing and TestFlight
+es = Firma y TestFlight automatizados
+
+fr = Un RAW s'ouvre, se règle et s'exporte sur Mac et iPhone.
+en = A RAW file opens, gets adjusted and exported on Mac and iPhone.
+es = Un RAW se abre, se ajusta y se exporta en Mac y en iPhone.
+
+fr = Pipeline f32, Display P3
+en = f32 pipeline, Display P3
+es = Pipeline f32, Display P3
+
+fr = HDR / EDR sur écrans XDR
+en = HDR / EDR on XDR displays
+es = HDR / EDR en pantallas XDR
+
+fr = Mémoire unifiée sans copie
+en = Zero‑copy unified memory
+es = Memoria unificada sin copias
+
+fr = Graphe de retouche, projet versionné
+en = Editing graph, versioned project
+es = Grafo de edición, proyecto versionado
+
+fr = Même rendu Mac et iPhone, à tolérance ΔE documentée.
+en = The same rendering on Mac and iPhone, within a documented ΔE tolerance.
+es = El mismo resultado en Mac y en iPhone, con una tolerancia ΔE documentada.
+
+fr = Photothèque, retouche, export sur Mac
+en = Library, editing, export on Mac
+es = Fototeca, edición y exportación en Mac
+
+fr = Import PhotoKit et Fichiers
+en = PhotoKit and Files import
+es = Importación desde PhotoKit y Archivos
+
+fr = Masques à l'Apple Pencil
+en = Apple Pencil masks
+es = Máscaras con el Apple Pencil
+
+fr = TestFlight public
+en = Public TestFlight
+es = TestFlight público
+
+fr = Un flux photo complet sans autre éditeur.
+en = A complete photo workflow with no other editor.
+es = Un flujo fotográfico completo sin otro editor.
+
+fr = Bêta
+en = Beta
+es = Beta
+
+fr = IA locale : sujet, ciel, débruitage
+en = On‑device AI: subject, sky, denoising
+es = IA local: sujeto, cielo, reducción de ruido
+
+fr = Profils boîtiers et objectifs
+en = Camera and lens profiles
+es = Perfiles de cámaras y objetivos
+
+fr = Recherche, doublons
+en = Search, duplicates
+es = Búsqueda, duplicados
+
+fr = Récupération après plantage
+en = Crash recovery
+es = Recuperación tras un cierre inesperado
+
+fr = Outils avancés validés en qualité et en vitesse.
+en = Advanced tools validated for quality and speed.
+es = Herramientas avanzadas validadas en calidad y en velocidad.
+
+fr = Mac App Store et App Store
+en = Mac App Store and App Store
+es = Mac App Store y App Store
+
+fr = Accessibilité, migration
+en = Accessibility, migration
+es = Accesibilidad, migración
+
+fr = Matrice de compatibilité publique
+en = Public compatibility matrix
+es = Matriz de compatibilidad pública
+
+fr = Version photo professionnelle stable.
+en = A stable, professional photo release.
+es = Una versión fotográfica profesional y estable.
+
+fr = Expansion
+en = Expansion
+es = Expansión
+
+fr = Vidéo : timeline, étalonnage
+en = Video: timeline, color grading
+es = Vídeo: línea de tiempo, etalonaje
+
+fr = Tethering, impression
+en = Tethering, printing
+es = Disparo conectado, impresión
+
+fr = Windows, Linux, Android
+en = Windows, Linux, Android
+es = Windows, Linux, Android
+
+fr = Le même moteur, partout.
+en = The same engine, everywhere.
+es = El mismo motor, en todas partes.
+
+# 100 % Rust.
+fr = 100 % Rust, vérifiable
+en = 100% Rust, verifiable
+es = 100 % Rust, verificable
+
+fr = Pas une promesse. *Un audit*.
+en = Not a promise. *An audit*.
+es = No es una promesa. *Es una auditoría*.
+
+fr = Une crate sur crates.io n'est pas forcément pure Rust. LÜMA vérifie le graphe de dépendances réel à chaque build : aucune `-sys`, aucun `build.rs` qui compile du C, aucun FFI vers une bibliothèque tierce. Les frameworks du système (Metal, AppKit, UIKit, PhotoKit) sont appelés depuis Rust.
+en = A crate on crates.io isn't necessarily pure Rust. LÜMA checks the actual dependency graph on every build: no `-sys` crate, no `build.rs` compiling C, no FFI to a third‑party library. System frameworks (Metal, AppKit, UIKit, PhotoKit) are called from Rust.
+es = Un crate de crates.io no es necesariamente Rust puro. LÜMA comprueba el grafo de dependencias real en cada compilación: ningún `-sys`, ningún `build.rs` que compile C, ningún FFI hacia una biblioteca de terceros. Los frameworks del sistema (Metal, AppKit, UIKit, PhotoKit) se llaman desde Rust.
+
+fr = # deny.toml — vérifié à chaque build
+en = # deny.toml — checked on every build
+es = # deny.toml — comprobado en cada compilación
+
+fr = # cibles prioritaires
+en = # priority targets
+es = # objetivos prioritarios
+
+fr = Épinglé
+en = Pinned
+es = Fijado
+
+fr = Dépendances transitives auditées et figées.
+en = Transitive dependencies audited and locked.
+es = Dependencias transitivas auditadas y fijadas.
+
+fr = Sans FFI tiers
+en = No third‑party FFI
+es = Sin FFI de terceros
+
+fr = Pas de LibRaw, d'OpenSSL ni de FFmpeg cachés.
+en = No hidden LibRaw, OpenSSL or FFmpeg.
+es = Nada de LibRaw, OpenSSL ni FFmpeg ocultos.
+
+fr = unsafe encadré
+en = unsafe, contained
+es = unsafe acotado
+
+fr = Limité, documenté, testé.
+en = Limited, documented, tested.
+es = Limitado, documentado, probado.
+
+fr = Reproductible
+en = Reproducible
+es = Reproducible
+
+fr = Corpus RAW de référence, rendus dorés, tolérances ΔE.
+en = Reference RAW corpus, golden renders, ΔE tolerances.
+es = Corpus RAW de referencia, renderizados de referencia, tolerancias ΔE.
+
+# Appel final.
+fr = Développer *la lumière*.
+en = Develop *light*.
+es = Revelar *la luz*.
+
+fr = D'abord le meilleur moteur photo Rust possible, sur Mac et iPhone. Ensuite, tout le reste.
+en = First, the best Rust photo engine possible, on Mac and iPhone. Then everything else.
+es = Primero, el mejor motor fotográfico en Rust posible, en Mac y en iPhone. Después, todo lo demás.
+
+fr = Lire l'architecture
+en = Read the architecture
+es = Leer la arquitectura
+
+fr = Feuille de route détaillée
+en = Detailed roadmap
+es = Hoja de ruta detallada
+
+# ----- Tarifs -------------------------------------------------------------------------
+
+fr = Quatorze jours pour *essayer*, puis à vous de choisir.
+en = Fourteen days to *try it*, then the choice is yours.
+es = Catorce días para *probarlo*, y luego tú eliges.
+
+fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app.
+en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription, paid through Stripe; your license key appears right away, and you enter it in the app.
+es = Descarga LÜMA: todo está disponible durante la prueba. Después, una suscripción mensual o anual, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app.
+
+fr = Télécharger pour Mac
+en = Download for Mac
+es = Descargar para Mac
+
+fr = Apple Silicon et Intel, macOS 11 ou plus récent. Premier lancement : clic droit sur LÜMA, puis Ouvrir.
+en = Apple Silicon and Intel, macOS 11 or later. First launch: right‑click LÜMA, then choose Open.
+es = Apple Silicon e Intel, macOS 11 o posterior. Primer arranque: clic derecho en LÜMA y, después, Abrir.
+
+fr = Mensuel
+en = Monthly
+es = Mensual
+
+fr = Annuel
+en = Annual
+es = Anual
+
+fr = 9,99 €
+en = €9.99
+es = 9,99 €
+
+fr = 79,99 €
+en = €79.99
+es = 79,99 €
+
+fr = par mois
+en = per month
+es = al mes
+
+fr = par an
+en = per year
+es = al año
+
+fr = Sans engagement, résiliable à tout moment.
+en = No commitment, cancel anytime.
+es = Sin permanencia, cancela cuando quieras.
+
+fr = Deux mois offerts : 6,67 € par mois.
+en = Two months free: €6.67 per month.
+es = Dos meses gratis: 6,67 € al mes.
+
+fr = Le plus avantageux
+en = Best value
+es = El más ventajoso
+
+fr = S'abonner
+en = Subscribe
+es = Suscribirse
+
+fr = Bientôt disponible
+en = Coming soon
+es = Próximamente
+
+fr = Le développement RAW complet, sur le GPU
+en = Full RAW development, on the GPU
+es = El revelado RAW completo, en la GPU
+
+fr = 100 films, vos préréglages, et vos pellicules mesurées
+en = 100 film looks, your presets, and your measured film stocks
+es = 100 películas, tus ajustes preestablecidos y tus carretes medidos
+
+fr = Masques, films empilés, recadrage et géométrie
+en = Masks, stacked film looks, cropping and geometry
+es = Máscaras, películas combinadas, recorte y geometría
+
+fr = Empilements, ciel étoilé, panoramas en DNG
+en = Stacking, starry skies, DNG panoramas
+es = Apilamientos, cielos estrellados, panorámicas en DNG
+
+fr = Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto
+en = JPEG, PNG and 16‑bit TIFF export, in P3 and ProPhoto
+es = Exportación JPEG, PNG y TIFF de 16 bits, en P3 y ProPhoto
+
+fr = Mac, iPhone et iPad, et toutes les mises à jour
+en = Mac, iPhone and iPad, and every update
+es = Mac, iPhone y iPad, y todas las actualizaciones
+
+# ----- Pied de page -------------------------------------------------------------------
+
+fr = L'éditeur photo qui développe la lumière. Écrit en Rust, pour Mac, iPhone et iPad.
+en = The photo editor that develops light. Written in Rust, for Mac, iPhone and iPad.
+es = El editor de fotos que revela la luz. Escrito en Rust, para Mac, iPhone y iPad.
+
+fr = Télécharger pour
+en = Download for
+es = Descargar para
+
+fr = Bientôt sur
+en = Coming soon to
+es = Próximamente en
+
+fr = l'App Store
+en = the App Store
+es = el App Store
+
+fr = Produit
+en = Product
+es = Producto
+
+fr = Mac, iPhone et iPad
+en = Mac, iPhone and iPad
+es = Mac, iPhone y iPad
+
+fr = Ressources
+en = Resources
+es = Recursos
+
+fr = Performances
+en = Performance targets
+es = Rendimiento esperado
+
+fr = Notes de version
+en = Release notes
+es = Notas de la versión
+
+fr = Assistance
+en = Support
+es = Asistencia
+
+fr = Gérer mon abonnement
+en = Manage my subscription
+es = Gestionar mi suscripción
+
+fr = Signaler un problème
+en = Report a problem
+es = Informar de un problema
+
+fr = Contact
+en = Contact
+es = Contacto
+
+fr = Légal
+en = Legal
+es = Legal
+
+fr = Aucun cookie
+en = No cookies
+es = Sin cookies
+
+fr = © 2026 LÜMA. Tous droits réservés.
+en = © 2026 LÜMA. All rights reserved.
+es = © 2026 LÜMA. Todos los derechos reservados.
+
+fr = Fait en France · 100 % Rust · Aucun traceur
+en = Made in France · 100% Rust · No trackers
+es = Hecho en Francia · 100 % Rust · Sin rastreadores
+
+fr = Haut de page ↑
+en = Back to top ↑
+es = Volver arriba ↑
+
+# ----- Introuvable --------------------------------------------------------------------
+
+fr = Hors *champ*.
+en = Out of *frame*.
+es = Fuera de *campo*.
+
+fr = Cette page n'existe pas. La lumière est de l'autre côté.
+en = This page doesn't exist. The light is on the other side.
+es = Esta página no existe. La luz está al otro lado.
+
+fr = Retour à l'accueil
+en = Back to home
+es = Volver al inicio
+
+fr = Page introuvable
+en = Page not found
+es = Página no encontrada
+
+# ----- La clé de licence --------------------------------------------------------------
+
+fr = Merci !
+en = Thank you!
+es = ¡Gracias!
+
+# {plan} : « mensuel » ou « annuel » ; {email} : « (adresse) » ou rien.
+fr = Votre abonnement LÜMA Premium {plan} est actif{email}.
+en = Your {plan} LÜMA Premium subscription is active{email}.
+es = Tu suscripción {plan} a LÜMA Premium está activa{email}.
+
+fr = Votre clé de licence
+en = Your license key
+es = Tu clave de licencia
+
+fr = Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils, et se renouvelle seule tant que l'abonnement court.
+en = Copy it, then paste it into LÜMA: the “Trial” chip at the top of the app, “License key” field, Activate. It works on all your devices, and renews itself as long as your subscription runs.
+es = Cópiala y pégala en LÜMA: la etiqueta «Prueba» en la parte superior de la app, campo «Clave de licencia», Activar. Funciona en todos tus dispositivos y se renueva sola mientras la suscripción siga activa.
+
+fr = Clé de licence
+en = License key
+es = Clave de licencia
+
+fr = Gardez l'adresse de cette page (favori) : elle redonne votre clé à tout moment.
+en = Keep this page's address (bookmark it): it gives you your key again at any time.
+es = Guarda la dirección de esta página (en favoritos): te devuelve tu clave en cualquier momento.
+
+fr = Pas encore l'app ?
+en = Don't have the app yet?
+es = ¿Todavía no tienes la app?
+
+fr = Impossible d'afficher la clé : {error}.
+en = The key can't be shown: {error}.
+es = No se puede mostrar la clave: {error}.
+
+fr = Si vous venez de payer, rechargez la page dans un instant. Sinon, écrivez‑nous (voir les mentions légales) avec le courriel de l'abonnement.
+en = If you've just paid, reload the page in a moment. Otherwise, write to us (see the legal notice) with your subscription email address.
+es = Si acabas de pagar, recarga la página dentro de un momento. Si no, escríbenos (consulta el aviso legal) con el correo electrónico de la suscripción.
+
+fr = le paiement en ligne n'est pas encore ouvert
+en = online payment isn't open yet
+es = el pago en línea aún no está disponible
+
+fr = le portail client n'est pas encore ouvert
+en = the customer portal isn't open yet
+es = el portal de clientes aún no está disponible
+
+fr = lien de paiement invalide
+en = invalid payment link
+es = enlace de pago no válido
+
+fr = le paiement n'est pas terminé
+en = the payment isn't complete
+es = el pago no se ha completado
+
+fr = ce paiement n'est pas un abonnement LÜMA
+en = this payment isn't a LÜMA subscription
+es = este pago no es una suscripción a LÜMA
+
+fr = l'abonnement n'est plus actif
+en = the subscription is no longer active
+es = la suscripción ya no está activa
+
+fr = abonnement sans période
+en = subscription without a billing period
+es = suscripción sin período de facturación
+
+fr = abonnement sans identifiant
+en = subscription without an identifier
+es = suscripción sin identificador
+
+# ----- Documentation ------------------------------------------------------------------
+
+fr = Documentation
+en = Documentation
+es = Documentación
+
+fr = Ce tableau est généré en français.
+en = This table is generated in French.
+es = Esta tabla se genera en francés.
+
+fr = Boîtiers pris en charge
+en = Supported cameras
+es = Cámaras compatibles
+
+fr = La matrice des boîtiers, générée depuis la base du décodeur et vérifiée à chaque version.
+en = The camera matrix, generated from the decoder's database and checked with every release.
+es = La matriz de cámaras, generada a partir de la base de datos del decodificador y verificada en cada versión.
+
+fr = Parité avec Lightroom
+en = Parity with Lightroom
+es = Paridad con Lightroom
+
+fr = Le module Développement de Lightroom Classic, panneau par panneau : ce qui est fait, ce qui vient.
+en = Lightroom Classic's Develop module, panel by panel: what's done, what's coming.
+es = El módulo Revelar de Lightroom Classic, panel por panel: lo que está hecho y lo que viene.
+
+fr = Comment LÜMA est construit : le moteur, le GPU, les apps, et les règles du 100 % Rust.
+en = How LÜMA is built: the engine, the GPU, the apps, and the rules of 100% Rust.
+es = Cómo está construido LÜMA: el motor, la GPU, las apps y las reglas del 100 % Rust.
+
+fr = Les étapes, les jalons et les risques, avec où on en est.
+en = The stages, the milestones and the risks, and where things stand.
+es = Las etapas, los hitos y los riesgos, y en qué punto estamos.
+
+fr = Nouveautés
+en = What's new
+es = Novedades
+
+fr = Ce qui change à chaque version de LÜMA.
+en = What changes in each LÜMA release.
+es = Lo que cambia en cada versión de LÜMA.
+
+# L'introduction générée de docs/boitiers.md (luma cameras --markdown).
+fr = Généré par `luma cameras --markdown` depuis la base du décodeur ; la CI vérifie que ce fichier est à jour. **Couleur** : matrice D65 connue (couleur étalonnée). **Corpus** : un vrai RAW de ce boîtier est développé à chaque test (`scripts/fetch-corpus.sh`). Les formats DNG (dont iPhone ProRAW) sont lus pour tous les appareils, même absents de la liste.
+en = Generated by `luma cameras --markdown` from the decoder's database; CI checks that this list is up to date. **Color**: known D65 matrix (calibrated color). **Corpus**: a real RAW file from this camera is developed on every test run (`scripts/fetch-corpus.sh`). DNG files (including iPhone ProRAW) are read for every camera, even those missing from the list. Camera model names are listed as the decoder knows them.
+es = Generado por `luma cameras --markdown` a partir de la base de datos del decodificador; la CI comprueba que esta lista está al día. **Color**: matriz D65 conocida (color calibrado). **Corpus**: un RAW real de esta cámara se revela en cada prueba (`scripts/fetch-corpus.sh`). Los archivos DNG (incluido el ProRAW del iPhone) se leen en todas las cámaras, aunque no figuren en la lista. Los nombres de los modelos son los que conoce el decodificador.
+
+fr = **{cameras} boîtiers** de {brands} marques ; {color} avec couleur étalonnée ; {corpus} vérifiés sur le corpus.
+en = **{cameras} cameras** from {brands} brands; {color} with calibrated color; {corpus} verified on the corpus.
+es = **{cameras} cámaras** de {brands} marcas; {color} con color calibrado; {corpus} verificadas con el corpus.
+
+# ----- Pages légales ------------------------------------------------------------------
+
+fr = Sommaire
+en = Contents
+es = Índice
+
+fr = Traduction fournie pour information : en cas de différence, la version française fait foi.
+en = This translation is provided for information only: in case of any discrepancy, the French version prevails.
+es = Traducción facilitada a título informativo: en caso de discrepancia, prevalece la versión francesa.
+
+fr = À compléter : {todo}
+en = To be completed: {todo}
+es = Por completar: {todo}
+
+# Mentions légales.
+fr = Mentions légales
+en = Legal notice
+es = Aviso legal
+
+fr = Qui publie LÜMA, qui l'héberge, et à qui écrire.
+en = Who publishes LÜMA, who hosts it, and whom to write to.
+es = Quién publica LÜMA, quién lo aloja y a quién escribir.
+
+fr = Éditeur
+en = Publisher
+es = Editor
+
+fr = Nom ou raison sociale, forme juridique, capital, adresse du siège, numéro SIREN ou RCS, numéro de TVA intracommunautaire.
+en = Name or company name, legal form, share capital, registered office address, SIREN or RCS number (French company registration), EU VAT number.
+es = Nombre o razón social, forma jurídica, capital social, domicilio social, número SIREN o RCS (registro mercantil francés), número de IVA intracomunitario.
+
+fr = Directeur de la publication : prénom et nom.
+en = Publication director: first and last name.
+es = Director de la publicación: nombre y apellidos.
+
+fr = Adresse électronique de contact.
+en = Contact email address.
+es = Dirección de correo electrónico de contacto.
+
+fr = Pour un problème dans l'app : écrivez à l'adresse de contact, avec la version de LÜMA et, si possible, le RAW concerné.
+en = For a problem in the app: write to the contact address, with your LÜMA version and, if possible, the RAW file involved.
+es = Para un problema en la app: escribe a la dirección de contacto, indicando la versión de LÜMA y, si es posible, adjuntando el RAW afectado.
+
+fr = Hébergement
+en = Hosting
+es = Alojamiento
+
+fr = Le site est hébergé par Heroku : Salesforce, Inc., Salesforce Tower, 415 Mission Street, San Francisco, CA 94105, États‑Unis.
+en = The site is hosted by Heroku: Salesforce, Inc., Salesforce Tower, 415 Mission Street, San Francisco, CA 94105, United States.
+es = El sitio está alojado por Heroku: Salesforce, Inc., Salesforce Tower, 415 Mission Street, San Francisco, CA 94105, Estados Unidos.
+
+fr = Les paiements sont traités par Stripe : Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin 2, Irlande.
+en = Payments are processed by Stripe: Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin 2, Ireland.
+es = Los pagos los procesa Stripe: Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin 2, Irlanda.
+
+fr = Marques et noms de pellicules
+en = Trademarks and film names
+es = Marcas y nombres de películas
+
+fr = LÜMA, son logo et son interface sont la propriété de leur éditeur.
+en = LÜMA, its logo and its interface are the property of their publisher.
+es = LÜMA, su logotipo y su interfaz son propiedad de su editor.
+
+fr = Les noms de pellicules et de procédés cités dans les films de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) sont des marques de leurs propriétaires. Ils disent l'inspiration d'un rendu, sans lien avec ces marques ni copie de leurs produits. Lightroom est une marque d'Adobe.
+en = The names of film stocks and processes mentioned in LÜMA's film looks (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) are trademarks of their respective owners. They indicate what inspired a look, with no affiliation with these brands and no copying of their products. Lightroom is a trademark of Adobe.
+es = Los nombres de películas y procesos citados en las películas de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) son marcas de sus respectivos propietarios. Indican la inspiración de un acabado, sin vínculo alguno con esas marcas ni copia de sus productos. Lightroom es una marca de Adobe.
+
+# Confidentialité.
+fr = Confidentialité
+en = Privacy
+es = Privacidad
+
+fr = Vos photos restent chez vous. LÜMA ne vous suit pas.
+en = Your photos stay with you. LÜMA doesn't track you.
+es = Tus fotos se quedan contigo. LÜMA no te rastrea.
+
+fr = Vos photos
+en = Your photos
+es = Tus fotos
+
+fr = LÜMA développe vos photos sur votre appareil. Aucune photo, aucun réglage, aucune métadonnée n'est envoyé ailleurs : ni à l'éditeur, ni à un service tiers.
+en = LÜMA develops your photos on your device. No photo, no adjustment and no metadata is sent anywhere else: neither to the publisher nor to any third‑party service.
+es = LÜMA revela tus fotos en tu dispositivo. Ninguna foto, ningún ajuste y ningún metadato se envía a ninguna otra parte: ni al editor ni a un servicio de terceros.
+
+fr = Les réglages sont écrits à côté de vos RAW, dans des fichiers XMP que vous gardez.
+en = Adjustments are written next to your RAW files, in XMP files that you keep.
+es = Los ajustes se escriben junto a tus RAW, en archivos XMP que conservas.
+
+fr = Abonnement
+en = Subscription
+es = Suscripción
+
+fr = Votre clé de licence est vérifiée par l'app elle‑même, sans réseau. Une fois par jour, en ligne, l'app envoie votre clé au serveur de LÜMA pour en recevoir une à jour ; le serveur demande à Stripe si l'abonnement court. Rien d'autre n'est envoyé.
+en = Your license key is verified by the app itself, without any network access. Once a day, when online, the app sends your key to the LÜMA server to receive an updated one; the server asks Stripe whether the subscription is still running. Nothing else is sent.
+es = La propia app verifica tu clave de licencia, sin conexión a la red. Una vez al día, si hay conexión, la app envía tu clave al servidor de LÜMA para recibir una actualizada; el servidor pregunta a Stripe si la suscripción sigue activa. No se envía nada más.
+
+fr = Lors d'un achat, Stripe traite votre nom, votre courriel et votre paiement, selon sa propre politique de confidentialité ; l'éditeur ne voit jamais vos coordonnées bancaires. La clé de licence contient le courriel de l'abonnement.
+en = When you make a purchase, Stripe processes your name, your email address and your payment, under its own privacy policy; the publisher never sees your bank details. The license key contains the subscription's email address.
+es = Al realizar una compra, Stripe trata tu nombre, tu correo electrónico y tu pago, según su propia política de privacidad; el editor nunca ve tus datos bancarios. La clave de licencia contiene el correo electrónico de la suscripción.
+
+fr = Aucune mesure d'audience
+en = No audience measurement
+es = Sin medición de audiencia
+
+fr = Ni l'app ni le site ne contiennent de traceur, de publicité ou de mesure d'audience.
+en = Neither the app nor the site contains any tracker, advertising or audience measurement.
+es = Ni la app ni el sitio contienen rastreadores, publicidad ni medición de audiencia.
+
+fr = Le site ne dépose aucun cookie. Installé comme une app (PWA), il garde une copie de ses pages dans votre navigateur, pour s'ouvrir hors ligne : vous pouvez l'effacer à tout moment dans les réglages du navigateur.
+en = The site sets no cookies. Installed as an app (PWA), it keeps a copy of its pages in your browser so it can open offline: you can delete it at any time in your browser settings.
+es = El sitio no instala ninguna cookie. Instalado como una app (PWA), guarda una copia de sus páginas en tu navegador para poder abrirse sin conexión: puedes borrarla en cualquier momento desde los ajustes del navegador.
+
+fr = Le site charge ses polices depuis Google Fonts : votre navigateur contacte alors les serveurs de Google. Il est hébergé par Heroku, qui tient des journaux techniques (adresse IP) pour la sécurité du service.
+en = The site loads its fonts from Google Fonts: your browser then contacts Google's servers. It is hosted by Heroku, which keeps technical logs (IP address) for the security of the service.
+es = El sitio carga sus fuentes desde Google Fonts: tu navegador contacta entonces con los servidores de Google. Está alojado por Heroku, que conserva registros técnicos (dirección IP) para la seguridad del servicio.
+
+fr = Vos droits
+en = Your rights
+es = Tus derechos
+
+fr = Conformément au RGPD, vous pouvez demander l'accès, la rectification ou l'effacement des données liées à votre abonnement, à l'adresse de contact des mentions légales. Vous pouvez aussi saisir la CNIL.
+en = Under the GDPR, you can request access to, correction of or deletion of the data linked to your subscription, at the contact address given in the legal notice. You can also lodge a complaint with the CNIL (the French data protection authority).
+es = De conformidad con el RGPD, puedes solicitar el acceso, la rectificación o la supresión de los datos vinculados a tu suscripción en la dirección de contacto del aviso legal. También puedes presentar una reclamación ante la CNIL (la autoridad francesa de protección de datos).
+
+# Conditions d'abonnement.
+fr = Conditions d'abonnement
+en = Subscription terms
+es = Condiciones de suscripción
+
+fr = Quatorze jours pour essayer, puis au mois ou à l'an. Sans surprise.
+en = Fourteen days to try it, then monthly or yearly. No surprises.
+es = Catorce días para probarlo y, después, al mes o al año. Sin sorpresas.
+
+fr = Essai gratuit
+en = Free trial
+es = Prueba gratuita
+
+fr = LÜMA se télécharge librement. Au premier lancement commence un essai de 14 jours, complet, sans carte bancaire. À la fin de l'essai, l'app demande un abonnement pour continuer à développer vos photos ; vos fichiers et vos réglages restent à vous.
+en = LÜMA is free to download. A full 14‑day trial starts on first launch, with no credit card required. When the trial ends, the app asks for a subscription to keep developing your photos; your files and your adjustments remain yours.
+es = LÜMA se descarga libremente. En el primer arranque empieza una prueba completa de 14 días, sin tarjeta bancaria. Al final de la prueba, la app pide una suscripción para seguir revelando tus fotos; tus archivos y tus ajustes siguen siendo tuyos.
+
+fr = Abonnement et clé de licence
+en = Subscription and license key
+es = Suscripción y clave de licencia
+
+fr = Deux formules : Mensuel, 9,99 € par mois, et Annuel, 79,99 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.
+en = Two plans: Monthly, €9.99 per month, and Annual, €79.99 per year (VAT included). The subscription renews automatically at the end of each period.
+es = Dos planes: Mensual, 9,99 € al mes, y Anual, 79,99 € al año (IVA incluido). La suscripción se renueva automáticamente al final de cada período.
+
+fr = Après le paiement, votre clé de licence s'affiche sur le site (gardez l'adresse de la page : elle redonne la clé à tout moment). Saisissez‑la dans LÜMA (puce « Essai » en haut de l'app) ; elle vaut pour vos propres appareils, pour votre usage personnel ou professionnel.
+en = After payment, your license key is shown on the site (keep the page's address: it gives you the key again at any time). Enter it in LÜMA (the “Trial” chip at the top of the app); it is valid on your own devices, for your personal or professional use.
+es = Tras el pago, tu clave de licencia aparece en el sitio (guarda la dirección de la página: te devuelve la clave en cualquier momento). Introdúcela en LÜMA (etiqueta «Prueba» en la parte superior de la app); es válida en tus propios dispositivos, para tu uso personal o profesional.
+
+fr = La clé est valable jusqu'à la fin de la période payée, plus 14 jours. En ligne, l'app la renouvelle d'elle‑même chaque jour tant que l'abonnement court.
+en = The key is valid until the end of the paid period, plus 14 days. When online, the app renews it by itself every day as long as the subscription runs.
+es = La clave es válida hasta el final del período pagado, más 14 días. Con conexión, la app la renueva por sí sola cada día mientras la suscripción siga activa.
+
+fr = Paiement
+en = Payment
+es = Pago
+
+fr = Les paiements sont encaissés par Stripe, par carte bancaire et les moyens proposés sur la page de paiement. La TVA de votre pays est appliquée ; la facture est envoyée par courriel à chaque paiement.
+en = Payments are collected by Stripe, by card and the other methods offered on the checkout page. Your country's VAT is applied; an invoice is sent by email with each payment.
+es = Los pagos los cobra Stripe, con tarjeta bancaria y los demás medios ofrecidos en la página de pago. Se aplica el IVA de tu país; la factura se envía por correo electrónico con cada pago.
+
+fr = Résiliation et remboursement
+en = Cancellation and refunds
+es = Cancelación y reembolso
+
+fr = Vous pouvez résilier à tout moment depuis le portail client (lien « Gérer mon abonnement ») : factures, moyen de paiement, résiliation. L'abonnement reste actif jusqu'à la fin de la période payée, puis LÜMA revient à l'écran Premium.
+en = You can cancel at any time from the customer portal (the “Manage my subscription” link): invoices, payment method, cancellation. The subscription stays active until the end of the paid period, after which LÜMA returns to the Premium screen.
+es = Puedes cancelar en cualquier momento desde el portal de clientes (enlace «Gestionar mi suscripción»): facturas, medio de pago, cancelación. La suscripción sigue activa hasta el final del período pagado y, después, LÜMA vuelve a la pantalla Premium.
+
+fr = LÜMA étant un contenu numérique fourni dès l'activation, avec votre accord, le droit de rétractation ne s'applique plus une fois la clé activée (article L221‑28 du Code de la consommation). Pour toute demande de remboursement, écrivez à l'adresse de contact des mentions légales.
+en = Because LÜMA is digital content supplied as soon as it is activated, with your consent, the right of withdrawal no longer applies once the key has been activated (Article L221‑28 of the French Consumer Code, “Code de la consommation”). For any refund request, write to the contact address given in the legal notice.
+es = Al ser LÜMA un contenido digital suministrado desde su activación, con tu consentimiento, el derecho de desistimiento deja de aplicarse una vez activada la clave (artículo L221‑28 del Código de Consumo francés, «Code de la consommation»). Para cualquier solicitud de reembolso, escribe a la dirección de contacto del aviso legal.
+
+fr = Mises à jour
+en = Updates
+es = Actualizaciones
+
+fr = Toutes les mises à jour de LÜMA sont comprises dans l'abonnement, sur Mac, iPhone et iPad. Une modification des prix est annoncée au moins 30 jours à l'avance et ne s'applique qu'au renouvellement suivant.
+en = Every LÜMA update is included in the subscription, on Mac, iPhone and iPad. Any price change is announced at least 30 days in advance and only applies from the next renewal.
+es = Todas las actualizaciones de LÜMA están incluidas en la suscripción, en Mac, iPhone y iPad. Cualquier cambio de precio se anuncia con al menos 30 días de antelación y solo se aplica a partir de la siguiente renovación.
+
+fr = Droit applicable
+en = Governing law
+es = Legislación aplicable
+
+fr = Ces conditions sont soumises au droit français. En cas de litige, une solution amiable est recherchée d'abord ; à défaut, vous pouvez recourir gratuitement à un médiateur de la consommation.
+en = These terms are governed by French law. In the event of a dispute, an amicable solution is sought first; failing that, you can turn to a consumer mediator free of charge.
+es = Estas condiciones se rigen por la legislación francesa. En caso de litigio, primero se busca una solución amistosa; en su defecto, puedes acudir gratuitamente a un mediador de consumo.

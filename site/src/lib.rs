@@ -2,6 +2,7 @@
 //! et le navigateur, le serveur (natif) et le bundle du navigateur (wasm32).
 
 pub mod content;
+pub mod i18n;
 pub mod islands;
 
 #[cfg(not(target_arch = "wasm32"))]

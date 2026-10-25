@@ -19,6 +19,10 @@ crate-type = ["cdylib", "rlib"]
 name = "luma-site"
 path = "src/main.rs"
 
+[dependencies]
+# Les langues du site (français, anglais, espagnol), côté serveur et navigateur.
+luma-i18n = { path = "../crates/luma-i18n" }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 paquets = { git = "https://github.com/maxlestage/Paquets", default-features = false }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
