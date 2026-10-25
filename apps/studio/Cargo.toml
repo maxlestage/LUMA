@@ -21,6 +21,7 @@ luma-gpu.workspace = true
 luma-merge.workspace = true
 luma-brand.workspace = true
 luma-licence.workspace = true
+luma-i18n.workspace = true
 egui.workspace = true
 wgpu.workspace = true
 
