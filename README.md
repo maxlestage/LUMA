@@ -103,9 +103,16 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   - *Panorama* : perspective, cylindrique ou sphérique, exposition compensée, fondu.
   Le résultat est un **DNG** (un vrai RAW) ; le **rognage automatique** est proposé
   comme un recadrage ordinaire, qu'on garde, modifie ou retire.
-- **Films** : Portra 400, Ektar 100, Gold 200, Velvia 50, Provia 100F, Pro 400H,
-  Superia 400, CineStill 800T, Kodachrome 64, Ektachrome E100, Tri‑X 400, HP5 Plus,
-  Delta 100, Acros 100 (interprétations), et des looks créatifs.
+- **Films** : 72 looks, avec leur aperçu sur la photo et une intensité réglable.
+  *Pellicules couleur* (Portra 160/400/800, Ektar, Gold, ColorPlus, UltraMax,
+  Fujicolor C200, Superia, Pro 400H, Velvia, Provia, Astia, Kodachrome, Ektachrome,
+  Agfa, Lomography…), *Cinéma* (CineStill 800T, 400D, 50D ; Kodak Vision3 50D, 250D,
+  200T, 500T ; tirages Kodak 2383 et 2393, Fuji 3513 ; Eterna ; Technicolor 2 et 3
+  bandes ; blanchiment sauté ; traitement croisé ; nuit américaine ; Super 8…),
+  *Noir et blanc* (Tri‑X, T‑Max, HP5, FP4, Delta, Pan F, Acros, Neopan, Double‑X,
+  Fomapan, infrarouge), *Instantanés et vintage* (Polaroid, Instax, jetable, Lomo,
+  Holga, pellicule périmée, sépia, cyanotype, daguerréotype) et *Créatifs*. Ce sont des
+  interprétations, pas des copies des émulsions ni des marques.
 - Les réglages sont enregistrés automatiquement dans un XMP au format Lightroom à côté
   du RAW, qui n'est jamais modifié.
 
