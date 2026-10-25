@@ -114,7 +114,7 @@ jobs:
           sleep 45
           xcrun simctl io "$udid" screenshot target/ios-iphone.png
           ls -la "$data/Documents"
-          echo "--- sortie de l'app ---"; cat target/ios-stdout.txt target/ios-stderr.txt "$data/Documents/LÜMA-erreur.txt" || true
+          echo "--- sortie de l'app ---"; cat target/ios-stdout.txt target/ios-stderr.txt "$data/Documents/LÜMA-journal.txt" "$data/Documents/LÜMA-erreur.txt" || true
           # Toujours vivante ? (les apps du simulateur sont des processus du Mac)
           if ! pgrep -fl luma-studio; then
             echo "L'app s'est arrêtée. Rapports de plantage :"
