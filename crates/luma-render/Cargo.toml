@@ -1,0 +1,17 @@
+[package]
+name = "luma-render"
+description = "Moteur de rendu de LÜMA : photo ouverte, sources en cache, rendu annulable."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+luma-core.workspace = true
+luma-color.workspace = true
+luma-raw.workspace = true
+luma-project.workspace = true
+luma-image.workspace = true
+
+[lints]
+workspace = true

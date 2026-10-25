@@ -1,0 +1,39 @@
+# Le moteur de LÜMA. Le site (site/) est un crate à part, avec son propre workspace.
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+exclude = ["site"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+publish = false
+
+[workspace.dependencies]
+luma-core = { path = "crates/luma-core" }
+luma-color = { path = "crates/luma-color" }
+luma-raw = { path = "crates/luma-raw" }
+luma-project = { path = "crates/luma-project" }
+luma-image = { path = "crates/luma-image" }
+luma-render = { path = "crates/luma-render" }
+# Toutes en Rust, sans code C ni C++ : vérifié en CI (voir .github/workflows/engine.yml).
+rawler = "0.8"
+rayon = "1.12"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+quick-xml = "0.42"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tiff"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Les tests de rendu tournent sur de vraies images : optimisés même en test.
+[profile.test]
+opt-level = 3
+[profile.dev.package."*"]
+opt-level = 3
