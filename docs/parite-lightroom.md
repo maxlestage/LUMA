@@ -22,7 +22,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Panneau | Fonction | État |
 |---|---|---|
 | Profil | Couleur, Neutre, Vif, Monochrome ; lecture de `crs:CameraProfile` | ✅ |
-| | Profils créatifs, profils fabricant (« Camera Standard »…) | ⏳ |
+| | LUT 3D `.cube` (comme les profils créatifs), à intensité réglable, sur le GPU aussi | ✅ |
+| | Profils fabricant (« Camera Standard »…) | ⏳ |
 | Base | Balance des blancs telle quelle, température et teinte (échelle DNG) | ✅ |
 | | Balance automatique, préréglages (lumière du jour, nuageux, ombre, tungstène, fluorescent, flash), pipette (W) | ✅ |
 | | Exposition, Contraste | ✅ |
@@ -33,7 +34,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Courbe des tonalités | Paramétrique (4 régions, 3 séparations) | ✅ |
 | | Courbes à points : luminosité, rouge, vert, bleu | ✅ |
 | Mélangeur de couleurs | Teinte, saturation, luminance de 8 couleurs | ✅ |
-| | Mélange noir et blanc, outil de ciblage direct | ⏳ |
+| | Mélange noir et blanc (±3 IL, `crs:GrayMixer*`) | ✅ |
+| | Outil de ciblage direct | ⏳ |
 | Étalonnage des couleurs | Ombres, tons moyens, hautes lumières, global ; fusion, balance | ✅ |
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |
@@ -55,8 +57,9 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
 | | Empilements : moyenne, médiane, maximum, ciel étoilé (au‑delà de Lightroom) | ✅ |
 | | Fusion HDR, déformation des bords du panorama | ⏳ |
-| | 100 préréglages avec intensité : pellicules couleur, cinéma, noir et blanc, instantanés | ✅ |
-| | Films empilés par masques, chacun dans sa zone et à son intensité (au‑delà de Lightroom) | ✅ |
+| | 100 préréglages avec intensité : pellicules couleur, cinéma, noir et blanc, instantanés ; tous mesurés sur une mire à chaque test (distincts, sans image écrasée, rendus identiques sur le GPU) | ✅ |
+| | Mesure d'une vraie pellicule : un scan comparé à la même scène en numérique, alignement automatique, LUT 3D (au‑delà de Lightroom) | ✅ |
+| | Films empilés par masques, chacun dans sa zone et à son intensité, hautes lumières, ombres et clarté comprises (au‑delà de Lightroom) | ✅ |
 
 ## Formats et couleur
 

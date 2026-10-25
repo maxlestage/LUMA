@@ -102,6 +102,30 @@ fn params(s: &Settings, width: usize, height: usize, scale: f32, space: OutputSp
         }
     }
 
+    // Le film mesuré (LUT 3D) : taille (0 sans LUT), intensité, domaine ; ses couleurs
+    // sont à la fin des tables.
+    let cube = luma_image::cube::Stage::new(s);
+    match &cube {
+        Some(c) => {
+            p.push("CUBE", &[c.cube.size as f32, c.amount]);
+            p.push("CUBE_MIN", &c.cube.domain_min);
+            p.push("CUBE_MAX", &c.cube.domain_max);
+        }
+        None => {
+            p.push("CUBE", &[0.0, 0.0]);
+            p.push("CUBE_MIN", &[0.0; 3]);
+            p.push("CUBE_MAX", &[1.0; 3]);
+        }
+    }
+    p.mat(
+        "TO_SRGB",
+        &luma_color::rgb_to_rgb(&luma_color::WORKING, &luma_color::SRGB),
+    );
+    p.mat(
+        "FROM_SRGB",
+        &luma_color::rgb_to_rgb(&luma_color::SRGB, &luma_color::WORKING),
+    );
+
     let e = effects::params(&s.effects, scale);
     p.push("VIGNETTE", &[e.vignette]);
     p.push("CIRCLE", &[e.circle]);
@@ -122,7 +146,8 @@ fn params(s: &Settings, width: usize, height: usize, scale: f32, space: OutputSp
 const LUT: usize = Lut::SIZE + 1;
 const FILMIC: usize = luma_image::curve::FilmicTable::SIZE + 1;
 /// Les tables, à la suite : filmique, trois courbes, encodage et décodage sRGB (pour les
-/// courbes), encodage de sortie.
+/// courbes et la LUT), encodage de sortie ; puis, s'il y en a une, les couleurs de la
+/// LUT 3D (T_CUBE).
 const TABLES: [(&str, usize); 7] = [
     ("FILMIC", FILMIC),
     ("LUT_R", LUT),
@@ -149,6 +174,9 @@ fn tables(s: &Settings, space: OutputSpace) -> Vec<f32> {
     let enc = EncodeLut::new(|v| space.encode(v));
     t.extend((0..LUT).map(|i| enc.get(i as f32 / Lut::SIZE as f32)));
     debug_assert_eq!(t.len(), TABLES.iter().map(|t| t.1).sum::<usize>());
+    if let Some(c) = luma_image::cube::Stage::new(s) {
+        t.extend(c.cube.data.iter().flatten());
+    }
     t
 }
 
@@ -164,6 +192,7 @@ fn shader_source() -> String {
         out += &format!("const T_{name}: u32 = {pos}u;\n");
         pos += len;
     }
+    out += &format!("const T_CUBE: u32 = {pos}u;\n");
     out + include_str!("finish.wgsl")
 }
 
