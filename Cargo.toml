@@ -18,6 +18,7 @@ luma-raw = { path = "crates/luma-raw" }
 luma-project = { path = "crates/luma-project" }
 luma-image = { path = "crates/luma-image" }
 luma-gpu = { path = "crates/luma-gpu" }
+luma-merge = { path = "crates/luma-merge" }
 luma-render = { path = "crates/luma-render" }
 # Toutes en Rust, sans code C ni C++ : vérifié en CI (voir .github/workflows/engine.yml).
 rawler = "0.8"

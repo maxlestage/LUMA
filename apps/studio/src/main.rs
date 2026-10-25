@@ -17,6 +17,18 @@ impl eframe::App for App {
 }
 
 fn main() -> eframe::Result {
+    // Sur iPhone et iPad, une erreur fatale est aussi écrite dans Documents (visible
+    // dans l'app Fichiers) : il n'y a pas de terminal pour la lire.
+    if cfg!(target_os = "ios")
+        && let Some(dir) = luma_studio::dialogs::documents()
+    {
+        let default = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let text = format!("{info}\n{}", std::backtrace::Backtrace::force_capture());
+            let _ = std::fs::write(dir.join("LÜMA-erreur.txt"), text);
+            default(info);
+        }));
+    }
     let arg = std::env::args_os().nth(1).map(std::path::PathBuf::from);
     // Sur iPhone et iPad, l'app s'ouvre sur son dossier Documents.
     let arg = arg.or_else(|| {
