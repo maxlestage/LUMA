@@ -957,10 +957,11 @@ impl Studio {
                     self.selected_mask = None;
                 }
             }
-            "mask_linear" | "mask_radial" | "mask_brush" if self.photo.is_some() => {
+            "mask_linear" | "mask_radial" | "mask_brush" | "mask_full" if self.photo.is_some() => {
                 let mask = match action {
                     "mask_linear" => Mask::linear(),
                     "mask_radial" => Mask::radial(),
+                    "mask_full" => Mask::full(),
                     _ => Mask::brush(),
                 };
                 let label = format!("Nouveau masque : {}", mask.name.to_lowercase());
@@ -2253,6 +2254,7 @@ impl Studio {
             .default_open(true)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
+                    let width = ((ui.available_width() - 18.0) / 4.0).floor();
                     for (icon, label, key, action) in [
                         (
                             Icon::Radial,
@@ -2272,8 +2274,14 @@ impl Studio {
                             "K : peindre, Option pour gommer",
                             "mask_brush",
                         ),
+                        (
+                            Icon::Films,
+                            "Image entière",
+                            "Toute l'image : pour empiler un film de plus",
+                            "mask_full",
+                        ),
                     ] {
-                        if big_choice(ui, icon, label, false)
+                        if big_choice_sized(ui, icon, label, false, width)
                             .on_hover_text(key)
                             .clicked()
                         {
@@ -2284,8 +2292,13 @@ impl Studio {
                 let mut select = None;
                 for (i, m) in self.settings.masks.iter().enumerate() {
                     let current = self.selected_mask == Some(i);
-                    let mut text = RichText::new(format!("{}. {}", i + 1, m.name)).size(12.0);
-                    if !m.is_active() {
+                    let film = m
+                        .look
+                        .as_ref()
+                        .map(|l| format!(" · {}", l.name))
+                        .unwrap_or_default();
+                    let mut text = RichText::new(format!("{}. {}{film}", i + 1, m.name)).size(12.0);
+                    if !m.is_active() && m.active_look().is_none() {
                         text = text.color(theme::DIM);
                     }
                     if ui.selectable_label(current, text).clicked() {
@@ -2333,6 +2346,65 @@ impl Studio {
                     track: Track::Plain,
                     log: false,
                 };
+                // Le film du masque : il s'empile sur le reste, dans la zone du masque.
+                sub_title(ui, "Film du masque");
+                let current = m
+                    .look
+                    .as_ref()
+                    .map_or_else(|| "Aucun".to_owned(), |l| l.name.clone());
+                let mut pick: Option<Option<&'static str>> = None;
+                egui::ComboBox::from_id_salt("film-masque")
+                    .selected_text(&current)
+                    .height(440.0)
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_label(current == "Aucun", "Aucun").clicked() {
+                            pick = Some(None);
+                        }
+                        for group in presets::Group::ALL {
+                            ui.label(RichText::new(group.name()).size(11.0).color(theme::DIM));
+                            for p in PRESETS.iter().filter(|p| p.group == group) {
+                                if ui
+                                    .selectable_label(current == p.name, p.name)
+                                    .on_hover_text(p.description)
+                                    .clicked()
+                                {
+                                    pick = Some(Some(p.name));
+                                }
+                            }
+                        }
+                    })
+                    .response
+                    .accessible_name("Film du masque");
+                let mut film_changed = false;
+                if let Some(choice) = pick {
+                    let amount = m.look.as_ref().map_or(100.0, |l| l.amount);
+                    m.look = choice.map(|n| luma_project::Look {
+                        name: n.into(),
+                        amount,
+                    });
+                    commits.push(format!(
+                        "Masque {name} : film {}",
+                        choice.unwrap_or("aucun")
+                    ));
+                    film_changed = true;
+                }
+                if let Some(look) = &mut m.look {
+                    let film = SliderSpec {
+                        default: 100.0,
+                        track: Track::Gradient(&theme::SPECTRUM),
+                        ..spec("Intensité du film", 0.0, 100.0, 0)
+                    };
+                    let c = widgets::slider(ui, &film, &mut look.amount);
+                    film_changed |= c.changed;
+                    if c.committed {
+                        commits.push(format!(
+                            "Masque {name} : {} à {} %",
+                            look.name,
+                            format_value(look.amount, 0, false)
+                        ));
+                    }
+                }
+                sub_title(ui, "Réglages du masque");
                 let l = &mut m.local;
                 let rows: [(SliderSpec, &mut f32); 11] = [
                     (spec("Intensité", 0.0, 100.0, 0), &mut m.amount),
@@ -2347,7 +2419,7 @@ impl Studio {
                     (spec("Saturation", -100.0, 100.0, 0), &mut l.saturation),
                     (spec("Clarté", -100.0, 100.0, 0), &mut l.clarity),
                 ];
-                let mut changed = false;
+                let mut changed = film_changed;
                 for (spec, value) in rows {
                     let c = widgets::slider(ui, &spec, value);
                     changed |= c.changed;
@@ -2941,7 +3013,17 @@ fn icon_button(ui: &mut Ui, icon: Icon, label: &str, active: bool) -> egui::Resp
 
 /// Un grand choix illustré (Empilement / Panorama, masques).
 fn big_choice(ui: &mut Ui, icon: Icon, label: &str, active: bool) -> egui::Response {
-    let (rect, r) = ui.allocate_exact_size(vec2(96.0, 74.0), egui::Sense::click());
+    big_choice_sized(ui, icon, label, active, 96.0)
+}
+
+fn big_choice_sized(
+    ui: &mut Ui,
+    icon: Icon,
+    label: &str,
+    active: bool,
+    width: f32,
+) -> egui::Response {
+    let (rect, r) = ui.allocate_exact_size(vec2(width, 74.0), egui::Sense::click());
     let p = ui.painter();
     p.rect_filled(
         rect,

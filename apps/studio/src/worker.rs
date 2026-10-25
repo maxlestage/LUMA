@@ -461,24 +461,51 @@ fn render_loop(
             continue;
         };
         let (w, h) = (base.image.width, base.image.height);
+        let layers = luma_image::look_layers(&job.settings);
         let (mut rgba, on_gpu) = match &gpu {
-            Some(g) if g.can_finish(&job.settings, w, h, base.scale) => (
-                g.finish(
+            Some(g)
+                if g.can_finish(&job.settings, w, h, base.scale)
+                    && layers
+                        .iter()
+                        .all(|(_, s, _)| g.can_finish(s, w, h, base.scale)) =>
+            {
+                let finish = |s: &luma_project::Settings| {
+                    g.finish(&base.image, base.id, base.scale, s, OutputSpace::Srgb)
+                };
+                let mut rgba = finish(&job.settings);
+                // Les films des masques : chacun rendu sur le GPU, puis fondu selon
+                // la zone du masque.
+                for (mask, look, k) in &layers {
+                    let alt = finish(look);
+                    let weights = luma_image::local::weights(mask, w, h);
+                    for ((o, a), wt) in rgba
+                        .as_chunks_mut::<4>()
+                        .0
+                        .iter_mut()
+                        .zip(alt.as_chunks::<4>().0)
+                        .zip(&weights.data)
+                    {
+                        let t = (wt * k).clamp(0.0, 1.0);
+                        if t > 0.0 {
+                            for c in 0..3 {
+                                o[c] = (f32::from(o[c]) + (f32::from(a[c]) - f32::from(o[c])) * t)
+                                    .round() as u8;
+                            }
+                        }
+                    }
+                }
+                (rgba, true)
+            }
+            _ => {
+                let Ok(image) = luma_image::finish_layers(
                     &base.image,
-                    base.id,
                     base.scale,
                     &job.settings,
-                    OutputSpace::Srgb,
-                ),
-                true,
-            ),
-            _ => {
-                let mut image = (*base.image).clone();
-                if luma_image::finish(&mut image, base.scale, &job.settings, &cancel, &mut timings)
-                    .is_err()
-                {
+                    &cancel,
+                    &mut timings,
+                ) else {
                     continue;
-                }
+                };
                 (
                     to_rgba(&luma_image::encode8(&image, OutputSpace::Srgb), false),
                     false,
