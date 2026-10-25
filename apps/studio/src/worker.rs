@@ -35,9 +35,123 @@ pub enum Event {
         size: [usize; 2],
         rgba: Vec<u8>,
     },
+    /// Une photo de l'export est écrite (ou a échoué) : `done` sur `total`.
     Exported {
+        done: usize,
+        total: usize,
         result: Result<PathBuf, String>,
     },
+}
+
+/// Le format de fichier de l'export.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Format {
+    Jpeg,
+    Png,
+    Tiff,
+}
+
+impl Format {
+    pub fn extension(self) -> &'static str {
+        match self {
+            Format::Jpeg => "jpg",
+            Format::Png => "png",
+            Format::Tiff => "tif",
+        }
+    }
+}
+
+/// Les réglages de la fenêtre Exporter (comme celle de Lightroom, en plus court).
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExportOptions {
+    pub format: Format,
+    /// Qualité JPEG, 1 à 100.
+    pub quality: u8,
+    /// 8 ou 16 bits (PNG, TIFF).
+    pub bits: u8,
+    pub space: OutputSpace,
+    /// Le grand côté de l'image recadrée, en pixels ; `None` : pleine définition.
+    pub long_edge: Option<usize>,
+    /// `None` : un dossier `LÜMA/` à côté de chaque RAW.
+    pub folder: Option<PathBuf>,
+}
+
+impl Default for ExportOptions {
+    fn default() -> Self {
+        Self {
+            format: Format::Jpeg,
+            quality: 92,
+            bits: 8,
+            space: OutputSpace::Srgb,
+            long_edge: None,
+            folder: None,
+        }
+    }
+}
+
+/// Une photo à exporter : déjà ouverte (la photo affichée) ou à ouvrir.
+pub struct ExportJob {
+    pub source: PathBuf,
+    pub photo: Option<Arc<Photo>>,
+    pub settings: Settings,
+}
+
+/// Le fichier de sortie d'un RAW.
+pub fn export_path(source: &Path, options: &ExportOptions) -> PathBuf {
+    let dir = match &options.folder {
+        Some(d) => d.clone(),
+        None => source.parent().unwrap_or(Path::new(".")).join("LÜMA"),
+    };
+    dir.join(
+        source
+            .with_extension(options.format.extension())
+            .file_name()
+            .unwrap_or_default(),
+    )
+}
+
+/// Développe et écrit une photo selon les options.
+pub fn export_one(
+    photo: &Photo,
+    settings: &Settings,
+    out: &Path,
+    options: &ExportOptions,
+) -> Result<(), String> {
+    if let Some(dir) = out.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("{} : {e}", dir.display()))?;
+    }
+    let size = match options.long_edge {
+        None => Size::Full,
+        Some(n) => {
+            // La taille demandée est celle de l'image recadrée : on rend un peu plus
+            // grand, puis on réduit exactement.
+            let c = &settings.crop;
+            let frac = (c.right - c.left).min(c.bottom - c.top).max(0.05);
+            let (w, h) = photo.full_size();
+            let pre = (n as f32 / frac).ceil() as usize;
+            if pre >= w.max(h) {
+                Size::Full
+            } else {
+                Size::Fit(pre)
+            }
+        }
+    };
+    let rendered = photo
+        .render(settings, size, &Cancel::new())
+        .map_err(|e| e.to_string())?;
+    let mut image = rendered.image;
+    if let Some(n) = options.long_edge {
+        let (w, h) = luma_core::RgbImage::fit(image.width, image.height, n);
+        if (w, h) != (image.width, image.height) {
+            image = image.resize_area(w, h);
+        }
+    }
+    let bits = if options.format == Format::Jpeg {
+        8
+    } else {
+        options.bits
+    };
+    luma_render::export::write(out, &image, options.space, options.quality, bits)
 }
 
 struct RenderJob {
@@ -62,6 +176,20 @@ pub fn sidecar_path(raw: &Path) -> PathBuf {
 pub fn read_sidecar(raw: &Path) -> Option<Settings> {
     let text = std::fs::read_to_string(sidecar_path(raw)).ok()?;
     xmp::read(&text).ok()
+}
+
+/// La note, le drapeau et le libellé enregistrés à côté d'un RAW.
+pub fn read_meta(raw: &Path) -> xmp::Meta {
+    std::fs::read_to_string(sidecar_path(raw))
+        .map(|t| xmp::read_meta(&t))
+        .unwrap_or_default()
+}
+
+/// Écrit le sidecar d'un RAW : réglages, note et drapeau.
+pub fn write_sidecar(raw: &Path, settings: &Settings, meta: &xmp::Meta) -> Result<(), String> {
+    let target = sidecar_path(raw);
+    std::fs::write(&target, xmp::write_with_meta(settings, meta))
+        .map_err(|e| format!("{} : {e}", target.display()))
 }
 
 /// RGB 8 bits → RGBA, avec en option l'indicateur d'écrêtage de Lightroom (touche J) :
@@ -162,22 +290,29 @@ impl Worker {
         let _ = self.thumbs.send(path);
     }
 
-    /// Export pleine définition, JPEG sRGB, dans `<dossier>/LÜMA/`.
-    pub fn export(&self, photo: Arc<Photo>, settings: Settings, source: PathBuf) {
+    /// Exporte les photos l'une après l'autre, en arrière-plan.
+    pub fn export(&self, jobs: Vec<ExportJob>, options: ExportOptions) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
-            let result = (|| {
-                let dir = source.parent().unwrap_or(Path::new(".")).join("LÜMA");
-                std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-                let out = dir.join(source.with_extension("jpg").file_name().unwrap_or_default());
-                let rendered = photo
-                    .render(&settings, Size::Full, &Cancel::new())
-                    .map_err(|e| e.to_string())?;
-                luma_render::export::write(&out, &rendered.image, OutputSpace::Srgb, 92, 8)?;
-                Ok(out)
-            })();
-            let _ = sender.send(Event::Exported { result });
-            repaint();
+            let total = jobs.len();
+            for (k, job) in jobs.into_iter().enumerate() {
+                let out = export_path(&job.source, &options);
+                let result = match job.photo {
+                    Some(p) => Ok(p),
+                    None => Photo::open(&job.source)
+                        .map(Arc::new)
+                        .map_err(|e| e.to_string()),
+                }
+                .and_then(|photo| export_one(&photo, &job.settings, &out, &options))
+                .map(|()| out)
+                .map_err(|e| format!("{} : {e}", job.source.display()));
+                let _ = sender.send(Event::Exported {
+                    done: k + 1,
+                    total,
+                    result,
+                });
+                repaint();
+            }
         });
     }
 }
@@ -248,6 +383,21 @@ mod tests {
         assert_eq!(c[..4], [255, 40, 40, 255]);
         assert_eq!(c[4..8], [40, 90, 255, 255]);
         assert_eq!(c[8..12], [100, 100, 100, 255]);
+    }
+
+    #[test]
+    fn export_paths() {
+        let mut o = ExportOptions::default();
+        assert_eq!(
+            export_path(Path::new("/x/IMG_1.CR3"), &o),
+            PathBuf::from("/x/LÜMA/IMG_1.jpg")
+        );
+        o.format = Format::Tiff;
+        o.folder = Some("/sortie".into());
+        assert_eq!(
+            export_path(Path::new("/x/IMG_1.CR3"), &o),
+            PathBuf::from("/sortie/IMG_1.tif")
+        );
     }
 
     #[test]

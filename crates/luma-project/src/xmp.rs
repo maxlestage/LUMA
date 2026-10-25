@@ -27,6 +27,58 @@ const XMP_COLORS: [&str; 8] = ["Red", "Orange", "Yellow", "Green", "Aqua", "Blue
 struct Values {
     scalars: HashMap<String, String>,
     lists: HashMap<String, Vec<String>>,
+    /// Hors réglages : `xmp:Rating`, `xmp:Label`, `luma:Pick`.
+    meta: HashMap<String, String>,
+}
+
+const META_KEYS: [&str; 3] = ["xmp:Rating", "xmp:Label", "luma:Pick"];
+const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
+
+/// Le drapeau de la Bibliothèque (P, X, U dans Lightroom).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Flag {
+    #[default]
+    None,
+    Pick,
+    Reject,
+}
+
+/// Ce que la Bibliothèque sait d'une photo : note de 0 à 5 étoiles, drapeau, libellé
+/// de couleur. La note et le libellé sont ceux de Lightroom et Bridge (`xmp:Rating`,
+/// `xmp:Label`) ; un rejet s'écrit `xmp:Rating="-1"` comme dans Bridge, et le drapeau
+/// « retenue », que Lightroom garde dans son catalogue, dans l'espace `luma:`.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Meta {
+    pub rating: u8,
+    pub flag: Flag,
+    pub label: String,
+}
+
+/// La note, le drapeau et le libellé d'un document XMP (vides s'il n'y en a pas).
+pub fn read_meta(text: &str) -> Meta {
+    let Ok(values) = parse_values(text) else {
+        return Meta::default();
+    };
+    let rating: i32 = values
+        .meta
+        .get("xmp:Rating")
+        .and_then(|v| v.trim().parse().ok())
+        .unwrap_or(0);
+    let pick = values
+        .meta
+        .get("luma:Pick")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    Meta {
+        rating: rating.clamp(0, 5) as u8,
+        flag: if rating < 0 {
+            Flag::Reject
+        } else if pick {
+            Flag::Pick
+        } else {
+            Flag::None
+        },
+        label: values.meta.get("xmp:Label").cloned().unwrap_or_default(),
+    }
 }
 
 fn parse_values(text: &str) -> luma_core::Result<Values> {
@@ -49,6 +101,11 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                             .normalized_value(XmlVersion::Implicit1_0)
                             .map_err(|e| luma_core::Error::Format(e.to_string()))?;
                         values.scalars.insert(name.to_owned(), value.into_owned());
+                    } else if META_KEYS.contains(&key) {
+                        let value = attr
+                            .normalized_value(XmlVersion::Implicit1_0)
+                            .map_err(|e| luma_core::Error::Format(e.to_string()))?;
+                        values.meta.insert(key.to_owned(), value.into_owned());
                     }
                 }
                 let qname = e.name();
@@ -294,6 +351,11 @@ fn escape(s: &str) -> String {
 
 /// Un fichier XMP complet (sidecar), lisible par Lightroom et Camera Raw.
 pub fn write(settings: &Settings) -> String {
+    write_with_meta(settings, &Meta::default())
+}
+
+/// Comme [`write`], avec la note, le drapeau et le libellé de la Bibliothèque.
+pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     let mut s = settings.clone().clamped();
     let mut attrs = vec![
         ("ProcessVersion".to_owned(), "11.0".to_owned()),
@@ -339,6 +401,20 @@ pub fn write(settings: &Settings) -> String {
         "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"LÜMA\">\n <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"\"\n",
     );
     out.push_str(&format!("    xmlns:crs=\"{CRS}\"\n"));
+    out.push_str("    xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n");
+    out.push_str(&format!("    xmlns:luma=\"{LUMA_NS}\"\n"));
+    let rating = if meta.flag == Flag::Reject {
+        -1
+    } else {
+        i32::from(meta.rating.min(5))
+    };
+    out.push_str(&format!("    xmp:Rating=\"{rating}\"\n"));
+    if !meta.label.is_empty() {
+        out.push_str(&format!("    xmp:Label=\"{}\"\n", escape(&meta.label)));
+    }
+    if meta.flag == Flag::Pick {
+        out.push_str("    luma:Pick=\"True\"\n");
+    }
     for (name, value) in &attrs {
         out.push_str(&format!("    crs:{name}=\"{}\"\n", escape(value)));
     }
@@ -471,6 +547,42 @@ mod tests {
         assert!(text.contains("crs:Exposure2012=\"+0.65\""));
         assert!(text.contains("crs:HueAdjustmentMagenta=\"+12\""));
         assert_eq!(read(&text).unwrap(), s);
+    }
+
+    #[test]
+    fn rating_flag_and_label() {
+        let s = read(LIGHTROOM).unwrap();
+        assert_eq!(read_meta(LIGHTROOM), Meta::default());
+        for meta in [
+            Meta {
+                rating: 4,
+                flag: Flag::Pick,
+                label: "Rouge".into(),
+            },
+            Meta {
+                rating: 0,
+                flag: Flag::Reject,
+                label: String::new(),
+            },
+            Meta {
+                rating: 5,
+                flag: Flag::None,
+                label: String::new(),
+            },
+        ] {
+            let text = write_with_meta(&s, &meta);
+            assert_eq!(read_meta(&text), meta);
+            assert_eq!(read(&text).unwrap(), s);
+        }
+        let bridge = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:Rating="3" xmp:Label="Vert"/></rdf:RDF></x:xmpmeta>"#;
+        assert_eq!(
+            read_meta(bridge),
+            Meta {
+                rating: 3,
+                flag: Flag::None,
+                label: "Vert".into()
+            }
+        );
     }
 
     #[test]

@@ -30,14 +30,15 @@ C'est une estimation, pas une garantie.
 - 5 boîtiers développés à chaque push (Sony, Canon, Nikon, Fujifilm, iPhone), mesures
   de réactivité publiées ;
 - LÜMA Studio, l'app Mac (`apps/studio`) : module Développement complet, historique,
-  XMP automatique, film, raccourcis de Lightroom ; `LÜMA.app` universelle fabriquée par
+  XMP automatique, film, raccourcis de Lightroom, Bibliothèque (notes, drapeaux,
+  filtre), outil Recadrage, fenêtre Exporter ; `LÜMA.app` universelle fabriquée par
   la CI sur un runner Apple Silicon.
 
 Prochaines étapes, dans l'ordre :
 
 1. rendu GPU : les étapes par pixel en shaders WGSL sur `wgpu` (Metal), pour passer sous
    les 100 ms sur Mac et sur iPhone ;
-2. dans l'app : outil Recadrage à l'écran, réglages d'export, module Bibliothèque ;
+2. dans l'app : catalogue (plusieurs dossiers, collections, mots‑clés), préréglages ;
 3. masques (pinceau, dégradés) et corrections d'objectif ;
 4. application iOS, PhotoKit, TestFlight.
 
