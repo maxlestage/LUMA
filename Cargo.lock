@@ -1955,8 +1955,10 @@ dependencies = [
 name = "luma-merge"
 version = "0.1.0"
 dependencies = [
+ "image",
  "luma-color",
  "luma-core",
+ "luma-image",
  "luma-project",
  "luma-raw",
  "luma-render",

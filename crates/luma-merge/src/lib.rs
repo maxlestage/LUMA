@@ -1,5 +1,6 @@
 //! Fusion de plusieurs photos en une : empilements (réduction du bruit, suppression de
-//! ce qui bouge, filé, ciel étoilé) et panoramas.
+//! ce qui bouge, filé, ciel étoilé) et panoramas ; et la mesure d'une vraie pellicule
+//! (un scan comparé à la même scène en numérique, voir [`film`]).
 //!
 //! Tout se passe sur les couleurs caméra linéaires, avant tout développement : le
 //! résultat est enregistré en DNG, un vrai RAW, qui se développe ensuite comme une
@@ -11,6 +12,7 @@
 
 pub mod autocrop;
 pub mod features;
+pub mod film;
 pub mod frames;
 pub mod geometry;
 pub mod pano;

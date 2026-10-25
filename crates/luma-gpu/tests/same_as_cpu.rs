@@ -114,6 +114,22 @@ fn every_per_pixel_stage_matches_the_cpu() {
     s.effects.vignette_amount = 40.0;
     s.effects.vignette_roundness = 60.0;
     cases.push(("vignetage blanc rond", s));
+    // Un film mesuré : une LUT 3D qui croise les couches.
+    let mut cube = luma_image::cube::Cube::identity(17);
+    for p in &mut cube.data {
+        let [r, g, b] = *p;
+        *p = [0.03 + 0.94 * r.powf(0.9), 0.9 * g + 0.08 * b, b.powf(1.2) * 0.97];
+    }
+    luma_image::cube::register("Essai GPU", cube);
+    let mut s = Settings {
+        contrast: 20.0,
+        ..Settings::default()
+    };
+    s.lut = Some(luma_project::Look {
+        name: "Essai GPU".into(),
+        amount: 80.0,
+    });
+    cases.push(("film mesuré (LUT 3D)", s));
     for (name, s) in &cases {
         compare(&gpu, name, s, OutputSpace::Srgb, 0.25);
     }

@@ -39,3 +39,56 @@ pub fn pick_folder(_title: &str) -> Option<PathBuf> {
 
 /// Le système propose‑t‑il un sélecteur de dossier ?
 pub const FOLDER_PICKER: bool = !cfg!(target_os = "ios");
+
+/// Le dossier des films mesurés et des LUT importées (`.cube`), créé au besoin : sur Mac
+/// `~/Library/Application Support/LÜMA/Films`, sur iPhone et iPad `Documents/Films`
+/// (visible dans l'app Fichiers). `LUMA_FILMS` le remplace.
+pub fn films_dir() -> Option<PathBuf> {
+    let dir = if let Some(d) = std::env::var_os("LUMA_FILMS") {
+        PathBuf::from(d)
+    } else if cfg!(target_os = "ios") {
+        documents()?.join("Films")
+    } else if cfg!(target_os = "macos") {
+        PathBuf::from(std::env::var_os("HOME")?).join("Library/Application Support/LÜMA/Films")
+    } else {
+        std::env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .or_else(|| Some(PathBuf::from(std::env::var_os("HOME")?).join(".local/share")))?
+            .join("luma/films")
+    };
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
+/// Une LUT 3D à importer.
+#[cfg(not(target_os = "ios"))]
+pub fn pick_lut() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Importer une LUT 3D")
+        .add_filter("LUT 3D", &["cube", "CUBE"])
+        .pick_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_lut() -> Option<PathBuf> {
+    None
+}
+
+/// Le scan d'une pellicule, pour la mesurer.
+#[cfg(not(target_os = "ios"))]
+pub fn pick_scan() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Le scan de la même scène sur pellicule")
+        .add_filter(
+            "Scan",
+            &[
+                "jpg", "jpeg", "png", "tif", "tiff", "JPG", "JPEG", "PNG", "TIF", "TIFF",
+            ],
+        )
+        .pick_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_scan() -> Option<PathBuf> {
+    None
+}

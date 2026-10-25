@@ -18,6 +18,7 @@
 //! linéaire ; [`encode8`] et [`encode16`] le convertissent vers l'espace de sortie.
 
 pub mod color;
+pub mod cube;
 pub mod curve;
 pub mod detail;
 pub mod effects;
@@ -135,6 +136,7 @@ pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: 
         }
     });
     cancel.check()?;
+    t.time("film mesuré", || cube::apply(img, s));
     t.time("accentuation", || detail::sharpen(img, &s.detail, scale));
     t.time("effets", || effects::apply(img, &s.effects, scale));
     Ok(())
@@ -147,8 +149,15 @@ pub fn look_layers(s: &Settings) -> Vec<(&luma_project::Mask, Settings, f32)> {
         .iter()
         .filter_map(|m| {
             let (name, k) = m.active_look()?;
-            let preset = luma_project::presets::find(name)?;
-            Some((m, preset.applied(s, 1.0), k))
+            // Un film intégré, ou un film mesuré (LUT chargée).
+            let look = match luma_project::presets::find(name) {
+                Some(preset) => preset.applied(s, 1.0),
+                None => {
+                    cube::get(name)?;
+                    luma_project::presets::with_lut(s, name, 1.0)
+                }
+            };
+            Some((m, look, k))
         })
         .collect()
 }
@@ -293,7 +302,7 @@ fn render_stage(img: &mut RgbImage, s: &Settings) {
 
 /// Un pixel converti vers l'espace de sortie, linéaire, dans le gamut (0 à 1).
 #[inline]
-fn to_output(m: &Mat3, p: [f32; 3]) -> [f32; 3] {
+pub(crate) fn to_output(m: &Mat3, p: [f32; 3]) -> [f32; 3] {
     let y = luminance(p).clamp(0.0, 1.0);
     let mut c = lc::apply(m, p);
     // Hors gamut : on rapproche du gris de même luminance jusqu'à y rentrer, au lieu
