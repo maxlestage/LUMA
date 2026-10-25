@@ -1959,6 +1959,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "luma-licence"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "luma-merge"
 version = "0.1.0"
 dependencies = [
@@ -2017,6 +2025,7 @@ dependencies = [
  "luma-core",
  "luma-gpu",
  "luma-image",
+ "luma-licence",
  "luma-merge",
  "luma-project",
  "luma-raw",

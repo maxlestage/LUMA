@@ -54,6 +54,11 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: LÜMA.app
+        env:
+          # La boutique (Settings → Secrets and variables → Actions → Variables).
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+          LUMA_STORE_ID: ${{ vars.LUMA_STORE_ID }}
         run: scripts/bundle-macos.sh
 
       - name: Publier l'app
