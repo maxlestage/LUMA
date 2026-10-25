@@ -154,6 +154,67 @@ impl Photo {
         Ok(Rendered { image, timings })
     }
 
+    /// La balance qui rend neutre une couleur caméra (pipette, balance automatique).
+    pub fn white_balance_for(&self, camera: [f32; 3]) -> TempTint {
+        let g = camera[1].max(1e-6);
+        let neutral = [camera[0].max(1e-6) / g, 1.0, camera[2].max(1e-6) / g];
+        let t = luma_color::xy_to_temp_tint(self.raw.neutral_to_xy(neutral));
+        TempTint {
+            temperature: t.temperature.clamp(2000.0, 50000.0).round(),
+            tint: t.tint.clamp(-150.0, 150.0).round(),
+        }
+    }
+
+    /// Balance automatique : la moyenne des tons proches du gris (ni sombres, ni
+    /// écrêtés, ni très colorés), affinée trois fois à partir de la balance du boîtier.
+    pub fn auto_white_balance(&self) -> TempTint {
+        let src = self.source(Size::Fit(512), &mut Timings::default());
+        let mut neutral = self.raw.as_shot_neutral;
+        for _ in 0..3 {
+            let mut sum = [0.0f64; 3];
+            let mut n = 0usize;
+            for p in &src.data {
+                let top = p[0].max(p[1]).max(p[2]);
+                if !(0.02..0.9).contains(&top) {
+                    continue;
+                }
+                let (r, b) = (p[0] / neutral[0] / p[1].max(1e-6), p[2] / neutral[2] / p[1].max(1e-6));
+                if r.ln().abs() < 0.35 && b.ln().abs() < 0.35 {
+                    for c in 0..3 {
+                        sum[c] += f64::from(p[c]);
+                    }
+                    n += 1;
+                }
+            }
+            if n < 50 || sum[1] <= 0.0 {
+                break;
+            }
+            neutral = [(sum[0] / sum[1]) as f32, 1.0, (sum[2] / sum[1]) as f32];
+        }
+        self.white_balance_for(neutral)
+    }
+
+    /// La couleur caméra moyenne autour d'un point de l'image affichée (fractions de
+    /// l'image recadrée), pour la pipette. Le redressement et la perspective sont
+    /// ignorés : le point est pris dans le cadre droit.
+    pub fn camera_color_at(&self, x: f32, y: f32, crop: &luma_project::Crop) -> [f32; 3] {
+        let src = self.source(Size::Fit(1024), &mut Timings::default());
+        let sx = (crop.left + x.clamp(0.0, 1.0) * (crop.right - crop.left)) * src.width as f32;
+        let sy = (crop.top + y.clamp(0.0, 1.0) * (crop.bottom - crop.top)) * src.height as f32;
+        let mut sum = [0.0f32; 3];
+        let mut n = 0.0;
+        for dy in -3..=3 {
+            for dx in -3..=3 {
+                let p = src.sample(sx + dx as f32, sy + dy as f32);
+                for c in 0..3 {
+                    sum[c] += p[c];
+                }
+                n += 1.0;
+            }
+        }
+        sum.map(|v| v / n)
+    }
+
     /// L'aberration chromatique latérale de la photo, estimée une fois sur un aperçu
     /// (c'est une proportion : elle vaut pour toutes les tailles).
     pub fn chromatic_aberration(&self, timings: &mut Timings) -> (f32, f32) {
@@ -272,6 +333,22 @@ mod tests {
         };
         let direct = luma_image::develop(&source, &input, &s, &Cancel::new(), &mut t).unwrap();
         assert_eq!(cached.data, direct.data);
+    }
+
+    #[test]
+    fn auto_and_eyedropper_white_balance_match_the_neutral() {
+        // La photo d'essai est uniforme, de la couleur du neutre du boîtier : la balance
+        // automatique et la pipette retrouvent la balance « telle quelle ».
+        let p = photo();
+        let shot = p.as_shot();
+        let auto = p.auto_white_balance();
+        assert!(
+            (auto.temperature - shot.temperature).abs() <= 50.0,
+            "{auto:?} / {shot:?}"
+        );
+        assert!((auto.tint - shot.tint).abs() <= 2.0);
+        let picked = p.white_balance_for(p.camera_color_at(0.5, 0.5, &luma_project::Crop::default()));
+        assert!((picked.temperature - shot.temperature).abs() <= 50.0, "{picked:?}");
     }
 
     #[test]
