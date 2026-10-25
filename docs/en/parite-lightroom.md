@@ -69,6 +69,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Bayer RAW: Sony ARW, Canon CR3, Nikon NEF (and the other formats read by rawler) | ✅ 3 camera bodies checked continuously |
 | X‑Trans RAW (Fujifilm) | ✅ dedicated demosaicing |
 | Linear DNG, Apple ProRAW (with `BaselineExposure`) | ✅ |
+| Rendered images: JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG (pure Rust); HEIC, HEIF, AVIF (Apple ImageIO); unknown extensions read by content | ✅ “Original” profile: identical on opening |
 | DNG colour: two matrices interpolated by temperature | ✅ |
 | 32-bit floating-point pipeline, linear Rec. 2020 working space | ✅ |
 | Highlights clipped at the sensor rendered neutral (no pink skies) | ✅ |

@@ -70,6 +70,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | RAW Bayer : Sony ARW, Canon CR3, Nikon NEF (et les autres formats lus par rawler) | ✅ 3 boîtiers vérifiés en continu |
 | RAW X‑Trans (Fujifilm) | ✅ dématriçage dédié |
 | DNG linéaire, Apple ProRAW (avec `BaselineExposure`) | ✅ |
+| Images développées : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG (Rust pur) ; HEIC, HEIF, AVIF (ImageIO d'Apple) ; extension inconnue lue d'après le contenu | ✅ profil « Original » : identique à l'ouverture |
 | Couleur DNG : deux matrices interpolées selon la température | ✅ |
 | Pipeline en virgule flottante 32 bits, espace de travail Rec. 2020 linéaire | ✅ |
 | Hautes lumières saturées au capteur rendues neutres (pas de ciel rose) | ✅ |

@@ -164,6 +164,11 @@ impl RawPhoto {
         if raster::is_raster(path) {
             return raster::open(path);
         }
+        // Un RAW, ou à défaut une image d'après son contenu (extension inconnue).
+        Self::open_raw(path).or_else(|e| raster::sniff(path).ok_or(e))
+    }
+
+    fn open_raw(path: &Path) -> Result<RawPhoto> {
         let source = rawler::rawsource::RawSource::new(path).map_err(Error::Io)?;
         let params = rawler::decoders::RawDecodeParams::default();
         let raw = rawler::decode(&source, &params).map_err(|e| Error::Decode(e.to_string()))?;

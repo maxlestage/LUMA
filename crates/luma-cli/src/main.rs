@@ -532,6 +532,8 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
 }
 
 fn main() -> ExitCode {
+    // HEIC, AVIF… : le décodeur d'images du système (ImageIO sur Mac).
+    luma_apple::install();
     let mut args = std::env::args().skip(1);
     let Some(command) = args.next() else {
         println!("{USAGE}");

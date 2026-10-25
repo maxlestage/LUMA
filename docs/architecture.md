@@ -134,7 +134,7 @@ allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Un
 | Besoin | Piste Rust | À vérifier |
 |---|---|---|
 | RAW | `rawler` | Couverture des boîtiers, ProRAW, X‑Trans, pureté Rust de l'arbre |
-| Formats classiques | `image`, `zune-*` | HEIF/HEIC (codec), AVIF |
+| Formats classiques | `image`, `jxl-oxide`, `psd`, `hayro-jpeg2000`, `resvg` ; ImageIO d'Apple (`luma-apple`) | HEIF/HEIC et AVIF : décodeur du système (pas de codec HEVC en Rust pur) |
 | GPU | `wgpu` (Metal) | Latence, EDR/HDR, comportement sur iPhone |
 | Fenêtres | `winit` + `objc2` | Intégration AppKit/UIKit, Pencil, gestes |
 | UI | `egui`, ou UI maison sur `wgpu` | Fluidité 120 Hz ProMotion, accessibilité |

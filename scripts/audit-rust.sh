@@ -4,7 +4,9 @@
 #
 # 1. Le moteur (crates/luma-*) : aucune exception. Pas de crate de liaison vers une
 #    bibliothèque native (-sys), pas de compilateur C (cc, cmake), pas de bindgen.
-#    Seul luma-gpu, qui parle au pilote graphique (Metal, Vulkan), suit la règle 2.
+#    Suivent la règle 2 : luma-gpu, qui parle au pilote graphique (Metal, Vulkan),
+#    luma-apple, qui parle au décodeur d'images d'Apple (ImageIO : HEIC, AVIF…), et la
+#    ligne de commande luma-cli, qui l'utilise.
 # 2. L'application (apps/studio) et luma-gpu, sur macOS, iOS (la cible prioritaire) et sur Linux : seules
 #    les liaisons vers des composants du système d'exploitation sont admises, une par
 #    une, chacune justifiée ci‑dessous. Aucune ne compile de C.
@@ -25,7 +27,7 @@ allowed="^($(IFS='|'; echo "${system_bindings[*]}")) v"
 tree() { cargo tree "$@" -e normal,build --prefix none --format '{p}' | sort -u; }
 
 status=0
-engine=$(cargo metadata --no-deps --format-version 1 | grep -o '"name":"luma-[a-z]*"' | cut -d'"' -f4 | grep -v -e luma-studio -e luma-gpu | sed 's/^/-p /' | tr '\n' ' ')
+engine=$(cargo metadata --no-deps --format-version 1 | grep -o '"name":"luma-[a-z]*"' | cut -d'"' -f4 | grep -v -e luma-studio -e luma-gpu -e luma-apple -e luma-cli | sed 's/^/-p /' | tr '\n' ' ')
 # shellcheck disable=SC2086
 found=$(tree $engine | grep -E "$banned" || true)
 if [ -n "$found" ]; then
