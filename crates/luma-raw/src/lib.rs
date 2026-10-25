@@ -14,6 +14,7 @@
 //!   instantanés.
 
 mod demosaic;
+pub mod dng;
 
 use std::path::Path;
 
