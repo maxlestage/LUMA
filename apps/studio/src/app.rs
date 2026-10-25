@@ -1533,6 +1533,15 @@ impl Studio {
     fn viewer(&mut self, ui: &mut Ui) {
         let rect = ui.max_rect();
         let ppp = ui.ctx().pixels_per_point();
+        // Pincer (iPad, pavé tactile) : écarter pour le 1:1, rapprocher pour l'image entière.
+        if self.crop_tool.is_none() && ui.rect_contains_pointer(rect) {
+            let pinch = ui.input(|i| i.zoom_delta());
+            if pinch > 1.02 {
+                self.zoom = true;
+            } else if pinch < 0.98 {
+                self.zoom = false;
+            }
+        }
         self.request_render(rect.width().max(rect.height()) * ppp);
         let painter = ui.painter_at(rect);
         let Some(t) = &self.texture else {
