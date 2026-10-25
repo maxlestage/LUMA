@@ -118,7 +118,7 @@ fn hero() -> Element {
                 .child(
                     p().class("eyebrow reveal")
                         .child(span().class("dot"))
-                        .child(text(" Éditeur photo · 100 % Rust · macOS & iOS d'abord")),
+                        .child(text(" Éditeur photo · Mac, iPhone et iPad · 100 % Rust")),
                 )
                 .child(h1().class("hero-title").attr("aria-label", "LÜMA").child(title))
                 .child(
@@ -128,19 +128,19 @@ fn hero() -> Element {
                         .child(text(" en Rust.")),
                 )
                 .child(p().class("hero-lede reveal").text(
-                    "Un moteur RAW 32 bits flottants, un rendu GPU Metal, des masques et une IA qui restent sur ton appareil. Pas une copie de Lightroom : un concurrent qui se mesure à lui, chiffres à l'appui.",
+                    "Un moteur RAW 32 bits flottants sur le GPU, 100 films vérifiés, et vos vraies pellicules mesurées sur un scan. Pas une copie de Lightroom : un concurrent qui se mesure à lui, chiffres à l'appui.",
                 ))
                 .child(
                     div()
                         .class("hero-cta reveal")
-                        .child(a().class("btn magnetic").href("#labo").child(span().text("Voir le moteur en action")))
-                        .child(a().class("btn btn-ghost magnetic").href("#roadmap").child(span().text("La feuille de route"))),
+                        .child(a().class("btn magnetic").href("#tarifs").child(span().text("Télécharger · 14 jours d'essai")))
+                        .child(a().class("btn btn-ghost magnetic").href("#labo").child(span().text("Voir le moteur en action"))),
                 ),
         )
         .child(
             div()
                 .class("hero-meta reveal")
-                .children(["f/1.4", "ISO 100", "1/250 s", "32 bits f"].map(|t| span().text(t))),
+                .children(["RAW", "32 bits f", "GPU", "100 films"].map(|t| span().text(t))),
         )
         .child(
             a().class("scroll-hint")
