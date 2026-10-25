@@ -26,6 +26,7 @@ panneaux, mêmes curseurs, mêmes plages, et il lit les fichiers XMP de Lightroo
 | `luma-merge` | Empilements, panoramas (coins, RANSAC, projections, fondus), DNG ; mesure d'une vraie pellicule en LUT 3D |
 | `luma-gpu` | Les étapes par pixel (rendu, couleur, LUT 3D, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test, les 100 films compris |
 | `luma-brand` | La marque, dessinée par le code : le logo (anneau de lumière en croissant et « LÜMA »), les icônes du Mac, de l'iPhone, de l'iPad et du site, le fond « éclipse » de l'app |
+| `luma-licence` | LÜMA Premium : 14 jours d'essai, abonnements au mois et à l'an, clés de licence (voir [docs/premium.md](docs/premium.md)) |
 | `luma-cli` | `luma` : info, développement et export, XMP, mesures, fusion, mesure d'une pellicule |
 
 ```sh
@@ -133,6 +134,11 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   de Lightroom et Camera Raw. **Export** au format des préréglages Lightroom : clic droit
   sur un film pour l'exporter seul, ou « Exporter tous les préréglages » pour un dossier
   rangé par famille (les pellicules mesurées emportent leur `.cube`).
+- **LÜMA Premium** : 14 jours d'essai, puis un abonnement à 9,99 € par mois ou
+  79,99 € par an ; la puce de la barre du haut ouvre l'écran Premium (formules, clé de
+  licence). Paiement et TVA par Lemon Squeezy : [docs/premium.md](docs/premium.md).
+- **Télécharger** : sur le site (section Tarifs) et dans les Releases GitHub (app Mac
+  universelle, app iPhone et iPad non signée, ligne de commande Mac et Linux).
 - **Une app qui ne ressemble à aucune autre** : le logo de LÜMA (l'anneau de lumière)
   dans la barre, à l'accueil et comme icône ; le fond « éclipse », un noir profond
   éclairé par les lueurs du logo (or en bas à gauche, bleu en haut à droite) et un

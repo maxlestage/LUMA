@@ -20,6 +20,7 @@ luma-render.workspace = true
 luma-gpu.workspace = true
 luma-merge.workspace = true
 luma-brand.workspace = true
+luma-licence.workspace = true
 egui.workspace = true
 wgpu.workspace = true
 
@@ -39,6 +40,7 @@ eframe = { workspace = true, features = ["x11"] }
 rfd.workspace = true
 
 [dev-dependencies]
+luma-licence.workspace = true
 egui_kittest.workspace = true
 image.workspace = true
 

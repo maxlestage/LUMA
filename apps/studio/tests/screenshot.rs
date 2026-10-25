@@ -53,6 +53,8 @@ impl Session {
             return None;
         };
         prepare(raw.parent().unwrap());
+        // Un essai tout neuf : l'écran Premium ne cache pas les captures.
+        let licence_dir = raw.parent().unwrap().join("licence");
         let harness = Harness::builder()
             .with_size(size)
             .with_pixels_per_point(scale)
@@ -61,6 +63,7 @@ impl Session {
                 move |ui, studio: &mut Option<Studio>| {
                     let s = studio.get_or_insert_with(|| {
                         let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(licence_dir.clone());
                         s.open_path(&raw);
                         s
                     });
@@ -308,7 +311,13 @@ fn welcome_screen() {
         .wgpu()
         .build_ui_state(
             |ui, studio: &mut Option<Studio>| {
-                studio.get_or_insert_with(|| Studio::new(ui.ctx())).ui(ui);
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(std::env::temp_dir().join("luma-accueil-licence"));
+                        s
+                    })
+                    .ui(ui);
             },
             None,
         );
@@ -318,4 +327,50 @@ fn welcome_screen() {
     let image = harness.render().expect("rendu de l'interface");
     let out = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/studio-accueil.png");
     image.save(&out).unwrap();
+}
+
+/// L'écran Premium quand l'essai est fini : les deux formules et la clé.
+#[test]
+fn premium_screen_after_the_trial() {
+    let dir = std::env::temp_dir().join("luma-premium-licence");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    // Un essai commencé il y a 20 jours.
+    let started = luma_studio::licence::now() - 20 * 86_400;
+    std::fs::write(
+        dir.join("licence.json"),
+        luma_licence::State::new(started).to_json(),
+    )
+    .unwrap();
+    let mut harness = Harness::builder()
+        .with_size([1440.0, 900.0])
+        .wgpu()
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(dir.clone());
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    for _ in 0..5 {
+        harness.step();
+    }
+    assert!(
+        !harness
+            .state()
+            .as_ref()
+            .unwrap()
+            .licence
+            .access()
+            .is_allowed()
+    );
+    let image = harness.render().expect("rendu de l'interface");
+    image
+        .save(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/studio-premium.png"))
+        .unwrap();
 }

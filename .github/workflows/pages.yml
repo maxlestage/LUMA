@@ -1,5 +1,7 @@
 # Publie le site sur GitHub Pages à chaque push sur master (et à la demande).
 #
+# - mac-app : LÜMA.app universelle (Apple Silicon et Intel), publiée avec le site sous
+#   /download/LUMA-macos.zip (14 jours d'essai, puis LÜMA Premium) ;
 # - build : vérifications (fmt, clippy serveur et WebAssembly, tests), bundle du
 #   navigateur, puis export statique du site par le serveur Paquets lui-même, liens
 #   sous /<dépôt> ;
@@ -12,6 +14,7 @@ on:
   push:
     branches: [master]
   pull_request:
+    paths: ["site/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -35,8 +38,29 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  mac-app:
+    name: LÜMA.app à télécharger
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: LÜMA.app (universelle)
+        env:
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+          LUMA_STORE_ID: ${{ vars.LUMA_STORE_ID }}
+        run: scripts/bundle-macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telechargement-mac
+          path: target/macos/LUMA-macos.zip
+
   build:
     name: Vérifier et construire le site
+    needs: mac-app
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,9 +100,19 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}
           SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
         run: |
           cargo run --release -- export dist
           test -f dist/index.html && test -f dist/pkg/luma_site_bg.wasm
+
+      # L'app à télécharger, construite par le job mac-app : /download/LUMA-macos.zip.
+      - uses: actions/download-artifact@v4
+        with:
+          name: telechargement-mac
+          path: site/dist/download
+      - name: Téléchargement présent
+        run: test -s dist/download/LUMA-macos.zip
 
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'

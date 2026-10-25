@@ -7,6 +7,7 @@ pub mod app;
 pub mod crop;
 pub mod dialogs;
 pub mod icons;
+pub mod licence;
 pub mod masking;
 pub mod style;
 pub mod widgets;

@@ -435,6 +435,10 @@ pub struct Studio {
     edits: HashMap<PathBuf, presets::Summary>,
     /// La marque : le fond (l'éclipse), l'anneau, le logo avec son nom.
     brand: Option<Brand>,
+    /// LÜMA Premium : l'essai, l'abonnement, la clé.
+    pub licence: crate::licence::Licence,
+    /// L'écran Premium est ouvert (il l'est toujours quand l'essai est fini).
+    pub premium_open: bool,
     previews: Vec<Option<TextureHandle>>,
     previews_tag: u64,
     previews_for: Option<PathBuf>,
@@ -509,6 +513,8 @@ impl Studio {
             new_preset_name: String::new(),
             edits: HashMap::new(),
             brand: None,
+            licence: crate::licence::Licence::load(),
+            premium_open: false,
             previews: Vec::new(),
             previews_tag: 0,
             previews_for: None,
@@ -1209,7 +1215,21 @@ impl Studio {
     pub fn ui(&mut self, ui: &mut Ui) {
         let ctx = ui.ctx().clone();
         self.handle_events(&ctx);
-        self.shortcuts(&ctx);
+        if self.licence.poll() {
+            // Une clé activée ferme l'écran Premium.
+            if matches!(self.licence.access(), luma_licence::Access::Premium { .. })
+                && !self.licence.message.is_empty()
+            {
+                self.status = self.licence.message.clone();
+            }
+        }
+        if self.licence.busy() {
+            ctx.request_repaint_after(std::time::Duration::from_millis(150));
+        }
+        let allowed = self.licence.access().is_allowed();
+        if allowed {
+            self.shortcuts(&ctx);
+        }
         let dropped: Vec<PathBuf> = ctx.input(|i| {
             i.raw
                 .dropped_files
@@ -1281,8 +1301,251 @@ impl Studio {
             self.island(ui, inspector, |s, ui| s.inspector(ui));
             self.island(ui, film, |s, ui| s.filmstrip(ui));
         }
-        if self.export_open {
+        if self.export_open && allowed {
             self.export_window(&ctx);
+        }
+        if !allowed || self.premium_open {
+            self.premium_screen(&ctx, full, !allowed);
+        }
+    }
+
+    /// Charge l'état Premium d'un autre dossier (tests, plusieurs comptes).
+    pub fn use_licence_dir(&mut self, dir: PathBuf) {
+        self.licence = crate::licence::Licence::load_from(Some(dir));
+    }
+
+    /// L'écran Premium, par‑dessus tout : les formules, la clé. `locked` : l'essai est
+    /// fini, on ne peut pas le fermer.
+    fn premium_screen(&mut self, ctx: &egui::Context, full: Rect, locked: bool) {
+        // Le voile : rien derrière ne répond.
+        egui::Area::new(egui::Id::unique("premium-voile"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(full.min)
+            .show(ctx, |ui| {
+                let (r, _) = ui.allocate_exact_size(full.size(), egui::Sense::click_and_drag());
+                ui.painter().rect_filled(
+                    r,
+                    0.0,
+                    Color32::from_black_alpha(if locked { 215 } else { 170 }),
+                );
+            });
+        let w = (full.width() - 24.0).min(680.0);
+        let h = (full.height() - 24.0).min(560.0);
+        let card = Rect::from_center_size(full.center(), vec2(w, h));
+        egui::Area::new(egui::Id::unique("premium"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(card.min)
+            .show(ctx, |ui| {
+                ui.set_min_size(card.size());
+                ui.set_max_size(card.size());
+                let p = ui.painter();
+                p.add(
+                    egui::Shadow {
+                        offset: [0, 20],
+                        blur: 60,
+                        spread: 0,
+                        color: Color32::from_black_alpha(200),
+                    }
+                    .as_shape(card, egui::CornerRadius::same(26)),
+                );
+                p.rect(
+                    card,
+                    26.0,
+                    Color32::from_rgb(0x0d, 0x0d, 0x12),
+                    egui::Stroke::new(1.0, theme::GLASS_EDGE),
+                    egui::StrokeKind::Inside,
+                );
+                let inner = card.shrink(26.0);
+                ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| self.premium_contents(ui, locked));
+                });
+            });
+    }
+
+    fn premium_contents(&mut self, ui: &mut Ui, locked: bool) {
+        use crate::licence::{FEATURES, PLANS, open_url};
+        use luma_licence::Access;
+        let access = self.licence.access();
+        ui.horizontal(|ui| {
+            let (r, _) = ui.allocate_exact_size(vec2(54.0, 54.0), egui::Sense::hover());
+            if let Some(b) = &self.brand {
+                ui.painter().image(
+                    b.ring.id(),
+                    r.expand(6.0),
+                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
+            ui.vertical(|ui| {
+                ui.label(
+                    RichText::new("LÜMA Premium")
+                        .size(26.0)
+                        .extra_letter_spacing(1.5)
+                        .color(theme::TEXT),
+                );
+                let line = match &access {
+                    Access::Premium { plan, email } => format!(
+                        "Merci ! Votre abonnement{} est actif{}.",
+                        plan.map(|p| format!(" {}", p.name().to_lowercase())).unwrap_or_default(),
+                        email.as_ref().map(|e| format!(" ({e})")).unwrap_or_default()
+                    ),
+                    Access::Trial { days_left } => format!(
+                        "Il vous reste {days_left} jour{} d'essai gratuit.",
+                        if *days_left > 1 { "s" } else { "" }
+                    ),
+                    Access::Expired { .. } => "Votre essai est terminé : abonnez-vous pour continuer à développer vos photos.".into(),
+                };
+                ui.label(RichText::new(line).size(13.5).color(theme::DIM));
+            });
+            if !locked {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    if ui.button("Fermer").clicked() {
+                        self.premium_open = false;
+                    }
+                });
+            }
+        });
+        ui.add_space(14.0);
+        for f in FEATURES {
+            ui.horizontal(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), egui::Sense::hover());
+                widgets::spectral_ring(ui.painter(), r.center(), 4.0, 2.0, 1.0);
+                ui.label(RichText::new(f).size(13.0).color(theme::TEXT));
+            });
+        }
+        ui.add_space(16.0);
+        let gap = 14.0;
+        let (row, _) =
+            ui.allocate_exact_size(vec2(ui.available_width(), 172.0), egui::Sense::hover());
+        let card_w = ((row.width() - gap) / 2.0).floor();
+        let mut chosen = None;
+        for (k, plan) in PLANS.into_iter().enumerate() {
+            let best = plan == luma_licence::Plan::Annual;
+            let rect = Rect::from_min_size(
+                row.min + vec2(k as f32 * (card_w + gap), 0.0),
+                vec2(card_w, row.height()),
+            );
+            ui.painter().rect(
+                rect,
+                18.0,
+                theme::SECTION,
+                egui::Stroke::new(
+                    if best { 1.5 } else { 1.0 },
+                    if best {
+                        theme::ACCENT
+                    } else {
+                        theme::GLASS_EDGE
+                    },
+                ),
+                egui::StrokeKind::Inside,
+            );
+            let mut card = ui.new_child(
+                egui::UiBuilder::new()
+                    .max_rect(rect.shrink(16.0))
+                    .layout(egui::Layout::top_down(egui::Align::Min)),
+            );
+            card.horizontal(|ui| {
+                ui.label(RichText::new(plan.name()).size(15.0).color(theme::TEXT));
+                if best {
+                    ui.label(
+                        RichText::new("Le plus avantageux")
+                            .size(11.0)
+                            .color(theme::ACCENT),
+                    );
+                }
+            });
+            card.horizontal(|ui| {
+                ui.label(
+                    RichText::new(plan.price())
+                        .size(28.0)
+                        .strong()
+                        .color(theme::TEXT),
+                );
+                ui.label(RichText::new(plan.period()).size(13.0).color(theme::DIM));
+            });
+            card.label(RichText::new(plan.note()).size(12.0).color(theme::DIM));
+            card.add_space(8.0);
+            let size = vec2(card.available_width(), 30.0);
+            match plan.checkout_url() {
+                Some(url) => {
+                    if card
+                        .add_sized(size, egui::Button::new("S'abonner"))
+                        .clicked()
+                    {
+                        chosen = Some(url);
+                    }
+                }
+                None => {
+                    card.add_enabled(
+                        false,
+                        egui::Button::new("Bientôt disponible").min_size(size),
+                    )
+                    .on_disabled_hover_text("Le paiement en ligne ouvre bientôt.");
+                }
+            }
+        }
+        if let Some(url) = chosen {
+            if open_url(url) {
+                self.licence.message =
+                    "La page de paiement s'est ouverte : votre clé arrivera par courriel.".into();
+            } else {
+                ui.ctx().copy_text(url.to_owned());
+                self.licence.message = "Lien de paiement copié : ouvrez-le dans Safari.".into();
+            }
+        }
+        ui.add_space(16.0);
+        if matches!(access, Access::Premium { .. }) {
+            ui.horizontal(|ui| {
+                if ui.button("Gérer mon abonnement").clicked() {
+                    let url = "https://app.lemonsqueezy.com/my-orders";
+                    if !open_url(url) {
+                        ui.ctx().copy_text(url.to_owned());
+                    }
+                }
+                if ui
+                    .add_enabled(
+                        !self.licence.busy(),
+                        egui::Button::new("Retirer de cet appareil"),
+                    )
+                    .on_hover_text("Pour activer votre clé sur un autre Mac")
+                    .clicked()
+                {
+                    self.licence.deactivate();
+                }
+            });
+        } else {
+            ui.label(
+                RichText::new(
+                    "Déjà abonné ? Votre clé de licence est dans le courriel de confirmation.",
+                )
+                .size(12.5)
+                .color(theme::DIM),
+            );
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.licence.key_input)
+                        .hint_text("Clé de licence")
+                        .desired_width(330.0),
+                );
+                let ready = !self.licence.busy() && self.licence.key_input.trim().len() >= 8;
+                if ui
+                    .add_enabled(ready, egui::Button::new("Activer"))
+                    .clicked()
+                {
+                    self.licence.activate();
+                }
+                if self.licence.busy() {
+                    ui.spinner();
+                }
+            });
+        }
+        if !self.licence.message.is_empty() {
+            ui.add_space(6.0);
+            ui.label(
+                RichText::new(&self.licence.message)
+                    .size(12.5)
+                    .color(theme::ACCENT),
+            );
         }
     }
 
@@ -1360,6 +1623,22 @@ impl Studio {
                     .extra_letter_spacing(5.0)
                     .color(theme::TEXT),
             );
+            // La puce Premium : l'essai, ou l'abonnement ; un clic ouvre l'écran Premium.
+            let premium = matches!(self.licence.access(), luma_licence::Access::Premium { .. });
+            let badge = egui::Button::new(
+                RichText::new(self.licence.badge())
+                    .size(11.0)
+                    .color(if premium { theme::TEXT } else { theme::ACCENT }),
+            )
+            .fill(if premium {
+                theme::SECTION
+            } else {
+                Color32::from_rgb(0x3a, 0x2a, 0x14)
+            })
+            .corner_radius(10);
+            if ui.add(badge).on_hover_text("LÜMA Premium").clicked() {
+                self.premium_open = true;
+            }
             if !compact {
                 ui.add_space(14.0);
                 if let Some(p) = self.current_path() {
@@ -2027,8 +2306,8 @@ impl Studio {
         let n = self.selected.len();
         ui.label(
             RichText::new(match n {
-                0 => "Choisissez les photos dans le film : Cmd‑clic pour en ajouter une, Maj‑clic pour une suite.".to_owned(),
-                1 => "Une photo choisie : ajoutez‑en d'autres (Cmd‑clic, Maj‑clic).".to_owned(),
+                0 => "Choisissez les photos dans le film : Cmd-clic pour en ajouter une, Maj-clic pour une suite.".to_owned(),
+                1 => "Une photo choisie : ajoutez-en d'autres (Cmd-clic, Maj-clic).".to_owned(),
                 n => format!("{n} photos choisies."),
             })
             .color(theme::DIM),

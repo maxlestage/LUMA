@@ -1,0 +1,95 @@
+# Une version de LÜMA à télécharger : à chaque étiquette v… (ex. v0.1.0), l'app Mac
+# universelle, l'app iPhone et iPad (non signée, à signer avec un compte Apple
+# Developer) et la ligne de commande `luma` (Mac et Linux) sont construites et
+# publiées dans une Release GitHub.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+  LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+  LUMA_STORE_ID: ${{ vars.LUMA_STORE_ID }}
+
+jobs:
+  apple:
+    name: Mac, iPhone et iPad
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin, aarch64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+      - name: LÜMA.app pour Mac (universelle)
+        run: scripts/bundle-macos.sh
+      - name: LÜMA.app pour iPhone et iPad (non signée)
+        run: scripts/bundle-ios.sh device
+      - name: luma (ligne de commande, Mac)
+        run: |
+          for t in aarch64-apple-darwin x86_64-apple-darwin; do
+            cargo build --release -p luma-cli --target $t
+          done
+          lipo -create -output target/luma target/aarch64-apple-darwin/release/luma target/x86_64-apple-darwin/release/luma
+          (cd target && zip -q luma-cli-macos.zip luma)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apple
+          path: |
+            target/macos/LUMA-macos.zip
+            target/ios/device/LUMA-ios-device.zip
+            target/luma-cli-macos.zip
+
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: luma et LÜMA Studio (x86_64)
+        run: |
+          cargo build --release -p luma-cli -p luma-studio
+          mkdir -p out/luma-linux
+          cp target/release/luma target/release/luma-studio out/luma-linux/
+          tar -C out -czf out/luma-linux-x86_64.tar.gz luma-linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: out/luma-linux-x86_64.tar.gz
+
+  publish:
+    name: Publier la Release
+    needs: [apple, linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          find dist -type f
+          notes="LÜMA ${TAG#v} — 14 jours d'essai, puis LÜMA Premium (9,99 € par mois ou 79,99 € par an).
+
+          - **LUMA-macos.zip** : l'app pour Mac (Apple Silicon et Intel, macOS 11+). Premier lancement : clic droit sur LÜMA, puis Ouvrir.
+          - **LUMA-ios-device.zip** : l'app pour iPhone et iPad, non signée (à signer pour l'installer).
+          - **luma-cli-macos.zip**, **luma-linux-x86_64.tar.gz** : la ligne de commande \`luma\` (et LÜMA Studio pour Linux)."
+          files=$(find dist -type f)
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" $files --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" $files --title "LÜMA ${TAG#v}" --notes "$notes" --repo "$GITHUB_REPOSITORY"
+          fi
