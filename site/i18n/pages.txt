@@ -327,18 +327,6 @@ fr = Performance
 en = Performance
 es = Rendimiento
 
-fr = Des objectifs *mesurables*.
-en = *Measurable* targets.
-es = Objetivos *medibles*.
-
-fr = Ce sont des cibles d'ingénierie, pas des résultats. Référence : Mac Apple Silicon 16 Go et iPhone récent, cache chaud et cache froid mesurés séparément.
-en = These are engineering targets, not results. Reference: an Apple Silicon Mac with 16 GB and a recent iPhone, warm and cold cache measured separately.
-es = Son objetivos de ingeniería, no resultados. Referencia: Mac con Apple Silicon y 16 GB, y un iPhone reciente, con caché caliente y caché fría medidas por separado.
-
-fr = Commande simple
-en = Simple command
-es = Comando simple
-
 fr = Aperçu après réglage
 en = Preview after an adjustment
 es = Vista previa tras un ajuste
@@ -347,17 +335,9 @@ fr = Vignette
 en = Thumbnail
 es = Miniatura
 
-fr = Mémoire au repos
-en = Memory at idle
-es = Memoria en reposo
-
 fr = Mo
 en = MB
 es = MB
-
-fr = **8,3 ms** : le budget d'une image à 120 Hz. Les aperçus progressifs, les tuiles et l'annulation des calculs devenus inutiles servent à tenir ce budget pendant qu'un curseur bouge.
-en = **8.3 ms**: the time budget of one frame at 120 Hz. Progressive previews, tiles and cancelling work that's no longer needed are how that budget holds while a slider moves.
-es = **8,3 ms**: el presupuesto de una imagen a 120 Hz. Las vistas previas progresivas, las teselas y la cancelación de los cálculos que ya no sirven permiten cumplirlo mientras se mueve un control.
 
 # Feuille de route.
 fr = 24 à 36 mois. *Apple* à chaque étape.
@@ -1059,3 +1039,44 @@ es = Estas condiciones se rigen por la legislación francesa. En caso de litigio
 fr = Voir les tarifs
 en = See pricing
 es = Ver precios
+
+# Performance : des chiffres mesurés.
+fr = Des chiffres *mesurés*.
+en = *Measured* figures.
+es = Cifras *medidas*.
+
+fr = Mesurés à chaque version par l'intégration continue, sur un Mac Apple Silicon (machine virtuelle, GPU Metal) et cinq vrais RAW : Sony, Canon, Nikon, Fujifilm, iPhone ProRAW. Ce sont des médianes. Sur iPhone, ce sont encore des objectifs.
+en = Measured on every version by continuous integration, on an Apple Silicon Mac (virtual machine, Metal GPU) with five real raw files: Sony, Canon, Nikon, Fujifilm, iPhone ProRAW. These are medians. On iPhone, they are still targets.
+es = Medidas en cada versión por la integración continua, en un Mac con Apple Silicon (máquina virtual, GPU Metal) y cinco RAW reales: Sony, Canon, Nikon, Fujifilm, iPhone ProRAW. Son medianas. En iPhone, todavía son objetivos.
+
+fr = Ouverture d'une photo
+en = Opening a photo
+es = Apertura de una foto
+
+fr = Mémoire pendant la retouche
+en = Memory while editing
+es = Memoria durante la edición
+
+fr = La première fois, depuis le RAW : {v} ms.
+en = The first time, from the raw file: {v} ms.
+es = La primera vez, desde el RAW: {v} ms.
+
+fr = Depuis le RAW, sans doublon : {v} Mo.
+en = From the raw file, without the working copy: {v} MB.
+es = Desde el RAW, sin la copia de trabajo: {v} MB.
+
+fr = Mac, mesuré
+en = Mac, measured
+es = Mac, medido
+
+fr = iPhone, objectif
+en = iPhone, target
+es = iPhone, objetivo
+
+fr = Objectif : moins de {v} {unit}.
+en = Target: under {v} {unit}.
+es = Objetivo: menos de {v} {unit}.
+
+fr = **8,3 ms** : le budget d'une image à 120 Hz. Un aperçu après réglage en prend **{v} ms** sur le GPU du Mac : l'image suit le curseur, sans retard.
+en = **8.3 ms**: the time budget of one frame at 120 Hz. A preview after an adjustment takes **{v} ms** on the Mac's GPU: the image follows the slider, with no lag.
+es = **8,3 ms**: el presupuesto de una imagen a 120 Hz. Una vista previa tras un ajuste tarda **{v} ms** en la GPU del Mac: la imagen sigue al control, sin retraso.

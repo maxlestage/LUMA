@@ -286,12 +286,59 @@ pub const CRATES: [Crate; 18] = [
     },
 ];
 
-/// (mesure, unité, Mac, iPhone) : des objectifs, pas des mesures.
-pub const PERF: [(&str, &str, u32, u32); 4] = [
-    ("Commande simple", "ms", 50, 80),
-    ("Aperçu après réglage", "ms", 100, 150),
-    ("Vignette", "ms", 150, 250),
-    ("Mémoire au repos", "Mo", 500, 300),
+/// Une mesure de la section Performance.
+pub struct Perf {
+    pub name: &'static str,
+    pub unit: &'static str,
+    /// Mesuré sur Mac : médiane de cinq vrais RAW (Sony, Canon, Nikon, Fujifilm, iPhone
+    /// ProRAW), par `cargo run --release -p luma-gpu --example measure` dans la CI macOS
+    /// (GPU Metal). Affiché avec `decimals` décimales.
+    pub mac: f32,
+    pub decimals: usize,
+    /// Les objectifs, sur Mac et sur iPhone (pas encore mesuré).
+    pub mac_target: u32,
+    pub phone_target: u32,
+    /// Une précision, avec sa valeur à la place de `{v}`.
+    pub note: Option<(&'static str, f32)>,
+}
+
+pub const PERF: [Perf; 4] = [
+    Perf {
+        name: "Aperçu après réglage",
+        unit: "ms",
+        mac: 6.2,
+        decimals: 1,
+        mac_target: 100,
+        phone_target: 150,
+        note: None,
+    },
+    Perf {
+        name: "Ouverture d'une photo",
+        unit: "ms",
+        mac: 547.0,
+        decimals: 0,
+        mac_target: 500,
+        phone_target: 800,
+        note: Some(("La première fois, depuis le RAW : {v} ms.", 547.0)),
+    },
+    Perf {
+        name: "Vignette",
+        unit: "ms",
+        mac: 210.0,
+        decimals: 0,
+        mac_target: 150,
+        phone_target: 250,
+        note: None,
+    },
+    Perf {
+        name: "Mémoire pendant la retouche",
+        unit: "Mo",
+        mac: 64.0,
+        decimals: 0,
+        mac_target: 500,
+        phone_target: 300,
+        note: Some(("Depuis le RAW, sans doublon : {v} Mo.", 157.0)),
+    },
 ];
 
 pub struct Phase {
