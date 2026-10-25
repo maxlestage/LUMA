@@ -18,11 +18,16 @@ use std::sync::Arc;
 use egui::{
     Color32, ColorImage, Key, Modifiers, RichText, TextureHandle, TextureOptions, Ui, pos2, vec2,
 };
-use luma_project::{Profile, Settings, WhiteBalance, xmp};
+use luma_color::OutputSpace;
+use luma_project::xmp::{Flag, Meta};
+use luma_project::{Crop, Profile, Settings, WhiteBalance};
 use luma_render::{Photo, Size};
 
+use crate::crop;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
-use crate::worker::{Event, Worker, sidecar_path};
+use crate::worker::{
+    Event, ExportJob, ExportOptions, Format, Worker, read_meta, read_sidecar, write_sidecar,
+};
 
 /// Les extensions RAW reconnues dans un dossier.
 pub const RAW_EXTENSIONS: [&str; 20] = [
@@ -210,6 +215,28 @@ const HSL_NAMES: [&str; 8] = [
 ];
 const HSL_HUES: [f32; 8] = [0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 270.0, 300.0];
 
+/// Les modules de la barre du haut (G et D dans Lightroom).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Module {
+    Library,
+    Develop,
+}
+
+/// Le filtre de la Bibliothèque, appliqué aussi au film et à ← →.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum FlagFilter {
+    #[default]
+    All,
+    Picks,
+    NotRejected,
+}
+
+/// L'outil Recadrage ouvert : le cadre d'avant (pour Échap) et les proportions.
+struct CropTool {
+    saved: Crop,
+    aspect: usize,
+}
+
 /// Ce qui a été demandé au rendu, pour ne pas redemander la même chose.
 #[derive(PartialEq)]
 struct Request {
@@ -244,6 +271,14 @@ pub struct Studio {
     xmp_due: Option<f64>,
     grading_tab: usize,
     hsl_tab: usize,
+    pub module: Module,
+    meta: HashMap<PathBuf, Meta>,
+    min_rating: u8,
+    flag_filter: FlagFilter,
+    export_options: ExportOptions,
+    export_open: bool,
+    export_all: bool,
+    crop_tool: Option<CropTool>,
 }
 
 impl Studio {
@@ -275,6 +310,14 @@ impl Studio {
             xmp_due: None,
             grading_tab: 0,
             hsl_tab: 0,
+            module: Module::Develop,
+            meta: HashMap::new(),
+            min_rating: 0,
+            flag_filter: FlagFilter::All,
+            export_options: ExportOptions::default(),
+            export_open: false,
+            export_all: false,
+            crop_tool: None,
         }
     }
 
@@ -298,6 +341,7 @@ impl Studio {
             if !self.thumbs.contains_key(p) {
                 self.worker.thumbnail(p.clone());
             }
+            self.meta.insert(p.clone(), read_meta(p));
         }
         let index = file
             .and_then(|f| self.folder.iter().position(|p| *p == f))
@@ -319,10 +363,43 @@ impl Studio {
             .map(PathBuf::as_path)
     }
 
+    /// Les photos qui passent le filtre, dans l'ordre du dossier.
+    pub fn visible(&self) -> Vec<usize> {
+        (0..self.folder.len())
+            .filter(|i| {
+                let m = self.meta.get(&self.folder[*i]).cloned().unwrap_or_default();
+                m.rating >= self.min_rating
+                    && match self.flag_filter {
+                        FlagFilter::All => true,
+                        FlagFilter::Picks => m.flag == Flag::Pick,
+                        FlagFilter::NotRejected => m.flag != Flag::Reject,
+                    }
+            })
+            .collect()
+    }
+
+    /// La note et le drapeau de la photo affichée.
+    pub fn current_meta(&self) -> Meta {
+        self.current_path()
+            .and_then(|p| self.meta.get(p))
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    fn set_meta(&mut self, f: impl FnOnce(&mut Meta)) {
+        let Some(path) = self.current_path().map(Path::to_path_buf) else {
+            return;
+        };
+        let meta = self.meta.entry(path).or_default();
+        f(meta);
+        self.touch();
+    }
+
     /// Prête : photo chargée et dernier rendu affiché.
     pub fn is_idle(&self) -> bool {
         self.loading.is_none()
             && self.photo.is_some()
+            && self.folder.iter().all(|p| self.thumbs.contains_key(p))
             && self.shown == self.generation
             && self.texture.is_some()
     }
@@ -408,10 +485,19 @@ impl Studio {
                     self.thumbs
                         .insert(path, ctx.load_texture(name, image, TextureOptions::LINEAR));
                 }
-                Event::Exported { result } => {
+                Event::Exported {
+                    done,
+                    total,
+                    result,
+                } => {
+                    let count = if total > 1 {
+                        format!(" ({done}/{total})")
+                    } else {
+                        String::new()
+                    };
                     self.status = match result {
-                        Ok(p) => format!("Exporté : {}", p.display()),
-                        Err(e) => format!("Échec de l'export : {e}"),
+                        Ok(p) => format!("Exporté{count} : {}", p.display()),
+                        Err(e) => format!("Échec de l'export{count} : {e}"),
                     };
                 }
             }
@@ -451,9 +537,16 @@ impl Studio {
             return;
         }
         if let Some(path) = self.current_path().map(Path::to_path_buf) {
-            let target = sidecar_path(&path);
-            if let Err(e) = std::fs::write(&target, xmp::write(&self.settings)) {
-                self.status = format!("XMP non enregistré ({}) : {e}", target.display());
+            // Pendant l'ouverture, les réglages affichés ne sont pas encore ceux de cette
+            // photo : on garde ceux de son XMP.
+            let settings = if self.loading.is_some() || self.photo.is_none() {
+                read_sidecar(&path).unwrap_or_default()
+            } else {
+                self.settings.clone()
+            };
+            let meta = self.meta.get(&path).cloned().unwrap_or_default();
+            if let Err(e) = write_sidecar(&path, &settings, &meta) {
+                self.status = format!("XMP non enregistré : {e}");
             }
         }
     }
@@ -468,11 +561,18 @@ impl Studio {
         } else {
             Size::Fit(((viewport_px / 512.0).ceil().max(1.0) * 512.0) as usize)
         };
-        let settings = if self.before {
+        let mut settings = if self.before {
             Settings::default()
         } else {
             self.settings.clone()
         };
+        if self.crop_tool.is_some() {
+            // Pendant le recadrage, toute la photo est visible (redressée).
+            settings.crop = Crop {
+                angle: settings.crop.angle,
+                ..Crop::default()
+            };
+        }
         let request = Request {
             path: path.to_path_buf(),
             settings,
@@ -513,7 +613,38 @@ impl Studio {
             } else if i.consume_key(Modifiers::COMMAND, Key::O) {
                 action = Some("open");
             } else if !typing {
-                if i.consume_key(Modifiers::NONE, Key::Backslash) {
+                let digits = [
+                    Key::Num0,
+                    Key::Num1,
+                    Key::Num2,
+                    Key::Num3,
+                    Key::Num4,
+                    Key::Num5,
+                ];
+                if let Some(n) = digits
+                    .iter()
+                    .position(|k| i.consume_key(Modifiers::NONE, *k))
+                {
+                    action = Some(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n]);
+                } else if i.consume_key(Modifiers::NONE, Key::G) {
+                    action = Some("library");
+                } else if i.consume_key(Modifiers::NONE, Key::D)
+                    || i.consume_key(Modifiers::NONE, Key::E)
+                {
+                    action = Some("develop");
+                } else if i.consume_key(Modifiers::NONE, Key::P) {
+                    action = Some("pick");
+                } else if i.consume_key(Modifiers::NONE, Key::X) {
+                    action = Some("reject");
+                } else if i.consume_key(Modifiers::NONE, Key::U) {
+                    action = Some("unflag");
+                } else if i.consume_key(Modifiers::NONE, Key::R) {
+                    action = Some("crop");
+                } else if i.consume_key(Modifiers::NONE, Key::Enter) {
+                    action = Some("crop_done");
+                } else if i.consume_key(Modifiers::NONE, Key::Escape) {
+                    action = Some("crop_cancel");
+                } else if i.consume_key(Modifiers::NONE, Key::Backslash) {
                     action = Some("before");
                 } else if i.consume_key(Modifiers::NONE, Key::ArrowLeft) {
                     action = Some("prev");
@@ -554,12 +685,52 @@ impl Studio {
                 self.touch();
             }
             "export" => {
-                if let (Some(photo), Some(path)) = (
-                    self.photo.clone(),
-                    self.current_path().map(Path::to_path_buf),
-                ) {
-                    self.status = format!("Export de {}…", file_name(&path));
-                    self.worker.export(photo, self.settings.clone(), path);
+                if self.current.is_some() {
+                    self.export_all = self.module == Module::Library;
+                    self.export_open = true;
+                }
+            }
+            "export_now" => self.export_now(),
+            "library" => {
+                self.crop_tool = None;
+                self.module = Module::Library;
+            }
+            "develop" => self.module = Module::Develop,
+            "pick" => self.set_meta(|m| m.flag = Flag::Pick),
+            "reject" => self.set_meta(|m| m.flag = Flag::Reject),
+            "unflag" => self.set_meta(|m| m.flag = Flag::None),
+            r if r.starts_with("rate") => {
+                let n: u8 = r[4..].parse().unwrap_or(0);
+                self.set_meta(|m| m.rating = n);
+                self.status = if n == 0 {
+                    "Note retirée".into()
+                } else {
+                    format!("Note : {n} sur 5")
+                };
+            }
+            "crop" => {
+                if self.crop_tool.is_some() {
+                    self.act("crop_done");
+                } else if self.photo.is_some() {
+                    self.module = Module::Develop;
+                    self.zoom = false;
+                    self.crop_tool = Some(CropTool {
+                        saved: self.settings.crop,
+                        aspect: 0,
+                    });
+                }
+            }
+            "crop_done" => {
+                if self.crop_tool.take().is_some() {
+                    self.commit("Recadrage".into());
+                    self.touch();
+                }
+            }
+            "crop_cancel" => {
+                if let Some(t) = self.crop_tool.take() {
+                    self.settings.crop = t.saved;
+                } else if self.export_open {
+                    self.export_open = false;
                 }
             }
             "open" => {
@@ -570,19 +741,174 @@ impl Studio {
                 }
             }
             "before" => self.before = !self.before,
-            "prev" => {
-                if let Some(i) = self.current.filter(|i| *i > 0) {
-                    self.select(i - 1);
-                }
-            }
-            "next" => {
-                if let Some(i) = self.current {
-                    self.select(i + 1);
+            "prev" | "next" => {
+                let visible = self.visible();
+                let next = match self
+                    .current
+                    .and_then(|c| visible.iter().position(|v| *v == c))
+                {
+                    Some(k) if action == "prev" => k.checked_sub(1).map(|k| visible[k]),
+                    Some(k) => visible.get(k + 1).copied(),
+                    None => visible.first().copied(),
+                };
+                if let Some(i) = next {
+                    self.select(i);
                 }
             }
             "clipping" => self.clipping = !self.clipping,
             "zoom" => self.zoom = !self.zoom,
             _ => {}
+        }
+    }
+
+    /// Lance l'export avec les options de la fenêtre : la photo affichée, ou toutes
+    /// celles que le filtre laisse voir.
+    fn export_now(&mut self) {
+        self.export_open = false;
+        self.flush_xmp();
+        let current = self.current_path().map(Path::to_path_buf);
+        let paths: Vec<PathBuf> = if self.export_all {
+            self.visible()
+                .into_iter()
+                .map(|i| self.folder[i].clone())
+                .collect()
+        } else {
+            current.clone().into_iter().collect()
+        };
+        let jobs: Vec<ExportJob> = paths
+            .into_iter()
+            .map(|source| {
+                let is_current = Some(&source) == current.as_ref() && self.loading.is_none();
+                ExportJob {
+                    photo: if is_current { self.photo.clone() } else { None },
+                    settings: if is_current {
+                        self.settings.clone()
+                    } else {
+                        read_sidecar(&source).unwrap_or_default()
+                    },
+                    source,
+                }
+            })
+            .collect();
+        if jobs.is_empty() {
+            return;
+        }
+        self.status = format!(
+            "Export de {} photo{}…",
+            jobs.len(),
+            if jobs.len() > 1 { "s" } else { "" }
+        );
+        self.worker.export(jobs, self.export_options.clone());
+    }
+
+    /// La fenêtre Exporter.
+    fn export_window(&mut self, ctx: &egui::Context) {
+        let mut open = self.export_open;
+        let mut go = false;
+        let count = self.visible().len();
+        egui::Window::new("Exporter")
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                let o = &mut self.export_options;
+                egui::Grid::new("export")
+                    .num_columns(2)
+                    .spacing(vec2(12.0, 8.0))
+                    .show(ui, |ui| {
+                        ui.label("Photos");
+                        ui.horizontal(|ui| {
+                            ui.radio_value(&mut self.export_all, false, "Photo affichée");
+                            ui.radio_value(
+                                &mut self.export_all,
+                                true,
+                                format!("Les {count} du filtre"),
+                            );
+                        });
+                        ui.end_row();
+                        ui.label("Format");
+                        ui.horizontal(|ui| {
+                            ui.radio_value(&mut o.format, Format::Jpeg, "JPEG");
+                            ui.radio_value(&mut o.format, Format::Png, "PNG");
+                            ui.radio_value(&mut o.format, Format::Tiff, "TIFF");
+                        });
+                        ui.end_row();
+                        if o.format == Format::Jpeg {
+                            ui.label("Qualité");
+                            ui.add(egui::Slider::new(&mut o.quality, 1..=100));
+                        } else {
+                            ui.label("Profondeur");
+                            ui.horizontal(|ui| {
+                                ui.radio_value(&mut o.bits, 8, "8 bits");
+                                ui.radio_value(&mut o.bits, 16, "16 bits");
+                            });
+                        }
+                        ui.end_row();
+                        ui.label("Espace colorimétrique");
+                        let spaces = [
+                            (OutputSpace::Srgb, "sRGB"),
+                            (OutputSpace::DisplayP3, "Display P3"),
+                            (OutputSpace::Rec2020, "Rec. 2020"),
+                            (OutputSpace::ProPhoto, "ProPhoto RGB"),
+                        ];
+                        let current = spaces
+                            .iter()
+                            .find(|s| s.0 == o.space)
+                            .map_or("sRGB", |s| s.1);
+                        egui::ComboBox::from_id_salt("espace")
+                            .selected_text(current)
+                            .show_ui(ui, |ui| {
+                                for (sp, name) in spaces {
+                                    ui.selectable_value(&mut o.space, sp, name);
+                                }
+                            })
+                            .response
+                            .accessible_name("Espace colorimétrique");
+                        ui.end_row();
+                        ui.label("Dimensions");
+                        ui.horizontal(|ui| {
+                            let mut resize = o.long_edge.is_some();
+                            ui.checkbox(&mut resize, "Grand côté");
+                            let mut n = o.long_edge.unwrap_or(2048);
+                            ui.add_enabled(
+                                resize,
+                                egui::DragValue::new(&mut n).range(64..=20000).suffix(" px"),
+                            )
+                            .accessible_name("Grand côté en pixels");
+                            o.long_edge = resize.then_some(n);
+                        });
+                        ui.end_row();
+                        ui.label("Dossier");
+                        ui.horizontal(|ui| {
+                            let text = match &o.folder {
+                                Some(d) => d.display().to_string(),
+                                None => "LÜMA/, à côté du RAW".into(),
+                            };
+                            ui.label(RichText::new(text).color(theme::DIM));
+                            if ui.button("Choisir…").clicked()
+                                && let Some(d) = rfd::FileDialog::new()
+                                    .set_title("Dossier d'export")
+                                    .pick_folder()
+                            {
+                                o.folder = Some(d);
+                            }
+                            if o.folder.is_some() && ui.button("À côté du RAW").clicked() {
+                                o.folder = None;
+                            }
+                        });
+                        ui.end_row();
+                    });
+                ui.add_space(8.0);
+                ui.with_layout(egui::Layout::top_down(egui::Align::Max), |ui| {
+                    if ui.button(RichText::new("Exporter").strong()).clicked() {
+                        go = true;
+                    }
+                });
+            });
+        self.export_open = open && !go;
+        if go {
+            self.export_now();
         }
     }
 
@@ -634,7 +960,10 @@ impl Studio {
                     .fill(theme::PANEL)
                     .inner_margin(egui::Margin::same(12)),
             )
-            .show(ui, |ui| self.left_panel(ui));
+            .show(ui, |ui| match self.module {
+                Module::Develop => self.left_panel(ui),
+                Module::Library => self.library_left(ui),
+            });
         egui::Panel::right("droite")
             .exact_size(330.0)
             .frame(
@@ -645,11 +974,20 @@ impl Studio {
             .show(ui, |ui| {
                 egui::ScrollArea::vertical()
                     .auto_shrink(false)
-                    .show(ui, |ui| self.develop_panels(ui));
+                    .show(ui, |ui| match self.module {
+                        Module::Develop => self.develop_panels(ui),
+                        Module::Library => self.library_right(ui),
+                    });
             });
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(Color32::from_gray(0x2a)))
-            .show(ui, |ui| self.viewer(ui));
+            .show(ui, |ui| match self.module {
+                Module::Develop => self.viewer(ui),
+                Module::Library => self.grid(ui),
+            });
+        if self.export_open {
+            self.export_window(&ctx);
+        }
     }
 
     fn top_bar(&mut self, ui: &mut Ui) {
@@ -661,12 +999,13 @@ impl Studio {
                     .color(Color32::WHITE),
             );
             ui.add_space(24.0);
-            for (name, active) in [
-                ("Bibliothèque", false),
-                ("Développement", true),
-                ("Carte", false),
-                ("Impression", false),
+            for (name, module) in [
+                ("Bibliothèque", Some(Module::Library)),
+                ("Développement", Some(Module::Develop)),
+                ("Carte", None),
+                ("Impression", None),
             ] {
+                let active = module == Some(self.module);
                 let text = RichText::new(name).size(13.0).color(if active {
                     Color32::WHITE
                 } else {
@@ -682,13 +1021,22 @@ impl Studio {
                         ],
                         egui::Stroke::new(2.0, theme::ACCENT),
                     );
+                } else if let Some(m) = module {
+                    let key = if m == Module::Library { "G" } else { "D" };
+                    if r.on_hover_text(key).clicked() {
+                        self.act(if m == Module::Library {
+                            "library"
+                        } else {
+                            "develop"
+                        });
+                    }
                 } else {
                     r.on_hover_text("Bientôt");
                 }
                 ui.add_space(14.0);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Exporter (Maj+Cmd+E)").clicked() {
+                if ui.button("Exporter… (Maj+Cmd+E)").clicked() {
                     self.act("export");
                 }
                 if ui.button("Ouvrir (Cmd+O)").clicked() {
@@ -776,13 +1124,217 @@ impl Studio {
         }
     }
 
+    /// Bibliothèque, à gauche : le dossier et le filtre.
+    fn library_left(&mut self, ui: &mut Ui) {
+        section_title(ui, "Dossier");
+        let dir = self
+            .folder
+            .first()
+            .and_then(|p| p.parent())
+            .map(|d| d.display().to_string())
+            .unwrap_or_else(|| "Aucun (Cmd+O)".into());
+        ui.label(RichText::new(dir).size(12.0));
+        ui.label(
+            RichText::new(format!(
+                "{} photos, {} affichées",
+                self.folder.len(),
+                self.visible().len()
+            ))
+            .size(11.5)
+            .color(theme::DIM),
+        );
+        ui.add_space(14.0);
+        section_title(ui, "Filtre");
+        ui.label(RichText::new("Note minimale").color(theme::DIM).size(11.5));
+        if let Some(n) = widgets::rating(ui, self.min_rating, 18.0) {
+            self.min_rating = n;
+        }
+        ui.add_space(8.0);
+        ui.label(RichText::new("Drapeau").color(theme::DIM).size(11.5));
+        for (f, name) in [
+            (FlagFilter::All, "Toutes"),
+            (FlagFilter::Picks, "Retenues (P)"),
+            (FlagFilter::NotRejected, "Sans les rejetées (X)"),
+        ] {
+            ui.radio_value(&mut self.flag_filter, f, name);
+        }
+        ui.add_space(14.0);
+        section_title(ui, "Raccourcis");
+        for line in [
+            "0 à 5 : note",
+            "P, X, U : retenir, rejeter, sans drapeau",
+            "Flèches gauche et droite : photo voisine",
+            "D ou double-clic : Développement",
+        ] {
+            ui.label(RichText::new(line).size(11.5).color(theme::DIM));
+        }
+    }
+
+    /// Bibliothèque, à droite : la note, le drapeau et les informations de la photo.
+    fn library_right(&mut self, ui: &mut Ui) {
+        section_title(ui, "Histogramme");
+        widgets::histogram(ui, &self.histogram, &mut self.clipping);
+        ui.add_space(10.0);
+        let Some(path) = self.current_path().map(Path::to_path_buf) else {
+            return;
+        };
+        section_title(ui, "Métadonnées");
+        ui.label(RichText::new(file_name(&path)).strong());
+        let meta = self.current_meta();
+        if let Some(n) = widgets::rating(ui, meta.rating, 20.0) {
+            self.act(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n as usize]);
+        }
+        ui.horizontal(|ui| {
+            for (f, name, action) in [
+                (Flag::Pick, "Retenue", "pick"),
+                (Flag::None, "Sans drapeau", "unflag"),
+                (Flag::Reject, "Rejetée", "reject"),
+            ] {
+                if ui.selectable_label(meta.flag == f, name).clicked() {
+                    self.act(action);
+                }
+            }
+        });
+        ui.add_space(8.0);
+        if let Some(photo) = &self.photo {
+            let raw = photo.raw();
+            let e = &raw.exif;
+            let (w, h) = photo.full_size();
+            let mut rows = vec![
+                ("Appareil", format!("{} {}", raw.make, raw.model)),
+                ("Dimensions", format!("{w} × {h}")),
+            ];
+            if let Some(iso) = e.iso {
+                rows.push(("ISO", iso.to_string()));
+            }
+            if let Some(f) = e.focal_length {
+                rows.push(("Focale", format!("{f:.0} mm")));
+            }
+            if let Some(a) = e.aperture {
+                rows.push(("Ouverture", format!("f/{}", format_value(a, 1, false))));
+            }
+            if let Some(t) = e.exposure_time {
+                rows.push((
+                    "Vitesse",
+                    if t < 1.0 {
+                        format!("1/{:.0} s", 1.0 / t)
+                    } else {
+                        format!("{t:.1} s")
+                    },
+                ));
+            }
+            egui::Grid::new("exif").num_columns(2).show(ui, |ui| {
+                for (k, v) in rows {
+                    ui.label(RichText::new(k).color(theme::DIM));
+                    ui.label(v);
+                    ui.end_row();
+                }
+            });
+        }
+    }
+
+    /// Bibliothèque, au centre : la grille des vignettes.
+    fn grid(&mut self, ui: &mut Ui) {
+        let visible = self.visible();
+        if visible.is_empty() {
+            let rect = ui.max_rect();
+            let text = if self.folder.is_empty() {
+                self.status.clone()
+            } else {
+                "Aucune photo ne passe le filtre.".into()
+            };
+            ui.painter().text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                text,
+                egui::FontId::proportional(15.0),
+                theme::DIM,
+            );
+            return;
+        }
+        let cell = 210.0;
+        let mut clicked = None;
+        let mut open = None;
+        egui::ScrollArea::vertical()
+            .id_salt("grille")
+            .auto_shrink(false)
+            .show(ui, |ui| {
+                ui.add_space(14.0);
+                let cols = ((ui.available_width() - 14.0) / (cell + 10.0))
+                    .floor()
+                    .max(1.0) as usize;
+                for row in visible.chunks(cols) {
+                    ui.horizontal(|ui| {
+                        ui.add_space(14.0);
+                        for &i in row {
+                            let path = &self.folder[i];
+                            let (rect, r) =
+                                ui.allocate_exact_size(vec2(cell, cell), egui::Sense::click());
+                            let current = Some(i) == self.current;
+                            let painter = ui.painter();
+                            painter.rect_filled(
+                                rect,
+                                4.0,
+                                if current {
+                                    Color32::from_gray(0x4a)
+                                } else {
+                                    theme::SECTION
+                                },
+                            );
+                            let area = rect.shrink2(vec2(12.0, 12.0)).with_max_y(rect.max.y - 30.0);
+                            match self.thumbs.get(path) {
+                                Some(t) => {
+                                    let [w, h] = t.size();
+                                    painter.image(
+                                        t.id(),
+                                        fit(area, w, h),
+                                        egui::Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                                        Color32::WHITE,
+                                    );
+                                }
+                                None => {
+                                    painter.rect_filled(area, 2.0, Color32::from_gray(0x22));
+                                }
+                            }
+                            let meta = self.meta.get(path).cloned().unwrap_or_default();
+                            paint_meta(painter, rect, &meta);
+                            painter.with_clip_rect(rect.shrink(6.0)).text(
+                                pos2(rect.min.x + 12.0, rect.min.y + 6.0),
+                                egui::Align2::LEFT_TOP,
+                                file_name(path),
+                                egui::FontId::proportional(10.5),
+                                theme::DIM,
+                            );
+                            if meta.flag == Flag::Reject {
+                                painter.rect_filled(rect, 4.0, Color32::from_black_alpha(120));
+                            }
+                            if r.double_clicked() {
+                                open = Some(i);
+                            } else if r.clicked() {
+                                clicked = Some(i);
+                            }
+                            ui.add_space(10.0);
+                        }
+                    });
+                    ui.add_space(10.0);
+                }
+            });
+        if let Some(i) = clicked.or(open) {
+            self.select(i);
+        }
+        if open.is_some() {
+            self.module = Module::Develop;
+        }
+    }
+
     fn filmstrip(&mut self, ui: &mut Ui) {
         let mut clicked = None;
         egui::ScrollArea::horizontal()
             .id_salt("film")
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    for (i, path) in self.folder.iter().enumerate() {
+                    for i in self.visible() {
+                        let path = &self.folder[i];
                         let h = 84.0;
                         let (w, tex) = match self.thumbs.get(path) {
                             Some(t) => {
@@ -804,6 +1356,12 @@ impl Studio {
                             }
                             None => {
                                 painter.rect_filled(rect, 2.0, theme::SECTION);
+                            }
+                        }
+                        if let Some(m) = self.meta.get(path) {
+                            paint_meta(painter, rect.expand2(vec2(0.0, 0.0)), m);
+                            if m.flag == Flag::Reject {
+                                painter.rect_filled(rect, 2.0, Color32::from_black_alpha(130));
                             }
                         }
                         if Some(i) == self.current {
@@ -853,6 +1411,15 @@ impl Studio {
                     self.zoom = false;
                 }
             });
+        } else if let Some(tool) = &self.crop_tool {
+            let target = fit(rect.shrink(36.0), iw, ih);
+            painter.image(t.id(), target, uv, Color32::WHITE);
+            let aspect = crop::ASPECTS[tool.aspect].1;
+            // Le rendu peut avoir un temps de retard : le cadre suit l'image affichée.
+            let c = crop::edit(ui, target, &mut self.settings.crop, aspect);
+            if c.changed {
+                self.touch();
+            }
         } else {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
@@ -870,6 +1437,9 @@ impl Studio {
         }
         if self.clipping {
             badges.push("Écrêtage (J)");
+        }
+        if self.crop_tool.is_some() {
+            badges.push("Recadrage : Entrée pour valider, Échap pour annuler");
         }
         for (k, b) in badges.iter().enumerate() {
             let p = rect.min + vec2(24.0, 24.0 + k as f32 * 26.0);
@@ -1178,9 +1748,51 @@ impl Studio {
                 keep(l, &mut commits);
             });
 
+        let cropping = self.crop_tool.is_some();
         egui::CollapsingHeader::new(RichText::new("Recadrage").strong())
+            .open(cropping.then_some(true))
             .default_open(false)
             .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    let label = if cropping {
+                        "Terminer (R)"
+                    } else {
+                        "Outil Recadrage (R)"
+                    };
+                    if ui.selectable_label(cropping, label).clicked() {
+                        self.act("crop");
+                    }
+                    if ui.button("Réinitialiser").clicked() {
+                        self.settings.crop = Crop::default();
+                        commits.push("Recadrage réinitialisé".into());
+                    }
+                });
+                if let Some(tool) = &mut self.crop_tool {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Proportions").color(theme::DIM));
+                        let before = tool.aspect;
+                        egui::ComboBox::from_id_salt("proportions")
+                            .selected_text(crop::ASPECTS[tool.aspect].0)
+                            .show_ui(ui, |ui| {
+                                for (k, (name, _)) in crop::ASPECTS.iter().enumerate() {
+                                    ui.selectable_value(&mut tool.aspect, k, *name);
+                                }
+                            })
+                            .response
+                            .accessible_name("Proportions");
+                        if tool.aspect != before
+                            && let Some(photo) = &self.photo
+                        {
+                            let (w, h) = photo.full_size();
+                            crop::constrain(
+                                &mut self.settings.crop,
+                                crop::ASPECTS[tool.aspect].1,
+                                w as f32 / h as f32,
+                            );
+                            self.xmp_due = Some(0.0);
+                        }
+                    });
+                }
                 let angle = SliderSpec {
                     label: "Angle",
                     min: -45.0,
@@ -1275,6 +1887,33 @@ fn curve_preview(ui: &mut Ui, s: &Settings) {
         points,
         egui::Stroke::new(1.5, Color32::from_gray(0xe0)),
     ));
+}
+
+/// Les étoiles et le drapeau en bas d'une vignette.
+fn paint_meta(painter: &egui::Painter, rect: egui::Rect, meta: &Meta) {
+    let y = rect.max.y - 13.0;
+    for k in 0..meta.rating {
+        let c = pos2(rect.min.x + 14.0 + f32::from(k) * 13.0, y);
+        widgets::paint_star(painter, c, 5.5, Color32::from_gray(0xe8));
+    }
+    let flag = match meta.flag {
+        Flag::Pick => Some(Color32::WHITE),
+        Flag::Reject => Some(Color32::from_rgb(0xe0, 0x50, 0x50)),
+        Flag::None => None,
+    };
+    if let Some(color) = flag {
+        let r = egui::Rect::from_center_size(pos2(rect.max.x - 16.0, y), vec2(10.0, 10.0));
+        painter.rect_filled(r, 2.0, color);
+        if meta.flag == Flag::Reject {
+            painter.line_segment(
+                [
+                    r.left_top() + vec2(2.0, 2.0),
+                    r.right_bottom() - vec2(2.0, 2.0),
+                ],
+                egui::Stroke::new(1.5, Color32::BLACK),
+            );
+        }
+    }
 }
 
 fn section_title(ui: &mut Ui, title: &str) {

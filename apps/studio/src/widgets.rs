@@ -405,6 +405,46 @@ pub fn histogram(ui: &mut Ui, h: &[[u32; 256]; 3], clipping: &mut bool) -> Respo
     response
 }
 
+/// Une étoile pleine (dessinée : la police n'a pas le glyphe).
+pub fn paint_star(painter: &egui::Painter, center: Pos2, radius: f32, color: Color32) {
+    let mut mesh = Mesh::default();
+    mesh.colored_vertex(center, color);
+    for k in 0..=10 {
+        let r = if k % 2 == 0 { radius } else { radius * 0.45 };
+        let a = -std::f32::consts::FRAC_PI_2 + k as f32 * std::f32::consts::PI / 5.0;
+        mesh.colored_vertex(center + vec2(a.cos(), a.sin()) * r, color);
+        if k > 0 {
+            mesh.add_triangle(0, k as u32, k as u32 + 1);
+        }
+    }
+    painter.add(egui::Shape::mesh(mesh));
+}
+
+/// La note en étoiles ; cliquer une étoile donne la note, recliquer la note la retire.
+pub fn rating(ui: &mut Ui, value: u8, size: f32) -> Option<u8> {
+    let (rect, response) = ui.allocate_exact_size(vec2(size * 5.4, size), Sense::click());
+    let response = response.on_hover_text("Note (0 à 5)");
+    let hover = response
+        .hover_pos()
+        .map(|p| (((p.x - rect.min.x) / (size * 1.08)).floor() as u8 + 1).min(5));
+    let shown = hover.unwrap_or(value);
+    for k in 0..5u8 {
+        let c = rect.min + vec2(size * 0.54 + k as f32 * size * 1.08, size * 0.5);
+        let color = if k < shown {
+            Color32::from_gray(0xe8)
+        } else {
+            Color32::from_gray(0x55)
+        };
+        paint_star(ui.painter(), c, size * 0.48, color);
+    }
+    let clicked = response.clicked();
+    response.widget_info(|| egui::WidgetInfo::slider(true, f64::from(value), "Note"));
+    match hover {
+        Some(n) if clicked => Some(if n == value { 0 } else { n }),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
