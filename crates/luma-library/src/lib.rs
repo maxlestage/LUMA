@@ -13,6 +13,7 @@
 pub mod collections;
 pub mod query;
 mod store;
+pub mod watch;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
