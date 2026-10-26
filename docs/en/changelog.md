@@ -107,6 +107,11 @@ The professional photo library, step by step.
   in pure Rust; a truncated or broken profile is rejected harmlessly. `luma icc`
   describes a profile: class, space, intents, media white, and the device's white,
   black and primaries.
+- **Faster, lighter**: the lens corrections recorded in RAW files (Sony, Fujifilm,
+  OM System, Panasonic) no longer copy the image, 17 to 35% faster at full
+  resolution (ARW 602 → 408 ms, RW2 523 → 339 ms), with bit-identical pixels;
+  working duplicates are 5 to 9% lighter and read up to 17% faster (CR3 331 →
+  274 ms), still lossless.
 - **On-screen soft proofing** (below the histogram): choose the ICC profile of a
   printer and paper, and the preview shows the photo as it will come out, with the
   perceptual or relative colorimetric intent; the histogram follows. A view, not an
