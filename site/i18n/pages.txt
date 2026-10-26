@@ -1132,3 +1132,43 @@ es = Ajuste en pantalla Retina
 fr = Aperçu de 3072 px avec l'accentuation, tout sur le GPU. Sur le processeur : {v} ms.
 en = A 3072 px preview with sharpening, all on the GPU. On the processor: {v} ms.
 es = Vista previa de 3072 px con enfoque, todo en la GPU. En el procesador: {v} ms.
+
+fr = Sur iPhone et iPad
+en = On iPhone and iPad
+es = En iPhone y iPad
+
+fr = Les curseurs suivent le doigt
+en = Sliders follow your finger
+es = Los controles siguen al dedo
+
+fr = Pendant un geste, un aperçu plus petit, puis la pleine netteté au lâcher : 12 fois plus rapide (417 → 35 ms par image).
+en = During a gesture, a smaller preview, then full sharpness when you let go: 12 times faster (417 → 35 ms per frame).
+es = Durante un gesto, una vista previa más pequeña y luego la nitidez completa al soltar: 12 veces más rápido (417 → 35 ms por imagen).
+
+fr = Tout le rendu sur le GPU
+en = All rendering on the GPU
+es = Todo el renderizado en la GPU
+
+fr = Accentuation et Masquage compris, avec Metal : 15 fois plus rapide sur les grands écrans comme celui de l'iPad Pro.
+en = Sharpening and Masking included, with Metal: 15 times faster on large screens like the iPad Pro's.
+es = Enfoque y Máscara incluidos, con Metal: 15 veces más rápido en pantallas grandes como la del iPad Pro.
+
+fr = Jamais fermée faute de mémoire
+en = Never closed for lack of memory
+es = Nunca se cierra por falta de memoria
+
+fr = LÜMA surveille la mémoire que le système lui laisse et libère ses caches sous 300 Mo, avant qu'il ne ferme l'app.
+en = LÜMA watches the memory the system leaves it and frees its caches below 300 MB, before the system closes the app.
+es = LÜMA vigila la memoria que le deja el sistema y libera sus cachés por debajo de 300 MB, antes de que el sistema cierre la app.
+
+fr = Vignettes instantanées
+en = Instant thumbnails
+es = Miniaturas instantáneas
+
+fr = L'aperçu intégré au RAW en 15 ms, puis les vignettes retouchées, relues en moins d'une milliseconde.
+en = The preview embedded in the raw file in 15 ms, then the edited thumbnails, read back in under a millisecond.
+es = La vista previa integrada en el RAW en 15 ms, luego las miniaturas retocadas, releídas en menos de un milisegundo.
+
+fr = Gains mesurés avec le même moteur sur Mac et sur Linux. Les temps sur iPhone et iPad remplaceront les objectifs dès les essais sur appareil.
+en = Gains measured with the same engine on Mac and Linux. Times on iPhone and iPad will replace the targets as soon as on-device testing begins.
+es = Mejoras medidas con el mismo motor en Mac y Linux. Los tiempos en iPhone y iPad sustituirán a los objetivos en cuanto empiecen las pruebas en el dispositivo.

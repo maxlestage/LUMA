@@ -306,6 +306,26 @@ pub struct Perf {
     pub note: Option<(&'static str, f32)>,
 }
 
+/// Ce qui est déjà fait pour iPhone et iPad, avec le gain mesuré : (titre, détail).
+pub const PHONE_GAINS: [(&str, &str); 4] = [
+    (
+        "Les curseurs suivent le doigt",
+        "Pendant un geste, un aperçu plus petit, puis la pleine netteté au lâcher : 12 fois plus rapide (417 → 35 ms par image).",
+    ),
+    (
+        "Tout le rendu sur le GPU",
+        "Accentuation et Masquage compris, avec Metal : 15 fois plus rapide sur les grands écrans comme celui de l'iPad Pro.",
+    ),
+    (
+        "Jamais fermée faute de mémoire",
+        "LÜMA surveille la mémoire que le système lui laisse et libère ses caches sous 300 Mo, avant qu'il ne ferme l'app.",
+    ),
+    (
+        "Vignettes instantanées",
+        "L'aperçu intégré au RAW en 15 ms, puis les vignettes retouchées, relues en moins d'une milliseconde.",
+    ),
+];
+
 pub const PERF: [Perf; 5] = [
     Perf {
         name: "Aperçu après réglage",

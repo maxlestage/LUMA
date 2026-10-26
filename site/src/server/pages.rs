@@ -477,6 +477,22 @@ fn performance(lang: Lang) -> Element {
         .child(div().class("perf-grid").children(cards))
         .child(
             div()
+                .class("phone-gains reveal")
+                .child(h3().text(t(lang, "Sur iPhone et iPad")))
+                .child(ul().children(PHONE_GAINS.iter().map(|&(title, detail)| {
+                    li().child(span().class("cap-check").attr("aria-hidden", "true").text("✔"))
+                        .child(
+                            span()
+                                .child(strong().text(t(lang, title)))
+                                .child(span().text(t(lang, detail))),
+                        )
+                })))
+                .child(p().class("phone-gains-note").text(t(lang,
+                    "Gains mesurés avec le même moteur sur Mac et sur Linux. Les temps sur iPhone et iPad remplaceront les objectifs dès les essais sur appareil.",
+                ))),
+        )
+        .child(
+            div()
                 .class("frame-budget reveal")
                 .child(p().children(rich(&fill(
                     t(lang,
