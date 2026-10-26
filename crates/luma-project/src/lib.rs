@@ -10,9 +10,11 @@ pub mod copies;
 pub mod masks;
 pub mod paste;
 pub mod presets;
+pub mod retouch;
 pub mod xmp;
 
 pub use masks::{Combine, Dab, Local, Look, Mask, Part, Range, Shape};
+pub use retouch::{Spot, SpotKind};
 
 use serde::{Deserialize, Serialize};
 
@@ -371,6 +373,9 @@ pub struct Settings {
     pub transform: Transform,
     /// Panneau Masquage : les retouches locales, dans l'ordre.
     pub masks: Vec<Mask>,
+    /// Tampon et correcteur : les retouches, dans l'ordre (chacune voit les précédentes).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub spots: Vec<Spot>,
     /// Un film mesuré sur une vraie pellicule ou une LUT 3D importée (`.cube`) : son nom
     /// et son intensité (0 à 100).
     pub lut: Option<Look>,
@@ -405,6 +410,7 @@ impl Default for Settings {
             lens: Lens::default(),
             transform: Transform::default(),
             masks: Vec::new(),
+            spots: Vec::new(),
             lut: None,
             film: None,
         }
@@ -451,6 +457,9 @@ impl Settings {
         clamp(&mut s.transform.rotate, -10.0, 10.0);
         clamp(&mut s.transform.aspect, -100.0, 100.0);
         clamp(&mut s.transform.scale, 50.0, 150.0);
+        for spot in &mut s.spots {
+            spot.clamp();
+        }
         for m in &mut s.masks {
             m.local.clamp();
             if let Some(r) = &mut m.range {
