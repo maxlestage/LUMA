@@ -61,6 +61,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
+| | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
 | | Snapshots, sync across multiple photos | ⏳ |
 | | iPhone and iPad: smaller preview during a gesture (12 times faster), memory watched, caches freed before the system closes the app | ✅ |
 | | Histogram, clipping indicator (J), before/after (`\`), 1:1 zoom | ✅ |

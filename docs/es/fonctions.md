@@ -62,6 +62,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Corrección, clonar, ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
+| | Copiar y pegar selectivo de ajustes («Pegar…», Alt+Mayús+Cmd+V): catorce grupos a elegir, recorte y máscaras propios de cada foto por defecto | ✅ |
 | | Instantáneas, sincronización en varias fotos | ⏳ |
 | | iPhone y iPad: vista previa reducida durante un gesto (12 veces más rápida), memoria vigilada, cachés liberadas antes de que el sistema cierre la app | ✅ |
 | | Histograma, indicador de recorte (J), antes/después (`\`), zoom 1:1 | ✅ |

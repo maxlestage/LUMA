@@ -2650,3 +2650,59 @@ es = Aviso de gama
 fr = En bleu : les couleurs que l'imprimante ne saura pas rendre
 en = In blue: the colors the printer will not be able to reproduce
 es = En azul: los colores que la impresora no podrá reproducir
+
+fr = Contraste, hautes lumières, ombres, blancs, noirs
+en = Contrast, highlights, shadows, whites, blacks
+es = Contraste, altas luces, sombras, blancos, negros
+
+fr = Texture, clarté, voile, vibrance, saturation
+en = Texture, clarity, dehaze, vibrance, saturation
+es = Textura, claridad, neblina, intensidad, saturación
+
+fr = Détail (accentuation, bruit)
+en = Detail (sharpening, noise)
+es = Detalle (enfoque, ruido)
+
+fr = Effets (vignetage, grain)
+en = Effects (vignette, grain)
+es = Efectos (viñeta, grano)
+
+fr = Profil et film
+en = Profile and film
+es = Perfil y película
+
+fr = Objectif et transformation
+en = Lens and transform
+es = Objetivo y transformación
+
+fr = Coller…
+en = Paste…
+es = Pegar…
+
+fr = Alt+Maj+Cmd+V : choisir quoi coller
+en = Alt+Shift+Cmd+V: choose what to paste
+es = Alt+Mayús+Cmd+V: elegir qué pegar
+
+fr = Copiez d'abord les réglages d'une photo.
+en = Copy a photo's adjustments first.
+es = Copia primero los ajustes de una foto.
+
+fr = Coller une partie des réglages
+en = Paste some adjustments
+es = Pegar parte de los ajustes
+
+fr = Tout
+en = All
+es = Todo
+
+fr = Rien
+en = None
+es = Nada
+
+fr = Coller ({n})
+en = Paste ({n})
+es = Pegar ({n})
+
+fr = Coller une partie des réglages ({n})
+en = Paste some adjustments ({n})
+es = Pegar parte de los ajustes ({n})
