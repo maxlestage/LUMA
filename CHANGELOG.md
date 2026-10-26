@@ -110,6 +110,10 @@ La photothèque professionnelle, étape par étape.
   en Rust pur ; un profil tronqué ou faux est refusé sans dommage. `luma icc`
   décrit un profil : classe, espace, intentions, blanc du support, blanc, noir et
   primaires du périphérique.
+- **Épreuvage à l'écran** (sous l'histogramme) : choisissez le profil ICC d'une
+  imprimante et d'un papier, et l'aperçu montre la photo telle qu'elle sortira, en
+  intention perceptuelle ou colorimétrique relative ; l'histogramme suit. Une vue,
+  pas un réglage : rien n'est écrit dans la photo.
 
 ## 0.2.0 — octobre 2026
 
