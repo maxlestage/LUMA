@@ -51,15 +51,26 @@ pub enum Flag {
 }
 
 /// Ce que la Bibliothèque sait d'une photo : note de 0 à 5 étoiles, drapeau, libellé
-/// de couleur. La note et le libellé sont les propriétés de base du XMP (`xmp:Rating`,
+/// de couleur, mots‑clés. La note et le libellé sont les propriétés de base du XMP (`xmp:Rating`,
 /// `xmp:Label`) ; un rejet s'écrit `xmp:Rating="-1"`, la valeur que le format lui
 /// réserve, et le drapeau « retenue », qui n'a pas de propriété de base, dans l'espace
-/// `luma:`.
+/// `luma:`. Les mots‑clés sont la liste `dc:subject`, que lisent tous les logiciels.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Meta {
     pub rating: u8,
     pub flag: Flag,
     pub label: String,
+    pub keywords: Vec<String>,
+}
+
+/// Le fichier XMP d'une photo : `IMG_0001.CR3.xmp` s'il existe, sinon `IMG_0001.xmp`.
+pub fn sidecar_path(photo: &std::path::Path) -> std::path::PathBuf {
+    let long = std::path::PathBuf::from(format!("{}.xmp", photo.display()));
+    if long.is_file() {
+        long
+    } else {
+        photo.with_extension("xmp")
+    }
 }
 
 /// La note, le drapeau et le libellé d'un document XMP (vides s'il n'y en a pas).
@@ -86,8 +97,12 @@ pub fn read_meta(text: &str) -> Meta {
             Flag::None
         },
         label: values.meta.get("xmp:Label").cloned().unwrap_or_default(),
+        keywords: values.lists.get(SUBJECT).cloned().unwrap_or_default(),
     }
 }
+
+/// La liste des mots‑clés, rangée avec les listes `crs:`.
+const SUBJECT: &str = "dc:subject";
 
 fn parse_values(text: &str) -> luma_core::Result<Values> {
     let mut reader = quick_xml::Reader::from_str(text);
@@ -118,25 +133,40 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                 }
                 let qname = e.name();
                 let tag: &str = qname.as_ref();
-                if let Some(name) = tag.strip_prefix("crs:") {
+                if let Some(name) = tag.strip_prefix("crs:").or((tag == SUBJECT).then_some(SUBJECT)) {
                     if !empty {
                         open = Some(name.to_owned());
                     }
-                } else if tag == "rdf:li" && open.is_some() && !empty {
+                } else if tag == "rdf:li"
+                    && !empty
+                    && let Some(name) = &open
+                {
                     in_li = true;
+                    values.lists.entry(name.clone()).or_default().push(String::new());
                 }
             }
-            Event::Text(t) => {
+            // Un texte arrive en morceaux, coupé à chaque entité (`&amp;`, `&#233;`…).
+            Event::Text(_) | Event::GeneralRef(_) => {
                 let Some(name) = &open else { continue };
-                let text = t.xml_content(XmlVersion::Implicit1_0);
-                let text = text.trim();
-                if text.is_empty() {
-                    continue;
-                }
+                let piece = match &event {
+                    Event::Text(t) => t.xml_content(XmlVersion::Implicit1_0).into_owned(),
+                    Event::GeneralRef(r) => match r.resolve_char_ref() {
+                        Ok(Some(c)) => c.to_string(),
+                        _ => {
+                            let entity = r.xml_content(XmlVersion::Implicit1_0);
+                            quick_xml::escape::resolve_xml_entity(&entity)
+                                .unwrap_or_default()
+                                .to_owned()
+                        }
+                    },
+                    _ => unreachable!(),
+                };
                 if in_li {
-                    values.lists.entry(name.clone()).or_default().push(text.to_owned());
-                } else {
-                    values.scalars.insert(name.clone(), text.to_owned());
+                    if let Some(item) = values.lists.get_mut(name).and_then(|l| l.last_mut()) {
+                        item.push_str(&piece);
+                    }
+                } else if !piece.trim().is_empty() || values.scalars.contains_key(name) {
+                    values.scalars.entry(name.clone()).or_default().push_str(&piece);
                 }
             }
             Event::End(ref e) => {
@@ -144,8 +174,17 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                 let tag: &str = qname.as_ref();
                 if tag == "rdf:li" {
                     in_li = false;
-                } else if tag.starts_with("crs:") {
-                    open = None;
+                    if let Some(item) = open
+                        .as_ref()
+                        .and_then(|n| values.lists.get_mut(n))
+                        .and_then(|l| l.last_mut())
+                    {
+                        *item = item.trim().to_owned();
+                    }
+                } else if (tag.starts_with("crs:") || tag == SUBJECT)
+                    && let Some(v) = open.take().and_then(|n| values.scalars.get_mut(&n))
+                {
+                    *v = v.trim().to_owned();
                 }
             }
             Event::Eof => break,
@@ -563,6 +602,9 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     );
     out.push_str(&format!("    xmlns:crs=\"{CRS}\"\n"));
     out.push_str("    xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n");
+    if !meta.keywords.is_empty() {
+        out.push_str("    xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n");
+    }
     out.push_str(&format!("    xmlns:luma=\"{LUMA_NS}\"\n"));
     let rating = if meta.flag == Flag::Reject {
         -1
@@ -602,6 +644,13 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
             out.push_str(&format!("     <rdf:li>{x:.0}, {y:.0}</rdf:li>\n"));
         }
         out.push_str(&format!("    </rdf:Seq>\n   </crs:{name}>\n"));
+    }
+    if !meta.keywords.is_empty() {
+        out.push_str("   <dc:subject>\n    <rdf:Bag>\n");
+        for k in &meta.keywords {
+            out.push_str(&format!("     <rdf:li>{}</rdf:li>\n", escape(k)));
+        }
+        out.push_str("    </rdf:Bag>\n   </dc:subject>\n");
     }
     out.push_str("  </rdf:Description>\n </rdf:RDF>\n</x:xmpmeta>\n");
     out
@@ -814,16 +863,19 @@ mod tests {
                 rating: 4,
                 flag: Flag::Pick,
                 label: "Rouge".into(),
+                keywords: vec!["Montagne".into(), "Été & neige <2026>".into()],
             },
             Meta {
                 rating: 0,
                 flag: Flag::Reject,
                 label: String::new(),
+                keywords: Vec::new(),
             },
             Meta {
                 rating: 5,
                 flag: Flag::None,
                 label: String::new(),
+                keywords: Vec::new(),
             },
         ] {
             let text = write_with_meta(&s, &meta);
@@ -836,9 +888,13 @@ mod tests {
             Meta {
                 rating: 3,
                 flag: Flag::None,
-                label: "Vert".into()
+                label: "Vert".into(),
+                keywords: Vec::new(),
             }
         );
+        // Les mots‑clés écrits par un autre logiciel : la liste `dc:subject`.
+        let tagged = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:subject><rdf:Bag><rdf:li>Portrait</rdf:li><rdf:li>Studio</rdf:li></rdf:Bag></dc:subject></rdf:Description></rdf:RDF></x:xmpmeta>"#;
+        assert_eq!(read_meta(tagged).keywords, ["Portrait", "Studio"]);
     }
 
     #[test]

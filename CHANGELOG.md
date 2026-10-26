@@ -1,5 +1,17 @@
 # Nouveautés
 
+## 0.3.0 — à venir
+
+La photothèque professionnelle, étape par étape.
+
+- **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
+  photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
+  vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
+  94 ms), puis seuls les fichiers modifiés sont relus (moins d'une milliseconde).
+  Photos rangées par date de prise de vue.
+- **Mots‑clés** : lus et écrits dans le XMP (`dc:subject`), comme le font tous les
+  logiciels photo.
+
 ## 0.2.0 — octobre 2026
 
 Toutes les images, trois langues, et la boutique.
