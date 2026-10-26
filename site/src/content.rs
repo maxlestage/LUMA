@@ -175,7 +175,7 @@ pub const PRIORITIES: [(&str, &str); 5] = [
     ("all", "Tout"),
     ("P0", "P0 · fondations"),
     ("P1", "P1 · éditeur"),
-    ("P2", "P2 · IA"),
+    ("P2", "P2 · outils avancés"),
     ("P3", "P3 · expansion"),
 ];
 
@@ -259,16 +259,16 @@ pub const CRATES: [Crate; 18] = [
         text: "Styles et profils de rendu partageables.",
     },
     Crate {
-        name: "luma-ai",
+        name: "luma-quality",
         priority: "P2",
         glyph: "◉",
-        text: "Sujet, ciel, débruitage, super‑résolution. Local, modèles versionnés.",
+        text: "Dématriçage fin, débruitage avancé, déconvolution. Sans IA.",
     },
     Crate {
         name: "luma-privacy",
         priority: "P2",
         glyph: "◌",
-        text: "Consentement IA, diagnostics sans contenu photographique.",
+        text: "Diagnostics sans contenu photographique, rien envoyé sans accord.",
     },
     Crate {
         name: "luma-sync",
@@ -397,7 +397,7 @@ pub const ROADMAP: [Phase; 6] = [
         when: "M13 – M18",
         name: "Bêta",
         items: &[
-            "IA locale : sujet, ciel, débruitage",
+            "Masques par plages, débruitage avancé, sans IA",
             "Profils boîtiers et objectifs",
             "Recherche, doublons",
             "Récupération après plantage",

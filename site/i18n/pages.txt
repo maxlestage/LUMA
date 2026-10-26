@@ -420,9 +420,9 @@ fr = Bêta
 en = Beta
 es = Beta
 
-fr = IA locale : sujet, ciel, débruitage
-en = On‑device AI: subject, sky, denoising
-es = IA local: sujeto, cielo, reducción de ruido
+fr = Masques par plages, débruitage avancé, sans IA
+en = Range masks, advanced denoising, no AI
+es = Máscaras por rangos, reducción de ruido avanzada, sin IA
 
 fr = Profils boîtiers et objectifs
 en = Camera and lens profiles
