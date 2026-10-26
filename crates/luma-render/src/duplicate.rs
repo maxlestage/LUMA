@@ -166,6 +166,7 @@ fn photo_of(m: &Value, width: usize, height: usize) -> Option<RawPhoto> {
             }),
         },
         rendered: m["rendered"].as_bool().unwrap_or(false),
+        opcodes: None,
     })
 }
 

@@ -26,6 +26,10 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Correcciones de objetivo de los DNG**: la distorsión, la aberración cromática
+  lateral y el viñeteo que la cámara o el programa escribieron en un DNG (opcodes
+  `WarpRectilinear` y `FixVignetteRadial`) se aplican automáticamente, en la vista
+  previa como en la exportación.
 - **Fototeca más rápida en discos externos**: para archivar una foto, LÜMA ya solo
   lee el principio del archivo (0,5 a 2 MB en lugar de 25 a 56 MB). Cinco RAW del
   corpus: 34 MB leídos en lugar de 189; un NEF se archiva en 1,5 ms en lugar de 17 a

@@ -43,7 +43,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Reducción de ruido de luminancia y de color | ✅ |
 | | Reducción de ruido avanzada (medias no locales, ondículas), sin IA | ⏳ |
 | Correcciones de lente | Aberración cromática lateral estimada en la foto, distorsión, viñeteado (cantidad, punto medio), eliminación de halos púrpuras y verdes | ✅ |
-| | Perfiles de objetivos (base de datos), aberración longitudinal | ⏳ |
+| | Correcciones de objetivo escritas en los DNG (opcodes `WarpRectilinear` y `FixVignetteRadial`): distorsión, aberración cromática lateral y viñeteo, aplicadas automáticamente en todos los tamaños | ✅ |
+| | Correcciones de objetivo leídas en los RAW de otros formatos (Sony, Fujifilm, Olympus/OM, Panasonic…), aberración longitudinal | ⏳ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
 | | Enderezamiento automático y guiado | ⏳ |
 | Efectos | Viñeta tras el recorte (cantidad, punto medio, redondez, desvanecimiento, altas luces) | ✅ |

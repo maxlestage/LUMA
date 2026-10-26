@@ -446,6 +446,7 @@ fn photo(width: usize, height: usize, data: Vec<f32>, space: Space, orientation:
         baseline_exposure: 0.0,
         exif: Exif::default(),
         rendered: true,
+        opcodes: None,
     }
 }
 

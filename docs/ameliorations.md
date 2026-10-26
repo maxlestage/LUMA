@@ -53,7 +53,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 
 ### 3. Corrections d'objectif automatiques
 
-- [ ] 3.1 DNG : opcodes `WarpRectilinear` et `FixVignetteRadial` (OpcodeList1‑3) lus et
+- [x] 3.1 DNG : opcodes `WarpRectilinear` et `FixVignetteRadial` (OpcodeList1‑3) lus et
   appliqués.
 - [ ] 3.2 Sony : distorsion, vignetage et aberration chromatique des makernotes ARW.
 - [ ] 3.3 Fujifilm : données de correction du RAF.
@@ -155,6 +155,9 @@ et blanc, vignetage après recadrage et grain existent).
 
 ## Idées
 
+- Une fusion (empilement, panorama) de DNG à opcodes n'applique pas leurs corrections
+  d'objectif au résultat ; et un doublon de travail écrit avant la lecture des opcodes
+  garde l'image non corrigée jusqu'à ce qu'il soit refait.
 - Copies virtuelles dans le catalogue (aujourd'hui, elles n'apparaissent que dans le
   dossier de leur original, pas dans les vues « toutes les photos » ni les recherches).
 - Le trait d'union insécable (U+2011) n'est pas dans la police de l'app : un texte
@@ -206,3 +209,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 2.6 Métadonnées d'export (`luma_render::metadata`) : EXIF écrit en TIFF maison (boîtier, objectif, pose, ouverture, ISO, focale, date, dimensions, logiciel), auteur et copyright (donnés ou inscrits par le boîtier, lus par rawler comme la position GPS), GPS retiré par défaut, paquet XMP dans les JPEG (créateur, droits, mots‑clés, note, libellé) ; doublon de travail en version 3 pour garder ces données ; fenêtre Exporter, préréglages, `--author`, `--copyright`, `--keep-gps`, `--no-exif`, `--no-keywords` | Vérifié sur le corpus : boîtier, réglages, auteur et copyright des RAW recopiés ; position de l'iPhone ProRAW retirée par défaut puis gardée avec `--keep-gps` |
 | 2026-10-26 | Vitesse (photothèque) : `luma_raw::info` ne lit que le début du fichier (256 Ko, puis 1 et 4 Mo, le fichier entier en dernier recours et pour le CR3, dont des métadonnées sont dans les pistes) ; résultat identique au décodage complet, vérifié sur le corpus | `cargo run --release -p luma-raw --example info -- tests/raw-corpus/*`, cache du système vidé : lu sur le disque 189 → 34 Mo pour les 5 RAW (hors CR3 : 161 → 4 Mo) ; NEF 17–23 → 1,5 ms (47,6 → 1,9 Mo) ; RAF 22–25 → 0,6 ms (56,1 → 0,6 Mo) ; DNG 11–19 → 0,5 ms (29,2 → 0,5 Mo) ; ARW 28,5 → 1,0 Mo ; CR3 inchangé |
 | 2026-10-26 | 2.6 bis Métadonnées dans les TIFF : le TIFF est désormais écrit par LÜMA (une bande RVB non compressée, 8 ou 16 bits, profil ICC, EXIF avec IFD EXIF et GPS, XMP), avec le même écrivain d'IFD que l'EXIF des JPEG ; pixels écrits à la suite de l'en‑tête, sans copie | TIFF 16 bits ProPhoto d'un NEF 24 Mpx : pixels identiques à l'ancien encodeur, 146 030 650 octets au lieu de 146 030 934 ; rendu et écriture : 1667 ms au mieux contre 1613 (dans le bruit de la machine) |
+| 2026-10-26 | 3.1 Opcodes DNG (`luma_raw::opcodes`) : `WarpRectilinear` (distorsion radiale et tangentielle, par plan : aberration chromatique latérale) et `FixVignetteRadial` lus dans `OpcodeList2` et `OpcodeList3`, appliqués sur la mosaïque ou après le dématriçage, à toutes les tailles, au centre optique du capteur même recadré ; autres opcodes ignorés | Tests : lecture (et liste tronquée sans débordement), vignetage ×2 aux coins et inchangé au centre, distorsion nulle sans effet, barillet, trois plans, image recadrée ; même gain dans l'aperçu et en pleine taille. Le ProRAW du corpus n'a pas d'opcodes : rendu inchangé |

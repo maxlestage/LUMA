@@ -16,6 +16,7 @@
 pub mod cameras;
 mod demosaic;
 pub mod dng;
+pub mod opcodes;
 pub mod raster;
 
 use std::path::Path;
@@ -168,6 +169,9 @@ pub struct RawPhoto {
     /// Une image déjà développée (JPEG, PNG, TIFF…) : ses valeurs sont celles de
     /// l'écran, et non la lumière de la scène (voir [`raster`]).
     pub rendered: bool,
+    /// Les corrections d'objectif d'un DNG (`OpcodeList3`), appliquées après le
+    /// dématriçage, et l'image du capteur à laquelle elles se réfèrent.
+    pub opcodes: Option<(Vec<opcodes::Opcode>, opcodes::Frame)>,
 }
 
 fn illuminant_temperature(i: rawler::imgop::xyz::Illuminant) -> f32 {
@@ -209,6 +213,31 @@ fn baseline_exposure(path: &Path) -> f32 {
         .get_entry(rawler::tags::DngTag::BaselineExposure)
         .map_or(0.0, |e| e.value.force_f32(0))
         .clamp(-10.0, 10.0)
+}
+
+/// Les corrections d'objectif d'un DNG : `OpcodeList2` (sur la mosaïque) et
+/// `OpcodeList3` (après le dématriçage). Vides pour les autres formats.
+fn dng_opcodes(path: &Path) -> (Vec<opcodes::Opcode>, Vec<opcodes::Opcode>) {
+    use rawler::formats::tiff::reader::TiffReader;
+    let is_dng = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("dng"));
+    let Some(tiff) = is_dng
+        .then(|| std::fs::File::open(path).ok())
+        .flatten()
+        .and_then(|mut f| rawler::formats::tiff::GenericTiffReader::new(&mut f, 0, 0, None, &[]).ok())
+    else {
+        return Default::default();
+    };
+    let list = |tag: rawler::tags::DngTag| {
+        tiff.root_ifd()
+            .find_first_ifd_with_tag(tag)
+            .and_then(|ifd| ifd.get_entry(tag))
+            .map(|e| opcodes::parse(e.value.get_data()))
+            .unwrap_or_default()
+    };
+    (
+        list(rawler::tags::DngTag::OpcodeList2),
+        list(rawler::tags::DngTag::OpcodeList3),
+    )
 }
 
 /// Ce que dit l'en‑tête d'une photo, sans décoder ses pixels : de quoi la ranger dans
@@ -294,9 +323,32 @@ impl RawPhoto {
         let params = rawler::decoders::RawDecodeParams::default();
         let raw = rawler::decode(&source, &params).map_err(|e| Error::Decode(e.to_string()))?;
         let exif = metadata(&source, &params).map(|i| i.exif).unwrap_or_default();
+        // L'image du capteur à laquelle se réfèrent les opcodes (la zone active), vue
+        // depuis l'image recadrée de LÜMA.
+        let active = raw
+            .active_area
+            .map_or((0, 0, raw.width, raw.height), |r| (r.p.x, r.p.y, r.d.w, r.d.h));
+        let origin = raw.crop_area.or(raw.active_area).map_or((0, 0), |r| (r.p.x, r.p.y));
+        let frame = opcodes::Frame {
+            x: active.0 as f64 - origin.0 as f64,
+            y: active.1 as f64 - origin.1 as f64,
+            width: active.2 as f64,
+            height: active.3 as f64,
+        };
         let mut photo = Self::from_rawler(raw)?;
         photo.baseline_exposure = baseline_exposure(path);
         photo.exif = exif;
+        let (before, mut after) = dng_opcodes(path);
+        // Le vignetage d'`OpcodeList2` s'applique à la mosaïque, avant le dématriçage ;
+        // sur un DNG déjà en RGB, il rejoint ceux d'après.
+        if matches!(photo.mosaic, Mosaic::Linear) {
+            after.splice(0..0, before);
+        } else {
+            opcodes::apply_to_mosaic(&before, &mut photo.data, photo.width, frame);
+        }
+        if !after.is_empty() {
+            photo.opcodes = Some((after, frame));
+        }
         Ok(photo)
     }
 
@@ -444,6 +496,7 @@ impl RawPhoto {
             baseline_exposure: 0.0,
             exif: Exif::default(),
             rendered: false,
+            opcodes: None,
         };
         photo.as_shot_neutral = if wb[0].is_finite() && wb[1] > 0.0 && wb[0] > 0.0 && wb[2] > 0.0 {
             [wb[1] / wb[0], 1.0, wb[1] / wb[2]]
@@ -529,7 +582,7 @@ impl RawPhoto {
 
     /// L'image en RGB caméra, pleine définition (dématriçage complet).
     pub fn demosaic(&self) -> RgbImage {
-        match &self.mosaic {
+        let mut img = match &self.mosaic {
             Mosaic::Bayer(cfa) => demosaic::bayer_mhc(&self.data, self.width, self.height, cfa),
             Mosaic::XTrans(cfa) => demosaic::xtrans(&self.data, self.width, self.height, cfa),
             Mosaic::Linear => RgbImage {
@@ -537,6 +590,16 @@ impl RawPhoto {
                 height: self.height,
                 data: self.data.as_chunks::<3>().0.to_vec(),
             },
+        };
+        self.correct_lens(&mut img);
+        img
+    }
+
+    /// Les corrections d'objectif du fichier (DNG), à la taille de `img`.
+    fn correct_lens(&self, img: &mut RgbImage) {
+        if let Some((ops, frame)) = &self.opcodes {
+            let scale = img.width as f64 / self.width.max(1) as f64;
+            opcodes::apply(ops, img, frame.scaled(scale));
         }
     }
 
@@ -544,8 +607,17 @@ impl RawPhoto {
     /// pixel. Environ 20 fois plus rapide, pour les aperçus et les vignettes.
     pub fn binned(&self) -> RgbImage {
         match &self.mosaic {
-            Mosaic::Bayer(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 2, 2),
-            Mosaic::XTrans(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 3, 6),
+            Mosaic::Bayer(cfa) => {
+                let mut img = demosaic::bin(&self.data, self.width, self.height, cfa, 2, 2);
+                self.correct_lens(&mut img);
+                img
+            }
+            Mosaic::XTrans(cfa) => {
+                let mut img = demosaic::bin(&self.data, self.width, self.height, cfa, 3, 6);
+                self.correct_lens(&mut img);
+                img
+            }
+            // Déjà corrigée par `demosaic`.
             Mosaic::Linear => self.demosaic().resize_area(self.width / 2, self.height / 2),
         }
     }
@@ -719,6 +791,53 @@ mod tests {
         );
     }
 
+    #[test]
+    fn lens_corrections_of_a_dng_apply_at_every_size() {
+        // Un capteur Bayer uniforme, et un vignetage à corriger : les coins s'éclaircissent,
+        // à la même place dans l'image entière et dans l'aperçu réduit.
+        let (w, h) = (64, 48);
+        let mut photo = synthetic([1.0; 3]);
+        photo.width = w;
+        photo.height = h;
+        photo.mosaic = Mosaic::Bayer(Cfa::parse("RGGB", 2, 2).unwrap());
+        photo.data = vec![0.25; w * h];
+        let flat_full = photo.demosaic();
+        let flat_binned = photo.binned();
+        let ops = vec![opcodes::Opcode::FixVignetteRadial {
+            k: [1.0, 0.0, 0.0, 0.0, 0.0],
+            center: [0.5, 0.5],
+        }];
+        let frame = opcodes::Frame {
+            x: 0.0,
+            y: 0.0,
+            width: w as f64,
+            height: h as f64,
+        };
+        photo.opcodes = Some((ops, frame));
+        let full = photo.demosaic();
+        let binned = photo.binned();
+        let corner_gain = |a: &RgbImage, b: &RgbImage| a.data[0][1] / b.data[0][1];
+        let center_gain = |a: &RgbImage, b: &RgbImage| {
+            let i = (a.height / 2) * a.width + a.width / 2;
+            a.data[i][1] / b.data[i][1]
+        };
+        assert!(
+            corner_gain(&full, &flat_full) > 1.8,
+            "{}",
+            corner_gain(&full, &flat_full)
+        );
+        assert!(center_gain(&full, &flat_full) < 1.01);
+        assert!(
+            (corner_gain(&binned, &flat_binned) - corner_gain(&full, &flat_full)).abs() < 0.1,
+            "aperçu {} et pleine taille {}",
+            corner_gain(&binned, &flat_binned),
+            corner_gain(&full, &flat_full)
+        );
+        // Sans opcodes, rien ne change.
+        photo.opcodes = None;
+        assert_eq!(photo.demosaic().data, flat_full.data);
+    }
+
     fn synthetic(neutral: [f32; 3]) -> RawPhoto {
         // Un boîtier fictif dont la matrice est celle du sRGB (A et D65 identiques).
         let m = color::inverse(&color::rgb_to_xyz(&color::SRGB)).unwrap();
@@ -735,6 +854,7 @@ mod tests {
             baseline_exposure: 0.0,
             exif: Exif::default(),
             rendered: false,
+            opcodes: None,
         }
     }
 
