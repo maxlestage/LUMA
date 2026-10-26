@@ -23,5 +23,8 @@ luma-licence.workspace = true
 luma-apple.workspace = true
 rayon.workspace = true
 
+[dev-dependencies]
+image.workspace = true
+
 [lints]
 workspace = true

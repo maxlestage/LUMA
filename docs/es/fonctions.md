@@ -90,7 +90,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Ajustes preestablecidos de exportación (formato, calidad, profundidad, espacio, tamaño, carpeta): web, resolución completa, pantalla P3, impresión, y los suyos; `luma export-preset`, `luma develop --preset` | ✅ |
 | Plantillas de nombre de archivo: `{nom}` (o `{nombre}`), `{date}` (`{fecha}`), `{séquence}` (`{secuencia}`), `{boîtier}` (`{cámara}`), `{objectif}` (`{objetivo}`), `{iso}`, `{note}` (`{valoración}`), `{libellé}` (`{etiqueta}`)…, subcarpetas con «/»; en la ventana Exportar, los ajustes preestablecidos y `luma develop --name` | ✅ |
 | Enfoque de salida: pantalla, papel mate, papel brillante; bajo, estándar, alto; al tamaño final (`--output-sharpen`) | ✅ |
-| Marca de agua, copia de los metadatos EXIF | ⏳ |
+| Marca de agua de texto (tipografía de LÜMA, suavizada): nueve posiciones, tamaño, opacidad, blanco o negro (`--watermark`) | ✅ |
+| Marca de agua con logotipo (PNG), copia de los metadatos EXIF | ⏳ |
 
 ## Biblioteca e interoperabilidad
 

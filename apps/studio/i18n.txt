@@ -417,6 +417,74 @@ fr = Forte
 en = High
 es = Alto
 
+fr = Filigrane
+en = Watermark
+es = Marca de agua
+
+fr = © votre nom
+en = © your name
+es = © su nombre
+
+fr = Emplacement du filigrane
+en = Watermark position
+es = Posición de la marca de agua
+
+fr = Taille du filigrane
+en = Watermark size
+es = Tamaño de la marca de agua
+
+fr = Taille, en pour cent du petit côté
+en = Size, as a percentage of the short edge
+es = Tamaño, en porcentaje del lado corto
+
+fr = Opacité
+en = Opacity
+es = Opacidad
+
+fr = Opacité du filigrane
+en = Watermark opacity
+es = Opacidad de la marca de agua
+
+fr = Noir
+en = Black
+es = Negro
+
+fr = En haut à gauche
+en = Top left
+es = Arriba a la izquierda
+
+fr = En haut
+en = Top
+es = Arriba
+
+fr = En haut à droite
+en = Top right
+es = Arriba a la derecha
+
+fr = À gauche
+en = Left
+es = A la izquierda
+
+fr = Au centre
+en = Center
+es = En el centro
+
+fr = À droite
+en = Right
+es = A la derecha
+
+fr = En bas à gauche
+en = Bottom left
+es = Abajo a la izquierda
+
+fr = En bas
+en = Bottom
+es = Abajo
+
+fr = En bas à droite
+en = Bottom right
+es = Abajo a la derecha
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos

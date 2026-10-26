@@ -53,6 +53,9 @@ La fototeca profesional, paso a paso.
 - **Enfoque de salida**: para pantalla, papel mate o papel brillante, bajo, estándar o
   alto, aplicado a la imagen en su tamaño final (en papel, el radio sigue el tamaño de
   la copia); las zonas lisas siguen lisas.
+- **Marca de agua de texto**: «© su nombre» dibujado con la tipografía de LÜMA,
+  suavizado al píxel, en una de nueve posiciones, con tamaño, opacidad, blanco o
+  negro; en la ventana Exportar, los ajustes preestablecidos y `luma develop --watermark`.
 
 ## 0.2.0 — octubre de 2026
 

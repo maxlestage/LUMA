@@ -2195,6 +2195,7 @@ dependencies = [
 name = "luma-cli"
 version = "0.2.0"
 dependencies = [
+ "image",
  "luma-apple",
  "luma-color",
  "luma-core",
@@ -2316,6 +2317,7 @@ dependencies = [
 name = "luma-render"
 version = "0.2.0"
 dependencies = [
+ "epaint_default_fonts",
  "image",
  "luma-color",
  "luma-core",
@@ -2326,6 +2328,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "skrifa",
 ]
 
 [[package]]
