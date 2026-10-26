@@ -112,6 +112,10 @@ const fn field(
     }
 }
 
+/// Un écran tactile sans clavier (iPhone, iPad) : toucher pour ouvrir, glisser d'une
+/// photo à l'autre, toucher longuement pour choisir ; pas de raccourcis à annoncer.
+const TOUCH: bool = cfg!(target_os = "ios");
+
 const TONE: [Field; 6] = [
     field("Exposition", -5.0, 5.0, 0.0, 2, |s| &mut s.exposure),
     field("Contraste", -100.0, 100.0, 0.0, 0, |s| &mut s.contrast),
@@ -2432,10 +2436,21 @@ impl Studio {
         let m = if compact { 8.0 } else { 14.0 };
         let top = Rect::from_min_size(full.min + vec2(m, m), vec2(full.width() - 2.0 * m, 50.0));
         self.island(ui, top, |s, ui| s.top_island(ui, compact));
-        if compact {
+        // Rien à retoucher encore : l'accueil prend tout l'écran.
+        let welcome = compact && self.folder.is_empty() && self.texture.is_none();
+        if welcome {
+            let stage = Rect::from_min_max(pos2(full.min.x, top.max.y + m), full.max);
+            self.stage(ui, stage);
+        } else if compact {
+            // La bibliothèque donne plus de place à la grille qu'à la photo seule.
+            let share = if self.module == Module::Library {
+                0.56
+            } else {
+                0.38
+            };
             let stage = Rect::from_min_max(
                 pos2(full.min.x, top.max.y + m),
-                pos2(full.max.x, top.max.y + m + full.height() * 0.38),
+                pos2(full.max.x, top.max.y + m + full.height() * share),
             );
             let bar = Rect::from_min_size(
                 pos2(full.min.x + m, stage.max.y + m),
@@ -3419,10 +3434,17 @@ impl Studio {
     /// Mes préréglages : enregistrer le look actuel, importer, tout exporter.
     fn my_presets(&mut self, ui: &mut Ui) {
         ui.label(
-            RichText::new(tr(
-                "En préréglages XMP (.xmp) : clic droit sur un film pour l'exporter seul, \
-                 ou tous d'un coup, rangés par famille.",
-            ))
+            RichText::new(if TOUCH {
+                tr(
+                    "En préréglages XMP (.xmp) : touchez longuement un film pour l'exporter seul, \
+                    ou tous d'un coup, rangés par famille.",
+                )
+            } else {
+                tr(
+                    "En préréglages XMP (.xmp) : clic droit sur un film pour l'exporter seul, \
+                    ou tous d'un coup, rangés par famille.",
+                )
+            })
             .size(11.5)
             .color(theme::DIM),
         );
@@ -3580,6 +3602,8 @@ impl Studio {
         let n = self.selected.len();
         ui.label(
             RichText::new(match n {
+                0 if TOUCH => tr("Dans la bibliothèque, touchez longuement les photos à fusionner, ou prenez tout le dossier.").to_owned(),
+                1 if TOUCH => tr("Une photo choisie : touchez longuement les autres dans la bibliothèque.").to_owned(),
                 0 => tr("Choisissez les photos dans le film : Cmd-clic pour en ajouter une, Maj-clic pour une suite.").to_owned(),
                 1 => tr("Une photo choisie : ajoutez-en d'autres (Cmd-clic, Maj-clic).").to_owned(),
                 n => trf("{n} photos choisies.", &[("n", &n)]),
@@ -3734,7 +3758,14 @@ impl Studio {
                 .first()
                 .and_then(|p| p.parent())
                 .map(|d| d.display().to_string())
-                .unwrap_or_else(|| tr("Aucun (Cmd+O)").into()),
+                .unwrap_or_else(|| {
+                    if TOUCH {
+                        tr("Aucun")
+                    } else {
+                        tr("Aucun (Cmd+O)")
+                    }
+                    .into()
+                }),
             View::All => tr("Toutes les photos").to_owned(),
             View::Collection(name) => name.clone(),
             View::Search(text) => trf("Recherche : {text}", &[("text", text)]),
@@ -4058,21 +4089,22 @@ impl Studio {
             } else {
                 tr("Aucune photo ne passe le filtre.").into()
             };
-            let shown = ui.painter().text(
-                rect.center(),
-                egui::Align2::CENTER_CENTER,
+            let shown = centered_text(
+                ui.painter(),
+                rect.center() - vec2(0.0, 20.0),
+                rect.width() - 40.0,
                 text,
-                egui::FontId::proportional(15.0),
-                theme::DIM,
             );
             if self.folder.is_empty() {
                 self.import_button(ui, pos2(rect.center().x, shown.max.y + 20.0));
             }
             return;
         }
-        let cell = 210.0;
+        // Deux colonnes au moins sur un écran étroit (iPhone en portrait).
+        let cell = ((ui.available_width() - 14.0) / 2.0 - 10.0).clamp(120.0, 210.0);
         let mut clicked = None;
         let mut open = None;
+        let mut chosen = None;
         egui::ScrollArea::vertical()
             .id_salt("grille")
             .auto_shrink(false)
@@ -4145,7 +4177,9 @@ impl Studio {
                                     egui::StrokeKind::Inside,
                                 );
                             }
-                            if r.double_clicked() {
+                            if TOUCH && r.long_touched() {
+                                chosen = Some(i);
+                            } else if r.double_clicked() || (TOUCH && r.clicked()) {
                                 open = Some(i);
                             } else if r.clicked() {
                                 clicked = Some(i);
@@ -4156,7 +4190,15 @@ impl Studio {
                     ui.add_space(10.0);
                 }
             });
-        if let Some(i) = open {
+        if let Some(i) = chosen {
+            // Toucher longuement : ajouter à la sélection (ou en retirer), comme ⌘‑clic.
+            if !self.selected.remove(&i) {
+                self.selected.insert(i);
+                if let Some(c) = self.current {
+                    self.selected.insert(c);
+                }
+            }
+        } else if let Some(i) = open {
             self.selected.clear();
             self.select(i);
             self.set_tool(Tool::Light);
@@ -4316,12 +4358,11 @@ impl Studio {
                     Color32::WHITE,
                 );
             }
-            let text = painter.text(
+            let text = centered_text(
+                &painter,
                 pos2(rect.center().x, logo.max.y + 18.0),
-                egui::Align2::CENTER_TOP,
+                rect.width() - 40.0,
                 self.status_text(),
-                egui::FontId::proportional(15.0),
-                theme::DIM,
             );
             self.import_button(ui, pos2(rect.center().x, text.max.y + 20.0));
             return;
@@ -4408,7 +4449,7 @@ impl Studio {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
             self.edit_label(&painter, target);
-            let sense = if self.targeting {
+            let sense = if self.targeting || TOUCH {
                 egui::Sense::click_and_drag()
             } else {
                 egui::Sense::click()
@@ -4441,6 +4482,20 @@ impl Studio {
                         ],
                     ));
                     self.touch();
+                }
+            } else if TOUCH && r.drag_stopped() {
+                // Glisser du doigt : la photo suivante ou la précédente.
+                let moved = ui.input(|i| {
+                    i.pointer
+                        .press_origin()
+                        .zip(i.pointer.latest_pos())
+                        .map(|(a, b)| b - a)
+                });
+                if let Some(d) = moved
+                    && d.x.abs() > 60.0
+                    && d.x.abs() > 2.0 * d.y.abs()
+                {
+                    self.act(if d.x < 0.0 { "next" } else { "prev" });
                 }
             } else if r.on_hover_text(tr("Clic ou Z : zoom 1:1")).clicked() {
                 self.zoom = true;
@@ -6355,6 +6410,21 @@ fn export_summary(o: &ExportOptions) -> String {
 /// Le modèle du nom des fichiers exportés est‑il valable ?
 fn valid_name(template: &str) -> bool {
     luma_render::export::check_template(template).is_ok()
+}
+
+/// Un texte centré sous `top`, revenu à la ligne au‑delà de `width` ; rend sa place.
+fn centered_text(painter: &egui::Painter, top: egui::Pos2, width: f32, text: String) -> Rect {
+    let mut job = egui::text::LayoutJob::simple(
+        text,
+        egui::FontId::proportional(15.0),
+        theme::DIM,
+        width.max(100.0),
+    );
+    job.halign = egui::Align::Center;
+    let galley = painter.layout_job(job);
+    let rect = galley.rect.translate(top.to_vec2());
+    painter.galley(top, galley, theme::DIM);
+    rect
 }
 
 #[cfg(test)]
