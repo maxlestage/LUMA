@@ -25,6 +25,9 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **“Camera corrections” checkbox** (Geometry): on by default; turned off, the photo
+  goes back to what the lens gave, and the distortion and vignetting sliders take over.
+  Saved in the XMP.
 - **OM System, Olympus and Panasonic lens corrections**: the distortion (and, for
   Olympus and OM System, the lateral chromatic aberration) that the camera records in
   every ORF or RW2 file is applied automatically. The test corpus now holds 7 real RAW

@@ -441,6 +441,9 @@ pub struct Studio {
     pub keyword_filter: Option<String>,
     /// Le mot‑clé en cours de saisie.
     keyword_input: String,
+    /// La photo relue depuis son RAW parce que les corrections du boîtier sont coupées
+    /// (son doublon les porte) : demandé une fois.
+    original_asked: Option<PathBuf>,
     /// La photothèque : le catalogue de toutes les photos vues, son fichier, et la mise
     /// à jour en cours (un dossier relu dans un fil à part, sans bloquer l'interface).
     catalog: luma_library::Catalog,
@@ -619,6 +622,7 @@ impl Studio {
             flag_filter: FlagFilter::All,
             keyword_filter: None,
             keyword_input: String::new(),
+            original_asked: None,
             catalog: luma_library::Catalog::default(),
             catalog_path: None,
             indexing: None,
@@ -1141,6 +1145,7 @@ impl Studio {
                             }
                             self.status = info;
                             self.photo = Some(photo);
+                            self.original_asked = None;
                             self.zoom = false;
                         }
                         Err(e) => {
@@ -2075,6 +2080,16 @@ impl Studio {
             }
         }
         self.poll_catalog();
+        // Corrections du boîtier coupées sur une photo ouverte depuis son doublon, qui les
+        // porte dans ses pixels : la relire depuis le RAW.
+        if let (Some(photo), Some(path)) = (&self.photo, self.current_path())
+            && photo.needs_original(self.settings.lens.camera)
+            && self.original_asked.as_deref() != Some(path)
+        {
+            let path = path.to_path_buf();
+            self.worker.reload_original(path.clone());
+            self.original_asked = Some(path);
+        }
         if self.indexing.is_some() {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
@@ -4772,6 +4787,28 @@ impl Studio {
                 .id_salt("Corrections de l'objectif")
                 .default_open(true)
                 .show(ui, |ui| {
+                    let recorded = self.photo.as_ref().is_some_and(|p| p.has_camera_corrections());
+                    if recorded {
+                        if ui
+                            .checkbox(&mut self.settings.lens.camera, tr("Corrections du boîtier"))
+                            .on_hover_text(tr(
+                                "La distorsion, l'aberration chromatique et le vignetage enregistrés dans le fichier par le boîtier",
+                            ))
+                            .changed()
+                        {
+                            commits.push(if self.settings.lens.camera {
+                                tr("Corrections du boîtier appliquées").into()
+                            } else {
+                                tr("Corrections du boîtier retirées").into()
+                            });
+                        }
+                    } else {
+                        ui.label(
+                            RichText::new(tr("Aucune correction enregistrée dans ce fichier"))
+                                .size(11.5)
+                                .color(theme::DIM),
+                        );
+                    }
                     if ui
                         .checkbox(
                             &mut self.settings.lens.remove_ca,

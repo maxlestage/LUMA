@@ -377,6 +377,8 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         }
     }
     s.lens.remove_ca = values.scalars.get("AutoLateralCA").is_some_and(|v| v.trim() == "1");
+    // Les corrections de l'objectif enregistrées : actives sauf si le XMP les coupe.
+    s.lens.camera = values.scalars.get("LensProfileEnable").is_none_or(|v| v.trim() != "0");
     let wb = values
         .scalars
         .get("WhiteBalance")
@@ -425,13 +427,14 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
 /// Les réglages qu'un préréglage n'emporte pas : ceux de la photo (balance des blancs,
 /// exposition, recadrage, objectif, perspective, détail, calibration).
 fn photo_only(name: &str) -> bool {
-    const KEYS: [&str; 12] = [
+    const KEYS: [&str; 13] = [
         "WhiteBalance",
         "Temperature",
         "Tint",
         "Exposure2012",
         "HasCrop",
         "AutoLateralCA",
+        "LensProfileEnable",
         "LensManualDistortionAmount",
         "VignetteAmount",
         "VignetteMidpoint",
@@ -595,6 +598,10 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     attrs.push((
         "AutoLateralCA".into(),
         if s.lens.remove_ca { "1".into() } else { "0".into() },
+    ));
+    attrs.push((
+        "LensProfileEnable".into(),
+        if s.lens.camera { "1".into() } else { "0".into() },
     ));
 
     if s.profile == Profile::Monochrome {
@@ -817,6 +824,7 @@ mod tests {
         }
         s.masks = vec![sky, brush];
         s.lens.remove_ca = true;
+        s.lens.camera = false;
         s.lens.distortion = 12.0;
         s.transform.vertical = -25.0;
         s.transform.scale = 95.0;
@@ -829,9 +837,13 @@ mod tests {
             amount: 80.0,
         });
         let text = write(&s);
+        assert!(text.contains("crs:LensProfileEnable=\"0\""), "{text}");
         assert!(text.contains("luma:Masks="));
         assert!(text.contains("luma:LutAmount=\"70\""));
         assert_eq!(read(&text).unwrap(), s);
+        // Sans l'étiquette, les corrections du boîtier restent actives.
+        let without = text.replace("crs:LensProfileEnable=\"0\"", "");
+        assert!(read(&without).unwrap().lens.camera);
     }
 
     #[test]

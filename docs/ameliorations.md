@@ -58,7 +58,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 - [x] 3.2 Sony : distorsion, vignetage et aberration chromatique des makernotes ARW.
 - [x] 3.3 Fujifilm : données de correction du RAF.
 - [x] 3.4 Olympus/OM et Panasonic : distorsion et vignetage des makernotes.
-- [ ] 3.5 Application automatique à l'ouverture, case « Corrections du boîtier »,
+- [x] 3.5 Application automatique à l'ouverture, case « Corrections du boîtier »,
   réglage manuel en secours ; XMP.
 
 ### 4. Masques avancés, sans IA
@@ -225,3 +225,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | Plus aucune mention d'IA dans ce qui est visible : README, architecture et feuille de route (FR, EN, ES), site (crates prévues, priorités, feuille de route) ; « sans IA » dit à la place | Recherche d'« IA », « AI », « Neural », « luma-ai » dans le README, les docs et le site : plus rien hors des mentions « sans IA » |
 | 2026-10-26 | 3.3 Corrections Fujifilm (`opcodes::fuji`) : 0xF00B (distorsion), 0xF00F (aberration chromatique), 0xF010 (vignetage) du FujiIFD, dans le TIFF des données brutes du RAF (quelques Ko lus) ; X‑Trans IV et V (9 nœuds) et avant (11 nœuds) ; mode recadré (CropMode 2 ou 4 : nœuds × 1,25) ; même passe que pour Sony | X‑T3 du corpus (XF 35 mm F2) : barillet corrigé (−8,9 % de rayon au bord), rouge et bleu décalés de ±0,15 %, pas de vignetage enregistré, aucun agrandissement nécessaire ; coût identique à celui des Sony |
 | 2026-10-26 | 3.4 Corrections Olympus/OM System (`opcodes::olympus` : ImageProcessing 0x150A distorsion, 0x150C aberration chromatique, flottants) et Panasonic (`opcodes::panasonic` : 0x0119, 16 entiers, modèle inversé par itérations) ; corpus : + OM‑5 Mark II (ORF) et Panasonic G9 (RW2), `docs/boitiers.md` régénéré (6 boîtiers vérifiés) | OM‑5 Mark II : barillet corrigé, rouge et bleu distincts ; G9 : distorsion de plus de 0,5 % au coin ; les deux lus dans le début du fichier (≤ 1 Mo), en‑têtes identiques au décodage complet pour les 7 RAW |
+| 2026-10-26 | 3.5 Case « Corrections du boîtier » : `Lens::camera` (vrai par défaut), XMP `crs:LensProfileEnable` (absent : actif) ; sources du rendu en cache avec ou sans corrections ; le doublon dit s'il porte déjà les corrections, et l'app relit alors le RAW quand on décoche ; curseurs manuels en secours | Tests : XMP aller‑retour et étiquette absente, coin du Sony plus sombre sans corrections, NEF inchangé (pas de corrections enregistrées), doublon qui demande l'original ; capture `studio-geometrie-corrections.png` |

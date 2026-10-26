@@ -101,6 +101,8 @@ fn meta(raw: &RawPhoto, source: (u64, u128)) -> Value {
         "orientation": orientation_code(raw.orientation),
         "baseline_exposure": raw.baseline_exposure,
         "rendered": raw.rendered,
+        // Les corrections d'objectif du fichier sont déjà dans les pixels du doublon.
+        "lens_corrected": raw.opcodes.is_some(),
         "exif": {
             "iso": raw.exif.iso,
             "exposure_time": raw.exif.exposure_time,
@@ -285,6 +287,8 @@ struct Level {
 pub struct Duplicate {
     path: PathBuf,
     levels: Vec<Level>,
+    /// Les pixels portent déjà les corrections d'objectif du fichier.
+    pub lens_corrected: bool,
 }
 
 fn read_u32(f: &mut impl Read) -> Result<u32> {
@@ -340,6 +344,7 @@ impl Duplicate {
             Duplicate {
                 path: path.to_owned(),
                 levels,
+                lens_corrected: m["lens_corrected"].as_bool().unwrap_or(false),
             },
             raw,
         ))

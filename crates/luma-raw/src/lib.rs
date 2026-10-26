@@ -813,9 +813,18 @@ impl RawPhoto {
 
     // ----- Images ------------------------------------------------------------------------
 
-    /// L'image en RGB caméra, pleine définition (dématriçage complet).
+    /// L'image en RGB caméra, pleine définition (dématriçage complet), corrections
+    /// d'objectif du fichier comprises.
     pub fn demosaic(&self) -> RgbImage {
-        let mut img = match &self.mosaic {
+        let mut img = self.demosaic_uncorrected();
+        self.correct_lens(&mut img);
+        img
+    }
+
+    /// Le dématriçage seul, sans les corrections d'objectif du fichier (case « Corrections
+    /// du boîtier » décochée).
+    pub fn demosaic_uncorrected(&self) -> RgbImage {
+        match &self.mosaic {
             Mosaic::Bayer(cfa) => demosaic::bayer_mhc(&self.data, self.width, self.height, cfa),
             Mosaic::XTrans(cfa) => demosaic::xtrans(&self.data, self.width, self.height, cfa),
             Mosaic::Linear => RgbImage {
@@ -823,12 +832,11 @@ impl RawPhoto {
                 height: self.height,
                 data: self.data.as_chunks::<3>().0.to_vec(),
             },
-        };
-        self.correct_lens(&mut img);
-        img
+        }
     }
 
-    /// Les corrections d'objectif du fichier (DNG), à la taille de `img`.
+    /// Les corrections d'objectif du fichier (DNG, ou celles du boîtier), à la taille de
+    /// `img` (une image de la photo dans le sens du capteur).
     fn correct_lens(&self, img: &mut RgbImage) {
         if let Some((ops, frame)) = &self.opcodes {
             let scale = img.width as f64 / self.width.max(1) as f64;
@@ -838,20 +846,19 @@ impl RawPhoto {
 
     /// L'image en RGB caméra, réduite sans dématriçage : chaque bloc du motif donne un
     /// pixel. Environ 20 fois plus rapide, pour les aperçus et les vignettes.
+    /// Corrections d'objectif du fichier comprises.
     pub fn binned(&self) -> RgbImage {
+        let mut img = self.binned_uncorrected();
+        self.correct_lens(&mut img);
+        img
+    }
+
+    /// [`binned`](Self::binned), sans les corrections d'objectif du fichier.
+    pub fn binned_uncorrected(&self) -> RgbImage {
         match &self.mosaic {
-            Mosaic::Bayer(cfa) => {
-                let mut img = demosaic::bin(&self.data, self.width, self.height, cfa, 2, 2);
-                self.correct_lens(&mut img);
-                img
-            }
-            Mosaic::XTrans(cfa) => {
-                let mut img = demosaic::bin(&self.data, self.width, self.height, cfa, 3, 6);
-                self.correct_lens(&mut img);
-                img
-            }
-            // Déjà corrigée par `demosaic`.
-            Mosaic::Linear => self.demosaic().resize_area(self.width / 2, self.height / 2),
+            Mosaic::Bayer(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 2, 2),
+            Mosaic::XTrans(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 3, 6),
+            Mosaic::Linear => self.demosaic_uncorrected().resize_area(self.width / 2, self.height / 2),
         }
     }
 

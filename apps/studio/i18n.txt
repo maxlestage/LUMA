@@ -1513,6 +1513,26 @@ fr = Supprimer la copie
 en = Delete copy
 es = Eliminar la copia
 
+fr = Corrections du boîtier
+en = Camera corrections
+es = Correcciones de la cámara
+
+fr = La distorsion, l'aberration chromatique et le vignetage enregistrés dans le fichier par le boîtier
+en = The distortion, chromatic aberration and vignetting recorded in the file by the camera
+es = La distorsión, la aberración cromática y el viñeteo registrados en el archivo por la cámara
+
+fr = Corrections du boîtier appliquées
+en = Camera corrections applied
+es = Correcciones de la cámara aplicadas
+
+fr = Corrections du boîtier retirées
+en = Camera corrections removed
+es = Correcciones de la cámara quitadas
+
+fr = Aucune correction enregistrée dans ce fichier
+en = No correction recorded in this file
+es = Ninguna corrección registrada en este archivo
+
 fr = Supprime ses réglages ; l'original ne change pas
 en = Deletes its settings; the original does not change
 es = Elimina sus ajustes; el original no cambia
