@@ -173,13 +173,22 @@ impl Plane {
 
     /// Flou boîte horizontal de rayon `r`, bords prolongés. Le centre de la ligne est
     /// parcouru sans aucune vérification de bornes.
+    #[cfg(test)]
     fn box_rows(&self, r: usize) -> Plane {
-        let w = self.width;
         if r == 0 {
             return self.clone();
         }
+        let mut out = Plane::new(self.width, self.height);
+        self.box_rows_into(r, &mut out);
+        out
+    }
+
+    /// `box_rows`, écrit dans `out` (de même taille, `r` ≥ 1) : les passes successives
+    /// d'un flou réutilisent deux tampons au lieu d'allouer chacune une image neuve (une
+    /// mémoire neuve coûte une faute de page par page à la première écriture).
+    fn box_rows_into(&self, r: usize, out: &mut Plane) {
+        let w = self.width;
         let norm = 1.0 / (2 * r + 1) as f32;
-        let mut out = Plane::new(w, self.height);
         out.data
             .par_chunks_mut(w)
             .zip(self.data.par_chunks(w))
@@ -202,23 +211,29 @@ impl Plane {
                     sum += at(x as isize + ri + 1) - at(x as isize - ri);
                 }
             });
-        out
     }
 
     /// Flou boîte vertical de rayon `r`. Par blocs de lignes, chacun avec ses sommes de
     /// colonnes glissantes : lectures et écritures contiguës, sans transposition.
+    #[cfg(test)]
     fn box_cols(&self, r: usize) -> Plane {
-        let (w, h) = (self.width, self.height);
         if r == 0 {
             return self.clone();
         }
+        let mut out = Plane::new(self.width, self.height);
+        self.box_cols_into(r, &mut out);
+        out
+    }
+
+    /// `box_cols`, écrit dans `out` (de même taille, `r` ≥ 1).
+    fn box_cols_into(&self, r: usize, out: &mut Plane) {
+        let (w, h) = (self.width, self.height);
         const ROWS: usize = 32;
         let norm = 1.0 / (2 * r + 1) as f32;
         let row = |y: isize| {
             let y = y.clamp(0, h as isize - 1) as usize;
             &self.data[y * w..(y + 1) * w]
         };
-        let mut out = Plane::new(w, h);
         out.data
             .par_chunks_mut(w * ROWS)
             .enumerate()
@@ -241,7 +256,6 @@ impl Plane {
                     }
                 }
             });
-        out
     }
 
     /// Flou gaussien d'écart type `sigma` (en pixels de ce plan).
@@ -260,12 +274,15 @@ impl Plane {
         // Trois boîtes successives approchent la gaussienne (théorème central limite).
         let ideal = (12.0 * sigma * sigma / 3.0 + 1.0).sqrt();
         let r = ((ideal - 1.0) / 2.0).round().max(1.0) as usize;
-        self.box_rows(r)
-            .box_rows(r)
-            .box_rows(r)
-            .box_cols(r)
-            .box_cols(r)
-            .box_cols(r)
+        // Six passes, deux tampons qui alternent.
+        let (mut a, mut b) = (Plane::new(self.width, self.height), Plane::new(self.width, self.height));
+        self.box_rows_into(r, &mut a);
+        a.box_rows_into(r, &mut b);
+        b.box_rows_into(r, &mut a);
+        a.box_cols_into(r, &mut b);
+        b.box_cols_into(r, &mut a);
+        a.box_cols_into(r, &mut b);
+        b
     }
 
     /// Réduction d'un facteur entier `k` : moyenne de chaque bloc `k × k` (les blocs du
@@ -422,6 +439,34 @@ mod tests {
         assert!((sum - 1.0).abs() < 1e-3, "{sum}");
         assert!(b.data[50 * 101 + 50] < 0.05);
         assert!(b.data[50 * 101 + 53] > 0.0);
+    }
+
+    #[test]
+    fn blur_in_two_buffers_matches_the_chained_passes() {
+        let p = Plane {
+            width: 53,
+            height: 41,
+            data: (0..53 * 41).map(|i| ((i as f32) * 0.618).fract()).collect(),
+        };
+        for sigma in [0.5, 1.0, 2.5, 5.0] {
+            let ideal = (12.0 * sigma * sigma / 3.0 + 1.0_f32).sqrt();
+            let r = ((ideal - 1.0) / 2.0).round().max(1.0) as usize;
+            let chained = p
+                .box_rows(r)
+                .box_rows(r)
+                .box_rows(r)
+                .box_cols(r)
+                .box_cols(r)
+                .box_cols(r);
+            let b = p.blur(sigma);
+            assert!(
+                b.data
+                    .iter()
+                    .zip(&chained.data)
+                    .all(|(x, y)| x.to_bits() == y.to_bits()),
+                "sigma {sigma}"
+            );
+        }
     }
 
     #[test]

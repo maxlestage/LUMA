@@ -6,7 +6,9 @@ The professional photo library, step by step.
 
 - **Faster**: colour noise reduction (on by default) is three times faster without
   changing a single pixel; full-resolution export takes 25 to 30% less time, and the
-  preview with heavy adjustments is about 25% more responsive.
+  preview with heavy adjustments is about 25% more responsive. Then the blurs: two
+  buffers instead of six new images, so full-resolution sharpening is almost twice as
+  fast (NEF 0.64 → 0.36 s), without changing a pixel.
 
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
