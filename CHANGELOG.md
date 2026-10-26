@@ -26,6 +26,10 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Corrections d'objectif des DNG** : la distorsion, l'aberration chromatique
+  latérale et le vignetage que le boîtier ou le logiciel a écrits dans un DNG (opcodes
+  `WarpRectilinear` et `FixVignetteRadial`) sont appliqués automatiquement, à l'aperçu
+  comme à l'export.
 - **Photothèque plus rapide sur les disques externes** : pour ranger une photo, LÜMA
   ne lit plus que le début du fichier (0,5 à 2 Mo au lieu de 25 à 56 Mo). Cinq RAW du
   corpus : 34 Mo lus au lieu de 189 ; un NEF se range en 1,5 ms au lieu de 17 à 23,

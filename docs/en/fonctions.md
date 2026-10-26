@@ -42,7 +42,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Luminance and colour noise reduction | ✅ |
 | | Advanced noise reduction (non-local means, wavelets), without AI | ⏳ |
 | Lens Corrections | Lateral chromatic aberration estimated from the photo, distortion, vignetting (amount, midpoint), purple and green defringe | ✅ |
-| | Lens profiles (database), longitudinal aberration | ⏳ |
+| | Lens corrections written in DNG files (`WarpRectilinear` and `FixVignetteRadial` opcodes): distortion, lateral chromatic aberration and vignetting, applied automatically at every size | ✅ |
+| | Lens corrections read from other RAW formats (Sony, Fujifilm, Olympus/OM, Panasonic…), longitudinal aberration | ⏳ |
 | Transform | Vertical and horizontal perspective, rotate, aspect, scale (homography, fixed centre) | ✅ |
 | | Automatic and guided straightening | ⏳ |
 | Effects | Post-crop vignetting (amount, midpoint, roundness, feather, highlights) | ✅ |

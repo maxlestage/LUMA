@@ -49,6 +49,7 @@ fn bayer(w: usize, h: usize) -> RawPhoto {
             ..Exif::default()
         },
         rendered: false,
+        opcodes: None,
     }
 }
 
