@@ -14,6 +14,9 @@
 //!
 //! Les autres opcodes (cartes de gain, pixels morts…) ne sont pas des corrections
 //! d'objectif : ils sont ignorés, comme le permet leur drapeau « facultatif ».
+//!
+//! Les boîtiers qui n'écrivent pas de DNG rangent les mêmes corrections dans leur RAW,
+//! sous forme de courbes le long du rayon ([`Opcode::Spline`], voir [`sony`]).
 
 use luma_core::RgbImage;
 use rayon::prelude::*;
@@ -27,6 +30,91 @@ pub enum Opcode {
     WarpRectilinear { planes: Vec<[f64; 6]>, center: [f64; 2] },
     /// Le vignetage : `k0..k4` et le centre optique.
     FixVignetteRadial { k: [f64; 5], center: [f64; 2] },
+    /// Les corrections d'un boîtier, en courbes définies par des nœuds le long du rayon
+    /// (0 au centre de l'image, 1 au coin) : le rapport entre le rayon où l'objectif a
+    /// posé un point et celui où il devrait être, pour le rouge, le vert et le bleu, et
+    /// la part de lumière qui arrive (le vignetage). `zoom` agrandit l'image juste
+    /// assez pour que la distorsion corrigée ne laisse aucun bord vide.
+    Spline {
+        knots: Vec<f64>,
+        distortion: [Vec<f64>; 3],
+        vignetting: Vec<f64>,
+        zoom: f64,
+    },
+}
+
+/// Une courbe linéaire par morceaux, constante au‑delà de ses nœuds.
+fn spline(knots: &[f64], values: &[f64], r: f64) -> f64 {
+    let n = knots.len().min(values.len());
+    if n == 0 {
+        return 1.0;
+    }
+    if r <= knots[0] {
+        return values[0];
+    }
+    for i in 1..n {
+        if r <= knots[i] {
+            let t = (r - knots[i - 1]) / (knots[i] - knots[i - 1]).max(1e-12);
+            return values[i - 1] + t * (values[i] - values[i - 1]);
+        }
+    }
+    values[n - 1]
+}
+
+/// Le plus petit agrandissement (≥ 1) pour lequel le coin de l'image corrigée va encore
+/// chercher ses pixels dans la photo : `r·d(r) ≤ 1` au rayon `r = 1/zoom`.
+fn zoom_for(knots: &[f64], distortion: &[Vec<f64>; 3]) -> f64 {
+    let reach = |z: f64| {
+        let r = 1.0 / z;
+        distortion.iter().map(|d| r * spline(knots, d, r)).fold(0.0, f64::max)
+    };
+    if reach(1.0) <= 1.0 {
+        return 1.0;
+    }
+    let (mut lo, mut hi) = (1.0, 2.0);
+    for _ in 0..40 {
+        let mid = 0.5 * (lo + hi);
+        if reach(mid) <= 1.0 { hi = mid } else { lo = mid }
+    }
+    hi
+}
+
+/// Les corrections enregistrées par un boîtier Sony dans son ARW (étiquettes 0x7037 :
+/// distorsion, 0x7035 : aberration chromatique, rouge puis bleu, 0x7032 : vignetage ;
+/// chacune commence par son nombre de valeurs). Des entiers, à l'échelle 2⁻¹⁴ pour la
+/// distorsion, 2⁻²¹ pour l'aberration chromatique et 2⁻¹³ pour le vignetage, sur des
+/// nœuds placés en (i + ½)/(n − 1) du rayon.
+pub fn sony(distortion: &[i32], ca: &[i32], vignetting: &[i32]) -> Option<Opcode> {
+    let n = usize::try_from(*distortion.first()?).ok()?;
+    let ok = (2..=16).contains(&n)
+        && distortion.len() > n
+        && ca.first().is_some_and(|c| *c as usize == 2 * n && ca.len() > 2 * n)
+        && vignetting
+            .first()
+            .is_some_and(|v| *v as usize == n && vignetting.len() > n);
+    if !ok {
+        return None;
+    }
+    let knots: Vec<f64> = (0..n).map(|i| (i as f64 + 0.5) / (n - 1) as f64).collect();
+    let green: Vec<f64> = (0..n)
+        .map(|i| f64::from(distortion[i + 1]) * 2f64.powi(-14) + 1.0)
+        .collect();
+    let tint = |offset: usize| -> Vec<f64> {
+        (0..n)
+            .map(|i| green[i] * (f64::from(ca[offset + i + 1]) * 2f64.powi(-21) + 1.0))
+            .collect()
+    };
+    let distortion = [tint(0), green.clone(), tint(n)];
+    let vignetting = (0..n)
+        .map(|i| 2f64.powf(0.5 - 2f64.powf(f64::from(vignetting[i + 1]) * 2f64.powi(-13) - 1.0)))
+        .collect();
+    let zoom = zoom_for(&knots, &distortion);
+    Some(Opcode::Spline {
+        knots,
+        distortion,
+        vignetting,
+        zoom,
+    })
 }
 
 fn u32_at(b: &[u8], at: usize) -> Option<u32> {
@@ -141,6 +229,30 @@ pub fn apply(ops: &[Opcode], img: &mut RgbImage, frame: Frame) {
         match op {
             Opcode::FixVignetteRadial { k, center } => vignette(img, frame, k, *center),
             Opcode::WarpRectilinear { planes, center } => warp(img, frame, planes, *center),
+            Opcode::Spline {
+                knots,
+                distortion,
+                vignetting,
+                zoom,
+            } => {
+                let (cx, cy, m) = frame.center([0.5, 0.5]);
+                // La lumière d'abord, là où elle est tombée ; puis chaque point à sa place.
+                img.data.par_chunks_mut(img.width).enumerate().for_each(|(y, row)| {
+                    let dy = (y as f64 + 0.5 - cy) / m;
+                    for (x, px) in row.iter_mut().enumerate() {
+                        let dx = (x as f64 + 0.5 - cx) / m;
+                        let v = spline(knots, vignetting, (dx * dx + dy * dy).sqrt()).max(1e-4);
+                        for c in px.iter_mut() {
+                            *c /= v as f32;
+                        }
+                    }
+                });
+                remap(img, |x, y, c| {
+                    let (dx, dy) = ((x - cx) / (m * zoom), (y - cy) / (m * zoom));
+                    let d = spline(knots, &distortion[c], (dx * dx + dy * dy).sqrt());
+                    (cx + dx * d * m, cy + dy * d * m)
+                });
+            }
         }
     }
 }
@@ -181,6 +293,21 @@ fn vignette(img: &mut RgbImage, frame: Frame, k: &[f64; 5], center: [f64; 2]) {
 /// l'a posé (interpolation bilinéaire).
 fn warp(img: &mut RgbImage, frame: Frame, planes: &[[f64; 6]], center: [f64; 2]) {
     let (cx, cy, m) = frame.center(center);
+    remap(img, |x, y, c| {
+        let (dx, dy) = ((x - cx) / m, (y - cy) / m);
+        let r2 = dx * dx + dy * dy;
+        let k = planes[c.min(planes.len() - 1)];
+        let f = k[0] + r2 * (k[1] + r2 * (k[2] + r2 * k[3]));
+        let sx = dx * f + k[4] * 2.0 * dx * dy + k[5] * (r2 + 2.0 * dx * dx);
+        let sy = dy * f + k[4] * (r2 + 2.0 * dy * dy) + k[5] * 2.0 * dx * dy;
+        (cx + sx * m, cy + sy * m)
+    });
+}
+
+/// Chaque pixel corrigé va chercher sa valeur à l'endroit où l'objectif l'a posé :
+/// `source(x, y, couleur)`, au centre du pixel, donne ce point (interpolation
+/// bilinéaire).
+fn remap(img: &mut RgbImage, source: impl Fn(f64, f64, usize) -> (f64, f64) + Sync) {
     let (w, h) = (img.width, img.height);
     let src = img.data.clone();
     let sample = |x: f64, y: f64, c: usize| -> f32 {
@@ -195,16 +322,10 @@ fn warp(img: &mut RgbImage, frame: Frame, planes: &[[f64; 6]], center: [f64; 2])
         top + (bottom - top) * fy
     };
     img.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
-        let dy = (y as f64 + 0.5 - cy) / m;
         for (x, px) in row.iter_mut().enumerate() {
-            let dx = (x as f64 + 0.5 - cx) / m;
-            let r2 = dx * dx + dy * dy;
             for (c, v) in px.iter_mut().enumerate() {
-                let k = planes[c.min(planes.len() - 1)];
-                let f = k[0] + r2 * (k[1] + r2 * (k[2] + r2 * k[3]));
-                let sx = dx * f + k[4] * 2.0 * dx * dy + k[5] * (r2 + 2.0 * dx * dx);
-                let sy = dy * f + k[4] * (r2 + 2.0 * dy * dy) + k[5] * 2.0 * dx * dy;
-                *v = sample(cx + sx * m - 0.5, cy + sy * m - 0.5, c);
+                let (sx, sy) = source(x as f64 + 0.5, y as f64 + 0.5, c);
+                *v = sample(sx - 0.5, sy - 0.5, c);
             }
         }
     });
