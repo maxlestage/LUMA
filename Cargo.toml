@@ -24,6 +24,7 @@ luma-image = { path = "crates/luma-image" }
 luma-gpu = { path = "crates/luma-gpu" }
 luma-merge = { path = "crates/luma-merge" }
 luma-render = { path = "crates/luma-render" }
+luma-library = { path = "crates/luma-library" }
 # Toutes en Rust, sans code C ni C++ : vérifié en CI (voir .github/workflows/engine.yml).
 rawler = "0.8"
 rayon = "1.12"

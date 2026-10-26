@@ -208,12 +208,7 @@ struct RenderJob {
 
 /// Le sidecar XMP d'un RAW (`IMG_0001.xmp` ou `IMG_0001.CR3.xmp`).
 pub fn sidecar_path(raw: &Path) -> PathBuf {
-    let long = PathBuf::from(format!("{}.xmp", raw.display()));
-    if long.is_file() {
-        long
-    } else {
-        raw.with_extension("xmp")
-    }
+    xmp::sidecar_path(raw)
 }
 
 /// Les réglages enregistrés à côté d'un RAW, s'il y en a.
