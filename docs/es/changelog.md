@@ -116,6 +116,9 @@ La fototeca profesional, paso a paso.
   un papel, y la vista previa muestra la foto tal como saldrá, con la intención
   perceptual o colorimétrica relativa; el histograma la sigue. Una vista, no un
   ajuste: no se escribe nada en la foto.
+- **Aviso de gama** (en la prueba en pantalla): los colores que la impresora no podrá
+  reproducir se vuelven azules en la vista previa, con o sin la simulación de la
+  impresión.
 
 ## 0.2.0 — octubre de 2026
 

@@ -2642,3 +2642,11 @@ es = Elegir un perfil de impresora
 fr = Profil ICC
 en = ICC profile
 es = Perfil ICC
+
+fr = Alerte de gamut
+en = Gamut warning
+es = Aviso de gama
+
+fr = En bleu : les couleurs que l'imprimante ne saura pas rendre
+en = In blue: the colors the printer will not be able to reproduce
+es = En azul: los colores que la impresora no podrá reproducir

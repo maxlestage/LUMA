@@ -398,6 +398,14 @@ fn saturation(image: &image::RgbaImage) -> f64 {
     sum as f64 / f64::from(w * h)
 }
 
+/// La part du centre de la photo peinte de la couleur de l'alerte de gamut.
+fn alert_share(image: &image::RgbaImage) -> f64 {
+    let crop = image::imageops::crop_imm(image, 300, 200, 600, 450).to_image();
+    let alert = luma_color::proof::ALERT;
+    let n = crop.pixels().filter(|p| p.0[..3] == alert).count();
+    n as f64 / f64::from(600 * 450)
+}
+
 /// Le profil sRGB aux primaires rapprochées du blanc : une « imprimante » plus terne.
 fn dull_profile() -> Vec<u8> {
     let mut bytes = luma_color::icc::profile(luma_color::OutputSpace::Srgb);
@@ -460,6 +468,17 @@ fn soft_proofing_shows_the_print() {
         (back - before).abs() < before * 0.02,
         "{before:.2} → {back:.2}"
     );
+    // L'alerte de gamut : les couleurs trop vives pour le profil étroit passent au bleu
+    // de l'alerte, sans simulation.
+    s.studio().set_gamut_alert(true);
+    assert!(s.studio().gamut_alert() && !s.studio().proofing_active());
+    s.wait();
+    s.capture("alerte-gamut");
+    let alerted = alert_share(&s.harness.render().unwrap());
+    assert!(alerted > 0.05, "{alerted:.3} de la photo en alerte");
+    s.studio().set_gamut_alert(false);
+    s.wait();
+    assert!(alert_share(&s.harness.render().unwrap()) < 0.001);
     // Un fichier qui n'est pas un profil est refusé sans rien casser.
     let junk = dir.join("faux.icc");
     std::fs::write(&junk, b"pas un profil").unwrap();
