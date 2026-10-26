@@ -543,17 +543,25 @@ mod tests {
         assert_eq!(res.status().as_u16(), 200);
         let html = res.text();
         assert!(html.contains(r#"<html lang="fr">"#));
-        assert!(html.contains("<title>LÜMA — La lumière, développée en Rust</title>"));
-        assert!(html.contains(r#"data-island="lab""#));
-        assert!(html.contains(r#"data-island="crates""#));
         assert!(
-            html.contains("Faisabilité"),
-            "la feuille de route est dans le HTML"
+            html.contains("<title>LÜMA — L&#x27;éditeur photo qui développe la lumière</title>")
         );
-        assert!(html.contains("cargo deny --target aarch64-apple-ios check"));
+        assert!(html.contains(r#"data-island="lab""#));
+        // Les sections pour les photographes : étapes, films, vie privée, questions.
+        for id in ["etapes", "films", "vie-privee", "questions"] {
+            assert!(html.contains(&format!(r#"id="{id}""#)), "section {id}");
+        }
+        // Rien sur le code : ni Rust, ni crates, ni cargo.
+        for code in ["Rust", "crate", "cargo", "wgpu", "WebAssembly"] {
+            assert!(!html.contains(code), "le code sur l'accueil : {code}");
+        }
         assert!(html.contains("/js/scenes.js?v="));
         assert!(html.contains(r#"id="tarifs""#));
-        assert!(html.contains("239,88 €") && html.contains("19,99 €"));
+        // Les prix : le montant (qui monte à l'écran) puis le symbole.
+        assert!(
+            html.contains(r#"data-sep=",">239,88</i> €"#)
+                && html.contains(r#"data-sep=",">19,99</i> €"#)
+        );
         // Le téléchargement est fermé tant que LUMA_DOWNLOADS ne vaut pas 1.
         assert!(!html.contains("/download/LUMA-macos.zip") && !html.contains("Télécharger"));
         assert!(
@@ -699,12 +707,15 @@ mod tests {
     async fn the_english_and_spanish_home_pages_are_translated() {
         let client = client().await;
         let en = client.get("/en/").await.text();
-        assert!(en.contains("<title>LÜMA — Light, developed in Rust</title>"));
-        assert!(en.contains("€19.99") && en.contains("€239.88") && en.contains("per month"));
-        assert!(en.contains(r#"data-island="lab" data-props="en""#));
-        assert!(en.contains(r#"data-island="crates" data-props="en""#));
+        assert!(en.contains("<title>LÜMA — The photo editor that develops light</title>"));
         assert!(
-            en.contains(r#"href="/en/#tarifs""#) && en.contains(r#"href="/en/docs/architecture/""#)
+            en.contains(r#"€<i data-count="19.99""#)
+                && en.contains(">239.88</i>")
+                && en.contains("per month")
+        );
+        assert!(en.contains(r#"data-island="lab" data-props="en""#));
+        assert!(
+            en.contains(r#"href="/en/#tarifs""#) && en.contains(r#"href="/en/docs/fonctions/""#)
         );
         assert!(en.contains(r#"href="/en/mentions-legales/""#));
         // Des textes français qui ne doivent pas rester sur la page anglaise.
@@ -716,22 +727,22 @@ mod tests {
             "Mentions légales",
             "Confidentialité",
             "Tous droits réservés",
-            "Être écrit en Rust",
+            "Une belle photo",
             "Exposition",
             "Hautes lumières",
             "Bientôt",
             "par mois",
             "19,99 €",
-            "Faisabilité",
-            "Le moteur",
-            "cibles prioritaires",
+            "Questions fréquentes",
+            "Vos photos",
+            "Pellicules couleur",
             "Aucun cookie",
         ] {
             assert!(!en.contains(french), "texte français sur /en/ : {french}");
         }
         let es = client.get("/es/").await.text();
-        assert!(es.contains("<title>LÜMA — La luz, revelada en Rust</title>"));
-        assert!(es.contains("19,99 €") && es.contains("al mes"));
+        assert!(es.contains("<title>LÜMA — El editor de fotos que revela la luz</title>"));
+        assert!(es.contains(">19,99</i> €") && es.contains("al mes"));
         assert!(es.contains(r#"data-props="es""#));
         for french in [
             "Télécharger",

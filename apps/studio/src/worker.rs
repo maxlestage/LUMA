@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use luma_color::OutputSpace;
-use luma_core::Cancel;
+use luma_core::{Cancel, RgbImage};
 use luma_project::{Settings, xmp};
 use luma_render::{Photo, Size};
 
@@ -24,6 +24,9 @@ pub struct Frame {
     pub millis: f32,
     /// Fini sur le GPU (sinon sur le processeur).
     pub gpu: bool,
+    /// Une copie réduite de la base (linéaire), quand un masque a une plage : l'écran
+    /// y lit les tons et les couleurs pour montrer sa zone (touche O).
+    pub scene: Option<Arc<RgbImage>>,
 }
 
 pub enum Event {
@@ -528,7 +531,7 @@ fn render_loop(
                         .filter(|b| (b.image.width, b.image.height) == (w, h))
                         .unwrap_or(&base);
                     let alt = g.finish(&b.image, b.id, b.scale, look, OutputSpace::Srgb);
-                    let weights = luma_image::local::weights(mask, w, h);
+                    let weights = luma_image::local::weights_on(mask, &base.image);
                     for ((o, a), wt) in rgba
                         .as_chunks_mut::<4>()
                         .0
@@ -569,6 +572,15 @@ fn render_loop(
         if job.clipping {
             clip_overlay(&mut rgba);
         }
+        let scene = job
+            .settings
+            .masks
+            .iter()
+            .any(|m| m.range.is_some())
+            .then(|| {
+                let (sw, sh) = RgbImage::fit(w, h, 256);
+                Arc::new(base.image.resize_area(sw, sh))
+            });
         let frame = Frame {
             generation: job.generation,
             size: [w, h],
@@ -576,6 +588,7 @@ fn render_loop(
             histogram,
             millis: start.elapsed().as_secs_f32() * 1000.0,
             gpu: on_gpu,
+            scene,
         };
         let _ = sender.send(Event::Rendered(Box::new(frame)));
         repaint();

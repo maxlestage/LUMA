@@ -89,6 +89,11 @@ La fototeca profesional, paso a paso.
 - **Exportación a varios ajustes preestablecidos a la vez**: marque «Web» e
   «Impresión» en la ventana Exportar y cada foto va a los dos de una vez; guarde sus
   ajustes como preestablecido; `luma export *.ARW --preset Web --preset Impression`.
+- **Máscaras por rango**: la zona de una máscara (degradado, pincel, imagen entera)
+  puede quedarse solo con algunos tonos (rango de luminancia: mínimo, máximo,
+  suavizado) o algunos colores (rango de color: tono, anchura, suavizado; los grises
+  quedan fuera). Medidos en OKLab sobre la foto, antes de los ajustes de las máscaras;
+  la zona se muestra en rojo (O).
 
 ## 0.2.0 — octubre de 2026
 

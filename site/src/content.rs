@@ -3,15 +3,15 @@
 
 use crate::i18n::{Lang, t};
 
-pub const TITLE: &str = "LÜMA — La lumière, développée en Rust";
-pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel écrit en Rust : RAW, couleur 32 bits flottants sur le GPU, 100 films, vos vraies pellicules mesurées, masques. Mac, iPhone et iPad. 14 jours d'essai.";
+pub const TITLE: &str = "LÜMA — L'éditeur photo qui développe la lumière";
+pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 100 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone et iPad. 14 jours d'essai.";
 
 pub const NAV: [(&str, &str); 6] = [
-    ("#pipeline", "Moteur"),
-    ("#labo", "Labo"),
+    ("#etapes", "Fonctions"),
+    ("#films", "Films"),
+    ("#labo", "Essayer"),
     ("#apple", "Apple"),
-    ("#architecture", "Architecture"),
-    ("#roadmap", "Feuille de route"),
+    ("#questions", "Questions"),
     ("#tarifs", "Tarifs"),
 ];
 
@@ -45,19 +45,19 @@ pub const PREMIUM: [&str; 6] = [
 ];
 
 pub const MARQUEE: [&str; 9] = [
-    "RAW 14 & 16 bits",
-    "Pipeline f32",
-    "Display P3",
-    "HDR / EDR",
-    "Metal",
-    "Apple Pencil",
-    "100 films · LUT 3D",
-    "Non destructif",
-    "Zéro cloud obligatoire",
+    "735 boîtiers",
+    "iPhone ProRAW",
+    "100 films",
+    "Vos pellicules",
+    "Masques",
+    "Photothèque",
+    "Filigrane",
+    "Originaux intacts",
+    "Sans compte",
 ];
 
 /// Le manifeste, mot à mot ; les mots marqués d'un `*` ressortent en couleur.
-pub const MANIFESTO: &str = "Être écrit en Rust ne rend pas un logiciel meilleur. Ce qui compte, c'est la qualité du moteur *RAW, la rigueur de la *couleur et la *vitesse ressentie sous les doigts. LÜMA veut gagner sur ces trois terrains, et le *prouver.";
+pub const MANIFESTO: &str = "Une belle photo commence à la prise de vue. LÜMA s'occupe du reste : un *RAW développé avec soin, des *couleurs justes, des réglages qui suivent le doigt *sans attendre, et des originaux qui ne sont *jamais modifiés.";
 
 pub struct Stat {
     pub prefix: &'static str,
@@ -69,52 +69,164 @@ pub struct Stat {
 pub const STATS: [Stat; 4] = [
     Stat {
         prefix: "",
-        value: 32,
-        unit: "bits",
-        text: "Pipeline en virgule flottante, du capteur à l'export.",
-    },
-    Stat {
-        prefix: "<",
-        value: 100,
-        unit: "ms",
-        text: "Objectif d'aperçu après un réglage (P95, Mac).",
+        value: 735,
+        unit: "boîtiers",
+        text: "Reconnus, de 20 marques, et tous les DNG, iPhone ProRAW compris.",
     },
     Stat {
         prefix: "",
-        value: 120,
-        unit: "Hz",
-        text: "Interface pensée pour ProMotion sur Mac, iPhone et iPad.",
+        value: 100,
+        unit: "films",
+        text: "Pellicules couleur, noir et blanc, cinéma et instantanés, prêtes à poser.",
+    },
+    Stat {
+        prefix: "",
+        value: 14,
+        unit: "jours",
+        text: "D'essai complet, sans carte bancaire.",
     },
     Stat {
         prefix: "",
         value: 0,
         unit: "compte",
-        text: "Aucun compte ni cloud obligatoire. Ta photothèque reste chez toi.",
+        text: "Aucun compte ni cloud obligatoire. Votre photothèque reste chez vous.",
     },
 ];
 
 /// Les étapes du pipeline : (nom, détail, étiquette de la couche).
 pub const PIPELINE: [(&str, &str, &str); 5] = [
-    ("Original", "RAW, JPEG ou HEIF. Jamais modifié.", "RAW"),
     (
-        "Décodage",
-        "Bayer, X‑Trans, ProRAW, dématriçage, profil caméra.",
-        "Décodage",
+        "Original",
+        "Votre RAW, JPEG ou HEIF, jamais modifié.",
+        "Original",
+    ),
+    (
+        "Lumière",
+        "Exposition, contraste, hautes lumières, ombres, courbes.",
+        "Lumière",
     ),
     (
         "Couleur",
-        "Espace linéaire f32, XYZ, Display P3, Rec. 2020.",
+        "Balance des blancs, teintes, saturation, profils.",
         "Couleur",
     ),
     (
         "Masques",
-        "Luminance, couleur, pinceau, sujet, ciel.",
+        "Dégradés, pinceau, plages de tons et de couleurs.",
         "Masques",
     ),
     (
-        "Rendu",
-        "Aperçu en tuiles sur GPU, export pleine précision.",
-        "Rendu",
+        "Export",
+        "JPEG, PNG ou TIFF 16 bits, en pleine qualité.",
+        "Export",
+    ),
+];
+
+/// Les quatre étapes du travail : (numéro, titre, texte).
+pub const STEPS: [(&str, &str, &str); 4] = [
+    (
+        "01",
+        "Ranger",
+        "Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections et recherche : vos photos se retrouvent en un instant.",
+    ),
+    (
+        "02",
+        "Développer",
+        "Lumière, couleur, courbes, détails, corrections d'objectif : chaque réglage s'affiche aussitôt, et l'original reste intact.",
+    ),
+    (
+        "03",
+        "Affiner",
+        "Des masques pour retoucher le ciel, un visage ou un détail, et un film à poser où vous voulez dans l'image.",
+    ),
+    (
+        "04",
+        "Partager",
+        "JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Plusieurs formats d'un coup.",
+    ),
+];
+
+/// Quelques films, pour la section Films : (nom, famille, filtre CSS de l'aperçu).
+pub const FILMS: [(&str, &str, &str); 8] = [
+    (
+        "Portra 400",
+        "Couleur",
+        "sepia(.18) saturate(1.05) brightness(1.06) contrast(.95)",
+    ),
+    ("Velvia 50", "Diapositive", "saturate(1.7) contrast(1.18)"),
+    (
+        "Kodachrome 64",
+        "Diapositive",
+        "sepia(.22) saturate(1.3) contrast(1.2)",
+    ),
+    (
+        "CineStill 800T",
+        "Cinéma",
+        "hue-rotate(-14deg) saturate(1.25) brightness(.95) contrast(1.08)",
+    ),
+    ("Tri-X 400", "Noir et blanc", "grayscale(1) contrast(1.35)"),
+    (
+        "Polaroid SX-70",
+        "Instantané",
+        "sepia(.4) saturate(.8) brightness(1.1) contrast(.85)",
+    ),
+    ("Ektar 100", "Couleur", "saturate(1.45) contrast(1.1)"),
+    (
+        "Superia 400",
+        "Couleur",
+        "hue-rotate(10deg) saturate(1.15) contrast(1.04)",
+    ),
+];
+
+/// Vos photos restent chez vous : (titre, texte).
+pub const PRIVACY: [(&str, &str); 4] = [
+    (
+        "Sans compte",
+        "LÜMA s'ouvre et travaille sans inscription ni connexion.",
+    ),
+    (
+        "Sans cloud obligatoire",
+        "Vos photos et vos réglages restent sur votre disque, dans des fichiers que vous gardez.",
+    ),
+    (
+        "Originaux intacts",
+        "Vos réglages sont rangés à côté de chaque photo, dans un petit fichier que d'autres logiciels savent lire.",
+    ),
+    (
+        "Position retirée",
+        "À l'export, la position GPS est retirée par défaut : vous choisissez ce que vous partagez.",
+    ),
+];
+
+/// Les questions fréquentes : (question, réponse).
+pub const FAQ: [(&str, &str); 7] = [
+    (
+        "Quels appareils photo sont pris en charge ?",
+        "735 boîtiers de 20 marques, dont Canon, Nikon, Sony, Fujifilm, Panasonic, Olympus et Leica, tous les fichiers DNG et l'iPhone ProRAW, ainsi que les JPEG, HEIC, PNG et TIFF. La liste complète est dans « Boîtiers pris en charge », en bas de page.",
+    ),
+    (
+        "Mes photos sont‑elles modifiées ?",
+        "Jamais. Vos réglages sont rangés dans un petit fichier à côté de la photo ; l'original reste tel qu'il est sorti de l'appareil.",
+    ),
+    (
+        "Puis‑je reprendre mes réglages d'un autre logiciel ?",
+        "LÜMA lit et écrit les fichiers XMP rangés à côté des photos, le format de réglages le plus répandu, et importe vos préréglages au format XMP.",
+    ),
+    (
+        "Faut‑il un compte ou une connexion ?",
+        "Non. LÜMA fonctionne sans compte. Sur Mac, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.",
+    ),
+    (
+        "Que se passe‑t‑il après l'essai ?",
+        "Pendant 14 jours, tout est ouvert. Ensuite, un abonnement LÜMA Premium permet de continuer à développer ; vos fichiers et vos réglages restent à vous dans tous les cas.",
+    ),
+    (
+        "Où acheter LÜMA ?",
+        "Sur Mac, uniquement sur ce site. Sur iPhone et iPad, uniquement dans l'App Store, par un abonnement à part.",
+    ),
+    (
+        "Et Windows, Linux ou Android ?",
+        "Ils viendront après les appareils Apple, avec le même moteur : une photo aura le même rendu partout.",
     ),
 ];
 
@@ -123,19 +235,19 @@ pub const PIPELINE: [(&str, &str, &str); 5] = [
 pub const APPLE: [(&str, &str); 4] = [
     (
         "Conçu pour *Apple Silicon*.",
-        "Un seul GPU à dompter au départ : Metal, via wgpu. La mémoire unifiée laisse le RAW décodé passer au GPU sans copie.",
+        "Les puces Apple développent vos RAW en direct : chaque réglage s'affiche aussitôt, même sur les gros fichiers.",
     ),
     (
         "La couleur, *comme elle est*.",
-        "Display P3 partout, HDR (EDR) sur les écrans XDR. Le meilleur terrain pour valider un pipeline 32 bits flottants.",
+        "Des couleurs fidèles sur les écrans des Mac, des iPhone et des iPad, et des hautes lumières éclatantes sur les écrans XDR.",
     ),
     (
         "Le même moteur, *dans ta poche*.",
-        "ProRAW sur iPhone, réglé du bout du pouce : aperçu réduit pendant le geste, pleine netteté au lâcher.",
+        "Vos ProRAW sur iPhone, réglés du bout du pouce : l'image suit le geste, et retrouve toute sa netteté dès que vous lâchez.",
     ),
     (
         "Les masques, *au crayon*.",
-        "Sur iPad, l'Apple Pencil peint les masques à même la photo. Le cœur Rust est identique sur Mac, iPhone et iPad : même projet, même rendu.",
+        "Sur iPad, l'Apple Pencil peint les masques à même la photo. Et d'un appareil à l'autre, une photo garde le même rendu.",
     ),
 ];
 
@@ -143,25 +255,25 @@ pub const APPLE: [(&str, &str); 4] = [
 pub const PLATFORMS: [(&str, &str, &str, bool); 6] = [
     (
         "macOS",
-        "Phase 1",
-        "Apple Silicon, Metal, EDR, téléchargement direct.",
+        "D'abord",
+        "Mac à puce Apple, écrans XDR, téléchargement direct.",
         true,
     ),
-    (
-        "iOS",
-        "Phase 1",
-        "ProRAW, PhotoKit, Fichiers, TestFlight.",
-        true,
-    ),
+    ("iOS", "D'abord", "ProRAW, Photos, Fichiers.", true),
     (
         "iPadOS",
-        "Phase 3",
+        "Ensuite",
         "Apple Pencil, gestes, Stage Manager.",
         true,
     ),
-    ("Windows", "Phase 6", "DX12 / Vulkan via wgpu.", false),
-    ("Linux", "Phase 6", "Vulkan, Wayland et X11.", false),
-    ("Android", "Phase 6", "Vulkan, NDK, stylet.", false),
+    ("Windows", "Plus tard", "Le même rendu que sur Mac.", false),
+    ("Linux", "Plus tard", "Le même rendu que sur Mac.", false),
+    (
+        "Android",
+        "Plus tard",
+        "Le même rendu que sur iPhone.",
+        false,
+    ),
 ];
 
 pub struct Crate {
@@ -384,126 +496,6 @@ pub const PERF: [Perf; 5] = [
     },
 ];
 
-pub struct Phase {
-    pub when: &'static str,
-    pub name: &'static str,
-    pub items: &'static [&'static str],
-    pub goal: &'static str,
-    pub later: bool,
-}
-
-pub const ROADMAP: [Phase; 6] = [
-    Phase {
-        when: "M0 – M3",
-        name: "Faisabilité",
-        items: &[
-            "App macOS et iOS minimales en Rust",
-            "Rendu wgpu sur Metal",
-            "RAW : Sony, Canon, Nikon, Fujifilm, ProRAW",
-            "Signature et TestFlight automatisés",
-        ],
-        goal: "Un RAW s'ouvre, se règle et s'exporte sur Mac et iPhone.",
-        later: false,
-    },
-    Phase {
-        when: "M4 – M6",
-        name: "Moteur",
-        items: &[
-            "Pipeline f32, Display P3",
-            "HDR / EDR sur écrans XDR",
-            "Mémoire unifiée sans copie",
-            "Graphe de retouche, projet versionné",
-        ],
-        goal: "Même rendu Mac et iPhone, à tolérance ΔE documentée.",
-        later: false,
-    },
-    Phase {
-        when: "M7 – M12",
-        name: "Alpha",
-        items: &[
-            "Photothèque, retouche, export sur Mac",
-            "Import PhotoKit et Fichiers",
-            "Masques à l'Apple Pencil",
-            "TestFlight public",
-        ],
-        goal: "Un flux photo complet sans autre éditeur.",
-        later: false,
-    },
-    Phase {
-        when: "M13 – M18",
-        name: "Bêta",
-        items: &[
-            "Masques par plages, débruitage avancé, sans IA",
-            "Profils boîtiers et objectifs",
-            "Recherche, doublons",
-            "Récupération après plantage",
-        ],
-        goal: "Outils avancés validés en qualité et en vitesse.",
-        later: false,
-    },
-    Phase {
-        when: "M19 – M24",
-        name: "1.0",
-        items: &[
-            "App Store (iPhone et iPad), téléchargement direct (Mac)",
-            "Accessibilité, migration",
-            "Matrice de compatibilité publique",
-        ],
-        goal: "Version photo professionnelle stable.",
-        later: false,
-    },
-    Phase {
-        when: "M25 – M36",
-        name: "Expansion",
-        items: &[
-            "Vidéo : timeline, étalonnage",
-            "Tethering, impression",
-            "Windows, Linux, Android",
-        ],
-        goal: "Le même moteur, partout.",
-        later: true,
-    },
-];
-
-/// `deny.toml`, ligne par ligne : (classe de couleur, texte). Dans le texte, `"…"` est
-/// une chaîne et `$` une invite.
-pub const DENY: [(&str, &str); 18] = [
-    ("c", "# deny.toml — vérifié à chaque build"),
-    ("k", "[bans]"),
-    ("", "deny = ["),
-    ("", "  { name = \"openssl-sys\" },"),
-    ("", "  { name = \"libraw-sys\" },"),
-    ("", "  { name = \"ffmpeg-sys-next\" },"),
-    ("", "]"),
-    ("", ""),
-    ("k", "[sources]"),
-    ("", "unknown-registry = \"deny\""),
-    ("", "unknown-git      = \"deny\""),
-    ("", ""),
-    ("k", "[licenses]"),
-    (
-        "",
-        "allow = [\"MIT\", \"Apache-2.0\", \"BSD-3-Clause\", \"ISC\", \"Zlib\"]",
-    ),
-    ("", ""),
-    ("c", "# cibles prioritaires"),
-    ("", "$ cargo deny --target aarch64-apple-darwin check"),
-    ("", "$ cargo deny --target aarch64-apple-ios check"),
-];
-
-pub const RULES: [(&str, &str); 4] = [
-    ("Épinglé", "Dépendances transitives auditées et figées."),
-    (
-        "Sans FFI tiers",
-        "Pas de LibRaw, d'OpenSSL ni de FFmpeg cachés.",
-    ),
-    ("unsafe encadré", "Limité, documenté, testé."),
-    (
-        "Reproductible",
-        "Corpus RAW de référence, rendus dorés, tolérances ΔE.",
-    ),
-];
-
 // ----- Labo ---------------------------------------------------------------------------
 
 /// Un réglage du labo : (clé, libellé, min, max, classe de la piste).
@@ -556,11 +548,11 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
     (
         "Produit",
         &[
-            ("Le moteur", "#pipeline"),
-            ("Le labo", "#labo"),
+            ("Les étapes", "#etapes"),
+            ("Les films", "#films"),
+            ("Essayer en direct", "#labo"),
             ("Mac, iPhone et iPad", "#apple"),
             ("Tarifs", "#tarifs"),
-            ("Feuille de route", "#roadmap"),
         ],
     ),
     (
@@ -568,7 +560,7 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
         &[
             ("Boîtiers pris en charge", "/docs/boitiers/"),
             ("Fonctions", "/docs/fonctions/"),
-            ("Architecture", "/docs/architecture/"),
+            ("Questions fréquentes", "#questions"),
             ("Performances", "#performance"),
             ("Notes de version", "/nouveautes/"),
         ],
