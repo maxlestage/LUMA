@@ -2,7 +2,7 @@
 //! quatre boîtiers, mots‑clés), enregistrées puis relues, et une recherche.
 //!
 //! ```sh
-//! cargo run --release -p luma-library --example bench [-- nombre]
+//! cargo run --release -p luma-library --example catalog [-- nombre]
 //! ```
 
 use std::time::Instant;
