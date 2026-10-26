@@ -501,6 +501,7 @@ fn capabilities(lang: Lang) -> Element {
         article()
             .class("cap-group reveal")
             .child(h3().text(title.clone()))
+            // L'ordre de chaque coche : elles se posent une à une à l'écran.
             .child(
                 ul().children(items.iter().enumerate().map(|(k, (panel, feature))| {
                     li().style(format!("--i:{}", k.min(24)))
