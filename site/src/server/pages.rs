@@ -774,12 +774,7 @@ fn site_footer(here: Here) -> Element {
                 .class("footer-signature")
                 .child(p().class("footer-signature-label").text(t(lang, "Conçu et développé par")))
                 .child(
-                    p().class("footer-signature-name")
-                        .child(span().class("sig-1").text("Maxime"))
-                        .text(" ")
-                        .child(span().class("sig-2").text("Nathan"))
-                        .text(" ")
-                        .child(span().class("sig-3").text("Lestage")),
+                    p().class("footer-signature-name").text("Maxime Nathan Lestage"),
                 )
                 .child(p().class("footer-signature-made").text(t(lang, "Fabriqué en Rust, en France")))
                 .child(p().class("footer-wordmark").attr("aria-hidden", "true").text("LÜMA")),

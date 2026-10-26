@@ -389,7 +389,7 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 .cta-orb { position: absolute; left: 50%; top: 50%; width: min(900px, 140vw); aspect-ratio: 1; margin: calc(min(900px, 140vw) / -2) 0 0 calc(min(900px, 140vw) / -2); border-radius: 50%; background: conic-gradient(from 0deg, var(--orange), var(--gold), var(--mint), var(--blue), var(--violet), var(--orange)); filter: blur(120px); opacity: .28; animation: spin 18s linear infinite; }
 
 /* ----- Pied de page ----- */
-.footer { padding: clamp(56px, 8vw, 96px) var(--gutter) max(28px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; background: radial-gradient(60% 45% at 50% 100%, rgba(214, 120, 70, .14), transparent 70%), radial-gradient(120% 80% at 0% 100%, rgba(255, 196, 102, .06), transparent 55%), radial-gradient(120% 80% at 100% 0%, rgba(76, 198, 255, .05), transparent 50%), var(--bg); }
+.footer { padding: clamp(56px, 8vw, 96px) var(--gutter) max(28px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; background: radial-gradient(35% 40% at 32% 100%, rgba(255, 107, 61, .10), transparent 70%), radial-gradient(35% 40% at 50% 100%, rgba(74, 242, 200, .07), transparent 70%), radial-gradient(35% 40% at 68% 100%, rgba(139, 123, 255, .11), transparent 70%), radial-gradient(120% 80% at 0% 100%, rgba(255, 196, 102, .06), transparent 55%), radial-gradient(120% 80% at 100% 0%, rgba(76, 198, 255, .05), transparent 50%), var(--bg); }
 .footer-top { display: grid; grid-template-columns: minmax(240px, 1.2fr) 3fr; gap: clamp(32px, 6vw, 80px); max-width: 1200px; margin: 0 auto; }
 .footer-brand .brand { color: var(--text); }
 .footer-tagline { margin: 16px 0 22px; max-width: 30ch; line-height: 1.55; }
@@ -407,20 +407,17 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 .footer-col a:hover { color: var(--text); }
 .footer-bottom { max-width: 1200px; margin: clamp(40px, 6vw, 72px) auto 0; padding-top: 22px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; color: var(--dim); font-size: .82rem; }
 .footer-bottom a:hover { color: var(--text); }
-/* La signature : au centre, le nom de l'auteur en dégradé chaud, l'origine, puis LÜMA
+/* La signature : au centre, le nom de l'auteur aux couleurs du spectre de LÜMA, l'origine, puis LÜMA
    en grand. */
 .footer-signature { max-width: 1200px; margin: clamp(48px, 7vw, 88px) auto 0; padding-top: clamp(48px, 7vw, 88px); border-top: 1px solid var(--line); text-align: center; }
 .footer-signature-label { margin: 0; font-family: var(--mono); font-size: clamp(.68rem, 1.6vw, .8rem); font-weight: 500; letter-spacing: .32em; text-indent: .32em; text-transform: uppercase; color: var(--muted); }
 .footer-signature-name { margin: .5em 0 0; font-size: clamp(2rem, 7.2vw, 4.6rem); font-weight: 800; letter-spacing: -.045em; line-height: 1.05; }
-.footer-signature-name span { background-clip: text; -webkit-background-clip: text; color: transparent; }
-.footer-signature-name .sig-1 { background-image: linear-gradient(90deg, #c4503d, #dc7550); }
-.footer-signature-name .sig-2 { background-image: linear-gradient(90deg, #e6935c, #f0c9a4); }
-.footer-signature-name .sig-3 { background-image: linear-gradient(90deg, #f6e7da, #f4f1ee); }
+.footer-signature-name { display: inline-block; background: var(--spectrum); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .footer-signature-made { margin: 1em 0 0; font-size: clamp(1.05rem, 2.6vw, 1.45rem); color: var(--muted); }
 .footer-wordmark { margin: clamp(20px, 4vw, 44px) 0 0; font-size: clamp(5.5rem, 26vw, 14rem); font-weight: 800; letter-spacing: -.05em; line-height: 1; padding-top: .14em; white-space: nowrap; background: linear-gradient(180deg, #f4f1ee 42%, #8d8a88 78%, #3a3836 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-user-select: none; user-select: none; }
 .footer-signature + .footer-bottom { margin-top: clamp(40px, 6vw, 64px); }
-.footer-made-with { color: #eaa67a; }
-.footer-made-with:hover { color: #f6c9a6 !important; }
+.footer-made-with { color: var(--gold); }
+.footer-made-with:hover { color: var(--text) !important; }
 @media (max-width: 900px) {
   .footer-top { grid-template-columns: 1fr; }
   .footer-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; }
