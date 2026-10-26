@@ -37,7 +37,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Courbes à points : luminosité, rouge, vert, bleu | ✅ |
 | Mélangeur de couleurs | Teinte, saturation, luminance de 8 couleurs | ✅ |
 | | Mélange noir et blanc (±3 IL, `crs:GrayMixer*`) | ✅ |
-| | Outil de ciblage direct | ⏳ |
+| | Outil de ciblage direct (T) : glisser sur une couleur de la photo règle cette couleur en teinte, saturation ou luminance | ✅ |
 | Étalonnage des couleurs | Ombres, tons moyens, hautes lumières, global ; fusion, balance | ✅ |
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |

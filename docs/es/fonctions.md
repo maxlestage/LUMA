@@ -37,7 +37,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Curvas de puntos: luminosidad, rojo, verde, azul | ✅ |
 | Mezclador de color | Tono, saturación y luminancia de 8 colores | ✅ |
 | | Mezcla de blanco y negro (±3 EV, `crs:GrayMixer*`) | ✅ |
-| | Herramienta de ajuste selectivo | ⏳ |
+| | Herramienta de ajuste selectivo (T): arrastrar sobre un color de la foto ajusta su tono, saturación o luminancia | ✅ |
 | Gradación de color | Sombras, medios tonos, altas luces, global; fusión, equilibrio | ✅ |
 | Detalle | Enfoque: cantidad, radio, detalle, máscara | ✅ |
 | | Reducción de ruido de luminancia y de color | ✅ |
