@@ -8,14 +8,14 @@ técnica; la planificación se encuentra en [`roadmap.md`](roadmap.md).
 | Cuestión | Decisión |
 |---|---|
 | Plataformas | **macOS e iOS/iPadOS primero**, después Windows, Linux y Android |
-| Ambición | Un editor fotográfico profesional completo: RAW, revelado, máscaras, IA local, fototeca y, más adelante, vídeo |
+| Ambición | Un editor fotográfico profesional completo: RAW, revelado, máscaras, fototeca y, más adelante, vídeo; sin IA, sin redes neuronales ni archivos de modelo |
 | «100 % Rust» | Todo el código de LÜMA y de sus dependencias está en Rust. Ninguna biblioteca nativa de terceros (C, C++, Objective‑C, Swift, Kotlin). Los **frameworks del sistema** (Metal, AppKit, UIKit, PhotoKit…) se llaman desde Rust mediante crates de enlace en Rust (`objc2`) y no son dependencias de terceros |
 
 ## Por qué Apple primero
 
 - **Una sola GPU que dominar al principio**: Metal en Apple Silicon (Mac de la serie M, iPhone, iPad).
   `wgpu` se dirige a Metal de forma nativa; el backend Vulkan/DX12 llegará con Windows, Linux y Android.
-- **Memoria unificada**: la CPU, la GPU y el Neural Engine comparten la misma memoria. El pipeline puede
+- **Memoria unificada**: la CPU y la GPU comparten la misma memoria. El pipeline puede
   evitar copias entre la decodificación RAW y el renderizado en GPU.
 - **Pantallas calibradas**: Display P3 en todas partes, HDR (EDR) en las pantallas XDR y los iPhone recientes.
   Es el mejor terreno para validar la colorimetría en coma flotante de 32 bits.
@@ -34,7 +34,7 @@ LÜMA Core               proyectos, comandos, historial, tareas, orquestación
  ┌──────┼──────────┬───────────┬──────────┐
 Photo  Video     Compute     Library
 RAW,   timeline, CPU, GPU,   catálogo,
-color, etalon.   IA          metadatos,
+color, etalon.               metadatos,
 masks                        caché
         │
 luma-platform           archivos, PhotoKit, cámara, pantalla EDR, GPU, permisos
@@ -68,8 +68,8 @@ luma/
 │   ├── luma-library/     P1  catálogo, colecciones, valoraciones, duplicados, búsqueda
 │   ├── luma-export/      P1  JPEG, PNG, TIFF, DNG, lotes, ajustes preestablecidos
 │   ├── luma-presets/     P1  estilos y perfiles de renderizado
-│   ├── luma-ai/          P2  sujetos, cielo, reducción de ruido, superresolución (local)
-│   ├── luma-privacy/     P2  consentimiento de IA, diagnósticos sin contenido
+│   ├── luma-quality/     P2  desmosaicado fino, reducción de ruido avanzada, deconvolución (sin IA)
+│   ├── luma-privacy/     P2  diagnósticos sin contenido, nada se envía sin consentimiento
 │   ├── luma-sync/        P3  sincronización cifrada opcional
 │   ├── luma-plugins/     P3  extensiones aisladas, permisos
 │   ├── luma-video/       P3  timeline, etalonaje, renderizado
@@ -138,7 +138,6 @@ allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Un
 | GPU | `wgpu` (Metal) | Latencia, EDR/HDR, comportamiento en iPhone |
 | Ventanas | `winit` + `objc2` | Integración con AppKit/UIKit, Pencil, gestos |
 | UI | `egui`, o UI propia sobre `wgpu` | Fluidez a 120 Hz ProMotion, accesibilidad |
-| IA | `burn`, `candle` | Backend Metal, tamaño de los modelos, pureza |
 | Vídeo | `rav1e` (AV1) | H.264/HEVC: decodificación mediante VideoToolbox (sistema) o exclusión |
 
 ## Objetivos de rendimiento (por medir, aún sin medir)
