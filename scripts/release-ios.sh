@@ -18,6 +18,10 @@ cd "$(dirname "$0")/.."
 : "${ASC_ISSUER_ID:?ASC_ISSUER_ID manquant}"
 : "${ASC_KEY:?ASC_KEY manquant (contenu du fichier .p8)}"
 : "${APPLE_TEAM_ID:?APPLE_TEAM_ID manquant}"
+# Les secrets tels qu'on les a collés : sans espaces ni retours à la ligne autour.
+ASC_KEY_ID=$(printf '%s' "$ASC_KEY_ID" | tr -d ' \r\n')
+ASC_ISSUER_ID=$(printf '%s' "$ASC_ISSUER_ID" | tr -d ' \r\n')
+export ASC_KEY_ID ASC_ISSUER_ID
 BUILD_NUMBER=${BUILD_NUMBER:-$(date +%s)}
 BUNDLE=app.luma.studio
 asc() { python3 scripts/asc.py "$@"; }
