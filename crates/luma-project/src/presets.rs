@@ -289,6 +289,9 @@ pub fn summary(s: &Settings) -> Summary {
     if own.lut.is_some() && s.film.is_none() {
         panels.push("LUT");
     }
+    if !s.spots.is_empty() {
+        panels.push("Retouche");
+    }
     Summary {
         film: s.film.as_ref().map(|f| (f.name.clone(), f.amount)),
         panels,
