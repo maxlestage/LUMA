@@ -4,7 +4,7 @@
 # `…` est du code et **…** du gras. Voir crates/luma-i18n.
 #
 # Anglais : américain. Espagnol : tutoiement, comme le site le fait en français dans ses
-# pages produit. Prix : €9.99 en anglais, 9,99 € en espagnol.
+# pages produit. Prix : €19.99 en anglais, 19,99 € en espagnol.
 
 # ----- Le site ------------------------------------------------------------------------
 
@@ -552,9 +552,9 @@ fr = Quatorze jours pour *essayer*, puis à vous de choisir.
 en = Fourteen days to *try it*, then the choice is yours.
 es = Catorce días para *probarlo*, y luego tú eliges.
 
-fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app.
-en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription, paid through Stripe; your license key appears right away, and you enter it in the app.
-es = Descarga LÜMA: todo está disponible durante la prueba. Después, una suscripción mensual o anual, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app.
+fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, sur Mac, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad, l'abonnement s'achète uniquement dans l'App Store.
+en = Download LÜMA: everything is unlocked during the trial. After that, on Mac, a monthly or yearly subscription, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad, the subscription is sold only on the App Store.
+es = Descarga LÜMA: todo está disponible durante la prueba. Después, en Mac, una suscripción mensual o anual, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app. En iPhone y iPad, la suscripción se compra únicamente en el App Store.
 
 fr = Télécharger pour Mac
 en = Download for Mac
@@ -576,13 +576,13 @@ fr = Annuel
 en = Annual
 es = Anual
 
-fr = 9,99 €
-en = €9.99
-es = 9,99 €
+fr = 19,99 €
+en = €19.99
+es = 19,99 €
 
-fr = 79,99 €
-en = €79.99
-es = 79,99 €
+fr = 239,88 €
+en = €239.88
+es = 239,88 €
 
 fr = par mois
 en = per month
@@ -596,13 +596,13 @@ fr = Sans engagement, résiliable à tout moment.
 en = No commitment, cancel anytime.
 es = Sin permanencia, cancela cuando quieras.
 
-fr = Deux mois offerts : 6,67 € par mois.
-en = Two months free: €6.67 per month.
-es = Dos meses gratis: 6,67 € al mes.
+fr = Soit 19,99 € par mois, en un seul paiement.
+en = That's €19.99 per month, in a single payment.
+es = O sea 19,99 € al mes, en un solo pago.
 
-fr = Le plus avantageux
-en = Best value
-es = El más ventajoso
+fr = Un seul paiement par an
+en = One payment a year
+es = Un solo pago al año
 
 fr = S'abonner
 en = Subscribe
@@ -632,9 +632,9 @@ fr = Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto
 en = JPEG, PNG and 16‑bit TIFF export, in P3 and ProPhoto
 es = Exportación JPEG, PNG y TIFF de 16 bits, en P3 y ProPhoto
 
-fr = Mac, iPhone et iPad, et toutes les mises à jour
-en = Mac, iPhone and iPad, and every update
-es = Mac, iPhone y iPad, y todas las actualizaciones
+fr = Sur Mac, avec toutes les mises à jour
+en = On Mac, with every update
+es = En Mac, con todas las actualizaciones
 
 # ----- Pied de page -------------------------------------------------------------------
 
@@ -1003,9 +1003,9 @@ fr = Abonnement et clé de licence
 en = Subscription and license key
 es = Suscripción y clave de licencia
 
-fr = Deux formules : Mensuel, 9,99 € par mois, et Annuel, 79,99 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.
-en = Two plans: Monthly, €9.99 per month, and Annual, €79.99 per year (VAT included). The subscription renews automatically at the end of each period.
-es = Dos planes: Mensual, 9,99 € al mes, y Anual, 79,99 € al año (IVA incluido). La suscripción se renueva automáticamente al final de cada período.
+fr = Deux formules : Mensuel, 19,99 € par mois, et Annuel, 239,88 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.
+en = Two plans: Monthly, €19.99 per month, and Annual, €239.88 per year (VAT included). The subscription renews automatically at the end of each period.
+es = Dos planes: Mensual, 19,99 € al mes, y Anual, 239,88 € al año (IVA incluido). La suscripción se renueva automáticamente al final de cada período.
 
 fr = Après le paiement, votre clé de licence s'affiche sur le site (gardez l'adresse de la page : elle redonne la clé à tout moment). Saisissez‑la dans LÜMA (puce « Essai » en haut de l'app) ; elle vaut pour vos propres appareils, pour votre usage personnel ou professionnel.
 en = After payment, your license key is shown on the site (keep the page's address: it gives you the key again at any time). Enter it in LÜMA (the “Trial” chip at the top of the app); it is valid on your own devices, for your personal or professional use.
@@ -1014,6 +1014,10 @@ es = Tras el pago, tu clave de licencia aparece en el sitio (guarda la direcció
 fr = La clé est valable jusqu'à la fin de la période payée, plus 14 jours. En ligne, l'app la renouvelle d'elle‑même chaque jour tant que l'abonnement court.
 en = The key is valid until the end of the paid period, plus 14 days. When online, the app renews it by itself every day as long as the subscription runs.
 es = La clave es válida hasta el final del período pagado, más 14 días. Con conexión, la app la renueva por sí sola cada día mientras la suscripción siga activa.
+
+fr = Sur iPhone et iPad, LÜMA Premium s'achète uniquement dans l'App Store, par un abonnement intégré distinct de l'abonnement Mac. Il est facturé par Apple, aux prix affichés dans l'App Store, et se gère ou se résilie dans les réglages de votre compte Apple ; les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac.
+en = On iPhone and iPad, LÜMA Premium is sold only on the App Store, as an in‑app subscription separate from the Mac subscription. It is billed by Apple, at the prices shown on the App Store, and is managed or cancelled in your Apple account settings; the Payment and Cancellation sections below apply to the Mac subscription.
+es = En iPhone y iPad, LÜMA Premium se compra únicamente en el App Store, como una suscripción integrada distinta de la de Mac. La factura Apple, a los precios indicados en el App Store, y se gestiona o se cancela en los ajustes de tu cuenta de Apple; los apartados Pago y Cancelación siguientes se refieren a la suscripción de Mac.
 
 fr = Paiement
 en = Payment

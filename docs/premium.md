@@ -5,8 +5,12 @@ un abonnement **LÜMA Premium** :
 
 | Formule | Prix TTC | |
 |---|---|---|
-| Mensuel | 9,99 € par mois | sans engagement |
-| Annuel | 79,99 € par an | deux mois offerts (6,67 € par mois) |
+| Mensuel | 19,99 € par mois | sans engagement |
+| Annuel | 239,88 € par an | soit 19,99 € par mois, en un seul paiement |
+
+Ces abonnements sont ceux du Mac (Stripe). **Sur iPhone et iPad, LÜMA Premium s'achète
+uniquement dans l'App Store** (abonnement intégré, distinct, facturé par Apple), comme
+l'exigent les règles de l'App Store pour du contenu numérique.
 
 Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
 `site/src/content.rs` (le site) ; les prix facturés sont ceux de Stripe.
@@ -45,7 +49,7 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
    `LUMA_LICENCE_SECRET=…` (privée : seulement sur Heroku, jamais dans le dépôt) et
    `LUMA_LICENCE_PUBLIC=…` (publique : compilée dans l'app).
 2. **Stripe** (<https://dashboard.stripe.com>) : créer un produit **LÜMA Premium** avec
-   deux prix récurrents, **9,99 € par mois** et **79,99 € par an** (TTC : « taxe
+   deux prix récurrents, **19,99 € par mois** et **239,88 € par an** (TTC : « taxe
    incluse »). Pour chacun, créer un **lien de paiement** ; dans « Après le paiement »,
    choisir « Ne pas afficher la page de confirmation, rediriger vers votre site » :
    `https://SITE/licence/?session_id={CHECKOUT_SESSION_ID}`.

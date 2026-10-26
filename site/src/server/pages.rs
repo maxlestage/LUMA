@@ -692,42 +692,47 @@ fn pricing(lang: Lang) -> Element {
         &'static str,
         &'static str,
     );
-    let card =
-        |(name, price, period, note, var): Plan, best: bool| {
-            let url = std::env::var(var)
-                .ok()
-                .filter(|u| u.starts_with("https://"));
-            let button = match url {
-                Some(u) => a()
-                    .class(if best {
-                        "btn magnetic"
-                    } else {
-                        "btn btn-ghost magnetic"
-                    })
-                    .href(u)
-                    .child(span().text(t(lang, "S'abonner"))),
-                None => span()
-                    .class("btn btn-ghost btn-disabled")
-                    .attr("aria-disabled", "true")
-                    .child(span().text(t(lang, "Bientôt disponible"))),
-            };
-            div()
+    let card = |(name, price, period, note, var): Plan, best: bool| {
+        let url = std::env::var(var)
+            .ok()
+            .filter(|u| u.starts_with("https://"));
+        let button = match url {
+            Some(u) => a()
                 .class(if best {
-                    "plan plan-best reveal"
+                    "btn magnetic"
                 } else {
-                    "plan reveal"
+                    "btn btn-ghost magnetic"
                 })
-                .child(p().class("plan-name").text(t(lang, name)).child(
-                    best.then(|| span().class("plan-tag").text(t(lang, "Le plus avantageux"))),
-                ))
-                .child(
-                    p().class("plan-price")
-                        .text(t(lang, price))
-                        .child(span().text(format!(" {}", t(lang, period)))),
-                )
-                .child(p().class("plan-note").text(t(lang, note)))
-                .child(button)
+                .href(u)
+                .child(span().text(t(lang, "S'abonner"))),
+            None => span()
+                .class("btn btn-ghost btn-disabled")
+                .attr("aria-disabled", "true")
+                .child(span().text(t(lang, "Bientôt disponible"))),
         };
+        div()
+            .class(if best {
+                "plan plan-best reveal"
+            } else {
+                "plan reveal"
+            })
+            .child(
+                p().class("plan-name")
+                    .text(t(lang, name))
+                    .child(best.then(|| {
+                        span()
+                            .class("plan-tag")
+                            .text(t(lang, "Un seul paiement par an"))
+                    })),
+            )
+            .child(
+                p().class("plan-price")
+                    .text(t(lang, price))
+                    .child(span().text(format!(" {}", t(lang, period)))),
+            )
+            .child(p().class("plan-note").text(t(lang, note)))
+            .child(button)
+    };
     section()
         .class("pricing")
         .id("tarifs")
@@ -735,7 +740,7 @@ fn pricing(lang: Lang) -> Element {
             "LÜMA Premium",
             heading(h2, t(lang, "Quatorze jours pour *essayer*, puis à vous de choisir.")),
             Some(p().class("lede").text(t(lang,
-                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app.",
+                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, sur Mac, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad, l'abonnement s'achète uniquement dans l'App Store.",
             ))),
         ))
         .children(downloads_open().then(|| {
