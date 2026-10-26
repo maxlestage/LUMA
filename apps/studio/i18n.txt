@@ -569,6 +569,18 @@ fr = Impression
 en = Print
 es = Impresión
 
+fr = Suivre les bords
+en = Follow edges
+es = Seguir los bordes
+
+fr = La zone peinte s'arrête aux contours de la photo
+en = The painted area stops at the edges in the photo
+es = La zona pintada se detiene en los contornos de la foto
+
+fr = Pinceau qui suit les bords
+en = Edge-aware brush
+es = Pincel que sigue los bordes
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos

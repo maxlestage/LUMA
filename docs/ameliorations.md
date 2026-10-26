@@ -63,9 +63,9 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 
 ### 4. Masques avancés, sans IA
 
-- [ ] 4.1 Plage de luminance (bornes, adoucissement), sur le GPU aussi.
-- [ ] 4.2 Plage de couleur (pipette, tolérance en OKLab).
-- [ ] 4.3 Pinceau qui suit les bords (filtre guidé).
+- [x] 4.1 Plage de luminance (bornes, adoucissement), sur le GPU aussi. (fait dans la PR #3, « masques par plage »)
+- [x] 4.2 Plage de couleur (pipette, tolérance en OKLab). (fait dans la PR #3, « masques par plage »)
+- [x] 4.3 Pinceau qui suit les bords (filtre guidé).
 - [ ] 4.4 Combinaisons : ajouter, soustraire, intersection.
 - [ ] 4.5 Affichage du masque en surimpression (couleur, opacité) dans l'app.
 
@@ -226,3 +226,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 3.3 Corrections Fujifilm (`opcodes::fuji`) : 0xF00B (distorsion), 0xF00F (aberration chromatique), 0xF010 (vignetage) du FujiIFD, dans le TIFF des données brutes du RAF (quelques Ko lus) ; X‑Trans IV et V (9 nœuds) et avant (11 nœuds) ; mode recadré (CropMode 2 ou 4 : nœuds × 1,25) ; même passe que pour Sony | X‑T3 du corpus (XF 35 mm F2) : barillet corrigé (−8,9 % de rayon au bord), rouge et bleu décalés de ±0,15 %, pas de vignetage enregistré, aucun agrandissement nécessaire ; coût identique à celui des Sony |
 | 2026-10-26 | 3.4 Corrections Olympus/OM System (`opcodes::olympus` : ImageProcessing 0x150A distorsion, 0x150C aberration chromatique, flottants) et Panasonic (`opcodes::panasonic` : 0x0119, 16 entiers, modèle inversé par itérations) ; corpus : + OM‑5 Mark II (ORF) et Panasonic G9 (RW2), `docs/boitiers.md` régénéré (6 boîtiers vérifiés) | OM‑5 Mark II : barillet corrigé, rouge et bleu distincts ; G9 : distorsion de plus de 0,5 % au coin ; les deux lus dans le début du fichier (≤ 1 Mo), en‑têtes identiques au décodage complet pour les 7 RAW |
 | 2026-10-26 | 3.5 Case « Corrections du boîtier » : `Lens::camera` (vrai par défaut), XMP `crs:LensProfileEnable` (absent : actif) ; sources du rendu en cache avec ou sans corrections ; le doublon dit s'il porte déjà les corrections, et l'app relit alors le RAW quand on décoche ; curseurs manuels en secours | Tests : XMP aller‑retour et étiquette absente, coin du Sony plus sombre sans corrections, NEF inchangé (pas de corrections enregistrées), doublon qui demande l'original ; capture `studio-geometrie-corrections.png` |
+| 2026-10-26 | 4.3 Pinceau qui suit les bords (`Mask::edges`, `local::weights_for`, `Plane::guided_by`) : chaque touche ne peint que les pixels d'une clarté proche de celle de son centre (guide de clarté lissé à 1,5 px, le grain n'est pas un bord), puis un filtre guidé croisé, limité au rectangle des touches, lisse la zone sans franchir les contours ; base, films des masques, chemin GPU de l'app et affichage de la zone (O) ; case « Suivre les bords » | Trait de 30 touches à 2048 px (ARW) : 37 ms au lieu de 10 (meilleur de 5 ; 68 ms avant de limiter le filtre au rectangle des touches) ; recalculé seulement quand le masque change |

@@ -592,7 +592,7 @@ fn render_loop(
             .settings
             .masks
             .iter()
-            .any(|m| m.range.is_some())
+            .any(|m| m.range.is_some() || m.edges)
             .then(|| {
                 let (sw, sh) = RgbImage::fit(w, h, 256);
                 Arc::new(base.image.resize_area(sw, sh))

@@ -98,6 +98,9 @@ La photothèque professionnelle, étape par étape.
   certaines couleurs (plage de couleur : teinte, largeur, fondu ; les gris sont
   laissés). Mesurées en OKLab sur la photo, avant les retouches des masques ; la zone
   s'affiche en rouge (O).
+- **Pinceau qui suit les bords** : cochez « Suivre les bords » et le pinceau ne peint
+  que les tons proches du centre de chaque touche ; la zone s'arrête au contour d'un
+  ciel, d'un mur, d'un visage, sans déborder.
 
 ## 0.2.0 — octobre 2026
 
