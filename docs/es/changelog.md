@@ -37,6 +37,9 @@ La fototeca profesional, paso a paso.
   ISO, la valoración, la etiqueta y el orden en la exportación; en la ventana Exportar,
   los ajustes preestablecidos y `luma develop --name`. Dos fotos con el mismo nombre no
   se sobrescriben (`-2`, `-3`…).
+- **Dimensiones de exportación**: lado largo, lado corto, ancho × alto (la imagen cabe
+  en el marco) o megapíxeles, sin ampliar nunca; en la ventana Exportar, los ajustes
+  preestablecidos y `luma develop --resize short:1080`.
 
 ## 0.2.0 — octubre de 2026
 

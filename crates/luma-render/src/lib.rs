@@ -475,7 +475,7 @@ mod tests {
         let options = export::Options {
             format: export::Format::Png,
             bits: 16,
-            long_edge: Some(20),
+            resize: Some(export::Resize::LongEdge(20)),
             folder: Some(dir.join("sortie")),
             ..export::Options::default()
         };

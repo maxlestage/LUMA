@@ -357,6 +357,34 @@ fr = Grand côté en pixels
 en = Long edge in pixels
 es = Lado largo en píxeles
 
+fr = Pleine définition
+en = Full resolution
+es = Resolución completa
+
+fr = Petit côté
+en = Short edge
+es = Lado corto
+
+fr = Petit côté en pixels
+en = Short edge in pixels
+es = Lado corto en píxeles
+
+fr = Largeur × hauteur
+en = Width × height
+es = Ancho × alto
+
+fr = Largeur en pixels
+en = Width in pixels
+es = Ancho en píxeles
+
+fr = Hauteur en pixels
+en = Height in pixels
+es = Alto en píxeles
+
+fr = Mégapixels
+en = Megapixels
+es = Megapíxeles
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos

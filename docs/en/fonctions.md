@@ -83,7 +83,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 |---|---|
 | JPEG (quality), PNG and TIFF, 8 or 16 bits | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, with an embedded ICC profile | ✅ |
-| Resizing (long edge) | ✅ |
+| Resizing: long edge, short edge, width × height, megapixels, never enlarging (`--resize`) | ✅ |
 | Export dialog: format, quality, bit depth, colour space, size, folder; export every photo in the filter | ✅ |
 | Export presets (format, quality, bit depth, colour space, size, folder): web, full resolution, P3 display, print, and your own; `luma export-preset`, `luma develop --preset` | ✅ |
 | File name templates: `{nom}` (or `{name}`), `{date}`, `{séquence}` (`{sequence}`), `{boîtier}` (`{camera}`), `{objectif}` (`{lens}`), `{iso}`, `{note}` (`{rating}`), `{libellé}` (`{label}`)…, subfolders with “/”; in the Export dialog, presets and `luma develop --name` | ✅ |
