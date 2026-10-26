@@ -1,0 +1,17 @@
+[package]
+name = "luma-library"
+description = "La photothèque de LÜMA : catalogue local des photos, lu dans leurs en‑têtes et leurs XMP."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+luma-raw.workspace = true
+luma-project.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

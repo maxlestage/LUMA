@@ -188,7 +188,7 @@ fn wordmark_at(u: f32, v: f32, cap: f32, cy: f32, aa: f32) -> f32 {
     let scale = cap;
     let (x0, y0) = (-width * scale / 2.0, cy - scale / 2.0);
     let (lx, ly) = ((u - x0) / scale, (v - y0) / scale);
-    if lx < -0.3 || lx > width + 0.3 || ly < -0.45 || ly > 1.3 {
+    if !(-0.3..=width + 0.3).contains(&lx) || !(-0.45..=1.3).contains(&ly) {
         return 0.0;
     }
     let half = 0.055;

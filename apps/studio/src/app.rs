@@ -35,27 +35,7 @@ use crate::worker::{
     write_sidecar,
 };
 
-/// Les extensions RAW reconnues dans un dossier.
-pub const RAW_EXTENSIONS: [&str; 20] = [
-    "arw", "cr2", "cr3", "crw", "nef", "nrw", "raf", "dng", "orf", "rw2", "pef", "srw", "3fr",
-    "iiq", "erf", "kdc", "dcr", "mos", "mef", "rwl",
-];
-
-pub fn is_raw(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| RAW_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
-}
-
-/// Une photo que LÜMA sait ouvrir : un RAW, ou une image déjà développée (JPEG, PNG,
-/// TIFF, WebP… et, sur Mac, HEIC, AVIF, JPEG XL, PSD).
-pub fn is_photo(path: &Path) -> bool {
-    is_raw(path)
-        || path
-            .extension()
-            .and_then(|e| e.to_str())
-            .is_some_and(luma_raw::raster::supported)
-}
+pub use luma_raw::{RAW_EXTENSIONS, is_photo, is_raw};
 
 /// Les extensions de la fenêtre d'ouverture : les RAW et les images de ce système.
 pub fn photo_extensions() -> Vec<String> {

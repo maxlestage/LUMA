@@ -24,6 +24,24 @@ use luma_color::{self as color, Mat3, TempTint, Xy};
 use luma_core::{Error, Result, RgbImage};
 use rayon::prelude::*;
 
+/// Les extensions RAW reconnues dans un dossier.
+pub const RAW_EXTENSIONS: [&str; 20] = [
+    "arw", "cr2", "cr3", "crw", "nef", "nrw", "raf", "dng", "orf", "rw2", "pef", "srw", "3fr", "iiq", "erf", "kdc",
+    "dcr", "mos", "mef", "rwl",
+];
+
+pub fn is_raw(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| RAW_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+}
+
+/// Une photo que LÜMA sait ouvrir : un RAW, ou une image déjà développée (JPEG, PNG,
+/// TIFF, WebP… et, sur Mac, HEIC, AVIF, JPEG XL, PSD).
+pub fn is_photo(path: &Path) -> bool {
+    is_raw(path) || path.extension().and_then(|e| e.to_str()).is_some_and(raster::supported)
+}
+
 /// Le motif de filtres colorés du capteur, recalé sur la zone recadrée.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Cfa {
@@ -157,6 +175,49 @@ fn baseline_exposure(path: &Path) -> f32 {
         .clamp(-10.0, 10.0)
 }
 
+/// Ce que dit l'en‑tête d'une photo, sans décoder ses pixels : de quoi la ranger dans
+/// la photothèque.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Info {
+    pub make: String,
+    pub model: String,
+    pub exif: Exif,
+}
+
+fn metadata(source: &rawler::rawsource::RawSource, params: &rawler::decoders::RawDecodeParams) -> Option<Info> {
+    let m = rawler::get_decoder(source)
+        .and_then(|d| d.raw_metadata(source, params))
+        .ok()?;
+    Some(Info {
+        make: m.make.clone(),
+        model: m.model.clone(),
+        exif: Exif {
+            iso: m.exif.iso_speed.or(m.exif.iso_speed_ratings.map(u32::from)),
+            exposure_time: rational(&m.exif.exposure_time),
+            aperture: rational(&m.exif.fnumber),
+            focal_length: rational(&m.exif.focal_length),
+            lens: m
+                .exif
+                .lens_model
+                .clone()
+                .or(m.lens.map(|l| format!("{} {}", l.lens_make, l.lens_model))),
+            date: m.exif.date_time_original.clone(),
+        },
+    })
+}
+
+/// Les données de prise de vue d'un RAW, lues dans son en‑tête (quelques millisecondes,
+/// au lieu d'un décodage complet). Une image développée (JPEG, PNG…) ou un fichier
+/// illisible donne `None`.
+pub fn info(path: impl AsRef<Path>) -> Option<Info> {
+    let path = path.as_ref();
+    if raster::is_raster(path) {
+        return None;
+    }
+    let source = rawler::rawsource::RawSource::new(path).ok()?;
+    metadata(&source, &rawler::decoders::RawDecodeParams::default())
+}
+
 impl RawPhoto {
     /// Décode et normalise un fichier RAW.
     pub fn open(path: impl AsRef<Path>) -> Result<RawPhoto> {
@@ -172,21 +233,7 @@ impl RawPhoto {
         let source = rawler::rawsource::RawSource::new(path).map_err(Error::Io)?;
         let params = rawler::decoders::RawDecodeParams::default();
         let raw = rawler::decode(&source, &params).map_err(|e| Error::Decode(e.to_string()))?;
-        let exif = rawler::get_decoder(&source)
-            .and_then(|d| d.raw_metadata(&source, &params))
-            .map(|m| Exif {
-                iso: m.exif.iso_speed.or(m.exif.iso_speed_ratings.map(u32::from)),
-                exposure_time: rational(&m.exif.exposure_time),
-                aperture: rational(&m.exif.fnumber),
-                focal_length: rational(&m.exif.focal_length),
-                lens: m
-                    .exif
-                    .lens_model
-                    .clone()
-                    .or(m.lens.map(|l| format!("{} {}", l.lens_make, l.lens_model))),
-                date: m.exif.date_time_original.clone(),
-            })
-            .unwrap_or_default();
+        let exif = metadata(&source, &params).map(|i| i.exif).unwrap_or_default();
         let mut photo = Self::from_rawler(raw)?;
         photo.baseline_exposure = baseline_exposure(path);
         photo.exif = exif;
