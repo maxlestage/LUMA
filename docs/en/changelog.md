@@ -86,6 +86,9 @@ The professional photo library, step by step.
 - **Export to several presets at once**: tick “Web” and “Print” in the Export dialog
   and each photo goes to both in one go; save your settings as a preset;
   `luma export *.ARW --preset Web --preset Impression`.
+- **Mask luminance range**: a mask acts only on some tones (the bright sky but not the
+  trees, the shadows only), with smoothness; it also applies to films placed by masks
+  and shows with the O key.
 
 ## 0.2.0 — October 2026
 

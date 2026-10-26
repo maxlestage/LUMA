@@ -89,6 +89,9 @@ La fototeca profesional, paso a paso.
 - **Exportación a varios ajustes preestablecidos a la vez**: marque «Web» e
   «Impresión» en la ventana Exportar y cada foto va a los dos de una vez; guarde sus
   ajustes como preestablecido; `luma export *.ARW --preset Web --preset Impression`.
+- **Rango de luminancia de las máscaras**: una máscara solo actúa sobre algunos tonos
+  (el cielo claro y no los árboles, solo las sombras), con suavizado; también vale para
+  los filmes colocados por máscara y se ve con la tecla O.
 
 ## 0.2.0 — octubre de 2026
 

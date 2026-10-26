@@ -202,7 +202,14 @@ pub fn finish_layers(
         };
         cancel.check()?;
         finish(&mut alt, scale, &look, cancel, t)?;
-        let weights = t.time("films des masques", || local::weights(mask, out.width, out.height));
+        // La zone, plage de luminance comprise, mesurée sur la base (l'image de la scène).
+        let weights = t.time("films des masques", || {
+            if (base.width, base.height) == (out.width, out.height) {
+                local::weights_on(mask, base)
+            } else {
+                local::weights(mask, out.width, out.height)
+            }
+        });
         out.data
             .par_iter_mut()
             .zip(alt.data.par_iter().zip(weights.data.par_iter()))

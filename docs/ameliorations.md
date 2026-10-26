@@ -63,7 +63,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 
 ### 4. Masques avancés, sans IA
 
-- [ ] 4.1 Plage de luminance (bornes, adoucissement), sur le GPU aussi.
+- [x] 4.1 Plage de luminance (bornes, adoucissement), sur le GPU aussi.
 - [ ] 4.2 Plage de couleur (pipette, tolérance en OKLab).
 - [ ] 4.3 Pinceau qui suit les bords (filtre guidé).
 - [ ] 4.4 Combinaisons : ajouter, soustraire, intersection.
@@ -219,3 +219,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | Plus aucune mention d'IA dans ce qui est visible : README, architecture et feuille de route (FR, EN, ES), site (crates prévues, priorités, feuille de route) ; « sans IA » dit à la place | Recherche d'« IA », « AI », « Neural », « luma-ai » dans le README, les docs et le site : plus rien hors des mentions « sans IA » |
 | 2026-10-26 | 3.3 Corrections Fujifilm (`opcodes::fuji`) : 0xF00B (distorsion), 0xF00F (aberration chromatique), 0xF010 (vignetage) du FujiIFD, dans le TIFF des données brutes du RAF (quelques Ko lus) ; X‑Trans IV et V (9 nœuds) et avant (11 nœuds) ; mode recadré (CropMode 2 ou 4 : nœuds × 1,25) ; même passe que pour Sony | X‑T3 du corpus (XF 35 mm F2) : barillet corrigé (−8,9 % de rayon au bord), rouge et bleu décalés de ±0,15 %, pas de vignetage enregistré, aucun agrandissement nécessaire ; coût identique à celui des Sony |
 | 2026-10-26 | 3.4 Corrections Olympus/OM System (`opcodes::olympus` : ImageProcessing 0x150A distorsion, 0x150C aberration chromatique, flottants) et Panasonic (`opcodes::panasonic` : 0x0119, 16 entiers, modèle inversé par itérations) ; corpus : + OM‑5 Mark II (ORF) et Panasonic G9 (RW2), `docs/boitiers.md` régénéré (6 boîtiers vérifiés) | OM‑5 Mark II : barillet corrigé, rouge et bleu distincts ; G9 : distorsion de plus de 0,5 % au coin ; les deux lus dans le début du fichier (≤ 1 Mo), en‑têtes identiques au décodage complet pour les 7 RAW |
+| 2026-10-26 | 4.1 Plage de luminance des masques (`luma_project::LumaRange`, `local::weights_on`) : clarté perçue (racine cubique de la luminance), bornes et fondu doux, extrêmes pleins ; mesurée sur l'image avant les masques dans la base, sur la base pour les films des masques (même fonction au processeur et dans le chemin GPU de l'app, qui pose les films sur la finition GPU), approchée sur l'image affichée pour la touche O ; panneau Masques « Plage de luminance » ; XMP | Zone d'un masque radial, 2048 px : 2,6 ms, 5,4 ms avec la plage (la clarté n'est calculée que dans la forme, racine cubique rapide : 14,8 ms dans la première version) ; image entière avec plage : 11 ms |

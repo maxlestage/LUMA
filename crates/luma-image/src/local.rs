@@ -91,6 +91,28 @@ pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
     plane
 }
 
+/// La clarté perçue d'un pixel linéaire (0 à 1) : celle des bornes d'une plage de
+/// luminance.
+#[inline]
+pub fn lightness(p: [f32; 3]) -> f32 {
+    luma_color::fast_cbrt(luminance(p).max(0.0)).min(1.0)
+}
+
+/// La zone d'un masque sur cette image : sa forme, puis sa plage de luminance s'il en a
+/// une (mesurée sur l'image elle‑même).
+pub fn weights_on(mask: &Mask, img: &RgbImage) -> Plane {
+    let mut plane = weights(mask, img.width, img.height);
+    if let Some(r) = mask.range {
+        plane.data.par_iter_mut().zip(img.data.par_iter()).for_each(|(v, p)| {
+            // Hors de la forme, rien à mesurer.
+            if *v > 0.0 {
+                *v *= r.factor(lightness(*p));
+            }
+        });
+    }
+    plane
+}
+
 /// Applique les masques actifs à l'image (linéaire, espace de travail).
 pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
     let active: Vec<&Mask> = masks.iter().filter(|m| m.is_active()).collect();
@@ -105,8 +127,14 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
         .iter()
         .any(|m| m.local.clarity != 0.0)
         .then(|| stops.guided(0.008 * diag, 0.5));
+    // Les plages de luminance se mesurent sur l'image avant les masques : l'ordre des
+    // masques ne change pas leur zone.
+    let before = active.iter().any(|m| m.range.is_some()).then(|| img.clone());
     for mask in active {
-        let weights = weights(mask, w, h);
+        let weights = match &before {
+            Some(b) => weights_on(mask, b),
+            None => weights(mask, w, h),
+        };
         let l = &mask.local;
         let k = |v: f32| v / 100.0;
         let (contrast, hl, sh, wh, bl) = (k(l.contrast), k(l.highlights), k(l.shadows), k(l.whites), k(l.blacks));
@@ -149,6 +177,34 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_luminance_range_limits_the_mask() {
+        // Une image moitié sombre, moitié claire ; un masque plein, limité aux clartés.
+        let img = RgbImage::from_fn(20, 10, |x, _| if x < 10 { [0.02; 3] } else { [0.6; 3] });
+        let mut m = Mask::full();
+        m.local.exposure = -1.0;
+        m.range = Some(luma_project::LumaRange::default());
+        let w = weights_on(&m, &img);
+        assert_eq!(w.data[5 * 20 + 2], 0.0);
+        assert!((w.data[5 * 20 + 15] - 1.0).abs() < 1e-6);
+        // Sans plage : partout pareil.
+        m.range = None;
+        assert!(weights_on(&m, &img).data.iter().all(|v| (v - 1.0).abs() < 1e-6));
+        // Appliqué : seule la partie claire descend d'un IL, la sombre ne bouge pas.
+        m.range = Some(luma_project::LumaRange::default());
+        let mut out = img.clone();
+        apply(&mut out, std::slice::from_ref(&m));
+        assert_eq!(out.data[5 * 20 + 2], img.data[5 * 20 + 2]);
+        assert!(
+            (out.data[5 * 20 + 15][1] - 0.3).abs() < 0.02,
+            "{:?}",
+            out.data[5 * 20 + 15]
+        );
+        // L'inversion retourne la forme ; la plage reste celle des tons choisis.
+        m.invert = true;
+        assert!(weights_on(&m, &img).data.iter().all(|&v| v == 0.0));
+    }
     use luma_project::{Dab, Local};
 
     #[test]

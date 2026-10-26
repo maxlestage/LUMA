@@ -3889,7 +3889,7 @@ impl Studio {
                 let stale = self.mask_overlay.as_ref().is_none_or(|(m, _)| m != mask);
                 if stale {
                     let (w, h) = luma_core::RgbImage::fit(iw, ih, 400);
-                    let image = masking::overlay(mask, w, h);
+                    let image = masking::overlay(mask, w, h, &self.pick_map);
                     match &mut self.mask_overlay {
                         Some((m, tex)) => {
                             tex.set(image, TextureOptions::LINEAR);
@@ -4217,6 +4217,49 @@ impl Studio {
                                 ("n", &format_value(look.amount, 0, false)),
                             ],
                         ));
+                    }
+                }
+                // La plage de luminance : le masque n'agit que sur ces tons.
+                sub_title(ui, tr("Plage de luminance"));
+                let mut limited = m.range.is_some();
+                if ui
+                    .checkbox(&mut limited, tr("Seulement certains tons"))
+                    .changed()
+                {
+                    m.range = limited.then(luma_project::LumaRange::default);
+                    film_changed = true;
+                    commits.push(trf(
+                        "Masque {mask} : plage de luminance",
+                        &[("mask", &name)],
+                    ));
+                }
+                if let Some(r) = &mut m.range {
+                    let tone = |label, default| SliderSpec {
+                        label,
+                        min: 0.0,
+                        max: 100.0,
+                        default,
+                        decimals: 0,
+                        track: Track::Plain,
+                        log: false,
+                    };
+                    for (spec, value) in [
+                        (tone("Tons depuis", 60.0), &mut r.low),
+                        (tone("Tons jusqu'à", 100.0), &mut r.high),
+                        (tone("Adoucissement", 30.0), &mut r.feather),
+                    ] {
+                        let c = widgets::slider(ui, &spec, value);
+                        film_changed |= c.changed;
+                        if c.committed {
+                            commits.push(trf(
+                                "Masque {mask} : {setting} {value}",
+                                &[
+                                    ("mask", &name),
+                                    ("setting", &tr(spec.label).to_lowercase()),
+                                    ("value", &format_value(*value, 0, false)),
+                                ],
+                            ));
+                        }
                     }
                 }
                 sub_title(ui, tr("Réglages du masque"));
