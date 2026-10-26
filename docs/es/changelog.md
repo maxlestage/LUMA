@@ -26,6 +26,9 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Correcciones de objetivo de las Sony**: la distorsión, la aberración cromática
+  lateral y el viñeteo que la cámara registra en cada ARW se aplican automáticamente,
+  con la ampliación justa para no dejar ningún borde vacío.
 - **Correcciones de objetivo de los DNG**: la distorsión, la aberración cromática
   lateral y el viñeteo que la cámara o el programa escribieron en un DNG (opcodes
   `WarpRectilinear` y `FixVignetteRadial`) se aplican automáticamente, en la vista
