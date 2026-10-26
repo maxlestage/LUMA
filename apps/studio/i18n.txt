@@ -581,6 +581,26 @@ fr = Pinceau qui suit les bords
 en = Edge-aware brush
 es = Pincel que sigue los bordes
 
+fr = Zone
+en = Area
+es = Zona
+
+fr = Blanc
+en = White
+es = Blanco
+
+fr = Blanc sur noir
+en = White on black
+es = Blanco sobre negro
+
+fr = Couleur de la zone affichée
+en = Color of the area shown
+es = Color de la zona mostrada
+
+fr = Opacité de la zone affichée
+en = Opacity of the area shown
+es = Opacidad de la zona mostrada
+
 fr = Combiner
 en = Combine
 es = Combinar
