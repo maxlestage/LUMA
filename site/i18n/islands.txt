@@ -97,9 +97,9 @@ fr = P1 · éditeur
 en = P1 · editor
 es = P1 · editor
 
-fr = P2 · IA
-en = P2 · AI
-es = P2 · IA
+fr = P2 · outils avancés
+en = P2 · advanced tools
+es = P2 · herramientas avanzadas
 
 fr = P3 · expansion
 en = P3 · expansion
@@ -157,13 +157,13 @@ fr = Styles et profils de rendu partageables.
 en = Shareable styles and rendering profiles.
 es = Estilos y perfiles de renderizado para compartir.
 
-fr = Sujet, ciel, débruitage, super‑résolution. Local, modèles versionnés.
-en = Subject, sky, denoising, super‑resolution. On‑device, versioned models.
-es = Sujeto, cielo, reducción de ruido, superresolución. En local, modelos versionados.
+fr = Dématriçage fin, débruitage avancé, déconvolution. Sans IA.
+en = Fine demosaicing, advanced denoising, deconvolution. No AI.
+es = Desmosaicado fino, reducción de ruido avanzada, deconvolución. Sin IA.
 
-fr = Consentement IA, diagnostics sans contenu photographique.
-en = AI consent, diagnostics without any photo content.
-es = Consentimiento para la IA, diagnósticos sin contenido fotográfico.
+fr = Diagnostics sans contenu photographique, rien envoyé sans accord.
+en = Diagnostics without any photo content, nothing sent without consent.
+es = Diagnósticos sin contenido fotográfico, nada se envía sin consentimiento.
 
 fr = Synchronisation chiffrée et facultative entre appareils.
 en = Optional, encrypted sync between devices.

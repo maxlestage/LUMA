@@ -12,7 +12,7 @@ Es una estimación, no una garantía.
 | 1. Viabilidad | M0–M3 | App mínima para macOS y app mínima para iOS en Rust (`winit` + `objc2`), renderizado `wgpu`/Metal, decodificación con `rawler` sobre un corpus (Sony, Canon, Nikon, Fujifilm, ProRAW), firma y TestFlight automatizados | Compilación en CI del motor para Windows, Linux, Android |
 | 2. Motor | M4–M6 | Pipeline f32, Display P3, EDR/HDR en pantallas XDR, memoria unificada sin copias, grafo de revelado, proyecto versionado | Pruebas del motor en CPU (alternativa) |
 | 3. Alfa | M7–M12 | Mac: fototeca, revelado, exportación. iPhone/iPad: importación desde PhotoKit y Archivos, máscaras con el Apple Pencil, gestos. TestFlight público | — |
-| 4. Beta | M13–M18 | IA local (sujeto, cielo, reducción de ruido) en GPU de Apple, perfiles de cámaras y objetivos, búsqueda, recuperación tras un cierre inesperado | Primera adaptación del renderizado a Vulkan/DX12 |
+| 4. Beta | M13–M18 | Máscaras por rangos de color y de luminancia, reducción de ruido avanzada (sin IA), correcciones de objetivo leídas en los RAW, búsqueda, recuperación tras un cierre inesperado | Primera adaptación del renderizado a Vulkan/DX12 |
 | 5. 1.0 | M19–M24 | App Store (iPhone y iPad), descarga directa (Mac), accesibilidad, migración, documentación | — |
 | 6. Expansión | M25–M36 | Vídeo (timeline, etalonaje), captura conectada (tethering), impresión | Aplicaciones para Windows, Linux y Android sobre el mismo motor |
 
@@ -42,7 +42,7 @@ Próximos pasos, por orden:
    procesador); quedan las etapas de vecindad (ruido, tono local, enfoque)
    y la visualización sin relectura (textura compartida con la interfaz);
 2. en la app: catálogo (varias carpetas, colecciones, palabras clave), ajustes preestablecidos;
-3. máscaras por IA (sujeto, cielo), perfiles de objetivos, enderezamiento automático;
+3. máscaras por rangos de color y de luminancia, correcciones de objetivo leídas en los RAW, enderezamiento automático (sin IA);
 4. iOS: la app ya funciona (simulador, CI); quedan PhotoKit, los gestos (pellizcar para
    hacer zoom), el Apple Pencil para las máscaras, la firma y TestFlight.
 

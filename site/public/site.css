@@ -401,7 +401,7 @@ html.js.hydrated .cap-group:not(.in) .cap-check { transform: scale(0) rotate(-90
   .cap-close, .cap-toggle:checked ~ .cap-expand .cap-open { display: none; }
   .cap-toggle:checked ~ .cap-expand .cap-close { display: inline; }
 }
-.perf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1240px; margin: 0 auto; }
+.perf-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; max-width: 1240px; margin: 0 auto; }
 .perf-card { padding: 26px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); }
 .perf-card h3 { font-size: 1.05rem; letter-spacing: -0.01em; margin-bottom: 20px; }
 .perf-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; font-size: .9rem; color: var(--muted); }
@@ -413,6 +413,13 @@ html.js.hydrated .cap-group:not(.in) .cap-check { transform: scale(0) rotate(-90
 .bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,.07); margin-top: 8px; overflow: hidden; }
 .bar span { display: block; height: 100%; border-radius: inherit; background: var(--spectrum); transform-origin: 0 50%; transform: scaleX(0); transition: transform 1.6s var(--ease-out) .2s; }
 .in .bar span { transform: scaleX(var(--v)); }
+.phone-gains { max-width: 1240px; margin: 16px auto 0; padding: 26px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); }
+.phone-gains h3 { font-size: 1.05rem; letter-spacing: -0.01em; margin: 0 0 18px; }
+.phone-gains ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; }
+.phone-gains li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: .9rem; line-height: 1.45; color: var(--muted); }
+.phone-gains li strong { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+.phone-gains-note { margin: 18px 0 0; font-size: .8rem; color: var(--dim); }
+@media (max-width: 700px) { .phone-gains ul { grid-template-columns: 1fr; } }
 .frame-budget { max-width: 1240px; margin: 16px auto 0; padding: 26px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; align-items: center; }
 .frame-budget p { margin: 0; color: var(--muted); }
 .frame-budget b { color: var(--text); font-size: 1.6rem; letter-spacing: -0.02em; }

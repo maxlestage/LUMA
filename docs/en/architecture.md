@@ -8,14 +8,14 @@ architecture; planning lives in [`roadmap.md`](roadmap.md).
 | Question | Decision |
 |---|---|
 | Platforms | **macOS and iOS/iPadOS first**, then Windows, Linux and Android |
-| Ambition | A complete professional photo editor: RAW, editing, masks, on-device AI, photo library, then video |
+| Ambition | A complete professional photo editor: RAW, editing, masks, photo library, then video; no AI, no neural network, no model file |
 | "100% Rust" | All of LÜMA's code and its dependencies is Rust. No third-party native libraries (C, C++, Objective‑C, Swift, Kotlin). **System frameworks** (Metal, AppKit, UIKit, PhotoKit…) are called from Rust through Rust binding crates (`objc2`) and are not third-party dependencies |
 
 ## Why Apple first
 
 - **A single GPU to master at the start**: Metal on Apple Silicon (M‑series Macs, iPhone, iPad).
   `wgpu` targets Metal natively; the Vulkan/DX12 backend will come with Windows, Linux and Android.
-- **Unified memory**: the CPU, GPU and Neural Engine share the same memory. The pipeline can
+- **Unified memory**: the CPU and GPU share the same memory. The pipeline can
   avoid copies between RAW decoding and GPU rendering.
 - **Calibrated displays**: Display P3 everywhere, HDR (EDR) on XDR displays and recent iPhones.
   It is the best ground on which to validate 32-bit floating-point colour science.
@@ -34,7 +34,7 @@ LÜMA Core               projects, commands, history, tasks, orchestration
  ┌──────┼──────────┬───────────┬──────────┐
 Photo  Video     Compute     Library
 RAW,   timeline, CPU, GPU,   catalogue,
-color, grading   AI          metadata,
+color, grading               metadata,
 masks                        cache
         │
 luma-platform           files, PhotoKit, camera, EDR display, GPU, permissions
@@ -68,8 +68,8 @@ luma/
 │   ├── luma-library/     P1  catalogue, collections, ratings, duplicates, search
 │   ├── luma-export/      P1  JPEG, PNG, TIFF, DNG, batches, presets
 │   ├── luma-presets/     P1  styles and rendering profiles
-│   ├── luma-ai/          P2  subjects, sky, denoise, super‑resolution (on-device)
-│   ├── luma-privacy/     P2  AI consent, content-free diagnostics
+│   ├── luma-quality/     P2  fine demosaicing, advanced denoising, deconvolution (no AI)
+│   ├── luma-privacy/     P2  content-free diagnostics, nothing sent without consent
 │   ├── luma-sync/        P3  optional encrypted sync
 │   ├── luma-plugins/     P3  sandboxed extensions, permissions
 │   ├── luma-video/       P3  timeline, colour grading, rendering
@@ -138,7 +138,6 @@ allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Un
 | GPU | `wgpu` (Metal) | Latency, EDR/HDR, behaviour on iPhone |
 | Windowing | `winit` + `objc2` | AppKit/UIKit integration, Pencil, gestures |
 | UI | `egui`, or a custom UI on `wgpu` | 120 Hz ProMotion smoothness, accessibility |
-| AI | `burn`, `candle` | Metal backend, model size, purity |
 | Video | `rav1e` (AV1) | H.264/HEVC: decoding via VideoToolbox (system) or exclusion |
 
 ## Performance targets (to be measured, not yet measured)

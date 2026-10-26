@@ -247,6 +247,10 @@ mod catalog_tests {
                 add(note);
             }
         }
+        for (title, detail) in PHONE_GAINS {
+            add(title);
+            add(detail);
+        }
         for ph in &ROADMAP {
             add(ph.name);
             add(ph.goal);
