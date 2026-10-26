@@ -13,7 +13,9 @@ use luma_studio::Studio;
 use luma_studio::app::{Module, View};
 
 /// Une copie du corpus dans un dossier à part : les XMP écrits par l'app ne touchent
-/// pas le corpus. `None` si le corpus n'est pas téléchargé.
+/// pas le corpus. `None` si le corpus n'est pas téléchargé. Des liens physiques quand
+/// le système le permet (l'app ne modifie jamais un original : rien à copier, 219 Mo
+/// de moins par essai), sinon de vraies copies.
 fn corpus_copy(name: &str) -> Option<PathBuf> {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus");
     let files = luma_studio::app::scan(&src);
@@ -24,13 +26,24 @@ fn corpus_copy(name: &str) -> Option<PathBuf> {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     for f in &files {
-        std::fs::copy(f, dir.join(f.file_name().unwrap())).unwrap();
+        let to = dir.join(f.file_name().unwrap());
+        if std::fs::hard_link(f, &to).is_err() {
+            std::fs::copy(f, &to).unwrap();
+        }
     }
     Some(dir.join("_DSC0009.ARW"))
 }
 
 struct Session {
     harness: Harness<'static, Option<Studio>>,
+    /// La copie du corpus, effacée à la fin de l'essai.
+    dir: PathBuf,
+}
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.dir);
+    }
 }
 
 impl Session {
@@ -53,7 +66,8 @@ impl Session {
             eprintln!("corpus absent (scripts/fetch-corpus.sh) : capture ignorée");
             return None;
         };
-        prepare(raw.parent().unwrap());
+        let dir = raw.parent().unwrap().to_path_buf();
+        prepare(&dir);
         // Un essai tout neuf : l'écran Premium ne cache pas les captures.
         let licence_dir = raw.parent().unwrap().join("licence");
         // La photothèque de l'essai, dans sa copie du corpus.
@@ -75,7 +89,7 @@ impl Session {
                 },
                 None,
             );
-        let mut session = Self { harness };
+        let mut session = Self { harness, dir };
         session.wait();
         Some(session)
     }
