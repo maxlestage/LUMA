@@ -46,8 +46,16 @@ fn compare(gpu: &Gpu, name: &str, s: &Settings, space: OutputSpace, scale: f32) 
     assert!(worst <= 2 && mean < 0.05, "{name} : écart max {worst}, moyen {mean}");
 }
 
+/// Un GPU à la fois : plusieurs appareils créés en même temps sur le GPU logiciel de
+/// Linux (lavapipe, celui de la CI) le font parfois planter (SIGSEGV).
+fn one_at_a_time() -> std::sync::MutexGuard<'static, ()> {
+    static GPU: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    GPU.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 #[test]
 fn every_per_pixel_stage_matches_the_cpu() {
+    let _gpu = one_at_a_time();
     let Some(gpu) = Gpu::any() else {
         eprintln!("pas de GPU : test ignoré");
         return;
@@ -159,6 +167,7 @@ fn every_per_pixel_stage_matches_the_cpu() {
 
 #[test]
 fn sharpening_at_full_size_stays_on_the_cpu() {
+    let _gpu = one_at_a_time();
     let Some(gpu) = Gpu::any() else { return };
     let s = Settings::default();
     assert!(gpu.can_finish(&s, 100, 100, 0.3));
@@ -169,6 +178,7 @@ fn sharpening_at_full_size_stays_on_the_cpu() {
 /// en alternant, chaque rendu part bien de sa base.
 #[test]
 fn several_bases_stay_uploaded_and_never_mix() {
+    let _gpu = one_at_a_time();
     let Some(gpu) = Gpu::any() else { return };
     let s = Settings::default();
     let a = test_image(120, 80);
