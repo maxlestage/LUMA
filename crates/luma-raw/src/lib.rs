@@ -241,9 +241,12 @@ fn dng_opcodes(path: &Path) -> (Vec<opcodes::Opcode>, Vec<opcodes::Opcode>) {
 }
 
 /// Les corrections d'objectif rangées par le boîtier dans un RAW qui n'est pas un DNG :
-/// aujourd'hui celles des ARW de Sony.
+/// aujourd'hui celles des ARW de Sony et des RAF de Fujifilm.
 fn maker_corrections(path: &Path) -> Vec<opcodes::Opcode> {
     use rawler::formats::tiff::reader::TiffReader;
+    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("raf")) {
+        return fuji_corrections(path).into_iter().collect();
+    }
     let is_arw = path
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("arw") || e.eq_ignore_ascii_case("sr2"));
@@ -264,6 +267,107 @@ fn maker_corrections(path: &Path) -> Vec<opcodes::Opcode> {
     opcodes::sony(&values(0x7037), &values(0x7035), &values(0x7032))
         .into_iter()
         .collect()
+}
+
+/// Les corrections d'un RAF de Fujifilm. Le RAF range ses données brutes dans un petit
+/// TIFF (son adresse est à l'octet 0x64 de l'en‑tête), dont l'étiquette 0xF000 mène au
+/// FujiIFD ; ses décalages se comptent depuis le début de ce TIFF. Seuls quelques Ko en
+/// sont lus.
+fn fuji_corrections(path: &Path) -> Option<opcodes::Opcode> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path).ok()?;
+    let mut head = [0u8; 0x68];
+    file.read_exact(&mut head).ok()?;
+    if !head.starts_with(b"FUJIFILMCCD-RAW") {
+        return None;
+    }
+    let start = u32::from_be_bytes(head[0x64..0x68].try_into().ok()?);
+    file.seek(SeekFrom::Start(u64::from(start))).ok()?;
+    let mut tiff = Vec::new();
+    file.take(64 << 10).read_to_end(&mut tiff).ok()?;
+    let le = tiff.starts_with(b"II*\0");
+    if !le && !tiff.starts_with(b"MM\0*") {
+        return None;
+    }
+    let u16_at = |at: usize| -> Option<u16> {
+        let b: [u8; 2] = tiff.get(at..at + 2)?.try_into().ok()?;
+        Some(if le {
+            u16::from_le_bytes(b)
+        } else {
+            u16::from_be_bytes(b)
+        })
+    };
+    let u32_at = |at: usize| -> Option<u32> {
+        let b: [u8; 4] = tiff.get(at..at + 4)?.try_into().ok()?;
+        Some(if le {
+            u32::from_le_bytes(b)
+        } else {
+            u32::from_be_bytes(b)
+        })
+    };
+    // Les entrées d'un IFD : (étiquette, type, nombre, valeur ou décalage).
+    let entries = |at: usize| -> Vec<(u16, u16, u32, u32)> {
+        let n = u16_at(at).unwrap_or(0).min(512) as usize;
+        (0..n)
+            .filter_map(|k| {
+                let e = at + 2 + 12 * k;
+                Some((u16_at(e)?, u16_at(e + 2)?, u32_at(e + 4)?, u32_at(e + 8)?))
+            })
+            .collect()
+    };
+    let root = entries(u32_at(4)? as usize);
+    let fuji_ifd = root.iter().find(|e| e.0 == 0xF000)?.3 as usize;
+    let fuji = entries(fuji_ifd);
+    // Une liste de rationnels signés (type 10).
+    let rationals = |tag: u16| -> Vec<f64> {
+        let Some(&(_, 10, count, offset)) = fuji.iter().find(|e| e.0 == tag) else {
+            return Vec::new();
+        };
+        (0..count.min(128) as usize)
+            .map_while(|i| {
+                let at = offset as usize + 8 * i;
+                let (n, d) = (u32_at(at)? as i32, u32_at(at + 4)? as i32);
+                Some(if d == 0 { 0.0 } else { f64::from(n) / f64::from(d) })
+            })
+            .collect()
+    };
+    opcodes::fuji(
+        &rationals(0xF00B),
+        &rationals(0xF00F),
+        &rationals(0xF010),
+        fuji_crop(path),
+    )
+}
+
+/// 1,25 quand le Fujifilm photographiait en mode recadré (étiquette CropMode 0x104D de sa
+/// note du fabricant, valeur 2 ou 4), sinon 1.
+fn fuji_crop(path: &Path) -> f64 {
+    let Some(head) = read_head(path, 1 << 20) else {
+        return 1.0;
+    };
+    let Some(base) = head.windows(12).position(|w| w == b"FUJIFILM\x0c\0\0\0") else {
+        return 1.0;
+    };
+    let u16_at = |at: usize| head.get(at..at + 2).map(|b| u16::from_le_bytes([b[0], b[1]]));
+    let u32_at = |at: usize| {
+        head.get(at..at + 4)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+    };
+    let Some(ifd) = u32_at(base + 8).map(|o| base + o as usize) else {
+        return 1.0;
+    };
+    let n = u16_at(ifd).unwrap_or(0).min(512) as usize;
+    for k in 0..n {
+        let e = ifd + 2 + 12 * k;
+        if u16_at(e) == Some(0x104D) {
+            return if matches!(u16_at(e + 8), Some(2 | 4)) {
+                1.25
+            } else {
+                1.0
+            };
+        }
+    }
+    1.0
 }
 
 /// Ce que dit l'en‑tête d'une photo, sans décoder ses pixels : de quoi la ranger dans
