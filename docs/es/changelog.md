@@ -26,6 +26,9 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Correcciones de objetivo de las Fujifilm**: las que la cámara registra en cada RAF
+  (distorsión, aberración cromática lateral, viñeteo), modo recortado incluido, se
+  aplican automáticamente; por ejemplo el barrilete del XF 35 mm F2.
 - **Correcciones de objetivo de las Sony**: la distorsión, la aberración cromática
   lateral y el viñeteo que la cámara registra en cada ARW se aplican automáticamente,
   con la ampliación justa para no dejar ningún borde vacío.

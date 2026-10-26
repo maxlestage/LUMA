@@ -79,6 +79,56 @@ fn zoom_for(knots: &[f64], distortion: &[Vec<f64>; 3]) -> f64 {
     hi
 }
 
+/// Les corrections enregistrées par un boîtier Fujifilm dans son RAF (étiquettes 0xF00B :
+/// distorsion, 0xF00F : aberration chromatique, 0xF010 : vignetage, du FujiIFD), telles
+/// que lues : une valeur d'en‑tête, puis les nœuds (9 sur les capteurs X‑Trans IV et V,
+/// 11 avant), puis les valeurs, en pour cent pour la distorsion et le vignetage, en
+/// rapport pour l'aberration chromatique (rouge puis bleu ; sans premier nœud avant le
+/// X‑Trans IV). `crop` : 1,25 quand le boîtier photographiait en mode recadré, les
+/// nœuds étant comptés sur l'image entière.
+pub fn fuji(distortion: &[f64], ca: &[f64], vignetting: &[f64], crop: f64) -> Option<Opcode> {
+    // (nombre de nœuds, début des valeurs de distorsion et de vignetage, du rouge, du bleu)
+    let (n, values, red, blue, ca_first_knot) = match (distortion.len(), ca.len(), vignetting.len()) {
+        (19, 29, 19) => (9, 10, 10, 19, true),
+        (23, 31, 23) => (11, 12, 10, 20, false),
+        _ => return None,
+    };
+    let knots: Vec<f64> = (0..n).map(|i| distortion[i + 1] * crop).collect();
+    // Les trois listes disent les mêmes nœuds, sinon elles ne vont pas ensemble.
+    let same = (0..n).all(|i| {
+        let ca_knot = if ca_first_knot {
+            Some(ca[i + 1])
+        } else {
+            (i > 0).then(|| ca[i])
+        };
+        vignetting[i + 1] == distortion[i + 1] && ca_knot.is_none_or(|k| k == distortion[i + 1])
+    });
+    if !same || knots.windows(2).any(|w| w[1] <= w[0]) {
+        return None;
+    }
+    let green: Vec<f64> = (0..n).map(|i| distortion[values + i] / 100.0 + 1.0).collect();
+    let tint = |start: usize| -> Vec<f64> {
+        (0..n)
+            .map(|i| {
+                let c = if !ca_first_knot && i == 0 { 0.0 } else { ca[start + i] };
+                green[i] * (c + 1.0)
+            })
+            .collect()
+    };
+    let distortion = [tint(red), green.clone(), tint(blue)];
+    let vignetting: Vec<f64> = (0..n).map(|i| vignetting[values + i] / 100.0).collect();
+    if vignetting.iter().any(|v| *v <= 0.0) {
+        return None;
+    }
+    let zoom = zoom_for(&knots, &distortion);
+    Some(Opcode::Spline {
+        knots,
+        distortion,
+        vignetting,
+        zoom,
+    })
+}
+
 /// Les corrections enregistrées par un boîtier Sony dans son ARW (étiquettes 0x7037 :
 /// distorsion, 0x7035 : aberration chromatique, rouge puis bleu, 0x7032 : vignetage ;
 /// chacune commence par son nombre de valeurs). Des entiers, à l'échelle 2⁻¹⁴ pour la
@@ -483,6 +533,50 @@ mod tests {
         apply(&ca, &mut img, frame(w, h));
         let p = img.data[30 * w + 70];
         assert!((p[0] - 70.0).abs() < 1e-3 && (p[2] - original.data[30 * w + 70][2]).abs() > 0.1);
+    }
+
+    #[test]
+    fn fujifilm_lists_of_both_generations() {
+        // X‑Trans IV et V : 9 nœuds partout.
+        let knots: Vec<f64> = (1..=9).map(|i| f64::from(i) / 8.0).collect();
+        let list = |values: &[f64]| [&[416.0][..], &knots, values].concat();
+        let d = list(&[-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0, -9.0]);
+        let ca = [list(&[-0.001; 9]), vec![0.002; 9], vec![416.0]].concat();
+        let v = list(&[100.0, 99.0, 98.0, 97.0, 96.0, 95.0, 94.0, 93.0, 92.0]);
+        let Some(Opcode::Spline {
+            knots: k,
+            distortion,
+            vignetting,
+            zoom,
+        }) = fuji(&d, &ca, &v, 1.0)
+        else {
+            panic!()
+        };
+        assert_eq!(k, knots);
+        assert!((distortion[1][8] - 0.91).abs() < 1e-9);
+        assert!((distortion[0][0] - 0.99 * 0.999).abs() < 1e-9 && (distortion[2][0] - 0.99 * 1.002).abs() < 1e-9);
+        assert!((vignetting[8] - 0.92).abs() < 1e-9);
+        assert_eq!(zoom, 1.0);
+        // En mode recadré, les nœuds se comptent sur l'image entière.
+        let Some(Opcode::Spline { knots: k, .. }) = fuji(&d, &ca, &v, 1.25) else {
+            panic!()
+        };
+        assert!((k[7] - 1.25).abs() < 1e-9);
+        // Avant le X‑Trans IV : 11 nœuds, l'aberration chromatique sans le premier.
+        let knots11: Vec<f64> = (0..11).map(|i| f64::from(i) / 10.0).collect();
+        let d11 = [&[0.0][..], &knots11, &[-1.0; 11]].concat();
+        let ca11 = [&[0.0][..], &knots11[1..], &[0.001; 10], &[-0.001; 10]].concat();
+        let v11 = [&[0.0][..], &knots11, &[100.0; 11]].concat();
+        let Some(Opcode::Spline { distortion, .. }) = fuji(&d11, &ca11, &v11, 1.0) else {
+            panic!("{} {} {}", d11.len(), ca11.len(), v11.len())
+        };
+        assert_eq!(distortion[0][0], distortion[1][0], "pas d'aberration au centre");
+        assert!(distortion[0][5] > distortion[1][5]);
+        // Des nœuds qui ne vont pas ensemble : rien.
+        let mut bad = v.clone();
+        bad[3] += 0.01;
+        assert!(fuji(&d, &ca, &bad, 1.0).is_none());
+        assert!(fuji(&d[..10], &ca, &v, 1.0).is_none());
     }
 
     #[test]

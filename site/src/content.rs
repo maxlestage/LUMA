@@ -175,7 +175,7 @@ pub const PRIORITIES: [(&str, &str); 5] = [
     ("all", "Tout"),
     ("P0", "P0 · fondations"),
     ("P1", "P1 · éditeur"),
-    ("P2", "P2 · IA"),
+    ("P2", "P2 · outils avancés"),
     ("P3", "P3 · expansion"),
 ];
 
@@ -259,16 +259,16 @@ pub const CRATES: [Crate; 18] = [
         text: "Styles et profils de rendu partageables.",
     },
     Crate {
-        name: "luma-ai",
+        name: "luma-quality",
         priority: "P2",
         glyph: "◉",
-        text: "Sujet, ciel, débruitage, super‑résolution. Local, modèles versionnés.",
+        text: "Dématriçage fin, débruitage avancé, déconvolution. Sans IA.",
     },
     Crate {
         name: "luma-privacy",
         priority: "P2",
         glyph: "◌",
-        text: "Consentement IA, diagnostics sans contenu photographique.",
+        text: "Diagnostics sans contenu photographique, rien envoyé sans accord.",
     },
     Crate {
         name: "luma-sync",
@@ -306,7 +306,27 @@ pub struct Perf {
     pub note: Option<(&'static str, f32)>,
 }
 
-pub const PERF: [Perf; 4] = [
+/// Ce qui est déjà fait pour iPhone et iPad, avec le gain mesuré : (titre, détail).
+pub const PHONE_GAINS: [(&str, &str); 4] = [
+    (
+        "Les curseurs suivent le doigt",
+        "Pendant un geste, un aperçu plus petit, puis la pleine netteté au lâcher : 12 fois plus rapide (417 → 35 ms par image).",
+    ),
+    (
+        "Tout le rendu sur le GPU",
+        "Accentuation et Masquage compris, avec Metal : 15 fois plus rapide sur les grands écrans comme celui de l'iPad Pro.",
+    ),
+    (
+        "Jamais fermée faute de mémoire",
+        "LÜMA surveille la mémoire que le système lui laisse et libère ses caches sous 300 Mo, avant qu'il ne ferme l'app.",
+    ),
+    (
+        "Vignettes instantanées",
+        "L'aperçu intégré au RAW en 15 ms, puis les vignettes retouchées, relues en moins d'une milliseconde.",
+    ),
+];
+
+pub const PERF: [Perf; 5] = [
     Perf {
         name: "Aperçu après réglage",
         unit: "ms",
@@ -315,6 +335,18 @@ pub const PERF: [Perf; 4] = [
         mac_target: 100,
         phone_target: 150,
         note: None,
+    },
+    Perf {
+        name: "Réglage sur écran Retina",
+        unit: "ms",
+        mac: 22.5,
+        decimals: 1,
+        mac_target: 100,
+        phone_target: 150,
+        note: Some((
+            "Aperçu de 3072 px avec l'accentuation, tout sur le GPU. Sur le processeur : {v} ms.",
+            341.0,
+        )),
     },
     Perf {
         name: "Ouverture d'une photo",
@@ -397,7 +429,7 @@ pub const ROADMAP: [Phase; 6] = [
         when: "M13 – M18",
         name: "Bêta",
         items: &[
-            "IA locale : sujet, ciel, débruitage",
+            "Masques par plages, débruitage avancé, sans IA",
             "Profils boîtiers et objectifs",
             "Recherche, doublons",
             "Récupération après plantage",

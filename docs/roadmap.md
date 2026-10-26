@@ -12,7 +12,7 @@ C'est une estimation, pas une garantie.
 | 1. Faisabilité | M0–M3 | App macOS et app iOS minimales en Rust (`winit` + `objc2`), rendu `wgpu`/Metal, décodage `rawler` sur un corpus (Sony, Canon, Nikon, Fujifilm, ProRAW), signature et TestFlight automatisés | Compilation CI du moteur pour Windows, Linux, Android |
 | 2. Moteur | M4–M6 | Pipeline f32, Display P3, EDR/HDR sur écrans XDR, mémoire unifiée sans copie, graphe de retouche, projet versionné | Tests du moteur sur CPU (fallback) |
 | 3. Alpha | M7–M12 | Mac : photothèque, retouche, export. iPhone/iPad : import PhotoKit et Fichiers, masques à l'Apple Pencil, gestes. TestFlight public | — |
-| 4. Bêta | M13–M18 | IA locale (sujet, ciel, débruitage) sur GPU Apple, profils boîtiers/objectifs, recherche, récupération après plantage | Premier portage Vulkan/DX12 du rendu |
+| 4. Bêta | M13–M18 | Masques par plages de couleur et de luminance, débruitage avancé (sans IA), corrections d'objectif lues dans les RAW, recherche, récupération après plantage | Premier portage Vulkan/DX12 du rendu |
 | 5. 1.0 | M19–M24 | App Store (iPhone et iPad), téléchargement direct (Mac), accessibilité, migration, documentation | — |
 | 6. Expansion | M25–M36 | Vidéo (timeline, étalonnage), tethering, impression | Applications Windows, Linux et Android sur le même moteur |
 
@@ -42,7 +42,7 @@ Prochaines étapes, dans l'ordre :
    processeur) ; restent les étapes de voisinage (bruit, tonalité locale, accentuation)
    et l'affichage sans relecture (texture partagée avec l'interface) ;
 2. dans l'app : catalogue (plusieurs dossiers, collections, mots‑clés), préréglages ;
-3. masques par IA (sujet, ciel), profils d'objectifs, redressement automatique ;
+3. masques par plages de couleur et de luminance, corrections d'objectif lues dans les RAW, redressement automatique (sans IA) ;
 4. iOS : l'app tourne déjà (simulateur, CI) ; restent PhotoKit, les gestes (pincer pour
    zoomer), l'Apple Pencil pour les masques, la signature et TestFlight.
 

@@ -12,7 +12,7 @@ This is an estimate, not a guarantee.
 | 1. Feasibility | M0–M3 | Minimal macOS and iOS apps in Rust (`winit` + `objc2`), `wgpu`/Metal rendering, `rawler` decoding on a corpus (Sony, Canon, Nikon, Fujifilm, ProRAW), automated signing and TestFlight | CI builds of the engine for Windows, Linux, Android |
 | 2. Engine | M4–M6 | f32 pipeline, Display P3, EDR/HDR on XDR displays, zero-copy unified memory, edit graph, versioned project | Engine tests on the CPU (fallback) |
 | 3. Alpha | M7–M12 | Mac: photo library, editing, export. iPhone/iPad: import from PhotoKit and Files, Apple Pencil masking, gestures. Public TestFlight | — |
-| 4. Beta | M13–M18 | On-device AI (subject, sky, denoise) on Apple GPUs, camera/lens profiles, search, crash recovery | First Vulkan/DX12 port of the renderer |
+| 4. Beta | M13–M18 | Colour and luminance range masks, advanced denoising (no AI), lens corrections read from RAW files, search, crash recovery | First Vulkan/DX12 port of the renderer |
 | 5. 1.0 | M19–M24 | App Store (iPhone and iPad), direct download (Mac), accessibility, migration, documentation | — |
 | 6. Expansion | M25–M36 | Video (timeline, colour grading), tethering, printing | Windows, Linux and Android apps on the same engine |
 
@@ -42,7 +42,7 @@ Next steps, in order:
    CPU); the neighbourhood stages remain (noise, local tone, sharpening),
    as does display without readback (texture shared with the interface);
 2. in the app: catalogue (multiple folders, collections, keywords), presets;
-3. AI masks (subject, sky), lens profiles, automatic straightening;
+3. colour and luminance range masks, lens corrections read from RAW files, automatic straightening (no AI);
 4. iOS: the app already runs (simulator, CI); PhotoKit, gestures (pinch to
    zoom), Apple Pencil for masks, signing and TestFlight remain.
 
