@@ -8,7 +8,9 @@ The professional photo library, step by step.
   changing a single pixel; full-resolution export takes 25 to 30% less time, and the
   preview with heavy adjustments is about 25% more responsive. Then the blurs: two
   buffers instead of six new images, so full-resolution sharpening is almost twice as
-  fast (NEF 0.64 → 0.36 s), without changing a pixel.
+  fast (NEF 0.64 → 0.36 s), without changing a pixel. Then JPEG writing, on every
+  core: 2.3 to 2.6 times faster, byte-for-byte identical files; a full-resolution 24 MP
+  export in 1.8 s instead of 2.4.
 
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length

@@ -55,14 +55,9 @@ pub fn write_with(
     let create = || std::fs::File::create(path).map_err(|e| format!("{} : {e}", path.display()));
     match ext.as_str() {
         "jpg" | "jpeg" => {
-            // En mémoire d'abord : le paquet XMP s'insère après les premiers segments.
-            let mut out = Vec::new();
-            let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality.clamp(1, 100));
-            let _ = enc.set_icc_profile(profile);
-            if !meta.exif.is_empty() {
-                let _ = enc.set_exif_metadata(meta.exif.clone());
-            }
-            enc.write_image(&bytes, w, h, kind).map_err(err)?;
+            // Sur tous les cœurs, octet pour octet le JPEG d'avant ; en mémoire d'abord :
+            // le paquet XMP s'insère après les premiers segments.
+            let mut out = crate::jpeg::encode(&bytes, img.width, img.height, quality, &meta.exif, &profile)?;
             if let Some(x) = &meta.xmp {
                 insert_jpeg_xmp(&mut out, x);
             }
