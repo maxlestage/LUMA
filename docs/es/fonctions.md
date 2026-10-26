@@ -61,7 +61,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Combinaciones de máscaras: añadir, restar, intersecar otras formas (cada una invertible) | ✅ |
 | | Zona de la máscara mostrada (O) en rojo, verde, azul, blanco o blanco sobre negro, opacidad del 10 al 100 % | ✅ |
 | | Lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
-| | Corrección, clonar, ojos rojos, eliminar | ⏳ |
+| | Corrector y tampón (Q): un clic, la fuente encontrada sola, zona y fuente desplazables; tamaño, difuminado, opacidad | ✅ |
+| | Ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Copiar y pegar selectivo de ajustes («Pegar…», Alt+Mayús+Cmd+V): catorce grupos a elegir, recorte y máscaras propios de cada foto por defecto | ✅ |
 | | Instantáneas, sincronización en varias fotos | ⏳ |
