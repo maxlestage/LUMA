@@ -37,10 +37,15 @@ USAGE
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
-  luma catalog [dossier]… [--flat] [--catalog f.json] [--list]
+  luma catalog [dossier]… [--flat] [--catalog f.json] [--list] [--search \"…\"] [--keywords]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
       au catalogue de LÜMA, ou le remet à jour ; seuls les fichiers modifiés sont relus.
-      --list affiche les photos par date de prise de vue.
+      --list affiche les photos par date de prise de vue ; --search ne garde que celles
+      qui répondent à la recherche : des mots (nom, boîtier, objectif, libellé,
+      mots‑clés ; sans tenir compte des accents) et des filtres, par exemple
+        \"mer note:3 drapeau:retenue date:2024-06..2024-08 iso:..800 focale:24..70
+         boîtier:sony objectif:gm libellé:rouge mot:été\"
+      --keywords compte les mots‑clés, les boîtiers et les objectifs du catalogue.
   luma cameras [--markdown] [--corpus dossier]
       Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
       --corpus marque ceux dont un vrai RAW est dans le dossier.
@@ -170,13 +175,19 @@ fn load_settings(a: &Args, raw: Option<&Path>) -> Result<Settings, String> {
 
 fn catalog(args: Vec<String>) -> Result<(), String> {
     let mut file = luma_library::default_path();
-    let (mut folders, mut recursive, mut show) = (Vec::new(), true, false);
+    let (mut folders, mut recursive, mut show, mut facets) = (Vec::new(), true, false, false);
+    let mut query = None;
     let mut it = args.into_iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--catalog" => file = Some(it.next().ok_or("--catalog attend un fichier")?.into()),
             "--flat" => recursive = false,
             "--list" => show = true,
+            "--search" => {
+                let text = it.next().ok_or("--search attend une recherche")?;
+                query = Some(luma_library::Query::parse(&text)?);
+            }
+            "--keywords" => facets = true,
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => folders.push(PathBuf::from(arg)),
         }
@@ -203,8 +214,26 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
         cat.save(&file).map_err(|e| format!("{} : {e}", file.display()))?;
     }
     println!("{} : {} photos (lu en {:.1} ms)", file.display(), cat.len(), ms(loaded));
-    if show {
-        for e in cat.by_date() {
+    if facets {
+        for (title, values) in [
+            ("Mots‑clés", cat.keywords()),
+            ("Boîtiers", cat.cameras()),
+            ("Objectifs", cat.lenses()),
+        ] {
+            println!("{title}");
+            for (v, n) in values {
+                println!("  {v} ({n})");
+            }
+        }
+    }
+    if show || query.is_some() {
+        let query = query.unwrap_or_default();
+        let t = Instant::now();
+        let found = cat.search(&query);
+        if query != luma_library::Query::default() {
+            println!("{} photos trouvées ({:.1} ms)", found.len(), ms(t.elapsed()));
+        }
+        for e in found {
             let iso = e.iso.map(|i| format!("ISO {i}")).unwrap_or_default();
             println!(
                 "{}  {}  {}  {}  {}  {}",
