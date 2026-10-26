@@ -70,6 +70,12 @@ app="target/ios/device/LÜMA.app"
 plist="$app/Info.plist"
 pb() { /usr/libexec/PlistBuddy "$@"; }
 
+# Les frameworks liés, pour le journal : PhotosUI (le sélecteur de Photos) est aussi
+# chargé à la demande s'il manque ici.
+exe="$app/$(pb -c "Print :CFBundleExecutable" "$plist")"
+otool -L "$exe" | grep -E "framework" | sed 's/^/   /'
+otool -L "$exe" | grep -q "/PhotosUI.framework/" || echo "::warning::PhotosUI n'est pas lié (chargé à la demande)"
+
 # Le numéro de build, et ce que Xcode écrit d'ordinaire dans l'Info.plist.
 sdk_version=$(xcrun --sdk iphoneos --show-sdk-version)
 sdk_build=$(xcrun --sdk iphoneos --show-sdk-build-version)
