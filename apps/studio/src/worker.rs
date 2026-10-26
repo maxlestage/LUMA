@@ -654,27 +654,74 @@ pub fn clip_overlay(rgba: &mut [u8]) {
     }
 }
 
+/// Les vignettes, en deux temps : pour chaque photo demandée, tout de suite l'aperçu que
+/// le boîtier a enregistré dans le RAW (quelques millisecondes) ; puis, quand plus rien
+/// n'attend, le vrai rendu de LÜMA avec ses réglages, qui le remplace.
 fn thumbnail_loop(
     queue: Receiver<PathBuf>,
     sender: Sender<Event>,
     repaint: Arc<dyn Fn() + Send + Sync>,
 ) {
-    while let Ok(path) = queue.recv() {
-        let Ok(photo) = crate::dialogs::open_photo(&path) else {
-            continue;
+    use std::sync::mpsc::TryRecvError;
+    let mut pending: std::collections::VecDeque<PathBuf> = std::collections::VecDeque::new();
+    loop {
+        let path = match queue.try_recv() {
+            Ok(p) => p,
+            Err(TryRecvError::Disconnected) => return,
+            Err(TryRecvError::Empty) => {
+                if let Some(p) = pending.pop_front() {
+                    render_thumbnail(&p, &sender, &repaint);
+                    continue;
+                }
+                match queue.recv() {
+                    Ok(p) => p,
+                    Err(_) => return,
+                }
+            }
         };
-        let settings = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());
-        let Ok(r) = photo.render(&settings, Size::Fit(320), &Cancel::new()) else {
-            continue;
-        };
-        let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
-        let _ = sender.send(Event::Thumbnail {
-            path,
-            size: [r.image.width, r.image.height],
-            rgba: to_rgba(&rgb, false),
-        });
-        repaint();
+        if quick_thumbnail(&path, &sender, &repaint) {
+            pending.push_back(path);
+        } else {
+            render_thumbnail(&path, &sender, &repaint);
+        }
     }
+}
+
+/// La vignette instantanée : l'aperçu intégré au RAW. `false` s'il n'y en a pas.
+fn quick_thumbnail(
+    path: &Path,
+    sender: &Sender<Event>,
+    repaint: &Arc<dyn Fn() + Send + Sync>,
+) -> bool {
+    let Some(img) = luma_raw::RawPhoto::embedded_preview(path, 320) else {
+        return false;
+    };
+    let size = [img.width() as usize, img.height() as usize];
+    let _ = sender.send(Event::Thumbnail {
+        path: path.to_path_buf(),
+        size,
+        rgba: to_rgba(img.as_raw(), false),
+    });
+    repaint();
+    true
+}
+
+/// La vignette rendue par LÜMA, avec les réglages de la photo.
+fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() + Send + Sync>) {
+    let Ok(photo) = crate::dialogs::open_photo(path) else {
+        return;
+    };
+    let settings = read_sidecar(path).unwrap_or_else(|| photo.default_settings());
+    let Ok(r) = photo.render(&settings, Size::Fit(320), &Cancel::new()) else {
+        return;
+    };
+    let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
+    let _ = sender.send(Event::Thumbnail {
+        path: path.to_path_buf(),
+        size: [r.image.width, r.image.height],
+        rgba: to_rgba(&rgb, false),
+    });
+    repaint();
 }
 
 /// L'écriture d'un doublon dématrice toute l'image d'un coup : sur iPhone et iPad, où

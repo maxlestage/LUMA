@@ -193,6 +193,50 @@ impl RawPhoto {
         Ok(photo)
     }
 
+    /// L'aperçu JPEG que le boîtier a enregistré dans le RAW, dans le bon sens, réduit
+    /// à `max_side` pixels sur son grand côté : le plus petit des JPEG intégrés qui soit
+    /// assez grand. Quelques millisecondes, sans décoder ni dématricer le capteur : de
+    /// quoi montrer une vignette tout de suite, avant le vrai rendu. `None` si le fichier
+    /// n'en a pas (ou n'est pas un RAW).
+    pub fn embedded_preview(path: impl AsRef<Path>, max_side: u32) -> Option<image::RgbImage> {
+        let path = path.as_ref();
+        if raster::is_raster(path) {
+            return None;
+        }
+        // Les aperçus sont presque toujours au début du fichier : les 8 premiers Mo
+        // d'abord, le fichier entier seulement s'il le faut.
+        let pick = |bytes: &[u8]| -> Option<image::DynamicImage> {
+            let mut found = embedded_jpegs(bytes);
+            found.retain(|j| j.width.max(j.height) >= max_side);
+            found.sort_by_key(|j| u64::from(j.width) * u64::from(j.height));
+            found.iter().find_map(|j| decode_scaled(&bytes[j.offset..], max_side))
+        };
+        let head = read_head(path, 8 << 20)?;
+        let (img, bytes) = match pick(&head) {
+            Some(img) => (img, head),
+            None => {
+                let all = std::fs::read(path).ok()?;
+                (pick(&all)?, all)
+            }
+        };
+        let mut img = img.thumbnail(max_side, max_side);
+        // Les aperçus sont enregistrés dans le sens du capteur : l'orientation de la photo
+        // s'y applique. Lue dans l'en‑tête TIFF quand il y en a un (la plupart des RAW),
+        // sinon par le décodeur.
+        let code = tiff_orientation(&bytes).or_else(|| {
+            let source = rawler::rawsource::RawSource::new(path).ok()?;
+            let params = rawler::decoders::RawDecodeParams::default();
+            rawler::get_decoder(&source)
+                .and_then(|d| d.raw_metadata(&source, &params))
+                .ok()
+                .and_then(|m| m.exif.orientation)
+        });
+        if let Some(o) = code.and_then(|o| image::metadata::Orientation::from_exif(o.min(8) as u8)) {
+            img.apply_orientation(o);
+        }
+        Some(img.to_rgb8())
+    }
+
     fn from_rawler(raw: rawler::RawImage) -> Result<RawPhoto> {
         use rawler::rawimage::RawPhotometricInterpretation as P;
         let cpp = raw.cpp;
@@ -408,9 +452,165 @@ impl RawPhoto {
     }
 }
 
+/// Un JPEG décodé directement à la plus petite échelle (1, 1/2, 1/4 ou 1/8) qui donne
+/// encore au moins `side` pixels sur le grand côté : un aperçu de 13 Mpx en sort huit
+/// fois plus petit, bien plus vite qu'un décodage complet.
+fn decode_scaled(jpeg: &[u8], side: u32) -> Option<image::DynamicImage> {
+    use jpeg_decoder::PixelFormat;
+    let mut d = jpeg_decoder::Decoder::new(std::io::Cursor::new(jpeg));
+    d.read_info().ok()?;
+    let info = d.info()?;
+    let (w, h) = (u32::from(info.width), u32::from(info.height));
+    // La taille demandée garde les proportions ; le décodeur choisit l'échelle juste
+    // au‑dessus.
+    let k = f64::from(side) / f64::from(w.max(h));
+    let req = |v: u32| (f64::from(v) * k).ceil().clamp(1.0, 65_535.0) as u16;
+    let (sw, sh) = d.scale(req(w), req(h)).ok()?;
+    let px = d.decode().ok()?;
+    let (sw, sh) = (u32::from(sw), u32::from(sh));
+    let rgb: Vec<u8> = match d.info()?.pixel_format {
+        PixelFormat::RGB24 => px,
+        PixelFormat::L8 => px.iter().flat_map(|&v| [v, v, v]).collect(),
+        PixelFormat::L16 => px.as_chunks::<2>().0.iter().flat_map(|v| [v[0], v[0], v[0]]).collect(),
+        PixelFormat::CMYK32 => px
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .flat_map(|p| {
+                let k = 255 - u16::from(p[3]);
+                [0, 1, 2].map(|c| ((255 - u16::from(p[c])) * k / 255) as u8)
+            })
+            .collect(),
+    };
+    image::RgbImage::from_raw(sw, sh, rgb).map(image::DynamicImage::ImageRgb8)
+}
+
+/// Les `n` premiers octets d'un fichier (moins s'il est plus court).
+fn read_head(path: &Path, n: usize) -> Option<Vec<u8>> {
+    use std::io::Read;
+    let mut buf = Vec::with_capacity(n);
+    std::fs::File::open(path)
+        .ok()?
+        .take(n as u64)
+        .read_to_end(&mut buf)
+        .ok()?;
+    Some(buf)
+}
+
+/// L'orientation EXIF (étiquette 0x0112) du premier IFD d'un fichier TIFF (« II*\0 » ou
+/// « MM\0* », l'en‑tête de la plupart des RAW).
+fn tiff_orientation(b: &[u8]) -> Option<u16> {
+    let le = match b.get(..4)? {
+        [b'I', b'I', 42, 0] => true,
+        [b'M', b'M', 0, 42] => false,
+        _ => return None,
+    };
+    let u16_at = |at: usize| -> Option<u16> {
+        let v = [*b.get(at)?, *b.get(at + 1)?];
+        Some(if le {
+            u16::from_le_bytes(v)
+        } else {
+            u16::from_be_bytes(v)
+        })
+    };
+    let u32_at = |at: usize| -> Option<usize> {
+        let v = [*b.get(at)?, *b.get(at + 1)?, *b.get(at + 2)?, *b.get(at + 3)?];
+        Some(
+            (if le {
+                u32::from_le_bytes(v)
+            } else {
+                u32::from_be_bytes(v)
+            }) as usize,
+        )
+    };
+    let ifd = u32_at(4)?;
+    let count = usize::from(u16_at(ifd)?);
+    (0..count.min(512)).find_map(|k| {
+        let e = ifd + 2 + k * 12;
+        (u16_at(e)? == 0x0112).then(|| u16_at(e + 8)).flatten()
+    })
+}
+
+/// Un JPEG enregistré dans un RAW : où il commence, et sa taille.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct EmbeddedJpeg {
+    offset: usize,
+    width: u32,
+    height: u32,
+}
+
+/// Les JPEG d'aperçu cachés dans un fichier : chaque début de JPEG (FF D8 FF), suivi de
+/// ses segments jusqu'à l'en‑tête d'image (SOF) qui donne la taille. Les JPEG sans
+/// perte (SOF3, 7, 11, 15), qui portent les données du capteur, sont écartés.
+fn embedded_jpegs(bytes: &[u8]) -> Vec<EmbeddedJpeg> {
+    let be16 =
+        |at: usize| -> Option<usize> { Some(usize::from(u16::from_be_bytes([*bytes.get(at)?, *bytes.get(at + 1)?]))) };
+    let mut out = Vec::new();
+    let mut i = 0;
+    // On saute d'un octet 0xFF au suivant (recherche rapide), puis on vérifie FF D8 FF.
+    while let Some(k) = bytes[i..].iter().position(|&b| b == 0xFF) {
+        let start = i + k;
+        i = start + 1;
+        if bytes.get(start + 1) != Some(&0xD8) || bytes.get(start + 2) != Some(&0xFF) {
+            continue;
+        }
+        i = start + 2;
+        let mut j = start + 2;
+        for _ in 0..64 {
+            if bytes.get(j) != Some(&0xFF) {
+                break;
+            }
+            let Some(&marker) = bytes.get(j + 1) else { break };
+            let Some(len) = be16(j + 2) else { break };
+            let sof = matches!(marker, 0xC0..=0xCF) && !matches!(marker, 0xC4 | 0xC8 | 0xCC);
+            if sof {
+                let lossless = matches!(marker, 0xC3 | 0xC7 | 0xCB | 0xCF);
+                if let (Some(h), Some(w)) = (be16(j + 5), be16(j + 7))
+                    && !lossless
+                    && w >= 16
+                    && h >= 16
+                {
+                    out.push(EmbeddedJpeg {
+                        offset: start,
+                        width: w as u32,
+                        height: h as u32,
+                    });
+                }
+                break;
+            }
+            if len < 2 {
+                break;
+            }
+            j += 2 + len;
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn embedded_jpegs_are_found_with_their_size() {
+        // Un faux RAW : des octets, un petit JPEG, encore des octets.
+        let mut jpeg = Vec::new();
+        image::RgbImage::from_pixel(64, 40, image::Rgb([200, 100, 50]))
+            .write_to(&mut std::io::Cursor::new(&mut jpeg), image::ImageFormat::Jpeg)
+            .unwrap();
+        let mut file = vec![0u8; 1000];
+        file.extend(&jpeg);
+        file.extend([0xFF, 0xD8, 0xFF, 0x00, 0x12]);
+        let found = embedded_jpegs(&file);
+        assert_eq!(
+            found,
+            [EmbeddedJpeg {
+                offset: 1000,
+                width: 64,
+                height: 40
+            }]
+        );
+    }
 
     fn synthetic(neutral: [f32; 3]) -> RawPhoto {
         // Un boîtier fictif dont la matrice est celle du sRGB (A et D65 identiques).
