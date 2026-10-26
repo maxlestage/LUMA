@@ -417,7 +417,9 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 .footer-signature-made em { color: var(--text); font-size: 1.12em; }
 .footer-wordmark { display: flex; justify-content: center; margin: clamp(4px, 1.5vw, 16px) 0 0; font-size: clamp(5.5rem, 26vw, 14rem); font-weight: 800; letter-spacing: -.05em; line-height: 1; white-space: nowrap; -webkit-user-select: none; user-select: none; }
 .footer-wordmark .ch { display: inline-block; overflow: hidden; padding: .3em .02em .06em; }
-.footer-wordmark .ch > span { display: inline-block; padding-top: .3em; margin-top: -.3em; background: linear-gradient(180deg, #f4f1ee 42%, #8d8a88 78%, #3a3836 100%); -webkit-background-clip: text; background-clip: text; color: transparent; transition: transform 1.2s var(--ease-out); transition-delay: calc(.09s * var(--i) + .15s); }
+.footer-wordmark .ch > span { display: inline-block; padding-top: .3em; margin-top: -.3em; background: linear-gradient(180deg, transparent 45%, rgba(5, 5, 7, .55) 100%), linear-gradient(90deg, var(--orange), var(--gold), var(--mint), var(--blue), var(--violet), var(--orange)) 0 0 / 300% 100% repeat-x; -webkit-background-clip: text; background-clip: text; color: transparent; transition: transform 1.2s var(--ease-out); transition-delay: calc(.09s * var(--i) + .15s); animation: spectrum-flow 9s linear infinite; animation-delay: calc(-.7s * var(--i)); }
+/* Les couleurs du spectre défilent dans les lettres, en vague de l'une à l'autre. */
+@keyframes spectrum-flow { to { background-position: 0 0, -150% 0; } }
 /* Le mot entier ne fond pas : seules les lettres montent. */
 html.js.hydrated .footer-wordmark.reveal:not(.in) { opacity: 1; transform: none; filter: none; }
 html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(110%) rotate(8deg); }
