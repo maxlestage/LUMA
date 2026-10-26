@@ -26,6 +26,10 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Photothèque plus rapide sur les disques externes** : pour ranger une photo, LÜMA
+  ne lit plus que le début du fichier (0,5 à 2 Mo au lieu de 25 à 56 Mo). Cinq RAW du
+  corpus : 34 Mo lus au lieu de 189 ; un NEF se range en 1,5 ms au lieu de 17 à 23,
+  un RAF en 0,6 ms au lieu de 22 à 25 (lectures à froid).
 - **Copies virtuelles** : plusieurs développements d'une même photo, sans dupliquer le
   fichier ; chaque copie a ses réglages, sa note, ses mots‑clés et sa vignette, à côté
   de son original, et s'exporte sous le nom `IMG_0001-2`. La supprimer ne touche jamais

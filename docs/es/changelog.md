@@ -26,6 +26,10 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Fototeca más rápida en discos externos**: para archivar una foto, LÜMA ya solo
+  lee el principio del archivo (0,5 a 2 MB en lugar de 25 a 56 MB). Cinco RAW del
+  corpus: 34 MB leídos en lugar de 189; un NEF se archiva en 1,5 ms en lugar de 17 a
+  23, un RAF en 0,6 ms en lugar de 22 a 25 (lecturas en frío).
 - **Copias virtuales**: varios revelados de una misma foto sin duplicar el archivo;
   cada copia tiene sus ajustes, su valoración, sus palabras clave y su miniatura, junto
   a su original, y se exporta como `IMG_0001-2`. Eliminarla nunca toca el original.
