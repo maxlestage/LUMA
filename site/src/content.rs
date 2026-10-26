@@ -524,7 +524,7 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
         "Ressources",
         &[
             ("Boîtiers pris en charge", "/docs/boitiers/"),
-            ("Parité avec Lightroom", "/docs/parite-lightroom/"),
+            ("Fonctions", "/docs/fonctions/"),
             ("Architecture", "/docs/architecture/"),
             ("Performances", "#performance"),
             ("Notes de version", "/nouveautes/"),
@@ -594,7 +594,7 @@ pub const LEGAL: [Legal; 3] = [
                 "Marques et noms de pellicules",
                 &[
                     "LÜMA, son logo et son interface sont la propriété de leur éditeur.",
-                    "Les noms de pellicules et de procédés cités dans les films de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) sont des marques de leurs propriétaires. Ils disent l'inspiration d'un rendu, sans lien avec ces marques ni copie de leurs produits. Lightroom est une marque d'Adobe.",
+                    "Les noms de pellicules et de procédés cités dans les films de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) sont des marques de leurs propriétaires. Ils disent l'inspiration d'un rendu, sans lien avec ces marques ni copie de leurs produits.",
                 ],
             ),
         ],

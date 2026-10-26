@@ -3,8 +3,8 @@
 //!
 //! La vibrance, la saturation, le mélangeur et l'étalonnage travaillent en OKLCh, un
 //! espace perceptuel : tourner une teinte ou changer une saturation n'y modifie pas la
-//! clarté perçue. Les huit couleurs du mélangeur et les teintes des roues sont celles
-//! de Lightroom (rouge 0°, orange 30°, jaune 60°, vert 120°, bleu‑vert 180°, bleu 240°,
+//! clarté perçue. Les huit couleurs du mélangeur et les teintes des roues sont les huit
+//! teintes usuelles (rouge 0°, orange 30°, jaune 60°, vert 120°, bleu‑vert 180°, bleu 240°,
 //! violet 270°, magenta 300°), placées dans OKLCh.
 
 use luma_color::{self as color, Mat3, OkLab, Vec3};
@@ -247,8 +247,8 @@ impl ColorStage {
             c *= (1.0 + wi * bi[1] + wj * bj[1]).max(0.0);
             // La luminance ne touche que les pixels colorés : le gris reste gris.
             let colored = smoothstep(0.01, 0.06, chroma0);
-            // En noir et blanc, la luminance du mélangeur devient le mélange noir et blanc
-            // de Lightroom, plus ample : L ×2 ou ÷2, soit ±3 IL, la force d'un filtre
+            // En noir et blanc, la luminance du mélangeur devient le mélange noir et blanc,
+            // plus ample : L ×2 ou ÷2, soit ±3 IL, la force d'un filtre
             // rouge qui noircit un ciel bleu.
             let gain = if self.mono { 1.0 } else { 0.6 };
             l *= (gain * (wi * bi[2] + wj * bj[2]) * colored).exp2();

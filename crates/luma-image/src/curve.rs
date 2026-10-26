@@ -108,7 +108,7 @@ impl Filmic {
 /// La courbe du profil Original, dans la même table que la filmique : l'identité tant
 /// que les curseurs sont à zéro (l'image reste telle quelle), sinon le Contraste en S
 /// autour du gris moyen, les Blancs et les Noirs agissant sur les extrémités, en
-/// valeurs codées sRGB, comme dans Lightroom sur un JPEG. Au‑delà du blanc : écrêté.
+/// valeurs codées sRGB, comme on l'attend sur un JPEG. Au‑delà du blanc : écrêté.
 pub fn display_table(contrast: f32, whites: f32, blacks: f32) -> FilmicTable {
     let g = 1.0 + contrast.clamp(-100.0, 100.0) / 100.0 * 0.6;
     let (w, b) = (whites / 100.0 * 0.25, blacks / 100.0 * 0.12);

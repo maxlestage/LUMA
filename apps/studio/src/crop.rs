@@ -1,4 +1,4 @@
-//! L'outil Recadrage (touche R), comme dans Lightroom : un cadre posé sur toute la
+//! L'outil Recadrage (touche R) : un cadre posé sur toute la
 //! photo, qu'on déplace en glissant à l'intérieur et qu'on redimensionne par ses coins
 //! et ses côtés ; la grille des tiers aide à composer ; les proportions peuvent être
 //! verrouillées. Entrée valide, Échap annule.

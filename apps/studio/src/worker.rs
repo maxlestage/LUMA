@@ -105,7 +105,7 @@ impl Format {
     }
 }
 
-/// Les réglages de la fenêtre Exporter (comme celle de Lightroom, en plus court).
+/// Les réglages de la fenêtre Exporter (l'essentiel, sans détour).
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExportOptions {
     pub format: Format,
@@ -206,7 +206,7 @@ struct RenderJob {
     clipping: bool,
 }
 
-/// Le sidecar XMP d'un RAW (`IMG_0001.xmp` ou `IMG_0001.CR3.xmp`, comme Lightroom).
+/// Le sidecar XMP d'un RAW (`IMG_0001.xmp` ou `IMG_0001.CR3.xmp`).
 pub fn sidecar_path(raw: &Path) -> PathBuf {
     let long = PathBuf::from(format!("{}.xmp", raw.display()));
     if long.is_file() {
@@ -236,7 +236,7 @@ pub fn write_sidecar(raw: &Path, settings: &Settings, meta: &xmp::Meta) -> Resul
         .map_err(|e| format!("{} : {e}", target.display()))
 }
 
-/// RGB 8 bits → RGBA, avec en option l'indicateur d'écrêtage de Lightroom (touche J) :
+/// RGB 8 bits → RGBA, avec en option l'indicateur d'écrêtage (touche J) :
 /// rouge où un canal est blanc pur, bleu où tout est noir.
 pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
     let mut out = Vec::with_capacity(rgb.len() / 3 * 4);

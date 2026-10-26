@@ -1,6 +1,5 @@
 //! L'écriture d'un DNG linéaire : le résultat d'une fusion (empilement, panorama) reste
-//! un vrai fichier RAW, que LÜMA, Lightroom ou tout autre logiciel développe comme les
-//! originaux (balance des blancs, matrices de couleur et exposition de base conservées).
+//! un vrai fichier RAW, qui se développe comme les originaux (balance des blancs, matrices de couleur et exposition de base conservées).
 
 use std::io::BufWriter;
 use std::path::Path;

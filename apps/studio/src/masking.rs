@@ -1,4 +1,4 @@
-//! Les masques à l'écran : poignées des dégradés et pinceau, comme dans Lightroom.
+//! Les masques à l'écran : poignées des dégradés et pinceau.
 //!
 //! - dégradé linéaire : trois lignes (plein effet, milieu, plus d'effet) ; on tire le
 //!   point de départ ou d'arrivée, ou la ligne du milieu pour tout déplacer ;
@@ -12,7 +12,7 @@ use luma_project::{Dab, Mask, Shape};
 use crate::widgets::Change;
 
 /// Les réglages du pinceau (Taille en fraction de la largeur, Contour progressif,
-/// Débit, comme Lightroom).
+/// Débit).
 #[derive(Clone, Copy, Debug)]
 pub struct Brush {
     pub radius: f32,

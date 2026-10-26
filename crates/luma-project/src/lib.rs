@@ -1,10 +1,9 @@
-//! Les réglages d'une photo, et leur échange avec les autres logiciels.
+//! Les réglages d'une photo, et leur enregistrement en JSON et en XMP.
 //!
 //! Une retouche n'est jamais appliquée aux pixels d'origine : c'est une liste de
-//! paramètres, rejouée à chaque rendu. Ces paramètres reprennent un à un ceux du
-//! module Développement de Lightroom Classic (processus 2012 et suivants) : mêmes
-//! panneaux, mêmes curseurs, mêmes plages, mêmes valeurs par défaut pour un RAW. Un
-//! photographe y retrouve ses repères, et ses fichiers XMP existants se lisent (voir
+//! paramètres, rejouée à chaque rendu. Ces paramètres sont rangés par panneau
+//! (Base, Courbe des tonalités, Mélangeur de couleurs…), chacun avec sa plage et sa
+//! valeur par défaut pour un RAW ; ils s'enregistrent et se relisent en XMP (voir
 //! [`xmp`]).
 
 pub mod masks;
@@ -26,7 +25,7 @@ pub enum WhiteBalance {
     Custom { temperature: f32, tint: f32 },
 }
 
-/// Le profil de rendu (navigateur de profils de Lightroom) : le point de départ de la
+/// Le profil de rendu (navigateur de profils) : le point de départ de la
 /// retouche, avant tout curseur.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -42,7 +41,7 @@ pub enum Profile {
     Monochrome,
     /// Le rendu du fichier lui‑même, pour une image déjà développée (JPEG, PNG, TIFF…) :
     /// sans courbe filmique ni accentuation, l'image reste telle quelle tant qu'aucun
-    /// réglage ne change (« Incorporé » dans Lightroom).
+    /// réglage ne change (le profil « incorporé »).
     Original,
 }
 
@@ -171,7 +170,7 @@ pub struct Detail {
 
 impl Default for Detail {
     fn default() -> Self {
-        // Les valeurs par défaut de Lightroom pour un RAW.
+        // Les valeurs par défaut pour un RAW.
         Self {
             sharpen_amount: 40.0,
             sharpen_radius: 1.0,
@@ -237,7 +236,7 @@ pub struct Calibration {
     pub blue_saturation: f32,
 }
 
-/// Panneau Corrections de l'objectif (onglet Manuel de Lightroom).
+/// Panneau Corrections de l'objectif (réglages manuels).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Lens {
@@ -248,7 +247,7 @@ pub struct Lens {
     /// Vignetage de l'objectif : −100 à +100 (positif éclaircit les coins), milieu 0 à 100.
     pub vignetting: f32,
     pub vignetting_midpoint: f32,
-    /// Défrangeage : violet et vert, 0 à 20 comme Lightroom.
+    /// Défrangeage : violet et vert, de 0 à 20.
     pub defringe_purple: f32,
     pub defringe_green: f32,
 }
@@ -266,7 +265,7 @@ impl Default for Lens {
     }
 }
 
-/// Panneau Transformation : perspective et échelle (curseurs manuels de Lightroom).
+/// Panneau Transformation : perspective et échelle (curseurs manuels).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Transform {
@@ -415,8 +414,8 @@ fn clamp(v: &mut f32, lo: f32, hi: f32) {
 
 impl Settings {
     /// Les réglages de départ d'une image déjà développée (JPEG, PNG, TIFF…) : le
-    /// profil Original, ni accentuation ni réduction du bruit de couleur (comme
-    /// Lightroom pour un JPEG) : l'image s'ouvre telle qu'elle est.
+    /// profil Original, ni accentuation ni réduction du bruit de couleur (l'usage
+    /// pour un JPEG) : l'image s'ouvre telle qu'elle est.
     pub fn for_rendered() -> Self {
         let mut s = Settings {
             profile: Profile::Original,
@@ -693,7 +692,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn defaults_match_lightroom_for_a_raw() {
+    fn defaults_are_the_usual_ones_for_a_raw() {
         let s = Settings::default();
         assert_eq!(s.detail.sharpen_amount, 40.0);
         assert_eq!(s.detail.sharpen_radius, 1.0);

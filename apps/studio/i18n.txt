@@ -3,7 +3,7 @@
 # Une entrée par paragraphe : le texte français tel qu'écrit dans le code (la clé), puis
 # l'anglais et l'espagnol. Les trous {nom} sont remplis par l'app après la traduction ;
 # un texte ambigu porte son contexte après « | » (il ne s'affiche pas). Vocabulaire :
-# celui de Lightroom en anglais et en espagnol. Vérifié par apps/studio/tests/i18n.rs.
+# celui des logiciels photo professionnels en anglais et en espagnol. Vérifié par apps/studio/tests/i18n.rs.
 
 # ----- Les outils (le rail) -----
 
@@ -1303,9 +1303,9 @@ fr = Export impossible : {error}
 en = Export failed: {error}
 es = No se pudo exportar: {error}
 
-fr = Au format de Lightroom (.xmp) : clic droit sur un film pour l'exporter seul, ou tous d'un coup, rangés par famille.
-en = In Lightroom format (.xmp): right-click a film to export it alone, or export them all at once, sorted by family.
-es = En formato de Lightroom (.xmp): clic derecho en una película para exportarla sola, o todas a la vez, ordenadas por familia.
+fr = En préréglages XMP (.xmp) : clic droit sur un film pour l'exporter seul, ou tous d'un coup, rangés par famille.
+en = As XMP presets (.xmp): right-click a film to export it alone, or export them all at once, sorted by family.
+es = Como ajustes preestablecidos XMP (.xmp): clic derecho en una película para exportarla sola, o todas a la vez, ordenadas por familia.
 
 fr = Nom du préréglage
 en = Preset name
@@ -1339,9 +1339,9 @@ fr = Importer…
 en = Import…
 es = Importar…
 
-fr = Des préréglages .xmp de Lightroom, Camera Raw ou LÜMA
-en = .xmp presets from Lightroom, Camera Raw or LÜMA
-es = Ajustes preestablecidos .xmp de Lightroom, Camera Raw o LÜMA
+fr = Des préréglages XMP (.xmp)
+en = XMP presets (.xmp)
+es = Ajustes preestablecidos XMP (.xmp)
 
 fr = Actualiser
 en = Refresh
@@ -1583,9 +1583,9 @@ fr = Exporter le préréglage
 en = Export preset
 es = Exportar ajuste preestablecido
 
-fr = Préréglage Lightroom
-en = Lightroom preset
-es = Ajuste preestablecido de Lightroom
+fr = Préréglage XMP
+en = XMP preset
+es = Ajuste preestablecido XMP
 
 fr = Exporter les préréglages dans…
 en = Export presets to…

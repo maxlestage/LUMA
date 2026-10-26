@@ -1,6 +1,6 @@
 [package]
 name = "luma-project"
-description = "Réglages non destructifs de LÜMA (calqués sur Lightroom), JSON et XMP."
+description = "Réglages non destructifs de LÜMA, en JSON et XMP."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -16,8 +16,8 @@ Toutes les images, trois langues, et la boutique.
 
 La première version à télécharger : 14 jours d'essai, puis LÜMA Premium.
 
-- **Développement RAW** : le module Développement de Lightroom repris panneau par
-  panneau, moteur 32 bits flottants, finition sur le GPU (Metal), XMP compatibles.
+- **Développement RAW** : un module Développement complet, panneau par
+  panneau, moteur 32 bits flottants, finition sur le GPU (Metal), réglages en XMP.
 - **735 boîtiers** reconnus, dont 714 à couleur étalonnée ; tout DNG, dont l'iPhone
   ProRAW.
 - **100 films** vérifiés par la machine (pellicules couleur, cinéma, noir et blanc,
@@ -25,7 +25,7 @@ La première version à télécharger : 14 jours d'essai, puis LÜMA Premium.
   LUT `.cube`.
 - **Masques** linéaire, radial et pinceau ; **films empilés** par masques, complets.
 - **Empilements** (bruit, médiane, filé, ciel étoilé) et **panoramas**, en DNG.
-- **Préréglages** : les vôtres, importés de Lightroom ou exportés en préréglages
-  Lightroom.
+- **Préréglages** : les vôtres, importés ou exportés en préréglages
+  XMP.
 - **Mac** (Apple Silicon et Intel), **iPhone et iPad** (en préparation pour l'App
   Store), ligne de commande `luma`.

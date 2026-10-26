@@ -166,7 +166,7 @@ fn library_ratings_and_flags() {
     s.keys(&[(NONE, Key::Num2), (NONE, Key::X)]);
     assert_eq!(s.studio().module, Module::Library);
     s.capture("bibliotheque");
-    // Les notes sont dans les XMP, lisibles par Lightroom.
+    // Les notes sont enregistrées dans les XMP.
     s.studio().flush_xmp();
     let dir = std::env::temp_dir().join("luma-studio-bibliotheque");
     let rejected = luma_studio::worker::read_meta(s.studio().current_path().unwrap());

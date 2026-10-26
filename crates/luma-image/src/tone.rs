@@ -5,7 +5,7 @@
 //!
 //! Hautes lumières et Ombres agissent sur une **base** lissée qui respecte les
 //! contours (filtre guidé) : une zone claire est assombrie en bloc, son détail reste
-//! intact, et les bords nets ne font pas de halo. Comme dans Lightroom, ils
+//! intact, et les bords nets ne font pas de halo. Ils
 //! s'adaptent à la photo : ils visent ses tons clairs et sombres à elle, quelle que
 //! soit son exposition. Clarté et Texture amplifient l'écart
 //! à une base floue, à grande échelle (Clarté) ou à petite échelle (Texture). Les
@@ -74,7 +74,7 @@ pub fn local_tone(img: &mut RgbImage, s: &Settings) {
     if hl != 0.0 || sh != 0.0 {
         // Base : lisse à l'intérieur des zones, nette sur les contours (écarts > ½ IL).
         let base = stops.guided(0.02 * diag, 0.25);
-        // Comme dans Lightroom, ces curseurs s'adaptent à l'image : ils visent ses
+        // Ces curseurs s'adaptent à l'image : ils visent ses
         // parties claires et sombres à elle (centiles 1, 50 et 99 de la base).
         let mut sample: Vec<f32> = base.data.iter().step_by(5).copied().collect();
         let n = sample.len() - 1;

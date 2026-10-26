@@ -1,4 +1,4 @@
-//! Panneau Masquage : des retouches locales, comme dans Lightroom. Chaque masque a une
+//! Panneau Masquage : des retouches locales. Chaque masque a une
 //! forme (dégradé linéaire, dégradé radial, pinceau) et ses propres curseurs
 //! (exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte,
 //! saturation, clarté).
@@ -50,7 +50,7 @@ pub struct Dab {
     pub erase: bool,
 }
 
-/// Les curseurs d'un masque (plages de Lightroom : exposition ±4, le reste ±100).
+/// Les curseurs d'un masque (plages : exposition ±4, le reste ±100).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Local {

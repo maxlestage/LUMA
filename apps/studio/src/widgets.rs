@@ -1,4 +1,4 @@
-//! Les composants de l'interface, dans l'esprit de Lightroom : curseurs fins à repère
+//! Les composants de l'interface, sobres et précis : curseurs fins à repère
 //! central (double‑clic : valeur par défaut), pistes colorées pour la balance des
 //! blancs et le mélangeur, roues chromatiques de l'étalonnage, histogramme.
 
@@ -132,7 +132,7 @@ pub struct SliderSpec {
     pub log: bool,
 }
 
-/// Un curseur à la Lightroom : libellé, piste fine, valeur modifiable.
+/// Un curseur de réglage : libellé, piste fine, valeur modifiable.
 pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
     let mut change = Change::default();
     let height = 22.0;
@@ -247,7 +247,7 @@ pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
         [pos2(tick, y - 4.0), pos2(tick, y + 4.0)],
         Stroke::new(1.0, theme::DIM),
     );
-    // Poignée : un triangle, comme dans Lightroom.
+    // Poignée : un triangle.
     let x = x0 + (x1 - x0) * to_t(*value).clamp(0.0, 1.0);
     let active = track.hovered() || track.dragged();
     let knob = if active {
@@ -361,8 +361,8 @@ pub fn color_wheel(
     change
 }
 
-/// L'histogramme RGB, avec les deux indicateurs d'écrêtage dans les coins (comme
-/// Lightroom) : allumés si des pixels sont bouchés ou brûlés. Un clic les active
+/// L'histogramme RGB, avec les deux indicateurs d'écrêtage dans les coins :
+/// allumés si des pixels sont bouchés ou brûlés. Un clic les active
 /// à l'écran (touche J).
 pub fn histogram(ui: &mut Ui, h: &[[u32; 256]; 3], clipping: &mut bool) -> Response {
     let width = ui.available_width();

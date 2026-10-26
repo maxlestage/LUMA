@@ -16,8 +16,8 @@ Every image format, three languages, and the store.
 
 The first version available for download: a 14-day trial, then LÜMA Premium.
 
-- **RAW development**: Lightroom's Develop module reproduced panel by
-  panel, 32-bit floating-point engine, finishing on the GPU (Metal), compatible XMP files.
+- **RAW development**: a complete Develop module, panel by
+  panel, 32-bit floating-point engine, finishing on the GPU (Metal), settings saved as XMP.
 - **735 camera bodies** supported, 714 of them with calibrated colour; any DNG, including iPhone
   ProRAW.
 - **100 films** verified by machine (colour film stocks, cinema, black & white,
@@ -25,7 +25,7 @@ The first version available for download: a 14-day trial, then LÜMA Premium.
   `.cube` LUTs.
 - **Linear, radial and brush masks**; **films stacked** through masks, fully featured.
 - **Stacking** (noise reduction, median, light trails, starry sky) and **panoramas**, as DNG.
-- **Presets**: your own, imported from Lightroom or exported as Lightroom
+- **Presets**: your own, imported or exported as XMP
   presets.
 - **Mac** (Apple Silicon and Intel), **iPhone and iPad** (being prepared for the App
   Store), `luma` command-line tool.
