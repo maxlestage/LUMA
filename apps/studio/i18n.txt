@@ -2832,3 +2832,15 @@ es = Elegir una carpeta…
 fr = Dossier à surveiller
 en = Folder to watch
 es = Carpeta que vigilar
+
+fr = En préréglages XMP (.xmp) : touchez longuement un film pour l'exporter seul, ou tous d'un coup, rangés par famille.
+en = As XMP presets (.xmp): touch and hold a film to export it alone, or all at once, sorted by family.
+es = Como ajustes preestablecidos XMP (.xmp): mantenga pulsada una película para exportarla sola, o todas a la vez, ordenadas por familia.
+
+fr = Dans la bibliothèque, touchez longuement les photos à fusionner, ou prenez tout le dossier.
+en = In the library, touch and hold the photos to merge, or take the whole folder.
+es = En la biblioteca, mantenga pulsadas las fotos que desea fusionar, o tome toda la carpeta.
+
+fr = Une photo choisie : touchez longuement les autres dans la bibliothèque.
+en = One photo selected: touch and hold the others in the library.
+es = Una foto seleccionada: mantenga pulsadas las demás en la biblioteca.
