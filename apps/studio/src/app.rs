@@ -488,6 +488,8 @@ pub struct Studio {
     thumbs: HashMap<PathBuf, TextureHandle>,
     /// La dernière vérification de la mémoire laissée par le système (iPhone, iPad).
     memory_check: f64,
+    /// Les photos importées depuis Photos déjà vues (voir `watch_imports`).
+    imports_seen: usize,
     /// Les vignettes libérées faute de mémoire : redemandées quand elles réapparaissent.
     evicted: std::collections::HashSet<PathBuf>,
     /// Les vignettes affichées sans image pendant cette image de l'interface.
@@ -679,6 +681,7 @@ impl Studio {
             zoom: false,
             thumbs: HashMap::new(),
             memory_check: 0.0,
+            imports_seen: 0,
             evicted: Default::default(),
             shown_missing: Default::default(),
             // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
@@ -774,7 +777,11 @@ impl Studio {
             photos.push(f.clone());
         }
         self.view = View::Folder;
-        let empty = trf("Aucune photo dans {dir}", &[("dir", &dir.display())]);
+        let empty = if luma_apple::photos::AVAILABLE {
+            tr("Aucune photo pour l'instant : touchez « Importer des photos ».").to_owned()
+        } else {
+            trf("Aucune photo dans {dir}", &[("dir", &dir.display())])
+        };
         self.show_photos(photos, file, empty);
         self.index_folder(dir);
     }
@@ -939,7 +946,9 @@ impl Studio {
 
     /// La ligne d'état ; vide, l'accueil (dans la langue du moment).
     fn status_text(&self) -> String {
-        if self.status.is_empty() {
+        if self.status.is_empty() && luma_apple::photos::AVAILABLE {
+            tr("Choisissez vos photos dans Photos : RAW, ProRAW, HEIC, JPEG.").to_owned()
+        } else if self.status.is_empty() {
             tr("Ouvrez une photo (RAW, JPEG, PNG, TIFF…) ou un dossier (Cmd+O), ou déposez-la dans la fenêtre.").to_owned()
         } else {
             self.status.clone()
@@ -1489,6 +1498,27 @@ impl Studio {
         }
     }
 
+    /// Les photos importées depuis Photos arrivent une à une dans le dossier de LÜMA :
+    /// on le relit à chaque arrivée, en gardant la photo affichée.
+    fn watch_imports(&mut self, ctx: &egui::Context) {
+        if !luma_apple::photos::AVAILABLE {
+            return;
+        }
+        let count = luma_apple::photos::imported();
+        if count != self.imports_seen {
+            self.imports_seen = count;
+            let current = self.current_path().map(Path::to_path_buf);
+            if let Some(dir) = crate::dialogs::documents() {
+                match current {
+                    Some(p) => self.open_path(&p),
+                    None => self.open_path(&dir),
+                }
+            }
+        }
+        // Tant qu'un import peut arriver, on regarde deux fois par seconde.
+        ctx.request_repaint_after(std::time::Duration::from_millis(500));
+    }
+
     /// Sur iPhone et iPad, le système ferme une app qui dépasse sa mémoire. Une fois par
     /// seconde : s'il reste moins de 300 Mo, LÜMA libère ses caches d'aperçus et les
     /// vignettes loin de la photo en cours (elles se relisent en moins d'une
@@ -1862,7 +1892,13 @@ impl Studio {
                 }
             }
             "open" => {
-                if let Some(p) = crate::dialogs::pick_raw() {
+                // Sur iPhone et iPad : le sélecteur de Photos ; les photos choisies sont
+                // copiées dans le dossier de LÜMA, relu dès qu'elles arrivent.
+                if luma_apple::photos::AVAILABLE {
+                    if let Some(dir) = crate::dialogs::documents() {
+                        luma_apple::photos::pick(dir);
+                    }
+                } else if let Some(p) = crate::dialogs::pick_raw() {
                     self.open_path(&p);
                 }
             }
@@ -2213,6 +2249,7 @@ impl Studio {
         let ctx = ui.ctx().clone();
         self.handle_events(&ctx);
         self.watch_memory(&ctx);
+        self.watch_imports(&ctx);
         // Les vignettes libérées qui se sont affichées vides : on les relit.
         for p in self.shown_missing.take() {
             if self.evicted.remove(&p) {
@@ -2268,15 +2305,18 @@ impl Studio {
             None => {}
         }
 
-        let full = ui.max_rect();
-        ui.painter().rect_filled(full, 0.0, theme::BACKGROUND);
+        let screen = ui.max_rect();
+        ui.painter().rect_filled(screen, 0.0, theme::BACKGROUND);
         let brand = self.brand.get_or_insert_with(|| Brand::new(ui.ctx()));
         ui.painter().image(
             brand.backdrop.id(),
-            full,
+            screen,
             Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
             Color32::WHITE,
         );
+        // L'interface évite l'encoche, la Dynamic Island et la barre d'accueil : le fond
+        // va jusqu'aux bords, le reste dans la zone sûre.
+        let full = screen.intersect(ctx.content_rect());
         // iPhone (ou fenêtre étroite) : la photo en haut, la barre d'outils, puis
         // l'inspecteur en feuille.
         let compact = full.width() < 820.0;
@@ -2761,7 +2801,13 @@ impl Studio {
                 if icon_button(
                     ui,
                     Icon::Open,
-                    if compact { "" } else { tr("Ouvrir") },
+                    if compact {
+                        ""
+                    } else if luma_apple::photos::AVAILABLE {
+                        tr("Importer")
+                    } else {
+                        tr("Ouvrir")
+                    },
                     false,
                 )
                 .on_hover_text("Cmd+O")
@@ -3848,13 +3894,16 @@ impl Studio {
             } else {
                 tr("Aucune photo ne passe le filtre.").into()
             };
-            ui.painter().text(
+            let shown = ui.painter().text(
                 rect.center(),
                 egui::Align2::CENTER_CENTER,
                 text,
                 egui::FontId::proportional(15.0),
                 theme::DIM,
             );
+            if self.folder.is_empty() {
+                self.import_button(ui, pos2(rect.center().x, shown.max.y + 20.0));
+            }
             return;
         }
         let cell = 210.0;
@@ -4056,6 +4105,25 @@ impl Studio {
         }
     }
 
+    /// Sur iPhone et iPad, sans photo : le bouton qui ouvre Photos, sous l'accueil.
+    fn import_button(&mut self, ui: &mut Ui, top: egui::Pos2) {
+        if !luma_apple::photos::AVAILABLE {
+            return;
+        }
+        let size = vec2(240.0, 48.0);
+        let rect = Rect::from_min_size(top - vec2(size.x / 2.0, 0.0), size);
+        let button = egui::Button::new(
+            RichText::new(tr("Importer des photos"))
+                .size(17.0)
+                .color(theme::BACKGROUND),
+        )
+        .fill(theme::ACCENT)
+        .corner_radius(24.0);
+        if ui.put(rect, button).clicked() {
+            self.act("open");
+        }
+    }
+
     fn viewer(&mut self, ui: &mut Ui) {
         let rect = ui.max_rect();
         let ppp = ui.ctx().pixels_per_point();
@@ -4084,13 +4152,14 @@ impl Studio {
                     Color32::WHITE,
                 );
             }
-            painter.text(
+            let text = painter.text(
                 pos2(rect.center().x, logo.max.y + 18.0),
                 egui::Align2::CENTER_TOP,
                 self.status_text(),
                 egui::FontId::proportional(15.0),
                 theme::DIM,
             );
+            self.import_button(ui, pos2(rect.center().x, text.max.y + 20.0));
             return;
         };
         let [iw, ih] = self.image_size;

@@ -12,12 +12,28 @@
 //! Ce crate est le seul endroit de LÜMA où du code `unsafe` est permis : les appels à
 //! ImageIO et à CoreGraphics, chacun justifié.
 
+pub mod photos;
 pub mod store;
 
 /// Installe le décodeur du système dans le moteur (sans effet hors d'Apple).
 pub fn install() {
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     luma_raw::raster::set_system_decoder(apple::decode);
+}
+
+/// Les langues préférées de l'iPhone ou de l'iPad, en liste : `fr-FR,en-US`. `None`
+/// ailleurs (le Mac a `defaults`, Linux ses variables d'environnement).
+pub fn preferred_languages() -> Option<String> {
+    #[cfg(target_os = "ios")]
+    {
+        let list: Vec<String> = objc2_foundation::NSLocale::preferredLanguages()
+            .iter()
+            .map(|l| l.to_string())
+            .collect();
+        (!list.is_empty()).then(|| list.join(","))
+    }
+    #[cfg(not(target_os = "ios"))]
+    None
 }
 
 /// La mémoire que le système laisse encore à l'app, en octets : sur iPhone et iPad,
