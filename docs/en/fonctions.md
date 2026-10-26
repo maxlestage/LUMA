@@ -54,6 +54,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Snapshots, sync across multiple photos | ⏳ |
+| | iPhone and iPad: smaller preview during a gesture (12 times faster), memory watched, caches freed before the system closes the app | ✅ |
 | | Histogram, clipping indicator (J), before/after (`\`), 1:1 zoom | ✅ |
 | | Panorama (perspective, cylindrical, spherical), reversible auto crop, DNG | ✅ |
 | | Stacks: mean, median, maximum, starry sky | ✅ |

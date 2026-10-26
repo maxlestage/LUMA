@@ -55,6 +55,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Corrección, clonar, ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Instantáneas, sincronización en varias fotos | ⏳ |
+| | iPhone y iPad: vista previa reducida durante un gesto (12 veces más rápida), memoria vigilada, cachés liberadas antes de que el sistema cierre la app | ✅ |
 | | Histograma, indicador de recorte (J), antes/después (`\`), zoom 1:1 | ✅ |
 | | Panorámica (perspectiva, cilíndrica, esférica), recorte automático reversible, DNG | ✅ |
 | | Apilamientos: media, mediana, máximo, cielo estrellado | ✅ |

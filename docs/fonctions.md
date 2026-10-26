@@ -55,6 +55,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Correcteur, tampon, yeux rouges, suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |
+| | iPhone et iPad : aperçu réduit pendant un geste (12 fois plus rapide), mémoire surveillée, caches libérés avant que le système ne ferme l'app | ✅ |
 | | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), zoom 1:1 | ✅ |
 | | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
 | | Empilements : moyenne, médiane, maximum, ciel étoilé | ✅ |
