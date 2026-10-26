@@ -136,6 +136,10 @@ La photothèque professionnelle, étape par étape.
   et la luminosité du papier, « Encre noire » le vrai noir de l'encre, plus clair
   que celui de l'écran ; sans elles, le blanc du papier et le noir de l'encre sont
   ramenés au blanc et au noir de l'écran.
+- **Dossier surveillé** (Bibliothèque) : les photos qui arrivent dans un dossier
+  (boîtier relié, carte copiée) entrent dans la photothèque et le film dès qu'elles
+  sont complètes, et la dernière s'ouvre (ou s'ajoute seulement, au choix) ;
+  `luma watch dossier` fait de même en ligne de commande.
 
 ## 0.2.0 — octobre 2026
 
