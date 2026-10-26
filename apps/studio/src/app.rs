@@ -292,6 +292,22 @@ const HSL_NAMES: [&str; 8] = [
 ];
 const HSL_HUES: [f32; 8] = [0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 270.0, 300.0];
 
+/// Les libellés de couleur, dans l'ordre de `xmp::LABELS` (touches 6 à 9 pour les
+/// quatre premiers).
+const LABEL_NAMES: [&str; 5] = ["Rouge", "Jaune", "Vert", "Bleu", "Violet"];
+const LABEL_COLORS: [Color32; 5] = [
+    Color32::from_rgb(0xe0, 0x50, 0x50),
+    Color32::from_rgb(0xe8, 0xc4, 0x40),
+    Color32::from_rgb(0x52, 0xb0, 0x62),
+    Color32::from_rgb(0x4a, 0x80, 0xe0),
+    Color32::from_rgb(0x9a, 0x62, 0xd0),
+];
+
+/// La couleur du libellé d'une photo, s'il en est un de couleur.
+fn label_color32(label: &str) -> Option<Color32> {
+    luma_project::xmp::label_color(label).map(|i| LABEL_COLORS[i])
+}
+
 /// Les modules de la barre du haut (touches G et D).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Module {
@@ -497,6 +513,10 @@ pub struct Studio {
     clipping: bool,
     proofing: Proofing,
     zoom: bool,
+    /// Le tri en plein écran (F) : la photo seule, notée au clavier.
+    culling: bool,
+    /// Au tri, passer à la suivante après chaque note, drapeau ou libellé (A).
+    auto_advance: bool,
     thumbs: HashMap<PathBuf, TextureHandle>,
     /// La dernière vérification de la mémoire laissée par le système (iPhone, iPad).
     memory_check: f64,
@@ -713,6 +733,8 @@ impl Studio {
             clipping: false,
             proofing: Proofing::default(),
             zoom: false,
+            culling: false,
+            auto_advance: true,
             thumbs: HashMap::new(),
             memory_check: 0.0,
             imports_seen: 0,
@@ -1856,11 +1878,23 @@ impl Studio {
                     Key::Num4,
                     Key::Num5,
                 ];
+                let labels = [Key::Num6, Key::Num7, Key::Num8, Key::Num9];
                 if let Some(n) = digits
                     .iter()
                     .position(|k| i.consume_key(Modifiers::NONE, *k))
                 {
                     action = Some(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n]);
+                } else if let Some(n) = labels
+                    .iter()
+                    .position(|k| i.consume_key(Modifiers::NONE, *k))
+                {
+                    action = Some(["label0", "label1", "label2", "label3"][n]);
+                } else if i.consume_key(Modifiers::NONE, Key::F) {
+                    action = Some("culling");
+                } else if i.consume_key(Modifiers::NONE, Key::A) {
+                    action = Some("auto_advance");
+                } else if i.consume_key(Modifiers::NONE, Key::Space) {
+                    action = Some("next");
                 } else if i.consume_key(Modifiers::SHIFT, Key::M) {
                     action = Some("mask_radial");
                 } else if i.consume_key(Modifiers::NONE, Key::M) {
@@ -1916,6 +1950,18 @@ impl Studio {
     }
 
     fn act(&mut self, action: &str) {
+        let culled = self.culling
+            && self.auto_advance
+            && (matches!(action, "pick" | "reject" | "unflag")
+                || action.starts_with("rate")
+                || action.starts_with("label"));
+        self.act_once(action);
+        if culled {
+            self.act_once("next");
+        }
+    }
+
+    fn act_once(&mut self, action: &str) {
         match action {
             "undo" if self.history_pos > 0 => self.restore(self.history_pos - 1),
             "redo" if self.history_pos + 1 < self.history.len() => {
@@ -1989,6 +2035,33 @@ impl Studio {
                     self.commit(tr("Recadrage").into());
                     self.touch();
                 }
+            }
+            "crop_cancel" if self.culling => self.culling = false,
+            "culling" => {
+                self.culling = !self.culling && !self.folder.is_empty();
+                if self.culling && self.current.is_none() {
+                    self.select(0);
+                }
+            }
+            "auto_advance" => {
+                self.auto_advance = !self.auto_advance;
+                self.status = if self.auto_advance {
+                    tr("Avance automatique").into()
+                } else {
+                    tr("Avance automatique coupée").into()
+                };
+            }
+            l if l.starts_with("label") => {
+                let n: usize = l[5..].parse().unwrap_or(0);
+                // La même touche retire le libellé.
+                let same = luma_project::xmp::label_color(&self.current_meta().label) == Some(n);
+                let name = luma_project::xmp::LABELS[n.min(4)];
+                self.set_meta(|m| m.label = if same { String::new() } else { name.to_owned() });
+                self.status = if same {
+                    tr("Libellé retiré").into()
+                } else {
+                    trf("Libellé : {name}", &[("name", &tr(LABEL_NAMES[n.min(4)]))])
+                };
             }
             "crop_cancel" => {
                 if let Some(t) = self.crop_tool.take() {
@@ -2516,10 +2589,16 @@ impl Studio {
         let compact = full.width() < 820.0;
         let m = if compact { 8.0 } else { 14.0 };
         let top = Rect::from_min_size(full.min + vec2(m, m), vec2(full.width() - 2.0 * m, 50.0));
-        self.island(ui, top, |s, ui| s.top_island(ui, compact));
+        // Au tri en plein écran, la photo prend tout, la barre du haut aussi.
+        let culling = self.culling && self.current.is_some();
+        if !culling {
+            self.island(ui, top, |s, ui| s.top_island(ui, compact));
+        }
         // Rien à retoucher encore : l'accueil prend tout l'écran.
         let welcome = compact && self.folder.is_empty() && self.texture.is_none();
-        if welcome {
+        if culling {
+            self.culling_view(ui, full, m);
+        } else if welcome {
             let stage = Rect::from_min_max(pos2(full.min.x, top.max.y + m), full.max);
             self.stage(ui, stage);
         } else if compact {
@@ -2573,6 +2652,84 @@ impl Studio {
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
         }
+    }
+
+    /// Le tri en plein écran : la photo seule, et en bas sa note, son drapeau, son libellé
+    /// et les touches.
+    fn culling_view(&mut self, ui: &mut Ui, full: Rect, m: f32) {
+        let bar = Rect::from_min_max(
+            pos2(full.min.x + m, full.max.y - m - 64.0),
+            full.max - vec2(m, m),
+        );
+        let stage = Rect::from_min_max(full.min, pos2(full.max.x, bar.min.y - m * 0.5));
+        ui.scope_builder(egui::UiBuilder::new().max_rect(stage), |ui| {
+            ui.set_clip_rect(stage);
+            self.viewer(ui);
+        });
+        self.island(ui, bar, |s, ui| s.culling_bar(ui));
+    }
+
+    fn culling_bar(&mut self, ui: &mut Ui) {
+        let Some(path) = self.current_path().map(Path::to_path_buf) else {
+            return;
+        };
+        let meta = self.current_meta();
+        let visible = self.visible();
+        let at = self
+            .current
+            .and_then(|c| visible.iter().position(|&v| v == c))
+            .map_or(0, |p| p + 1);
+        ui.horizontal_centered(|ui| {
+            ui.label(RichText::new(file_name(&path)).size(13.0).strong());
+            ui.label(
+                RichText::new(format!("{at} / {}", visible.len()))
+                    .size(11.5)
+                    .color(theme::DIM),
+            );
+            ui.add_space(12.0);
+            if let Some(n) = widgets::rating(ui, meta.rating, 18.0) {
+                self.act(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n as usize]);
+            }
+            ui.add_space(8.0);
+            for (f, name, action) in [
+                (Flag::Pick, tr("Retenue"), "pick"),
+                (Flag::Reject, tr("Rejetée"), "reject"),
+            ] {
+                if ui.selectable_label(meta.flag == f, name).clicked() {
+                    self.act(if meta.flag == f { "unflag" } else { action });
+                }
+            }
+            ui.add_space(8.0);
+            if let Some(n) = label_dots(ui, &meta.label) {
+                self.act(["label0", "label1", "label2", "label3", "label4"][n]);
+            }
+            ui.add_space(8.0);
+            let mut auto = self.auto_advance;
+            if ui
+                .checkbox(&mut auto, tr("Avance automatique (A)"))
+                .changed()
+            {
+                self.auto_advance = auto;
+            }
+            ui.add_space(8.0);
+            ui.label(
+                RichText::new(tr(
+                    "Flèches : photos · 0-5 note · P X U drapeau · 6-9 libellé · Échap pour sortir",
+                ))
+                .size(11.0)
+                .color(theme::DIM),
+            );
+        });
+    }
+
+    /// Ouvre la photo à cette place du film.
+    pub fn set_current(&mut self, index: usize) {
+        self.select(index);
+    }
+
+    /// Le tri en plein écran est‑il ouvert ?
+    pub fn is_culling(&self) -> bool {
+        self.culling
     }
 
     /// Charge l'état Premium d'un autre dossier (tests, plusieurs comptes).
@@ -4118,6 +4275,12 @@ impl Studio {
                 if ui.selectable_label(meta.flag == f, name).clicked() {
                     self.act(action);
                 }
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(tr("Libellé")).color(theme::DIM).size(11.5));
+            if let Some(n) = label_dots(ui, &meta.label) {
+                self.act(["label0", "label1", "label2", "label3", "label4"][n]);
             }
         });
         ui.add_space(8.0);
@@ -6371,8 +6534,38 @@ fn safe_name(name: &str) -> String {
         .to_string()
 }
 
+/// Les cinq pastilles de libellé ; rend celle cliquée (un clic sur la pastille choisie
+/// retire le libellé).
+fn label_dots(ui: &mut Ui, label: &str) -> Option<usize> {
+    let current = luma_project::xmp::label_color(label);
+    let mut clicked = None;
+    for (i, color) in LABEL_COLORS.iter().enumerate() {
+        let (rect, r) = ui.allocate_exact_size(vec2(18.0, 18.0), egui::Sense::click());
+        let on = current == Some(i);
+        let painter = ui.painter();
+        painter.circle_filled(rect.center(), if on { 7.0 } else { 5.5 }, *color);
+        if on {
+            painter.circle_stroke(rect.center(), 8.5, egui::Stroke::new(1.5, Color32::WHITE));
+        }
+        let key = if i < 4 {
+            format!(" ({})", i + 6)
+        } else {
+            String::new()
+        };
+        if r.on_hover_text(format!("{}{key}", tr(LABEL_NAMES[i])))
+            .clicked()
+        {
+            clicked = Some(i);
+        }
+    }
+    clicked
+}
+
 fn paint_meta(painter: &egui::Painter, rect: egui::Rect, meta: &Meta) {
     let y = rect.max.y - 13.0;
+    if let Some(color) = label_color32(&meta.label) {
+        painter.circle_filled(pos2(rect.max.x - 11.0, rect.min.y + 11.0), 5.0, color);
+    }
     for k in 0..meta.rating {
         let c = pos2(rect.min.x + 14.0 + f32::from(k) * 13.0, y);
         widgets::paint_star(painter, c, 5.5, Color32::from_gray(0xe8));

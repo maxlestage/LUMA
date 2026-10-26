@@ -152,8 +152,16 @@ impl Query {
         if e.rating < self.min_rating || self.flag.is_some_and(|f| f != e.flag()) {
             return false;
         }
-        if self.label.as_ref().is_some_and(|l| fold(&e.label) != *l) {
-            return false;
+        // Un libellé de couleur se retrouve dans toutes les langues (« libellé:rouge »
+        // trouve « Red ») ; un autre libellé, à l'identique.
+        if let Some(l) = &self.label {
+            let same = match luma_project::xmp::label_color(l) {
+                Some(c) => luma_project::xmp::label_color(&e.label) == Some(c),
+                None => fold(&e.label) == *l,
+            };
+            if !same {
+                return false;
+            }
         }
         if self.date_from.as_ref().is_some_and(|d| e.date.as_str() < d.as_str()) {
             return false;
@@ -261,6 +269,8 @@ mod tests {
             "drapeau:retenue",
             "flag:pick",
             "libellé:rouge",
+            "label:red",
+            "libellé:rojo",
             "date:2024",
             "date:2024-06",
             "date:2024-06-15",
@@ -289,6 +299,7 @@ mod tests {
             "drapeau:rejetée",
             "drapeau:aucun",
             "libellé:vert",
+            "label:blue",
             "date:2023",
             "date:2024-07..",
             "date:..2024-05",

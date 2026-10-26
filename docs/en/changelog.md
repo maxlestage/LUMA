@@ -143,6 +143,11 @@ The professional photo library, step by step.
   camera (USB, or network if it allows) through the system framework; each photo
   taken arrives in the watched folder and opens, those already on the card stay
   where they are; “Release shutter” for cameras that can be triggered remotely.
+- **Full-screen culling** (F): the photo alone, rated from the keyboard (0 to 5),
+  with its flags (P, X, U) and color labels (6 to 9: red, yellow, green, blue;
+  purple with the mouse); the next photo comes by itself (A to turn it off), Esc to
+  leave. Labels are written to the XMP under the format's names, which other photo
+  software reads, and can be searched in French, English or Spanish.
 
 ## 0.2.0 — October 2026
 

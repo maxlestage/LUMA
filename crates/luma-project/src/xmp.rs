@@ -64,6 +64,31 @@ pub struct Meta {
     pub keywords: Vec<String>,
 }
 
+/// Les cinq libellés de couleur, tels qu'ils s'écrivent dans `xmp:Label` : les noms
+/// anglais, que lisent les autres logiciels photo.
+pub const LABELS: [&str; 5] = ["Red", "Yellow", "Green", "Blue", "Purple"];
+
+/// Le libellé de couleur (0 à 4, dans l'ordre de [`LABELS`]) que nomme `name`, en
+/// anglais, en français ou en espagnol, sans tenir compte de la casse ni des accents.
+pub fn label_color(name: &str) -> Option<usize> {
+    let folded: String = name
+        .trim()
+        .chars()
+        .map(|c| match c {
+            'ú' | 'Ú' => 'u',
+            c => c.to_ascii_lowercase(),
+        })
+        .collect();
+    Some(match folded.as_str() {
+        "red" | "rouge" | "rojo" => 0,
+        "yellow" | "jaune" | "amarillo" => 1,
+        "green" | "vert" | "verde" => 2,
+        "blue" | "bleu" | "azul" => 3,
+        "purple" | "violet" | "morado" | "purpura" => 4,
+        _ => return None,
+    })
+}
+
 /// Le fichier XMP d'une photo : `IMG_0001.CR3.xmp` s'il existe, sinon `IMG_0001.xmp` ;
 /// celui d'une copie virtuelle, `IMG_0001.CR3.copie-2.xmp`.
 pub fn sidecar_path(photo: &std::path::Path) -> std::path::PathBuf {
@@ -951,6 +976,17 @@ mod tests {
         let back = read(external).unwrap();
         assert_eq!(back.profile, Profile::Monochrome);
         assert_eq!((back.hsl.luminance[0], back.hsl.luminance[3]), (-30.0, 25.0));
+    }
+
+    #[test]
+    fn colour_labels_in_three_languages() {
+        assert_eq!(label_color("Red"), Some(0));
+        assert_eq!(label_color("rouge"), Some(0));
+        assert_eq!(label_color(" Púrpura "), Some(4));
+        assert_eq!(label_color("VERT"), Some(2));
+        assert_eq!(label_color("Bleu"), label_color("azul"));
+        assert_eq!(label_color("À revoir"), None);
+        assert_eq!(LABELS.map(label_color), [0, 1, 2, 3, 4].map(Some));
     }
 
     #[test]

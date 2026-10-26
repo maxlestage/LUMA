@@ -198,6 +198,42 @@ fn library_ratings_and_flags() {
 }
 
 #[test]
+fn culling_full_screen_from_the_keyboard() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("tri") else {
+        return;
+    };
+    // La première photo du film, en plein écran (F).
+    s.keys(&[(NONE, Key::G)]);
+    s.studio().set_current(0);
+    s.wait();
+    s.keys(&[(NONE, Key::F)]);
+    assert!(s.studio().is_culling());
+    let photos = s.studio().photos().to_vec();
+    assert!(photos.len() >= 3);
+    s.capture("tri");
+    // Une note, puis la suivante d'elle‑même ; un libellé rouge (6), puis la suivante.
+    s.keys(&[(NONE, Key::Num3)]);
+    assert_eq!(s.studio().current_path(), Some(photos[1].as_path()));
+    s.keys(&[(NONE, Key::Num6)]);
+    assert_eq!(s.studio().current_path(), Some(photos[2].as_path()));
+    // Sans avance automatique (A), la photo reste ; la même touche retire le libellé.
+    s.keys(&[(NONE, Key::A), (NONE, Key::Num9), (NONE, Key::P)]);
+    assert_eq!(s.studio().current_path(), Some(photos[2].as_path()));
+    assert_eq!(s.studio().current_meta().label, "Blue");
+    s.keys(&[(NONE, Key::Num9)]);
+    assert_eq!(s.studio().current_meta().label, "");
+    // Échap sort du tri ; tout est dans les XMP, aux noms du format.
+    s.keys(&[(NONE, Key::Escape)]);
+    assert!(!s.studio().is_culling());
+    s.studio().flush_xmp();
+    let read = |p: &std::path::Path| luma_studio::worker::read_meta(p);
+    assert_eq!(read(&photos[0]).rating, 3);
+    assert_eq!(read(&photos[1]).label, "Red");
+    assert_eq!(read(&photos[2]).flag, luma_project::xmp::Flag::Pick);
+}
+
+#[test]
 fn library_keywords() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("mots-cles") else {

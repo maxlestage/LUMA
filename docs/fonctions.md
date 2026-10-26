@@ -119,6 +119,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Lecture des XMP (sidecar `IMG_0001.xmp`), écriture au même format | ✅ enregistrement automatique dans l'app |
 | Film du dossier avec vignettes, navigation ← → | ✅ |
 | Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
+| Tri en plein écran au clavier (F) : notes, drapeaux, libellés de couleur (6 à 9), photo suivante d'elle‑même (A), Échap pour sortir ; libellés aux noms du format dans le XMP, retrouvés en français, anglais et espagnol | ✅ |
 | Catalogue local (`luma catalog`) : dossiers et sous‑dossiers, date de prise de vue, boîtier, objectif, ISO lus dans l'en‑tête sans décoder l'image, mise à jour incrémentale, tri par date | ✅ |
 | Vignettes instantanées (l'aperçu intégré au RAW, en 15 ms), puis rendues avec les réglages et enregistrées sans perte pour les visites suivantes | ✅ |
 | Doublon de travail en pleine définition : identique à l'original, ouverture plus rapide, mémoire divisée par deux et demi ; « Vider le cache » en un clic | ✅ |
