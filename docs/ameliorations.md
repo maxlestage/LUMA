@@ -9,7 +9,8 @@ chaque changement, rendu identique quand on accélère.
 
 ## Feuille de route du propriétaire
 
-Dans cet ordre ; chaque étape tient en une heure. Une heure sur trois environ : un gain
+Dans cet ordre (« je veux tout », puis « hyper complet » : fonctions 7 à 16) ; chaque
+étape tient en une heure, en complétant l'existant plutôt qu'en le refaisant. Une heure sur trois environ : un gain
 mesuré de vitesse ou de légèreté (ouverture, aperçu, vignettes, export, mémoire, taille
 du binaire, démarrage, place des doublons de travail), mesuré avec
 `cargo run --release -p luma-gpu --example measure -- tests/raw-corpus/*`.
@@ -77,6 +78,77 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 - [ ] 6.1 Dossier surveillé : les nouvelles photos sont importées et affichées.
 - [ ] 6.2 Mac : connexion directe aux boîtiers par le framework du système, dans
   `crates/luma-apple` seulement.
+
+### 7. Tri et sélection
+
+- [ ] 7.1 Tri en plein écran au clavier (notes, drapeaux, libellés, suivante).
+- [ ] 7.2 Comparaison côte à côte puis grille de 2 à 4 photos, zoom et déplacement
+  synchronisés ; loupe.
+- [ ] 7.3 Empilement des rafales et des séries d'exposition (date, réglages).
+- [ ] 7.4 Doublons par empreinte d'image ; notes, drapeaux et libellés en lot.
+
+### 8. Synchronisation
+
+- [ ] 8.1 Copier‑coller sélectif des réglages (choix des panneaux).
+- [ ] 8.2 Synchroniser une sélection ; réglages automatiques par lot.
+- [ ] 8.3 Réglages par défaut par boîtier et par ISO ; préréglages d'import.
+
+### 9. Retouche locale
+
+- [ ] 9.1 Tampon (clonage) et correcteur (réparation par diffusion), dans le XMP.
+- [ ] 9.2 Taches de capteur : visualisation des poussières, retrait.
+- [ ] 9.3 Yeux rouges.
+- [ ] 9.4 Moiré et aberration chromatique locale au pinceau.
+
+### 10. Outils de développement avancés
+
+Vérifier d'abord l'existant (courbes paramétrique et par canal, étalonnage, mélange noir
+et blanc, vignetage après recadrage et grain existent).
+
+- [ ] 10.1 Mélangeur de couches ; virage partiel.
+- [ ] 10.2 Guides de recadrage : tiers, nombre d'or, diagonales.
+- [ ] 10.3 Redressement automatique par l'horizon (transformée de Hough).
+- [ ] 10.4 Perspective automatique par les lignes de fuite.
+
+### 11. Qualité d'image
+
+- [ ] 11.1 Dématriçage de haute qualité (directionnel, maison, en Rust).
+- [ ] 11.2 Réduction du bruit avancée (moyennes non locales ou ondelettes).
+- [ ] 11.3 Accentuation par déconvolution.
+- [ ] 11.4 Hautes lumières reconstruites à partir des canaux non saturés.
+- [ ] 11.5 Fusion HDR alignée, sans fantômes ; empilement de mise au point.
+
+### 12. Couleur professionnelle
+
+- [ ] 12.1 Profil de boîtier créé depuis une mire (`luma colorchecker` jusqu'au profil).
+- [ ] 12.2 Correspondance des couleurs entre deux boîtiers.
+- [ ] 12.3 Vectorscope, forme d'onde, parade RVB.
+- [ ] 12.4 Mesure au point (RVB, Lab), écrêtage par canal.
+
+### 13. Métadonnées et organisation
+
+- [ ] 13.1 IPTC/XMP complet : titre, légende, mots‑clés hiérarchiques, lieu, auteur,
+  droits ; modèles de métadonnées.
+- [ ] 13.2 Carte des photos géolocalisées (tuiles libres).
+- [ ] 13.3 Renommage par lot. (Pas de détection des visages : ce serait de l'IA.)
+
+### 14. Sortie
+
+- [ ] 14.1 Impression : mise en page, marges, planche contact, profil de l'imprimante.
+- [ ] 14.2 Diaporama exportable ; livre photo simple en PDF.
+- [ ] 14.3 Galerie web statique ; fichiers optimisés pour le web (WebP, AVIF, JPEG XL).
+
+### 15. Flux de travail
+
+- [ ] 15.1 Historique illimité, instantanés nommés ; copies virtuelles comparées.
+- [ ] 15.2 Sauvegarde et restauration du catalogue ; fichiers manquants ou déplacés.
+- [ ] 15.3 Import depuis une carte mémoire, renommage, copie sur un second disque.
+- [ ] 15.4 Raccourcis personnalisables, espaces de travail.
+
+### 16. Vidéo de base
+
+- [ ] 16.1 Si possible sans dépendance native : un film ou préréglage appliqué à une
+  vidéo courte, export.
 
 ## Idées
 
