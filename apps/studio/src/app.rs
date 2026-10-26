@@ -1611,6 +1611,7 @@ impl Studio {
         }
         let count = luma_apple::photos::imported();
         if count != self.imports_seen {
+            let new = count - self.imports_seen;
             self.imports_seen = count;
             let current = self.current_path().map(Path::to_path_buf);
             if let Some(dir) = crate::dialogs::documents() {
@@ -1618,6 +1619,7 @@ impl Studio {
                     Some(p) => self.open_path(&p),
                     None => self.open_path(&dir),
                 }
+                self.status = trf("{n} photo(s) importée(s).", &[("n", &new)]);
             }
         }
         // Tant qu'un import peut arriver, on regarde deux fois par seconde.
@@ -2000,8 +2002,10 @@ impl Studio {
                 // Sur iPhone et iPad : le sélecteur de Photos ; les photos choisies sont
                 // copiées dans le dossier de LÜMA, relu dès qu'elles arrivent.
                 if luma_apple::photos::AVAILABLE {
-                    if let Some(dir) = crate::dialogs::documents() {
-                        luma_apple::photos::pick(dir);
+                    let opened = crate::dialogs::documents().is_some_and(luma_apple::photos::pick);
+                    if !opened {
+                        self.status =
+                            tr("Photos ne s'ouvre pas : réessayez dans un instant.").to_owned();
                     }
                 } else if let Some(p) = crate::dialogs::pick_raw() {
                     self.open_path(&p);
