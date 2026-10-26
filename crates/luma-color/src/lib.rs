@@ -15,6 +15,7 @@
 
 pub mod icc;
 pub mod profile;
+pub mod proof;
 
 pub type Mat3 = [[f32; 3]; 3];
 pub type Vec3 = [f32; 3];
