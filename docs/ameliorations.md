@@ -92,7 +92,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 
 ### 8. Synchronisation
 
-- [ ] 8.1 Copier‑coller sélectif des réglages (choix des panneaux).
+- [x] 8.1 Copier‑coller sélectif des réglages (choix des panneaux).
 - [ ] 8.2 Synchroniser une sélection ; réglages automatiques par lot.
 - [ ] 8.3 Réglages par défaut par boîtier et par ISO ; préréglages d'import.
 
@@ -201,6 +201,7 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | Masquage de l'accentuation sur le GPU (flou gardé, second flou, pente des bords) : toute la fin du développement est désormais sur le GPU, quel que soit le réglage | Identique au processeur à 1/255 près (Masquage 10, 50, 100 ; à 100 % et 70 %) |
 | 2026-10-26 | Ouverture : l'image est réduite à la taille de l'aperçu avant d'être tournée (depuis le RAW et depuis le doublon), au lieu de tourner la pleine définition | iPhone ProRAW (portrait) : orientation 91 → 18 ms, base du premier aperçu 297 → 204 ms (Linux) ; même image (écart < 1e‑5, 8 orientations) |
 | 2026-10-26 | Coup d'œil à l'ouverture : l'aperçu intégré au RAW (jusqu'à 2048 px) s'affiche pendant le décodage, à la place de la photo précédente ; une photo retouchée montre sa vignette enregistrée, jamais une version sans ses retouches | Premier image à l'écran (Linux) : Sony 76 ms au lieu de 364, Canon CR3 278 ms au lieu de 1,64 s, Nikon 285 ms au lieu de 469 |
+| 2026-10-26 | 8.1 Copier‑coller sélectif : `luma_project::paste` (quatorze groupes), fenêtre « Coller… » (Alt+Maj+Cmd+V) avec les groupes cochés gardés ; recadrage et masques laissés à chaque photo par défaut | Test de bout en bout : copier, photo suivante, Coller… → exposition et vibrance collées, recadrage inchangé |
 | 2026-10-26 | 1.2 Recherche et filtres du catalogue (`luma_library::Query`, `luma catalog --search`, `--keywords`) : mots sans accents, note, drapeau, libellé, dates partielles, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers, objectifs | Catalogue synthétique de 100 000 photos : filtres combinés 65 ms → 4 ms ; mot libre 82 ms → 14–25 ms (comparaison sans allocation, filtrage sur 4 cœurs) ; chargement de l'index JSON (34 Mo) : 314 ms, à alléger (étape 1.7) |
 | 2026-10-26 | 2.1 Préréglages d'export dans le moteur (`luma_render::export` : `Options`, `Preset`, `Presets`, `develop`), partagés par l'app et la ligne de commande : quatre de base (Web, Pleine définition, Écran P3, Impression) et ceux de l'utilisateur (`Exports.json`) ; `luma export-preset`, `luma develop --preset` | Export « Web » (2048 px) d'un RAW, rendu et encodage : 307 à 626 ms selon le boîtier ; « Pleine définition » : 1,8 à 5,3 s (4 cœurs) |
 | 2026-10-26 | 1.3 Collections manuelles et dynamiques dans le catalogue (`luma_library::Collection`, `luma catalog --smart`, `--add`, `--collections`, `--collection`) ; anciens index relus tels quels | Une collection dynamique coûte une recherche (4 à 25 ms pour 100 000 photos) ; index du corpus avec une collection de deux photos : 1,6 → 1,8 Ko |
