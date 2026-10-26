@@ -193,14 +193,17 @@ impl Photo {
                     data: vec![[0.0; 3]; w * h],
                 }
             });
-            let oriented = t.time("orientation", || geometry::orient(img, self.raw.orientation));
-            match size {
-                Size::Full => oriented,
+            // Réduit avant d'être tourné, comme depuis le RAW.
+            let o = self.raw.orientation;
+            let img = match size {
+                Size::Full => img,
                 Size::Fit(max) => {
                     let (tw, th) = RgbImage::fit(fw, fh, max);
-                    t.time("mise à l'échelle", || oriented.resize_area(tw, th))
+                    let (sw, sh) = if swaps_axes(o) { (th, tw) } else { (tw, th) };
+                    t.time("mise à l'échelle", || img.resize_area(sw, sh))
                 }
-            }
+            };
+            t.time("orientation", || geometry::orient(img, o))
         } else {
             self.source_from_raw(size, fw, fh, t)
         };
@@ -232,8 +235,12 @@ impl Photo {
                 } else {
                     t.time("dématriçage", || self.raw.demosaic())
                 };
-                let oriented = t.time("orientation", || geometry::orient(base, self.raw.orientation));
-                t.time("mise à l'échelle", || oriented.resize_area(tw, th))
+                // On réduit avant de tourner : la rotation porte alors sur l'image finale,
+                // quatre à six fois plus petite (la taille cible, dans le sens du capteur).
+                let o = self.raw.orientation;
+                let (sw, sh) = if swaps_axes(o) { (th, tw) } else { (tw, th) };
+                let small = t.time("mise à l'échelle", || base.resize_area(sw, sh));
+                t.time("orientation", || geometry::orient(small, o))
             }
         }
     }
@@ -441,9 +448,53 @@ impl Photo {
     }
 }
 
+/// L'orientation échange-t-elle largeur et hauteur (quart de tour, transposition) ?
+fn swaps_axes(o: luma_raw::Orientation) -> bool {
+    use luma_raw::Orientation as O;
+    matches!(o, O::Rotate90 | O::Rotate270 | O::Transpose | O::Transverse)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Réduire puis tourner donne la même image que tourner puis réduire, pour les huit
+    /// orientations (la réduction par surfaces est la même dans les deux sens).
+    #[test]
+    fn reducing_before_orienting_changes_nothing() {
+        use luma_raw::Orientation as O;
+        let img = RgbImage::from_fn(301, 203, |x, y| {
+            [
+                (x * 7 % 13) as f32 / 13.0,
+                (y * 5 % 11) as f32 / 11.0,
+                ((x + y) % 17) as f32 / 17.0,
+            ]
+        });
+        for o in [
+            O::Normal,
+            O::FlipHorizontal,
+            O::Rotate180,
+            O::FlipVertical,
+            O::Transpose,
+            O::Rotate90,
+            O::Transverse,
+            O::Rotate270,
+        ] {
+            let before = geometry::orient(img.clone(), o);
+            let (tw, th) = RgbImage::fit(before.width, before.height, 120);
+            let reference = before.resize_area(tw, th);
+            let (sw, sh) = if swaps_axes(o) { (th, tw) } else { (tw, th) };
+            let ours = geometry::orient(img.resize_area(sw, sh), o);
+            assert_eq!((ours.width, ours.height), (reference.width, reference.height), "{o:?}");
+            let worst = ours
+                .data
+                .iter()
+                .zip(&reference.data)
+                .flat_map(|(a, b)| (0..3).map(move |k| (a[k] - b[k]).abs()))
+                .fold(0.0f32, f32::max);
+            assert!(worst < 1e-5, "{o:?} : écart {worst}");
+        }
+    }
     use luma_raw::{Cfa, Exif, Mosaic, Orientation};
 
     fn photo() -> Photo {
