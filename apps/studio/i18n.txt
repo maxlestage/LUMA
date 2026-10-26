@@ -2852,3 +2852,27 @@ es = Fotos no se abre ({why}).
 fr = {n} photo(s) importée(s).
 en = {n} photo(s) imported.
 es = {n} foto(s) importada(s).
+
+fr = Relier un boîtier
+en = Tether a camera
+es = Conectar una cámara
+
+fr = Les photos prises boîtier relié (USB) arrivent dans ce dossier
+en = Photos taken with the camera tethered (USB) arrive in this folder
+es = Las fotos tomadas con la cámara conectada (USB) llegan a esta carpeta
+
+fr = Branchez le boîtier et allumez-le
+en = Plug in the camera and turn it on
+es = Conecte la cámara y enciéndala
+
+fr = Boîtier relié : {name}
+en = Tethered camera: {name}
+es = Cámara conectada: {name}
+
+fr = Déclencher
+en = Release shutter
+es = Disparar
+
+fr = Déconnecter le boîtier
+en = Disconnect the camera
+es = Desconectar la cámara

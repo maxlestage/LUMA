@@ -14,6 +14,7 @@
 
 pub mod photos;
 pub mod store;
+pub mod tether;
 
 /// Installe le décodeur du système dans le moteur (sans effet hors d'Apple).
 pub fn install() {

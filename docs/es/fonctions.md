@@ -126,6 +126,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Palabras clave en la app: escritura (varias a la vez, separadas por comas), añadidas y quitadas en todas las fotos seleccionadas, lista de palabras clave de la carpeta con su número, filtro de la cuadrícula | ✅ |
 | Fototeca en la app: cada carpeta abierta entra en ella (en segundo plano); todas las fotos, las colecciones y las carpetas, cada una con su número de fotos; búsqueda y filtros; vistas ordenadas por fecha de captura | ✅ |
 | Carpeta vigilada (captura conectada, tarjeta copiada): cada foto completa entra en la fototeca y en la tira, y se abre; `luma watch` | ✅ |
+| En Mac, cámara conectada (USB, o red si lo permite) mediante el marco del sistema: cada foto tomada llega a la carpeta vigilada, disparo desde LÜMA para las cámaras que lo permiten | ✅ |
 | Copias virtuales: varios revelados de una foto sin duplicar el archivo (un XMP por copia), cada una con su valoración, sus palabras clave y su miniatura, junto a su original; exportada como `IMG_0001-2`; eliminada sin tocar el original | ✅ |
 | Importación de catálogos existentes | ⏳ |
 

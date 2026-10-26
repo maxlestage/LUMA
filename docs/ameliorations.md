@@ -79,7 +79,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 ### 6. Prise de vue en connexion
 
 - [x] 6.1 Dossier surveillé : les nouvelles photos sont importées et affichées.
-- [ ] 6.2 Mac : connexion directe aux boîtiers par le framework du système, dans
+- [x] 6.2 Mac : connexion directe aux boîtiers par le framework du système, dans
   `crates/luma-apple` seulement.
 
 ### 7. Tri et sélection
@@ -186,6 +186,8 @@ et blanc, vignetage après recadrage et grain existent).
 - La suppression d'une branche distante par `git push --delete` est refusée par le
   proxy de cette session : les branches `amelioration/*` restent sur le dépôt.
 
+- Boîtier relié sur Mac (6.2) : écrit d'après les déclarations d'ImageCaptureCore, compilé pour macOS (clippy), mais pas encore essayé avec un vrai boîtier (pas de Mac ici) ; à vérifier : boîtier USB Canon, Nikon, Sony, Fujifilm, photos prises arrivées dans le dossier, « Déclencher ».
+
 ## Fait
 
 | Date | Quoi | Mesures |
@@ -236,3 +238,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 5.4 Papier et encre noire (`proof::Media`) : l'encre choisie par l'intention est relue en colorimétrie absolue (papier : ton et luminosité, l'encre suit), en relative (encre noire : le noir imprimé garde sa densité), ou en relative avec compensation du point noir (par défaut : le noir le plus profond de l'imprimante devient le noir de l'écran, linéaire en XYZ) ; l'alerte de gamut n'en dépend pas ; cases « Couleur du papier » et « Encre noire » sous la simulation | Papier mat construit (noir à L* 15, blanc crème) : par défaut noir 0, blanc 1, gris moyen à 0,04 près ; encre : noir relu à L* 15 ± 1,5 ; papier : blanc crème, plus sombre que l'écran ; profils à matrice (noir 0) : rien ne change ; essai d'app : photo assombrie et réchauffée |
 | 2026-10-26 | Vitesse (ouverture, doublons) : corrections d'objectif du fichier (`opcodes::splines`, `remap`) écrites dans une image neuve remplie en parallèle au lieu de copier la source (la copie coûtait un tiers du temps), écart au centre de chaque colonne calculé une fois ; doublons `LUMADUP4` : chaque flottant 24 bits remplacé par son écart au pixel de gauche, replié, avant la séparation des octets et LZ4 (les doublons `LUMADUP3` sont refaits une fois) | Dématriçage et corrections, au mieux de 5, 4 cœurs : ARW 602 → 408 ms, RW2 523 → 339, ORF 500 → 349, RAF 848 → 705, NEF et CR3 (sans corrections) inchangés ; pixels identiques au bit près (empreinte de chaque image) ; doublons : NEF 214,1 → 202,2 Mo, CR3 377,6 → 359,6, DNG 104,3 → 95,2 ; pleine définition relue : CR3 331 → 274 ms, ARW 178 → 152, RW2 156 → 141, DNG 89 → 79 ; bandes relues au bit près (essai) |
 | 2026-10-26 | 6.1 Dossier surveillé (`luma_library::watch`) : relevés successifs du dossier (sans service du système : portable, sans dépendance, sûr sur un dossier réseau), une photo donnée seulement quand sa taille et sa date n'ont pas bougé d'un relevé au suivant (fichier en cours d'écriture : elle attend), fichiers cachés, vides et autres ignorés ; app : section « Dossier surveillé » de la Bibliothèque (Surveiller ce dossier, Choisir un dossier…, nombre de nouvelles photos, Ouvrir chaque nouvelle photo, Arrêter), relevé chaque seconde, photos ajoutées au film (la sélection et la photo ouverte suivent leurs photos) et à la photothèque, badge ; `luma watch` | Essais : photo en cours d'écriture retenue, donnée une seule fois, fichiers cachés ou vides ignorés, retirée puis remise : de nouveau ; app : NEF copié dans le dossier ouvert au 2ᵉ relevé et dans la photothèque, RW2 ajouté sans changer la photo ouverte ; `luma watch` : NEF annoncé (boîtier, objectif, ISO, ouverture) en moins d'une seconde |
+| 2026-10-26 | 6.2 Boîtier relié sur Mac (`luma_apple::tether`, ImageCaptureCore par objc2, le seul crate où `unsafe` est permis, chaque bloc justifié) : navigateur des boîtiers (locaux et réseau), session ouverte à l'arrivée, photos déjà sur la carte laissées (seules celles ajoutées une fois le contenu connu sont copiées, sous leur nom, dans le dossier surveillé, que le 6.1 reprend), déclenchement à distance pour les boîtiers qui le permettent ; app : « Relier un boîtier », nom du boîtier, « Déclencher », « Déconnecter le boîtier », arrêtés avec la surveillance ; hors Mac : rien | Compilé sans avertissement pour macOS et iOS (clippy, `undocumented_unsafe_blocks`) ; hors Mac, `start` rend `false` (essai) ; pas encore essayé avec un vrai boîtier |
