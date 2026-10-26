@@ -61,7 +61,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Combinaisons de masques : ajouter, soustraire, intersection d'autres formes (chacune inversable) | ✅ |
 | | Zone du masque affichée (O) en rouge, vert, bleu, blanc ou blanc sur noir, opacité de 10 à 100 % | ✅ |
 | | Lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
-| | Correcteur, tampon, yeux rouges, suppression | ⏳ |
+| | Correcteur et tampon (Q) : un clic, la source trouvée d'elle-même, zone et source déplaçables ; taille, contour progressif, opacité | ✅ |
+| | Yeux rouges, suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |

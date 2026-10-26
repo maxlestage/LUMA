@@ -71,9 +71,9 @@ fr = Empilements et panoramas
 en = Stacks and panoramas
 es = Apilados y panorámicas
 
-fr = M, Maj+M, K
-en = M, Shift+M, K
-es = M, Mayús+M, K
+fr = M, Maj+M, K, Q
+en = M, Shift+M, K, Q
+es = M, Mayús+M, K, Q
 
 # ----- La barre du haut -----
 
@@ -580,6 +580,50 @@ es = La zona pintada se detiene en los contornos de la foto
 fr = Pinceau qui suit les bords
 en = Edge-aware brush
 es = Pincel que sigue los bordes
+
+fr = Retouche
+en = Retouch
+es = Retoque
+
+fr = Correcteur
+en = Healing
+es = Corrector
+
+fr = Tampon
+en = Clone
+es = Tampón
+
+fr = Q : la texture d'ailleurs, la lumière du bord de la zone
+en = Q: texture from elsewhere, light from the edge of the area
+es = Q: la textura de otro lugar, la luz del borde de la zona
+
+fr = Une copie exacte d'une autre partie de la photo
+en = An exact copy of another part of the photo
+es = Una copia exacta de otra parte de la foto
+
+fr = Retouche supprimée
+en = Retouch deleted
+es = Retoque eliminado
+
+fr = Retouche : {tool}
+en = Retouch: {tool}
+es = Retoque: {tool}
+
+fr = Retouche réglée
+en = Retouch adjusted
+es = Retoque ajustado
+
+fr = Nouvelle source
+en = New source
+es = Nueva fuente
+
+fr = Chercher une autre partie de la photo qui convient
+en = Look for another suitable part of the photo
+es = Buscar otra parte adecuada de la foto
+
+fr = Retouche : cliquez une tache, tirez la zone ou sa source, Échap pour quitter
+en = Retouch: click a spot, drag the area or its source, Esc to leave
+es = Retoque: haga clic en una mancha, arrastre la zona o su fuente, Esc para salir
 
 fr = Zone
 en = Area
