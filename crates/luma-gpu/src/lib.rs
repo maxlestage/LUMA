@@ -10,8 +10,9 @@
 //!
 //! L'accentuation, qui n'apparaît qu'à partir de 50 % (en dessous, elle ne se voit
 //! pas), se fait en plusieurs passes (l'image avant accentuation, six passes de flou
-//! boîte, puis l'accentuation et la fin). Seul son Masquage n'est pas encore porté :
-//! [`Gpu::can_finish`] dit quand le processeur doit prendre la main.
+//! boîte, son Masquage s'il y en a un, puis l'accentuation et la fin).
+//! [`Gpu::can_finish`] dit quand le processeur doit prendre la main (une image trop
+//! grande pour le GPU).
 
 use std::sync::Mutex;
 
@@ -149,11 +150,16 @@ fn params(s: &Settings, width: usize, height: usize, scale: f32, space: OutputSp
             p.push("SHARPEN_R", &[luma_core::Plane::box_radius(sh.radius) as f32]);
             p.push("SHARPEN_AMOUNT", &[sh.amount]);
             p.push("SHARPEN_LIMIT", &[sh.limit]);
+            // Le Masquage : les bords d'un flou de rayon 1 du flou, et leur seuil.
+            p.push("MASK_R", &[luma_core::Plane::box_radius(1.0) as f32]);
+            p.push("MASK_TH", &[s.detail.sharpen_masking.max(0.0) / 100.0 * 0.06]);
         }
         None => {
             p.push("SHARPEN_R", &[1.0]);
             p.push("SHARPEN_AMOUNT", &[0.0]);
             p.push("SHARPEN_LIMIT", &[0.0]);
+            p.push("MASK_R", &[1.0]);
+            p.push("MASK_TH", &[0.0]);
         }
     }
     p
@@ -220,9 +226,9 @@ struct Uploaded {
     input: wgpu::Buffer,
     output: wgpu::Buffer,
     readback: wgpu::Buffer,
-    /// Les tampons de l'accentuation (image avant accentuation, deux plans), créés au
-    /// premier besoin.
-    sharp: Option<[wgpu::Buffer; 3]>,
+    /// Les tampons de l'accentuation (image avant accentuation, deux plans, le flou
+    /// gardé pour le Masquage), créés au premier besoin.
+    sharp: Option<[wgpu::Buffer; 4]>,
 }
 
 /// Le GPU, prêt à finir des développements.
@@ -230,10 +236,11 @@ pub struct Gpu {
     device: wgpu::Device,
     queue: wgpu::Queue,
     pipeline: wgpu::ComputePipeline,
-    /// Les passes de l'accentuation : `pre`, `box_h`, `box_v`, `post`.
-    sharpen: [wgpu::ComputePipeline; 4],
+    /// Les passes de l'accentuation : `pre`, `box_h`, `box_v`, `post`, puis celles du
+    /// Masquage : `keep_blur`, `mask_h`, `mask_v`.
+    sharpen: [wgpu::ComputePipeline; 7],
     /// De petits tampons à la place de ceux de l'accentuation, quand elle n'a pas lieu.
-    spare: [wgpu::Buffer; 3],
+    spare: [wgpu::Buffer; 4],
     layout: wgpu::BindGroupLayout,
     name: String,
     max_buffer: u64,
@@ -309,6 +316,7 @@ impl Gpu {
                 entry(4, false),
                 entry(5, false),
                 entry(6, false),
+                entry(7, false),
             ],
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -327,8 +335,8 @@ impl Gpu {
             })
         };
         let pipeline = pipeline_for("main");
-        let sharpen = ["pre", "box_h", "box_v", "post"].map(pipeline_for);
-        let spare = ["réserve 4", "réserve 5", "réserve 6"].map(|label| {
+        let sharpen = ["pre", "box_h", "box_v", "post", "keep_blur", "mask_h", "mask_v"].map(pipeline_for);
+        let spare = ["réserve 4", "réserve 5", "réserve 6", "réserve 7"].map(|label| {
             device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(label),
                 size: 16,
@@ -354,13 +362,11 @@ impl Gpu {
         &self.name
     }
 
-    /// Le GPU sait-il finir ce développement ? Non si le Masquage de l'accentuation
-    /// doit s'appliquer (pas encore porté) ou si l'image dépasse ce que le GPU accepte
-    /// d'un bloc.
-    pub fn can_finish(&self, s: &Settings, width: usize, height: usize, scale: f32) -> bool {
-        let masking = s.detail.sharpen_masking > 0.0 && luma_image::detail::sharpening(&s.detail, scale).is_some();
+    /// Le GPU sait-il finir ce développement ? Oui, toutes les étapes de la fin y sont ;
+    /// non si l'image dépasse ce que le GPU accepte d'un bloc.
+    pub fn can_finish(&self, _s: &Settings, width: usize, height: usize, _scale: f32) -> bool {
         let bytes = (width * height * 16) as u64;
-        !masking && bytes <= self.max_buffer && width * height > 0
+        bytes <= self.max_buffer && width * height > 0
     }
 
     /// Finit `base` (sortie de `develop_base`, identifiée par `id`) et l'encode en RGBA
@@ -428,6 +434,7 @@ impl Gpu {
                 buffer("avant accentuation", (n * 16) as u64),
                 buffer("plan A", (n * 4) as u64),
                 buffer("plan B", (n * 4) as u64),
+                buffer("flou gardé", (n * 4) as u64),
             ]);
         }
         let u = &uploaded[0];
@@ -446,7 +453,7 @@ impl Gpu {
         };
         let params = storage("paramètres", &params);
         let tables = storage("tables", &tables);
-        let [mid, a, b] = u.sharp.as_ref().unwrap_or(&self.spare);
+        let [mid, a, b, keep] = u.sharp.as_ref().unwrap_or(&self.spare);
         // Deux jeux de liaisons : le plan lu et le plan écrit échangés, pour les passes
         // de flou qui se suivent.
         let bind = |pin: &wgpu::Buffer, pout: &wgpu::Buffer| {
@@ -461,6 +468,7 @@ impl Gpu {
                     entry(4, mid),
                     entry(5, pin),
                     entry(6, pout),
+                    entry(7, keep),
                 ],
             })
         };
@@ -476,9 +484,9 @@ impl Gpu {
                 pass.dispatch_workgroups(x, groups.div_ceil(x), 1);
             };
             if sharpening {
-                let [pre, box_h, box_v, post] = &self.sharpen;
+                let [pre, box_h, box_v, post, keep_blur, mask_h, mask_v] = &self.sharpen;
                 // pre écrit le plan B ; trois flous horizontaux puis trois verticaux,
-                // en alternant ; le flou final est dans le plan B, que post lit.
+                // en alternant : le flou finit dans le plan B.
                 run(pre, &ab);
                 for (pipeline, bind) in [
                     (box_h, &ba),
@@ -489,6 +497,21 @@ impl Gpu {
                     (box_v, &ab),
                 ] {
                     run(pipeline, bind);
+                }
+                if s.detail.sharpen_masking > 0.0 {
+                    // Le flou est gardé, puis flouté encore : les bords finissent aussi
+                    // dans le plan B, que post lit.
+                    run(keep_blur, &ba);
+                    for (pipeline, bind) in [
+                        (mask_h, &ba),
+                        (mask_h, &ab),
+                        (mask_h, &ba),
+                        (mask_v, &ab),
+                        (mask_v, &ba),
+                        (mask_v, &ab),
+                    ] {
+                        run(pipeline, bind);
+                    }
                 }
                 run(post, &ba);
             } else {
