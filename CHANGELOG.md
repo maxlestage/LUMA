@@ -118,6 +118,10 @@ La photothèque professionnelle, étape par étape.
   imprimante et d'un papier, et l'aperçu montre la photo telle qu'elle sortira, en
   intention perceptuelle ou colorimétrique relative ; l'histogramme suit. Une vue,
   pas un réglage : rien n'est écrit dans la photo.
+- **LÜMA Premium dans l'App Store** (iPhone et iPad) : les deux abonnements à leur
+  prix App Store, « S'abonner » et « Restaurer les achats » ; chaque achat et
+  renouvellement ouvre Premium. Sur iPhone et iPad, seul l'App Store vend
+  l'abonnement ; sur Mac, seulement le site (Stripe).
 - **Alerte de gamut** (dans l'épreuvage) : les couleurs que l'imprimante ne saura
   pas rendre passent en bleu sur l'aperçu, avec ou sans la simulation de
   l'impression.
