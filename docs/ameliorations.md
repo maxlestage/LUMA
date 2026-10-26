@@ -29,7 +29,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   du catalogue avec leur nombre.
 - [x] 1.5 L'app ouvre le catalogue : panneau Photothèque (dossiers, collections),
   grille triée par date, recherche et filtres.
-- [ ] 1.6 Copies virtuelles : plusieurs jeux de réglages pour un même fichier, dans le
+- [x] 1.6 Copies virtuelles : plusieurs jeux de réglages pour un même fichier, dans le
   XMP, visibles dans la grille et le film.
 - [x] 1.7 Index plus léger : format binaire compact, chargement de 100 000 photos mesuré.
 
@@ -153,6 +153,8 @@ et blanc, vignetage après recadrage et grain existent).
 
 ## Idées
 
+- Copies virtuelles dans le catalogue (aujourd'hui, elles n'apparaissent que dans le
+  dossier de leur original, pas dans les vues « toutes les photos » ni les recherches).
 - Le trait d'union insécable (U+2011) n'est pas dans la police de l'app : un texte
   affiché qui en contient (descriptions de films : « sous‑exposé », « vert‑cyan »)
   fait échouer le rendu de test ; à remplacer par un trait d'union simple à l'écran.
@@ -194,3 +196,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 1.5 La photothèque dans l'app : chaque dossier ouvert entre au catalogue dans un fil à part (enregistré ensuite), panneau Photothèque (recherche, toutes les photos, collections, dossiers avec leur nombre), vues par date de prise de vue ; correction : changer de film enregistre d'abord les réglages en attente de la photo qui les porte | Test de l'interface sur le corpus : 5 photos indexées sans bloquer l'interface, vue « toutes » par date, recherche, collection dynamique ; capture `studio-bibliotheque-phototheque.png` |
 | 2026-10-26 | Vitesse : les six passes de boîte d'un flou (`Plane::blur`, aussi au cœur du filtre guidé) écrivent dans deux tampons qui alternent au lieu de six images neuves | Flou d'un plan 24 Mpx : 439 → 81 ms ; pleine définition (meilleur de 5, 4 cœurs, machine virtuelle bruitée) : accentuation NEF 642 → 362 ms, CR3 1339 → 627 ms, RAF 683 → 440 ms, DNG 166 → 127 ms ; rendu complet NEF 1488 → 1179 ms, CR3 3058 → 2166 ms, RAF 1892 → 1544 ms ; aperçu 2048 px inchangé ; JPEG identiques octet pour octet, test au bit près contre les passes chaînées |
 | 2026-10-26 | 2.5 Filigrane texte (`luma_render::watermark`) : police Ubuntu Light déjà embarquée par l'interface, contours lus par `skrifa` (déjà dans le dépôt : aucune nouvelle crate compilée), rastérisation maison par aires signées (couverture exacte), neuf emplacements, taille en % du petit côté, opacité mélangée en valeurs perçues, blanc ou noir ; fenêtre Exporter, préréglages, `--watermark` | Dessin et pose d'un filigrane (meilleur de 5) : 0,85 ms sur un export 1600 px, 9,4 ms en pleine définition 24 Mpx |
+| 2026-10-26 | 1.6 Copies virtuelles (`luma_project::copies`) : un XMP par copie (`IMG_0001.ARW.copie-2.xmp`), pixels, doublon de travail, aperçu intégré et fusion ramenés à l'original, vignette et note propres, export `IMG_0001-2`, création et suppression dans la Bibliothèque | Aucun fichier dupliqué : une copie pèse son XMP (4 Ko mesurés) ; test de l'interface sur le corpus (création, note propre, relue dans le dossier, suppression) ; capture `studio-bibliotheque-copie.png` |

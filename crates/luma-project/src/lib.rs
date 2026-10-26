@@ -6,6 +6,7 @@
 //! valeur par défaut pour un RAW ; ils s'enregistrent et se relisent en XMP (voir
 //! [`xmp`]).
 
+pub mod copies;
 pub mod masks;
 pub mod presets;
 pub mod xmp;

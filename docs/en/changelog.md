@@ -25,6 +25,9 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Virtual copies**: several developments of the same photo without duplicating the
+  file; each copy has its own settings, rating, keywords and thumbnail, sits next to
+  its original and exports as `IMG_0001-2`. Deleting it never touches the original.
 - **The catalog in the app** (Library): every folder you open is added in the
   background; all photos, collections and folders, each with its number of photos,
   and a search (“sea rating:3 date:2024”); these views are sorted by capture date, and

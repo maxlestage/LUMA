@@ -16,7 +16,8 @@ pub const EXTENSION: &str = "lumavig";
 /// réglages (`None` : ceux par défaut), le côté demandé et la version du moteur
 /// (FNV‑1a 64 bits).
 pub fn path_for(source: &Path, settings: Option<&Settings>, side: u32, dir: &Path) -> Option<PathBuf> {
-    let (len, time) = crate::duplicate::signature(source)?;
+    // Une copie virtuelle a les pixels de son original, et sa vignette à elle.
+    let (len, time) = crate::duplicate::signature(&luma_project::copies::source(source))?;
     let settings = settings.map_or_else(String::new, |s| serde_json::to_string(s).unwrap_or_default());
     let key = format!(
         "{}|{len}|{time}|{side}|{}|{settings}",
