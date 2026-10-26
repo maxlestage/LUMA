@@ -26,6 +26,9 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Corrections d'objectif des Fujifilm** : celles que le boîtier enregistre dans chaque
+  RAF (distorsion, aberration chromatique latérale, vignetage), mode recadré compris,
+  sont appliquées automatiquement ; par exemple le barillet du XF 35 mm F2.
 - **Corrections d'objectif des Sony** : la distorsion, l'aberration chromatique
   latérale et le vignetage que le boîtier enregistre dans chaque ARW sont appliqués
   automatiquement, avec juste ce qu'il faut d'agrandissement pour ne laisser aucun bord

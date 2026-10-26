@@ -83,3 +83,50 @@ fn the_sony_lens_corrections_are_read_from_the_arw() {
         corner(&raw)
     );
 }
+
+/// Le Fujifilm X‑T3 du corpus (XF 35 mm F2) range ses corrections dans le FujiIFD de son
+/// RAF : neuf nœuds, une distorsion en barillet à corriger, un peu d'aberration
+/// chromatique, pas de vignetage.
+#[test]
+fn the_fujifilm_lens_corrections_are_read_from_the_raf() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus/AFXT2720.RAF");
+    let Ok(photo) = luma_raw::RawPhoto::open(&path) else {
+        return;
+    };
+    let Some((ops, _)) = &photo.opcodes else {
+        panic!("aucune correction lue")
+    };
+    let [
+        luma_raw::opcodes::Opcode::Spline {
+            knots,
+            distortion,
+            vignetting,
+            zoom,
+        },
+    ] = ops.as_slice()
+    else {
+        panic!("{ops:?}")
+    };
+    assert_eq!(knots.len(), 9);
+    assert!((knots[7] - 1.0).abs() < 1e-6, "le coin de l'image : {knots:?}");
+    // Le barillet se corrige en allant chercher les points plus près du centre.
+    assert!(distortion[1][8] < 0.95 && distortion[1][0] < 1.0, "{distortion:?}");
+    assert!(
+        distortion[0][4] < distortion[1][4] && distortion[2][4] > distortion[1][4],
+        "rouge et bleu"
+    );
+    assert!(vignetting.iter().all(|v| (v - 1.0).abs() < 1e-9), "{vignetting:?}");
+    assert_eq!(*zoom, 1.0, "rien à agrandir : la correction rentre les bords");
+    // Corrigée, l'image n'est plus la même ; un point au bord s'est déplacé.
+    let corrected = photo.binned();
+    let mut plain = photo.clone();
+    plain.opcodes = None;
+    let raw = plain.binned();
+    let differs = corrected
+        .data
+        .iter()
+        .zip(&raw.data)
+        .filter(|(a, b)| (a[1] - b[1]).abs() > 1e-3)
+        .count();
+    assert!(differs > corrected.data.len() / 10, "{differs} pixels changés");
+}
