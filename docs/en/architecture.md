@@ -77,7 +77,7 @@ luma/
 │   ├── luma-ui/          P0  adaptive interface (pointer, touch, Pencil)
 │   └── luma-platform/    P0  macOS + iOS first; Windows/Linux/Android later
 ├── apps/
-│   ├── macos/            .app bundle, Mac App Store
+│   ├── macos/            .app bundle, direct download (no Mac App Store)
 │   ├── ios/              iPhone + iPad, App Store / TestFlight
 │   ├── desktop/          Windows, Linux (phase 6)
 │   └── android/          (phase 6)
