@@ -100,6 +100,8 @@ pub struct Options {
     pub folder: Option<PathBuf>,
     /// Le modèle du nom des fichiers (voir [`file_name`]) ; `None` : le nom de l'original.
     pub name: Option<String>,
+    /// L'accentuation de sortie, après le redimensionnement ; `None` : aucune.
+    pub sharpen: Option<OutputSharpen>,
 }
 
 impl Default for Options {
@@ -112,7 +114,116 @@ impl Default for Options {
             resize: None,
             folder: None,
             name: None,
+            sharpen: None,
         }
+    }
+}
+
+/// Le support d'une image exportée : l'accentuation de sortie dépend de la façon dont il
+/// rend les détails (l'encre s'étale sur un papier mat).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Medium {
+    Screen,
+    Matte,
+    Glossy,
+}
+
+/// L'intensité de l'accentuation de sortie.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Strength {
+    Low,
+    Standard,
+    High,
+}
+
+/// L'accentuation de sortie : appliquée à l'image à sa taille finale, pour compenser ce
+/// que l'écran ou le papier adoucit. Elle s'ajoute à celle du panneau Détail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OutputSharpen {
+    pub medium: Medium,
+    pub strength: Strength,
+}
+
+impl OutputSharpen {
+    /// Les réglages d'accentuation pour une image de ce grand côté. Écran : un rayon d'un
+    /// demi‑pixel ; papier : un rayon plus large qui grandit avec l'image (une grande
+    /// image s'imprime grande, vue de plus loin), plus fort sur papier mat.
+    pub fn detail(self, long_edge: usize) -> luma_project::Detail {
+        let k = match self.strength {
+            Strength::Low => 0.6,
+            Strength::Standard => 1.0,
+            Strength::High => 1.5,
+        };
+        let print = (long_edge as f32 / 3000.0).clamp(1.0, 2.0);
+        let (radius, amount) = match self.medium {
+            Medium::Screen => (0.5, 45.0),
+            Medium::Glossy => (0.9 * print, 60.0),
+            Medium::Matte => (1.3 * print, 85.0),
+        };
+        luma_project::Detail {
+            sharpen_amount: amount * k,
+            sharpen_radius: radius,
+            sharpen_detail: 50.0,
+            // Les aplats (ciel, peau) ne prennent pas de grain.
+            sharpen_masking: 15.0,
+            ..luma_project::Detail::default()
+        }
+    }
+
+    /// Accentue l'image (linéaire, à sa taille finale).
+    pub fn apply(self, img: &mut RgbImage) {
+        let d = self.detail(img.width.max(img.height));
+        luma_image::detail::sharpen(img, &d, 1.0);
+    }
+
+    /// Lit `screen`, `matte:high`, `brillant:faible`… (support, puis intensité ;
+    /// normale par défaut), en français ou en anglais.
+    pub fn parse(s: &str) -> Option<OutputSharpen> {
+        let s = s.trim().to_lowercase();
+        let (m, k) = s.split_once(':').unwrap_or((&s, "standard"));
+        let medium = match m.trim() {
+            "screen" | "écran" | "ecran" => Medium::Screen,
+            "matte" | "mat" => Medium::Matte,
+            "glossy" | "brillant" => Medium::Glossy,
+            _ => return None,
+        };
+        let strength = match k.trim() {
+            "low" | "faible" => Strength::Low,
+            "standard" | "normal" | "normale" => Strength::Standard,
+            "high" | "forte" | "fort" => Strength::High,
+            _ => return None,
+        };
+        Some(OutputSharpen { medium, strength })
+    }
+
+    /// L'écriture que `parse` relit.
+    pub fn id(self) -> String {
+        let m = match self.medium {
+            Medium::Screen => "screen",
+            Medium::Matte => "matte",
+            Medium::Glossy => "glossy",
+        };
+        let k = match self.strength {
+            Strength::Low => "low",
+            Strength::Standard => "standard",
+            Strength::High => "high",
+        };
+        format!("{m}:{k}")
+    }
+
+    /// En clair : « accentuation écran, normale ».
+    pub fn describe(self) -> String {
+        let m = match self.medium {
+            Medium::Screen => "écran",
+            Medium::Matte => "papier mat",
+            Medium::Glossy => "papier brillant",
+        };
+        let k = match self.strength {
+            Strength::Low => "faible",
+            Strength::Standard => "normale",
+            Strength::High => "forte",
+        };
+        format!("accentuation {m}, {k}")
     }
 }
 
@@ -485,6 +596,9 @@ pub fn develop(photo: &Photo, settings: &Settings, out: &Path, options: &Options
             image = image.resize_area(w, h);
         }
     }
+    if let Some(sh) = options.sharpen {
+        sh.apply(&mut image);
+    }
     let bits = if options.format == Format::Jpeg {
         8
     } else {
@@ -571,6 +685,8 @@ struct StoredPreset {
     folder: Option<PathBuf>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     name_template: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sharpen: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -592,6 +708,7 @@ impl StoredPreset {
             resize: o.resize.map(Resize::id),
             folder: o.folder.clone(),
             name_template: o.name.clone(),
+            sharpen: o.sharpen.map(OutputSharpen::id),
         }
     }
 
@@ -610,6 +727,10 @@ impl StoredPreset {
                 },
                 folder: self.folder,
                 name: self.name_template.filter(|t| !t.trim().is_empty()),
+                sharpen: match self.sharpen {
+                    Some(v) => Some(OutputSharpen::parse(&v)?),
+                    None => None,
+                },
             },
         })
     }
@@ -725,10 +846,14 @@ pub fn describe(o: &Options) -> String {
         .folder
         .as_ref()
         .map_or_else(|| "LÜMA/".to_owned(), |d| d.display().to_string());
-    match &o.name {
-        Some(n) => format!("{format}, {space}, {size}, {folder}, {n}"),
-        None => format!("{format}, {space}, {size}, {folder}"),
+    let mut out = format!("{format}, {space}, {size}, {folder}");
+    if let Some(sh) = o.sharpen {
+        out += &format!(", {}", sh.describe());
     }
+    if let Some(n) = &o.name {
+        out += &format!(", {n}");
+    }
+    out
 }
 
 #[cfg(test)]
@@ -754,6 +879,83 @@ mod tests {
         // Un modèle vide garde le nom de l'original.
         o.name = Some("  ".into());
         assert_eq!(output_path(src, &o, &f), PathBuf::from("/sortie/IMG_1.tif"));
+    }
+
+    #[test]
+    fn output_sharpening_by_medium_and_strength() {
+        let all = [Medium::Screen, Medium::Matte, Medium::Glossy]
+            .into_iter()
+            .flat_map(|medium| {
+                [Strength::Low, Strength::Standard, Strength::High].map(|strength| OutputSharpen { medium, strength })
+            });
+        for sh in all {
+            assert_eq!(OutputSharpen::parse(&sh.id()), Some(sh));
+        }
+        assert_eq!(
+            OutputSharpen::parse("écran"),
+            Some(OutputSharpen {
+                medium: Medium::Screen,
+                strength: Strength::Standard
+            })
+        );
+        assert_eq!(
+            OutputSharpen::parse("Brillant:Forte"),
+            Some(OutputSharpen {
+                medium: Medium::Glossy,
+                strength: Strength::High
+            })
+        );
+        assert_eq!(OutputSharpen::parse("toile"), None);
+        assert_eq!(OutputSharpen::parse("mat:extrême"), None);
+        let d = |m, k, n| OutputSharpen { medium: m, strength: k }.detail(n);
+        // Le papier mat demande plus que le brillant, qui demande plus que l'écran.
+        let (s, g, m) = (
+            d(Medium::Screen, Strength::Standard, 2000),
+            d(Medium::Glossy, Strength::Standard, 2000),
+            d(Medium::Matte, Strength::Standard, 2000),
+        );
+        assert!(s.sharpen_radius < g.sharpen_radius && g.sharpen_radius < m.sharpen_radius);
+        assert!(s.sharpen_amount < g.sharpen_amount && g.sharpen_amount < m.sharpen_amount);
+        assert!(d(Medium::Screen, Strength::Low, 2000).sharpen_amount < s.sharpen_amount);
+        assert!(d(Medium::Screen, Strength::High, 2000).sharpen_amount > s.sharpen_amount);
+        // Sur papier, le rayon suit la taille de l'image ; pas sur écran.
+        assert!(d(Medium::Matte, Strength::Standard, 6000).sharpen_radius > m.sharpen_radius);
+        assert_eq!(
+            d(Medium::Screen, Strength::Standard, 6000).sharpen_radius,
+            s.sharpen_radius
+        );
+        assert_eq!(
+            OutputSharpen {
+                medium: Medium::Matte,
+                strength: Strength::Low
+            }
+            .describe(),
+            "accentuation papier mat, faible"
+        );
+    }
+
+    #[test]
+    fn output_sharpening_raises_edge_contrast() {
+        // Un bord net adouci : l'accentuation creuse le côté sombre et éclaircit l'autre,
+        // d'autant plus que l'intensité est forte ; les aplats ne bougent pas.
+        let soft = RgbImage::from_fn(64, 16, |x, _| {
+            let t = ((x as f32 - 31.5) / 2.0).tanh() * 0.5 + 0.5;
+            [0.05 + 0.4 * t; 3]
+        });
+        let contrast = |img: &RgbImage| img.data[8 * 64 + 34][1] - img.data[8 * 64 + 29][1];
+        let mut last = contrast(&soft);
+        for strength in [Strength::Low, Strength::Standard, Strength::High] {
+            let mut img = soft.clone();
+            OutputSharpen {
+                medium: Medium::Screen,
+                strength,
+            }
+            .apply(&mut img);
+            let c = contrast(&img);
+            assert!(c > last, "{strength:?} : {c} ≤ {last}");
+            last = c;
+            assert!((img.data[8 * 64 + 2][1] - soft.data[8 * 64 + 2][1]).abs() < 1e-4);
+        }
     }
 
     #[test]
@@ -965,6 +1167,10 @@ mod tests {
                 space: OutputSpace::DisplayP3,
                 folder: Some("/tmp/insta".into()),
                 name: Some("{date}_{séquence}".into()),
+                sharpen: Some(OutputSharpen {
+                    medium: Medium::Matte,
+                    strength: Strength::High,
+                }),
                 ..Options::default()
             },
         };

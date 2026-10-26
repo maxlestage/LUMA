@@ -34,6 +34,7 @@ USAGE
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille]
+                     [--output-sharpen screen|matte|glossy[:low|standard|high]]
       Avec --preset, les options du préréglage d'export (format, qualité, espace, taille,
       dossier, nom) ; les options données les remplacent, --size est alors le grand côté
       de l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par
@@ -42,9 +43,12 @@ USAGE
       {iso} {note} {libellé} ; un « / » crée un sous‑dossier ({année}/{mois}/{nom}).
       --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
       (l'image tient dans le cadre), 12mp (mégapixels) ; jamais d'agrandissement.
+      --output-sharpen : l'accentuation de sortie, à la taille finale, pour l'écran ou
+      le papier mat ou brillant (écran, mat, brillant ; faible, normale, forte aussi).
   luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
                      [--space srgb|p3|rec2020|prophoto] [--size taille|0] [--folder d]
-                     [--next-to-original] [--name modèle] [--delete]
+                     [--next-to-original] [--name modèle] [--output-sharpen s|none]
+                     [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
       (partagé avec l'app) ; --delete le retire.
@@ -110,6 +114,7 @@ struct Args {
     preset: Option<String>,
     name: Option<String>,
     resize: Option<export::Resize>,
+    output_sharpen: Option<export::OutputSharpen>,
     xmp: Option<PathBuf>,
     settings: Option<PathBuf>,
     sidecar: bool,
@@ -129,6 +134,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         preset: None,
         name: None,
         resize: None,
+        output_sharpen: None,
         xmp: None,
         settings: None,
         sidecar: true,
@@ -149,6 +155,10 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--bits" => a.bits = Some(value(&arg)?.parse().map_err(|_| "--bits : 8 ou 16")?),
             "--preset" => a.preset = Some(value(&arg)?),
             "--name" => a.name = Some(value(&arg)?),
+            "--output-sharpen" => {
+                let v = value(&arg)?;
+                a.output_sharpen = Some(export::OutputSharpen::parse(&v).ok_or_else(|| sharpen_error(&v))?);
+            }
             "--resize" => {
                 let v = value(&arg)?;
                 a.resize = Some(export::Resize::parse(&v).ok_or_else(|| resize_error(&v))?);
@@ -397,7 +407,7 @@ fn develop(a: &Args) -> Result<(), String> {
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
-    if a.preset.is_some() || a.name.is_some() || a.resize.is_some() {
+    if a.preset.is_some() || a.name.is_some() || a.resize.is_some() || a.output_sharpen.is_some() {
         // Un préréglage d'export (à défaut, les options par défaut) : ses options, que les
         // options données remplacent.
         let mut o = match &a.preset {
@@ -415,6 +425,7 @@ fn develop(a: &Args) -> Result<(), String> {
             o.name = Some(t.clone()).filter(|t| !t.trim().is_empty());
         }
         o.space = a.space.unwrap_or(o.space);
+        o.sharpen = a.output_sharpen.or(o.sharpen);
         o.quality = a.quality.unwrap_or(o.quality);
         o.bits = a.bits.unwrap_or(o.bits);
         o.resize = a
@@ -474,6 +485,10 @@ fn develop(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+fn sharpen_error(v: &str) -> String {
+    format!("accentuation inconnue « {v} » (screen, matte, glossy, suivis de :low, :standard ou :high)")
+}
+
 fn resize_error(v: &str) -> String {
     format!("taille inconnue « {v} » (2048, short:1080, 1920x1080, 12mp)")
 }
@@ -522,6 +537,14 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
                     None
                 } else {
                     Some(export::Resize::parse(&v).ok_or_else(|| resize_error(&v))?)
+                };
+            }
+            "--output-sharpen" => {
+                let v = value()?;
+                o.sharpen = if v.trim() == "0" || v.trim() == "none" || v.trim() == "aucune" {
+                    None
+                } else {
+                    Some(export::OutputSharpen::parse(&v).ok_or_else(|| sharpen_error(&v))?)
                 };
             }
             "--folder" => o.folder = Some(value()?.into()),

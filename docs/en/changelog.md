@@ -43,6 +43,9 @@ The professional photo library, step by step.
 - **Export dimensions**: long edge, short edge, width × height (the image fits inside
   the frame) or megapixels, never enlarging; in the Export dialog, presets and
   `luma develop --resize short:1080`.
+- **Output sharpening**: for screen, matte paper or glossy paper, low, standard or
+  high, applied to the image at its final size (on paper, the radius follows the print
+  size); flat areas stay smooth.
 
 ## 0.2.0 — October 2026
 

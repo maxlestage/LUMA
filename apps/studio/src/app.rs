@@ -1401,6 +1401,9 @@ impl Studio {
                         ui.label(tr("Dimensions"));
                         ui.horizontal(|ui| resize_editor(ui, &mut o.resize));
                         ui.end_row();
+                        ui.label(tr("Accentuation de sortie"));
+                        ui.horizontal(|ui| sharpen_editor(ui, &mut o.sharpen));
+                        ui.end_row();
                         ui.label(tr("Nom des fichiers"));
                         ui.vertical(|ui| {
                             let mut text = o.name.clone().unwrap_or_default();
@@ -4440,6 +4443,43 @@ fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
     }
     let s = (area.width() / w as f32).min(area.height() / h as f32);
     egui::Rect::from_center_size(area.center(), vec2(w as f32 * s, h as f32 * s))
+}
+
+/// L'accentuation de sortie d'un export : le support, puis l'intensité.
+fn sharpen_editor(ui: &mut Ui, sharpen: &mut Option<luma_render::export::OutputSharpen>) {
+    use luma_render::export::{Medium, OutputSharpen, Strength};
+    let media = [
+        (None, tr("Aucune")),
+        (Some(Medium::Screen), tr("Écran")),
+        (Some(Medium::Matte), tr("Papier mat")),
+        (Some(Medium::Glossy), tr("Papier brillant")),
+    ];
+    let current = sharpen.map(|s| s.medium);
+    let mut chosen = current;
+    egui::ComboBox::from_id_salt("accentuation-sortie")
+        .selected_text(media.iter().find(|m| m.0 == current).map_or("", |m| m.1))
+        .show_ui(ui, |ui| {
+            for (m, name) in media {
+                ui.selectable_value(&mut chosen, m, name);
+            }
+        })
+        .response
+        .accessible_name(tr("Accentuation de sortie"));
+    if chosen != current {
+        *sharpen = chosen.map(|medium| OutputSharpen {
+            medium,
+            strength: sharpen.map_or(Strength::Standard, |s| s.strength),
+        });
+    }
+    if let Some(s) = sharpen {
+        for (k, name) in [
+            (Strength::Low, tr("Faible")),
+            (Strength::Standard, tr("Normale")),
+            (Strength::High, tr("Forte")),
+        ] {
+            ui.radio_value(&mut s.strength, k, name);
+        }
+    }
 }
 
 /// Un nombre de pixels d'export.

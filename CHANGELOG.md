@@ -44,6 +44,9 @@ La photothèque professionnelle, étape par étape.
 - **Dimensions d'export** : grand côté, petit côté, largeur × hauteur (l'image tient
   dans le cadre) ou mégapixels, sans jamais agrandir ; dans la fenêtre Exporter, les
   préréglages et `luma develop --resize short:1080`.
+- **Accentuation de sortie** : pour l'écran, le papier mat ou le papier brillant,
+  faible, normale ou forte, appliquée à l'image à sa taille finale (sur papier, le
+  rayon suit la taille du tirage) ; les aplats restent lisses.
 
 ## 0.2.0 — octobre 2026
 
