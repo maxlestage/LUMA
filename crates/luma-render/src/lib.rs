@@ -466,6 +466,30 @@ mod tests {
     }
 
     #[test]
+    fn export_preset_gives_the_cropped_long_edge() {
+        let p = photo();
+        let mut settings = Settings::default();
+        settings.crop.left = 0.25;
+        settings.crop.right = 0.75;
+        let dir = std::env::temp_dir().join(format!("luma-export-dev-{}", std::process::id()));
+        let options = export::Options {
+            format: export::Format::Png,
+            bits: 16,
+            long_edge: Some(20),
+            folder: Some(dir.join("sortie")),
+            ..export::Options::default()
+        };
+        let out = export::output_path(Path::new("/x/IMG_1.CR3"), &options);
+        assert_eq!(out, dir.join("sortie/IMG_1.png"));
+        export::develop(&p, &settings, &out, &options).unwrap();
+        let img = image::open(&out).unwrap();
+        // 48 × 64 recadré de moitié en largeur : 24 × 64, réduit à 20 px de grand côté.
+        assert_eq!((img.width(), img.height()), (8, 20));
+        assert_eq!(img.color(), image::ColorType::Rgb16);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn sources_are_cached_and_oriented() {
         let p = photo();
         assert_eq!(p.full_size(), (48, 64));

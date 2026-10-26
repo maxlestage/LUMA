@@ -86,7 +86,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
 | Redimensionnement (côté long) | ✅ |
 | Fenêtre Exporter : format, qualité, profondeur, espace, taille, dossier ; export de toutes les photos du filtre | ✅ |
-| Netteté de sortie, filigrane, copie des métadonnées EXIF, préréglages d'export | ⏳ |
+| Préréglages d'export (format, qualité, profondeur, espace, taille, dossier) : Web, Pleine définition, Écran P3, Impression, et les vôtres ; `luma export-preset`, `luma develop --preset` | ✅ |
+| Netteté de sortie, filigrane, copie des métadonnées EXIF | ⏳ |
 
 ## Bibliothèque et interopérabilité
 

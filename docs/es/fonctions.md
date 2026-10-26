@@ -86,7 +86,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | sRGB, Display P3, Rec. 2020, ProPhoto, con perfil ICC incrustado | ✅ |
 | Cambio de tamaño (lado largo) | ✅ |
 | Ventana Exportar: formato, calidad, profundidad de bits, espacio de color, tamaño, carpeta; exportación de todas las fotos del filtro | ✅ |
-| Enfoque de salida, marca de agua, copia de los metadatos EXIF, ajustes preestablecidos de exportación | ⏳ |
+| Ajustes preestablecidos de exportación (formato, calidad, profundidad, espacio, tamaño, carpeta): web, resolución completa, pantalla P3, impresión, y los suyos; `luma export-preset`, `luma develop --preset` | ✅ |
+| Enfoque de salida, marca de agua, copia de los metadatos EXIF | ⏳ |
 
 ## Biblioteca e interoperabilidad
 

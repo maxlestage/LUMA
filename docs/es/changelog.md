@@ -16,6 +16,10 @@ La fototeca profesional, paso a paso.
   tener en cuenta los acentos) y filtros (valoración, bandera, etiqueta, fechas, ISO,
   focal, cámara, objetivo, palabra clave). 100 000 fotos exploradas en 4 a 25 ms.
   `--keywords` cuenta palabras clave, cámaras y objetivos.
+- **Ajustes preestablecidos de exportación**: formato, calidad, profundidad, espacio,
+  tamaño y carpeta guardados con un nombre; cuatro de serie (web, resolución completa,
+  pantalla P3, impresión) y los suyos, compartidos por la app y la línea de comandos
+  (`luma export-preset`, `luma develop --preset Web`).
 
 ## 0.2.0 — octubre de 2026
 

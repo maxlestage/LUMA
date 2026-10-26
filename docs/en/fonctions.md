@@ -85,7 +85,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | sRGB, Display P3, Rec. 2020, ProPhoto, with an embedded ICC profile | ✅ |
 | Resizing (long edge) | ✅ |
 | Export dialog: format, quality, bit depth, colour space, size, folder; export every photo in the filter | ✅ |
-| Output sharpening, watermark, copying EXIF metadata, export presets | ⏳ |
+| Export presets (format, quality, bit depth, colour space, size, folder): web, full resolution, P3 display, print, and your own; `luma export-preset`, `luma develop --preset` | ✅ |
+| Output sharpening, watermark, copying EXIF metadata | ⏳ |
 
 ## Library and interoperability
 
