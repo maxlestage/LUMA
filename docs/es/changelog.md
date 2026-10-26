@@ -102,6 +102,10 @@ La fototeca profesional, paso a paso.
 - **Pincel que sigue los bordes**: marque «Seguir los bordes» y el pincel solo pinta
   los tonos cercanos al centro de cada toque; la zona se detiene en el contorno de un
   cielo, una pared o una cara, sin desbordar.
+- **Combinaciones de máscaras**: «Combinar» añade, resta o interseca otra forma
+  (degradado lineal o radial, pincel, cada una invertible); un radial al que se le
+  resta otro se convierte en un anillo, un pincel restado protege una cara bajo un
+  degradado.
 - **Perfiles ICC leídos** (un paso hacia la prueba en pantalla): perfiles de
   pantallas (matriz y curvas) y de impresoras y papeles (tablas lut8, lut16, A→B y
   B→A, versiones 2 y 4), en ambos sentidos y para las cuatro intenciones de

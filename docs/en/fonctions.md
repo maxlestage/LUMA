@@ -57,7 +57,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
 | | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
-| | Mask combinations; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
+| | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
+| | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Snapshots, sync across multiple photos | ⏳ |

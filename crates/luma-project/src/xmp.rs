@@ -822,7 +822,14 @@ mod tests {
                 erase: false,
             });
         }
-        s.masks = vec![sky, brush];
+        // Un masque radial dont on retire un pinceau inversé.
+        let mut combined = crate::Mask::radial();
+        combined.parts.push(crate::Part {
+            combine: crate::Combine::Subtract,
+            shape: brush.shape.clone(),
+            invert: true,
+        });
+        s.masks = vec![sky, brush, combined];
         s.lens.remove_ca = true;
         s.lens.camera = false;
         s.lens.distortion = 12.0;
@@ -844,6 +851,14 @@ mod tests {
         // Sans l'étiquette, les corrections du boîtier restent actives.
         let without = text.replace("crs:LensProfileEnable=\"0\"", "");
         assert!(read(&without).unwrap().lens.camera);
+    }
+
+    #[test]
+    fn masks_without_parts_still_read() {
+        // Un masque enregistré avant les combinaisons n'a pas de parties.
+        let old: crate::Mask = serde_json::from_str(r#"{"name":"A","shape":{"kind":"full"}}"#).unwrap();
+        assert!(old.parts.is_empty());
+        assert!(!serde_json::to_string(&old).unwrap().contains("parts"));
     }
 
     #[test]
