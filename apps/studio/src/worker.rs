@@ -674,6 +674,9 @@ fn thumbnail_loop(
                 }
             }
         };
+        if saved_thumbnail(&path, &sender, &repaint) {
+            continue;
+        }
         if quick_thumbnail(&path, &sender, &repaint) {
             pending.push_back(path);
         } else {
@@ -701,7 +704,33 @@ fn quick_thumbnail(
     true
 }
 
-/// La vignette rendue par LÜMA, avec les réglages de la photo.
+/// La vignette déjà rendue avec les réglages actuels de la photo, enregistrée à une
+/// visite précédente. `false` s'il n'y en a pas.
+fn saved_thumbnail(
+    path: &Path,
+    sender: &Sender<Event>,
+    repaint: &Arc<dyn Fn() + Send + Sync>,
+) -> bool {
+    let Some(img) = thumbnail_file(path).and_then(|f| luma_render::thumbnail::load(&f)) else {
+        return false;
+    };
+    let _ = sender.send(Event::Thumbnail {
+        path: path.to_path_buf(),
+        size: [img.width() as usize, img.height() as usize],
+        rgba: to_rgba(img.as_raw(), false),
+    });
+    repaint();
+    true
+}
+
+/// Le fichier de la vignette d'une photo avec ses réglages actuels.
+fn thumbnail_file(path: &Path) -> Option<PathBuf> {
+    let dir = crate::dialogs::duplicates_dir()?;
+    luma_render::thumbnail::path_for(path, read_sidecar(path).as_ref(), 320, &dir)
+}
+
+/// La vignette rendue par LÜMA, avec les réglages de la photo ; enregistrée pour les
+/// visites suivantes.
 fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() + Send + Sync>) {
     let Ok(photo) = crate::dialogs::open_photo(path) else {
         return;
@@ -711,6 +740,10 @@ fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() 
         return;
     };
     let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
+    if let Some(file) = thumbnail_file(path) {
+        let _ =
+            luma_render::thumbnail::store(&file, &rgb, r.image.width as u32, r.image.height as u32);
+    }
     let _ = sender.send(Event::Thumbnail {
         path: path.to_path_buf(),
         size: [r.image.width, r.image.height],

@@ -33,7 +33,7 @@ const BAND: usize = 64;
 const SMALLEST: usize = 512;
 
 /// La signature du fichier d'origine : taille et date de modification.
-fn signature(source: &Path) -> Option<(u64, u128)> {
+pub(crate) fn signature(source: &Path) -> Option<(u64, u128)> {
     let m = std::fs::metadata(source).ok()?;
     let t = m
         .modified()
@@ -361,15 +361,19 @@ impl Duplicate {
     }
 }
 
-/// Le ménage : au‑delà de `budget` octets, les doublons servis il y a le plus
-/// longtemps partent.
+/// Le ménage : au‑delà de `budget` octets, les doublons et les vignettes servis il y a
+/// le plus longtemps partent.
 pub fn trim(dir: &Path, budget: u64) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
     let mut files: Vec<(std::time::SystemTime, u64, PathBuf)> = entries
         .flatten()
-        .filter(|e| e.path().extension().is_some_and(|x| x == "lumadup"))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .is_some_and(|x| x == "lumadup" || x == crate::thumbnail::EXTENSION)
+        })
         .filter_map(|e| {
             let m = e.metadata().ok()?;
             Some((m.modified().ok()?, m.len(), e.path()))
@@ -397,15 +401,19 @@ pub fn usage(dir: &Path) -> u64 {
     })
 }
 
-/// Vide le dossier des doublons (y compris ceux à moitié écrits) ; rend la place
-/// libérée, en octets.
+/// Vide le dossier des doublons, vignettes comprises (et ce qui est à moitié écrit) ;
+/// rend la place libérée, en octets.
 pub fn clear(dir: &Path) -> u64 {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return 0;
     };
     entries
         .flatten()
-        .filter(|e| e.path().extension().is_some_and(|x| x == "lumadup" || x == "tmp"))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .is_some_and(|x| x == "lumadup" || x == "tmp" || x == crate::thumbnail::EXTENSION)
+        })
         .filter_map(|e| {
             let len = e.metadata().ok()?.len();
             std::fs::remove_file(e.path()).ok().map(|()| len)
