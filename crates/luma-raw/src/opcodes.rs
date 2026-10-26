@@ -234,27 +234,59 @@ pub fn apply(ops: &[Opcode], img: &mut RgbImage, frame: Frame) {
                 distortion,
                 vignetting,
                 zoom,
-            } => {
-                let (cx, cy, m) = frame.center([0.5, 0.5]);
-                // La lumière d'abord, là où elle est tombée ; puis chaque point à sa place.
-                img.data.par_chunks_mut(img.width).enumerate().for_each(|(y, row)| {
-                    let dy = (y as f64 + 0.5 - cy) / m;
-                    for (x, px) in row.iter_mut().enumerate() {
-                        let dx = (x as f64 + 0.5 - cx) / m;
-                        let v = spline(knots, vignetting, (dx * dx + dy * dy).sqrt()).max(1e-4);
-                        for c in px.iter_mut() {
-                            *c /= v as f32;
-                        }
-                    }
-                });
-                remap(img, |x, y, c| {
-                    let (dx, dy) = ((x - cx) / (m * zoom), (y - cy) / (m * zoom));
-                    let d = spline(knots, &distortion[c], (dx * dx + dy * dy).sqrt());
-                    (cx + dx * d * m, cy + dy * d * m)
-                });
-            }
+            } => splines(img, frame, knots, distortion, vignetting, *zoom),
         }
     }
+}
+
+/// Les corrections en courbes, en une passe : chaque pixel corrigé va chercher sa
+/// valeur, couleur par couleur, là où l'objectif l'a posée, et lui rend la lumière que
+/// l'objectif y a perdue.
+///
+/// Tout ce qui dépend du rayon est tabulé une fois, en fonction de son carré (pas de
+/// racine ni de recherche par pixel) : le rapport de rayon du rouge, du vert et du bleu,
+/// et le gain de lumière au point d'où vient le vert (le rouge et le bleu en viennent à
+/// moins d'un millième de rayon près).
+fn splines(img: &mut RgbImage, frame: Frame, knots: &[f64], distortion: &[Vec<f64>; 3], vignetting: &[f64], zoom: f64) {
+    const N: usize = 1024;
+    let (cx, cy, m) = frame.center([0.5, 0.5]);
+    // Les rayons de l'image corrigée vont de 0 à 1 sur l'échelle agrandie.
+    let table: Vec<[f32; 4]> = (0..=N + 1)
+        .map(|i| {
+            let r = (i as f64 / N as f64).sqrt();
+            let d = distortion.each_ref().map(|d| spline(knots, d, r));
+            let light = 1.0 / spline(knots, vignetting, r * zoom * d[1]).max(1e-4);
+            [d[0] as f32, d[1] as f32, d[2] as f32, light as f32]
+        })
+        .collect();
+    let (w, h) = (img.width, img.height);
+    let src = img.data.clone();
+    let (cx, cy, unit) = (cx as f32, cy as f32, (m * zoom) as f32);
+    let (mx, my) = ((w - 1) as f32, (h - 1) as f32);
+    img.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+        let dy = (y as f32 + 0.5 - cy) / unit;
+        for (x, px) in row.iter_mut().enumerate() {
+            let dx = (x as f32 + 0.5 - cx) / unit;
+            let t = ((dx * dx + dy * dy) * N as f32).min(N as f32);
+            let k = t as usize;
+            let f = t - k as f32;
+            let (a, b) = (table[k], table[k + 1]);
+            let light = a[3] + (b[3] - a[3]) * f;
+            for (c, v) in px.iter_mut().enumerate() {
+                let d = a[c] + (b[c] - a[c]) * f;
+                let sx = (cx + dx * d * unit - 0.5).clamp(0.0, mx);
+                let sy = (cy + dy * d * unit - 0.5).clamp(0.0, my);
+                let (x0, y0) = (sx as usize, sy as usize);
+                let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
+                let (fx, fy) = (sx - x0 as f32, sy - y0 as f32);
+                let (p, q) = (src[y0 * w + x0][c], src[y0 * w + x1][c]);
+                let top = p + (q - p) * fx;
+                let (p, q) = (src[y1 * w + x0][c], src[y1 * w + x1][c]);
+                let bottom = p + (q - p) * fx;
+                *v = (top + (bottom - top) * fy) * light;
+            }
+        }
+    });
 }
 
 /// Le vignetage, sur une mosaïque (une valeur par photosite) : `OpcodeList2`, avant le
