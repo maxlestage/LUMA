@@ -384,6 +384,89 @@ fn camera_lens_corrections_can_be_turned_off() {
     );
 }
 
+/// La saturation moyenne du centre de la photo, dans une capture en 1440 × 900.
+fn saturation(image: &image::RgbaImage) -> f64 {
+    let (x0, y0, w, h) = (300, 200, 600, 450);
+    let sum: u64 = image::imageops::crop_imm(image, x0, y0, w, h)
+        .to_image()
+        .pixels()
+        .map(|p| {
+            let (r, g, b) = (i32::from(p[0]), i32::from(p[1]), i32::from(p[2]));
+            u64::from((r.max(g).max(b) - r.min(g).min(b)).unsigned_abs())
+        })
+        .sum();
+    sum as f64 / f64::from(w * h)
+}
+
+/// Le profil sRGB aux primaires rapprochées du blanc : une « imprimante » plus terne.
+fn dull_profile() -> Vec<u8> {
+    let mut bytes = luma_color::icc::profile(luma_color::OutputSpace::Srgb);
+    let tag = |bytes: &[u8], sig: &[u8; 4]| {
+        let at = bytes.windows(4).position(|w| w == sig).unwrap();
+        u32::from_be_bytes(bytes[at + 4..at + 8].try_into().unwrap()) as usize + 8
+    };
+    let read = |bytes: &[u8], at: usize| {
+        i32::from_be_bytes(bytes[at..at + 4].try_into().unwrap()) as f32 / 65536.0
+    };
+    let cols: Vec<usize> = [b"rXYZ", b"gXYZ", b"bXYZ"]
+        .iter()
+        .map(|s| tag(&bytes, s))
+        .collect();
+    let white: Vec<f32> = (0..3)
+        .map(|i| cols.iter().map(|&c| read(&bytes, c + 4 * i)).sum())
+        .collect();
+    for &c in &cols {
+        for i in 0..3 {
+            let v = 0.15 * read(&bytes, c + 4 * i) + 0.85 * white[i] / 3.0;
+            bytes[c + 4 * i..c + 4 * i + 4]
+                .copy_from_slice(&((v * 65536.0).round() as i32).to_be_bytes());
+        }
+    }
+    bytes
+}
+
+#[test]
+fn soft_proofing_shows_the_print() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("epreuvage") else {
+        return;
+    };
+    s.studio().tool = luma_studio::app::Tool::Light;
+    s.wait();
+    let before = saturation(&s.harness.render().unwrap());
+    let dir = s
+        .studio()
+        .current_path()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    let icc = dir.join("Terne.icc");
+    std::fs::write(&icc, dull_profile()).unwrap();
+    s.studio().load_proof_profile(&icc);
+    assert!(s.studio().proofing_active());
+    s.wait();
+    s.capture("epreuvage");
+    let proofed = saturation(&s.harness.render().unwrap());
+    assert!(
+        proofed < before * 0.9,
+        "l'épreuvage ternit la photo : {before:.2} → {proofed:.2}"
+    );
+    // Coupé, la photo revient telle quelle.
+    s.studio().set_proofing(false, false);
+    s.wait();
+    let back = saturation(&s.harness.render().unwrap());
+    assert!(
+        (back - before).abs() < before * 0.02,
+        "{before:.2} → {back:.2}"
+    );
+    // Un fichier qui n'est pas un profil est refusé sans rien casser.
+    let junk = dir.join("faux.icc");
+    std::fs::write(&junk, b"pas un profil").unwrap();
+    s.studio().load_proof_profile(&junk);
+    assert!(!s.studio().proofing_active());
+}
+
 #[test]
 fn crop_tool_and_export_window() {
     let _gpu = one_at_a_time();
