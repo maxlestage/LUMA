@@ -118,6 +118,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Reads XMP files (`IMG_0001.xmp` sidecar), writes the same format | ✅ automatic saving in the app |
 | Folder filmstrip with thumbnails, ← → navigation | ✅ |
 | Grid, ratings (0 to 5), flags (P, X, U), filter by rating and flag, stored in the XMP | ✅ |
+| Full-screen culling from the keyboard (F): ratings, flags, color labels (6 to 9), next photo by itself (A), Esc to leave; labels stored under the format's names in the XMP, found in French, English and Spanish | ✅ |
 | Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
 | Instant thumbnails (the preview embedded in the raw file, in 15 ms), then rendered with the adjustments and saved losslessly for later visits | ✅ |
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
