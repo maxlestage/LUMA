@@ -112,6 +112,10 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Manchas del sensor**: «Ver las manchas» hace resaltar el polvo del sensor como
+  puntos oscuros; «Quitar el polvo» lo encuentra en las zonas uniformes (un cielo,
+  una pared) y pone un corrector en cada mancha, sin tocar texturas, cables ni el
+  desenfoque del fondo.
 - **Perfiles ICC leídos** (un paso hacia la prueba en pantalla): perfiles de
   pantallas (matriz y curvas) y de impresoras y papeles (tablas lut8, lut16, A→B y
   B→A, versiones 2 y 4), en ambos sentidos y para las cuatro intenciones de
