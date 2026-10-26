@@ -21,6 +21,7 @@ pub mod color;
 pub mod cube;
 pub mod curve;
 pub mod detail;
+pub mod dust;
 pub mod effects;
 pub mod geometry;
 pub mod lens;

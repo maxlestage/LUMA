@@ -613,6 +613,34 @@ fr = Retouche réglée
 en = Retouch adjusted
 es = Retoque ajustado
 
+fr = Voir les taches
+en = Show spots
+es = Ver las manchas
+
+fr = Les poussières du capteur ressortent en points sombres sur du gris
+en = Sensor dust stands out as dark dots on grey
+es = El polvo del sensor resalta como puntos oscuros sobre gris
+
+fr = Retirer les poussières
+en = Remove dust
+es = Quitar el polvo
+
+fr = Trouve les taches de capteur dans les zones unies et pose un correcteur sur chacune
+en = Finds sensor spots in even areas and puts a healing spot on each one
+es = Encuentra las manchas del sensor en las zonas uniformes y pone un corrector en cada una
+
+fr = Vue des taches : les poussières ressortent en points sombres
+en = Spot view: dust stands out as dark dots
+es = Vista de manchas: el polvo resalta como puntos oscuros
+
+fr = Aucune poussière trouvée.
+en = No dust found.
+es = No se ha encontrado polvo.
+
+fr = {n} poussières retirées
+en = {n} dust spots removed
+es = {n} manchas de polvo eliminadas
+
 fr = Nouvelle source
 en = New source
 es = Nueva fuente

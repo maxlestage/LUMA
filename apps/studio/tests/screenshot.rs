@@ -675,6 +675,46 @@ fn retouch_spots() {
 }
 
 #[test]
+fn sensor_dust() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("poussieres") else {
+        return;
+    };
+    // Le fond gris et flou du RAF : ses taches de capteur.
+    let raf = s.dir.join("AFXT2720.RAF");
+    if !raf.exists() {
+        return;
+    }
+    s.studio().open_path(&raf);
+    s.wait();
+    s.keys(&[(NONE, Key::Q)]);
+    let st = s.studio();
+    st.show_dust = true;
+    s.wait();
+    s.capture("poussieres-vue");
+    // Retirées d'un coup : des correcteurs posés, puis rien de plus au second essai.
+    s.studio().find_dust();
+    s.wait();
+    s.wait();
+    let found = s.studio().settings.spots.len();
+    assert!(found > 0 && found <= 60, "{found}");
+    assert!(
+        s.studio()
+            .settings
+            .spots
+            .iter()
+            .all(|p| p.kind == luma_project::SpotKind::Heal)
+    );
+    s.studio().find_dust();
+    s.wait();
+    s.wait();
+    assert_eq!(s.studio().settings.spots.len(), found, "déjà retirées");
+    s.studio().show_dust = false;
+    s.wait();
+    s.capture("poussieres");
+}
+
+#[test]
 fn masks_combined() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("masques-combines") else {

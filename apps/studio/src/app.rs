@@ -411,6 +411,8 @@ struct Request {
     /// La version de la table d'épreuvage, la simulation et l'alerte de gamut.
     proof: Option<(u64, bool, bool)>,
     scene: bool,
+    dust_view: bool,
+    find_dust: bool,
 }
 
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
@@ -558,6 +560,10 @@ pub struct Studio {
     pub selected_spot: Option<usize>,
     /// Le rayon des nouvelles retouches, en fraction de la largeur.
     pub spot_radius: f32,
+    /// La vue des taches : les poussières du capteur ressortent en points sombres.
+    pub show_dust: bool,
+    /// Les poussières demandées au prochain rendu.
+    dust_pending: bool,
     brush: masking::Brush,
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
@@ -749,6 +755,8 @@ impl Studio {
             retouch: None,
             selected_spot: None,
             spot_radius: 0.02,
+            show_dust: false,
+            dust_pending: false,
             brush: masking::Brush::default(),
             show_mask: false,
             mask_style: masking::Overlay::default(),
@@ -1385,6 +1393,12 @@ impl Studio {
                         self.mask_overlay = None;
                     }
                     self.scene_map = frame.scene.clone();
+                    if let Some(found) = frame.dust.clone()
+                        && self.dust_pending
+                    {
+                        self.dust_pending = false;
+                        self.add_dust(found);
+                    }
                     let image = ColorImage::from_rgba_unmultiplied(frame.size, &frame.rgba);
                     match &mut self.texture {
                         Some(t) => t.set(image, TextureOptions::LINEAR),
@@ -1789,6 +1803,8 @@ impl Studio {
                 .active()
                 .map(|p| (self.proofing.version, p.simulate, p.gamut)),
             scene: self.retouch.is_some() || self.selected_spot.is_some(),
+            dust_view: self.show_dust && self.tool == Tool::Masks,
+            find_dust: self.dust_pending,
         };
         if self.last_request.as_ref() == Some(&request) {
             return;
@@ -1802,6 +1818,8 @@ impl Studio {
             crate::worker::Extras {
                 clipping: self.clipping,
                 scene: request.scene,
+                dust_view: request.dust_view,
+                find_dust: request.find_dust,
             },
             self.proofing.active(),
         );
@@ -1979,9 +1997,10 @@ impl Studio {
                     self.export_open = false;
                 } else if self.paste_open {
                     self.paste_open = false;
-                } else if self.retouch.is_some() || self.selected_spot.is_some() {
+                } else if self.retouch.is_some() || self.selected_spot.is_some() || self.show_dust {
                     self.retouch = None;
                     self.selected_spot = None;
+                    self.show_dust = false;
                 } else {
                     self.selected_mask = None;
                 }
@@ -4664,6 +4683,11 @@ impl Studio {
                 "Retouche : cliquez une tache, tirez la zone ou sa source, Échap pour quitter",
             ));
         }
+        if self.tool == Tool::Masks && self.show_dust {
+            badges.push(tr(
+                "Vue des taches : les poussières ressortent en points sombres",
+            ));
+        }
         for (k, b) in badges.iter().enumerate() {
             let p = rect.min + vec2(24.0, 24.0 + k as f32 * 26.0);
             let galley = painter.layout_no_wrap(
@@ -4713,6 +4737,35 @@ impl Studio {
         .inner
     }
 
+    /// Demande au prochain rendu de chercher les poussières du capteur.
+    pub fn find_dust(&mut self) {
+        if self.photo.is_some() {
+            self.dust_pending = true;
+        }
+    }
+
+    /// Ajoute les poussières trouvées par le rendu, sauf celles déjà sous une retouche.
+    fn add_dust(&mut self, found: Vec<luma_project::Spot>) {
+        let aspect = self.image_size[1].max(1) as f32 / self.image_size[0].max(1) as f32;
+        let covered = |s: &luma_project::Spot| {
+            self.settings.spots.iter().any(|o| {
+                let (dx, dy) = (s.center.0 - o.center.0, (s.center.1 - o.center.1) * aspect);
+                (dx * dx + dy * dy).sqrt() < o.radius
+            })
+        };
+        let new: Vec<_> = found.into_iter().filter(|s| !covered(s)).collect();
+        if new.is_empty() {
+            self.status = tr("Aucune poussière trouvée.").into();
+            return;
+        }
+        let n = new.len();
+        self.settings.spots.extend(new);
+        self.selected_spot = None;
+        self.status = trf("{n} poussières retirées", &[("n", &n)]);
+        self.commit(trf("{n} poussières retirées", &[("n", &n)]));
+        self.touch();
+    }
+
     /// Panneau Retouche : correcteur et tampon, la liste des retouches et les réglages de
     /// celle qui est choisie.
     fn retouch_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
@@ -4745,6 +4798,22 @@ impl Studio {
                         {
                             self.act(action);
                         }
+                    }
+                });
+                // Les taches de capteur : les voir, puis les retirer d'un coup.
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut self.show_dust, tr("Voir les taches"))
+                        .on_hover_text(tr(
+                            "Les poussières du capteur ressortent en points sombres sur du gris",
+                        ));
+                    if ui
+                        .add_enabled(!self.dust_pending, egui::Button::new(tr("Retirer les poussières")))
+                        .on_hover_text(tr(
+                            "Trouve les taches de capteur dans les zones unies et pose un correcteur sur chacune",
+                        ))
+                        .clicked()
+                    {
+                        self.find_dust();
                     }
                 });
                 let spec = |label, min, max, default, decimals| SliderSpec {

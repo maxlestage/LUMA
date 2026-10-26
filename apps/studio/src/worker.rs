@@ -27,6 +27,8 @@ pub struct Frame {
     /// Une copie réduite de la base (linéaire), quand un masque a une plage : l'écran
     /// y lit les tons et les couleurs pour montrer sa zone (touche O).
     pub scene: Option<Arc<RgbImage>>,
+    /// Les poussières trouvées sur la base, quand on les a demandées.
+    pub dust: Option<Vec<luma_project::Spot>>,
 }
 
 pub enum Event {
@@ -131,14 +133,22 @@ struct RenderJob {
     proof: Option<Proofed>,
     /// Joindre une copie réduite de la base (la retouche y cherche ses sources).
     scene: bool,
+    /// Montrer la vue des taches à la place de la photo.
+    dust_view: bool,
+    /// Chercher les poussières sur la base.
+    find_dust: bool,
 }
 
 /// Ce qu'un rendu joint à l'image : l'écrêtage peint par‑dessus, une copie réduite de
-/// la base.
+/// la base, la vue des taches, les poussières trouvées.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Extras {
     pub clipping: bool,
     pub scene: bool,
+    /// La vue des taches (les poussières du capteur en points sombres).
+    pub dust_view: bool,
+    /// Les poussières à chercher, jointes au rendu.
+    pub find_dust: bool,
 }
 
 /// L'épreuvage demandé : la table, la simulation de l'impression, l'alerte de gamut.
@@ -330,6 +340,8 @@ impl Worker {
             clipping: extras.clipping,
             proof,
             scene: extras.scene,
+            dust_view: extras.dust_view,
+            find_dust: extras.find_dust,
         });
     }
 
@@ -624,6 +636,12 @@ fn render_loop(
         if job.clipping {
             clip_overlay(&mut rgba);
         }
+        if job.dust_view {
+            rgba = luma_image::dust::view(&base.image);
+        }
+        let dust = job
+            .find_dust
+            .then(|| luma_image::dust::find(&base.image, 60));
         let scene = (job.scene
             || job
                 .settings
@@ -642,6 +660,7 @@ fn render_loop(
             millis: start.elapsed().as_secs_f32() * 1000.0,
             gpu: on_gpu,
             scene,
+            dust,
         };
         let _ = sender.send(Event::Rendered(Box::new(frame)));
         repaint();
