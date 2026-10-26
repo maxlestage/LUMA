@@ -4,6 +4,11 @@
 
 La fototeca profesional, paso a paso.
 
+- **Más rápido**: la reducción de ruido de color (activa por defecto) es tres veces
+  más rápida sin cambiar un solo píxel; la exportación a resolución completa tarda
+  entre un 25 y un 30 % menos, y la vista previa con ajustes intensos responde un 25 %
+  más rápido.
+
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
   focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en

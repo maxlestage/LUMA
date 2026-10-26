@@ -160,8 +160,10 @@ et blanc, vignetage après recadrage et grain existent).
 - Vignettes du catalogue en cache sur disque, partagées entre la grille et le film.
 - Le test GPU `same_as_cpu` a planté une fois (SIGSEGV) sur le Vulkan logiciel de la CI,
   sans changement de `luma-gpu` : à surveiller.
-- L'export en pleine définition prend 1,8 à 5,3 s par RAW (4 cœurs) : la piste de vitesse
-  la plus visible pour l'export.
+- L'export en pleine définition : reste l'encodeur JPEG (≈ 0,6 s pour 24 Mpx, un seul cœur)
+  et chaque étape qui alloue une image neuve (une mémoire neuve coûte cher à la première
+  écriture) ; réutiliser les tampons entre étapes.
+- Chercher les autres mémoires neuves lues avant d'être écrites (`+=` sur `Plane::new`).
 - La suppression d'une branche distante par `git push --delete` est refusée par le
   proxy de cette session : les branches `amelioration/*` restent sur le dépôt.
 
@@ -176,3 +178,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 2.1 Préréglages d'export dans le moteur (`luma_render::export` : `Options`, `Preset`, `Presets`, `develop`), partagés par l'app et la ligne de commande : quatre de base (Web, Pleine définition, Écran P3, Impression) et ceux de l'utilisateur (`Exports.json`) ; `luma export-preset`, `luma develop --preset` | Export « Web » (2048 px) d'un RAW, rendu et encodage : 307 à 626 ms selon le boîtier ; « Pleine définition » : 1,8 à 5,3 s (4 cœurs) |
 | 2026-10-26 | 1.3 Collections manuelles et dynamiques dans le catalogue (`luma_library::Collection`, `luma catalog --smart`, `--add`, `--collections`, `--collection`) ; anciens index relus tels quels | Une collection dynamique coûte une recherche (4 à 25 ms pour 100 000 photos) ; index du corpus avec une collection de deux photos : 1,6 → 1,8 Ko |
 | 2026-10-26 | 2.2 Modèles de nom des fichiers exportés (`luma_render::export::file_name`, `NameFields`) : 13 repères (date et heure de prise de vue, séquence, boîtier, objectif, ISO, note, libellé…), alias anglais et espagnols, sous‑dossiers par « / », caractères interdits remplacés, noms en double numérotés ; fenêtre Exporter (modèle vérifié en direct), préréglages, `luma develop --name` | Nom calculé à partir de l'EXIF déjà lu : rien de plus à lire ni à décoder |
+| 2026-10-26 | Vitesse : réduction du bruit fusionnée (couleur calculée directement à demi‑résolution, agrandie ligne par ligne, plus de copie encodée ni de plans pleine taille) ; positions d'agrandissement calculées une fois ; `Plane::downscale` écrit sa première ligne sans la lire (une mémoire neuve lue avant d'être écrite coûte deux fautes de page) | Étape bruit, pleine définition (4 cœurs, médiane de 5) : NEF 674 → 234 ms, CR3 1205 → 383 ms, RAF 722 → 256 ms, ARW 639 → 202 ms, DNG 351 → 113 ms ; rendu complet −25 à −30 % (NEF 1659 → 1129 ms) ; aperçu 2048 px, réglages lourds P50 : NEF 350 → 263 ms, CR3 398 → 312 ms ; JPEG identiques octet pour octet, test au bit près contre l'ancienne version |

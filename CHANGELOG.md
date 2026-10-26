@@ -4,6 +4,10 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Plus rapide** : la réduction du bruit de couleur (active par défaut) trois fois
+  plus rapide, sans changer un seul pixel ; export en pleine définition 25 à 30 %
+  plus court, aperçu avec réglages lourds environ 25 % plus vif.
+
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en

@@ -4,6 +4,10 @@
 
 The professional photo library, step by step.
 
+- **Faster**: colour noise reduction (on by default) is three times faster without
+  changing a single pixel; full-resolution export takes 25 to 30% less time, and the
+  preview with heavy adjustments is about 25% more responsive.
+
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and
