@@ -1,7 +1,8 @@
 // `cargo run --release -p luma-gpu --example measure -- photo.ARW …` : les chiffres de
 // la section Performance du site, mesurés sur de vrais RAW, comme l'app les vit :
 //
-// - vignette : un RAW jamais ouvert jusqu'à sa vignette 320 px (la bibliothèque) ;
+// - vignette : un RAW jamais ouvert jusqu'à sa vignette 320 px instantanée (l'aperçu
+//   intégré, décodé à taille réduite), puis jusqu'à son vrai rendu (la bibliothèque) ;
 // - ouverture : un RAW jusqu'à son premier aperçu 2048 px (première fois), puis depuis
 //   son doublon de travail (les fois suivantes) ;
 // - aperçu après réglage : un curseur bouge, finition sur le GPU ;
@@ -45,13 +46,18 @@ fn main() {
     let gpu = luma_gpu::Gpu::any().expect("un GPU");
     println!("GPU : {}", gpu.name());
     let dir = std::env::temp_dir().join(format!("luma-measure-{}", std::process::id()));
-    let mut rows: Vec<[f64; 6]> = Vec::new();
+    let mut rows: Vec<[f64; 7]> = Vec::new();
     for path in &paths {
+        let t = Instant::now();
+        let quick = luma_raw::RawPhoto::embedded_preview(std::path::Path::new(path), 320);
+        let thumbnail = ms(t);
         let t = Instant::now();
         let photo = Photo::open(path).unwrap();
         let s = photo.default_settings();
         let _ = photo.render(&s, Size::Fit(320), &Cancel::new()).unwrap();
-        let thumbnail = ms(t);
+        let rendered = ms(t);
+        // Sans aperçu intégré, la vignette est le vrai rendu.
+        let thumbnail = if quick.is_some() { thumbnail } else { rendered };
         drop(photo);
 
         let t = Instant::now();
@@ -83,19 +89,19 @@ fn main() {
         let adjust = median(runs);
         let mem_dup = memory_mb(&photo);
         println!(
-            "{path} : vignette {thumbnail:.0} ms · ouverture {open_raw:.0} ms (RAW), {open_dup:.0} ms (doublon) · \
+            "{path} : vignette {thumbnail:.0} ms (rendu {rendered:.0} ms) · ouverture {open_raw:.0} ms (RAW), {open_dup:.0} ms (doublon) · \
              réglage P50 {adjust:.1} ms · mémoire {mem_raw:.0} Mo (RAW), {mem_dup:.0} Mo (doublon)"
         );
-        rows.push([thumbnail, open_raw, open_dup, adjust, mem_raw, mem_dup]);
+        rows.push([thumbnail, open_raw, open_dup, adjust, mem_raw, mem_dup, rendered]);
     }
     let _ = std::fs::remove_dir_all(&dir);
-    let m: [f64; 6] = std::array::from_fn(|k| median(rows.iter().map(|r| r[k]).collect()));
+    let m: [f64; 7] = std::array::from_fn(|k| median(rows.iter().map(|r| r[k]).collect()));
     println!(
-        "médianes : vignette {:.0} ms · ouverture {:.0} ms (RAW), {:.0} ms (doublon) · réglage {:.1} ms · mémoire {:.0} Mo (RAW), {:.0} Mo (doublon)",
-        m[0], m[1], m[2], m[3], m[4], m[5]
+        "médianes : vignette {:.0} ms (rendu {:.0} ms) · ouverture {:.0} ms (RAW), {:.0} ms (doublon) · réglage {:.1} ms · mémoire {:.0} Mo (RAW), {:.0} Mo (doublon)",
+        m[0], m[6], m[1], m[2], m[3], m[4], m[5]
     );
     println!(
-        "site: vignette={:.0} ouverture_raw={:.0} ouverture={:.0} reglage={:.1} memoire_raw={:.0} memoire={:.0}",
-        m[0], m[1], m[2], m[3], m[4], m[5]
+        "site: vignette={:.0} vignette_rendu={:.0} ouverture_raw={:.0} ouverture={:.0} reglage={:.1} memoire_raw={:.0} memoire={:.0}",
+        m[0], m[6], m[1], m[2], m[3], m[4], m[5]
     );
 }
