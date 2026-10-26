@@ -25,7 +25,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   (note, drapeau, libellé, plages de date, d'ISO, de focale) dans `luma-library`, testés.
 - [x] 1.3 Collections manuelles et dynamiques (règles : note, date, boîtier, objectif,
   ISO), enregistrées dans le catalogue ; `luma catalog --collection`.
-- [ ] 1.4 Mots‑clés dans l'app : saisie, ajout à plusieurs photos, liste des mots‑clés
+- [x] 1.4 Mots‑clés dans l'app : saisie, ajout à plusieurs photos, liste des mots‑clés
   du catalogue avec leur nombre.
 - [ ] 1.5 L'app ouvre le catalogue : panneau Photothèque (dossiers, collections),
   grille triée par date, recherche et filtres.
@@ -152,6 +152,9 @@ et blanc, vignetage après recadrage et grain existent).
 
 ## Idées
 
+- Le trait d'union insécable (U+2011) n'est pas dans la police de l'app : un texte
+  affiché qui en contient (descriptions de films : « sous‑exposé », « vert‑cyan »)
+  fait échouer le rendu de test ; à remplacer par un trait d'union simple à l'écran.
 - Les textes de présentation parlent encore d'« IA locale » (README, architecture,
   feuille de route) : à retirer, LÜMA n'utilise aucune IA.
 - Les images développées (JPEG, HEIC…) : lire leur EXIF pour la date de prise de vue,
@@ -182,3 +185,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | Vitesse : réduction du bruit fusionnée (couleur calculée directement à demi‑résolution, agrandie ligne par ligne, plus de copie encodée ni de plans pleine taille) ; positions d'agrandissement calculées une fois ; `Plane::downscale` écrit sa première ligne sans la lire (une mémoire neuve lue avant d'être écrite coûte deux fautes de page) | Étape bruit, pleine définition (4 cœurs, médiane de 5) : NEF 674 → 234 ms, CR3 1205 → 383 ms, RAF 722 → 256 ms, ARW 639 → 202 ms, DNG 351 → 113 ms ; rendu complet −25 à −30 % (NEF 1659 → 1129 ms) ; aperçu 2048 px, réglages lourds P50 : NEF 350 → 263 ms, CR3 398 → 312 ms ; JPEG identiques octet pour octet, test au bit près contre l'ancienne version |
 | 2026-10-26 | 1.7 (gain de légèreté) Catalogue en binaire compact (`luma-library/src/store.rs`) : table des textes (dossiers, boîtiers, objectifs, mots‑clés écrits une fois), nombres en longueur variable, arbre construit d'un bloc ; ancien JSON relu et converti ; fichier abîmé refusé sans rien allouer | `cargo run --release -p luma-library --example bench`, 100 000 photos : fichier 33,6 → 7,4 Mo ; relecture 166 → 68 ms ; enregistrement 332 → 121 ms ; recherche inchangée |
 | 2026-10-26 | 2.3 Dimensions d'export (`luma_render::export::Resize`) : grand côté, petit côté, cadre largeur × hauteur, mégapixels, jamais d'agrandissement, calculées sur l'image recadrée ; fenêtre Exporter (choix du mode), préréglages (anciens fichiers `long_edge` relus), `luma develop --resize`, `luma export-preset --size` | Rendu à la taille utile puis réduction exacte : un export « 1920 × 1080 » ou « 12 Mpx » ne rend jamais la pleine définition quand l'image est plus grande |
+| 2026-10-26 | 1.4 Mots‑clés dans l'app : saisie (virgules), ajout et retrait sur toutes les photos choisies (XMP de métadonnées seules pour une photo jamais développée), mots‑clés du dossier avec leur nombre, filtre de la grille ; correction : un XMP qui ne porte que des mots‑clés n'est plus pris pour des réglages | Test de l'interface avec le corpus : deux photos et la photo affichée étiquetées, XMP relus, filtre, retrait ; capture `studio-bibliotheque-mots-cles.png` |

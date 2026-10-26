@@ -143,6 +143,20 @@ pub fn write_sidecar(raw: &Path, settings: &Settings, meta: &xmp::Meta) -> Resul
         .map_err(|e| format!("{} : {e}", target.display()))
 }
 
+/// Change la note, le drapeau ou les mots‑clés d'une photo qui n'est pas ouverte :
+/// ses réglages enregistrés sont gardés tels quels ; sans réglages, seul un XMP de
+/// métadonnées est écrit, et la photo garde son rendu par défaut.
+pub fn write_meta(raw: &Path, meta: &xmp::Meta) -> Result<(), String> {
+    match read_sidecar(raw) {
+        Some(settings) => write_sidecar(raw, &settings, meta),
+        None => {
+            let target = sidecar_path(raw);
+            std::fs::write(&target, xmp::write_meta(meta))
+                .map_err(|e| format!("{} : {e}", target.display()))
+        }
+    }
+}
+
 /// RGB 8 bits → RGBA, avec en option l'indicateur d'écrêtage (touche J) :
 /// rouge où un canal est blanc pur, bleu où tout est noir.
 pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {

@@ -102,6 +102,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
 | Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates, ISO, focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
 | Manual and smart collections (rule: rating, date, camera, lens, ISO, keywords…), saved in the catalogue | ✅ |
+| Keywords in the app: entry (several at once, separated by commas), added to and removed from every selected photo, the folder's keywords with their count, grid filter | ✅ |
 | Catalogue in the app, virtual copies | ⏳ |
 | Importing existing catalogues | ⏳ |
 
