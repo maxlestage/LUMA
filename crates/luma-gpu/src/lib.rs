@@ -9,8 +9,9 @@
 //! GPU travaille.
 //!
 //! L'accentuation, qui n'apparaît qu'à partir de 50 % (en dessous, elle ne se voit
-//! pas), n'est pas encore portée : [`Gpu::can_finish`] dit quand le processeur doit
-//! prendre la main.
+//! pas), se fait en plusieurs passes (l'image avant accentuation, six passes de flou
+//! boîte, puis l'accentuation et la fin). Seul son Masquage n'est pas encore porté :
+//! [`Gpu::can_finish`] dit quand le processeur doit prendre la main.
 
 use std::sync::Mutex;
 
@@ -142,6 +143,19 @@ fn params(s: &Settings, width: usize, height: usize, scale: f32, space: OutputSp
         "OUTPUT",
         &luma_color::rgb_to_rgb(&luma_color::WORKING, &space.primaries()),
     );
+    // L'accentuation (sans Masquage) : rayon des boîtes, force, borne de l'écart.
+    match luma_image::detail::sharpening(&s.detail, scale) {
+        Some(sh) => {
+            p.push("SHARPEN_R", &[luma_core::Plane::box_radius(sh.radius) as f32]);
+            p.push("SHARPEN_AMOUNT", &[sh.amount]);
+            p.push("SHARPEN_LIMIT", &[sh.limit]);
+        }
+        None => {
+            p.push("SHARPEN_R", &[1.0]);
+            p.push("SHARPEN_AMOUNT", &[0.0]);
+            p.push("SHARPEN_LIMIT", &[0.0]);
+        }
+    }
     p
 }
 
@@ -206,6 +220,9 @@ struct Uploaded {
     input: wgpu::Buffer,
     output: wgpu::Buffer,
     readback: wgpu::Buffer,
+    /// Les tampons de l'accentuation (image avant accentuation, deux plans), créés au
+    /// premier besoin.
+    sharp: Option<[wgpu::Buffer; 3]>,
 }
 
 /// Le GPU, prêt à finir des développements.
@@ -213,6 +230,10 @@ pub struct Gpu {
     device: wgpu::Device,
     queue: wgpu::Queue,
     pipeline: wgpu::ComputePipeline,
+    /// Les passes de l'accentuation : `pre`, `box_h`, `box_v`, `post`.
+    sharpen: [wgpu::ComputePipeline; 4],
+    /// De petits tampons à la place de ceux de l'accentuation, quand elle n'a pas lieu.
+    spare: [wgpu::Buffer; 3],
     layout: wgpu::BindGroupLayout,
     name: String,
     max_buffer: u64,
@@ -280,25 +301,47 @@ impl Gpu {
         };
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("finition"),
-            entries: &[entry(0, true), entry(1, true), entry(2, true), entry(3, false)],
+            entries: &[
+                entry(0, true),
+                entry(1, true),
+                entry(2, true),
+                entry(3, false),
+                entry(4, false),
+                entry(5, false),
+                entry(6, false),
+            ],
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("finition"),
             bind_group_layouts: &[Some(&layout)],
             immediate_size: 0,
         });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("finition"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
+        let pipeline_for = |entry: &str| {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some(entry),
+                layout: Some(&pipeline_layout),
+                module: &module,
+                entry_point: Some(entry),
+                compilation_options: Default::default(),
+                cache: None,
+            })
+        };
+        let pipeline = pipeline_for("main");
+        let sharpen = ["pre", "box_h", "box_v", "post"].map(pipeline_for);
+        let spare = ["réserve 4", "réserve 5", "réserve 6"].map(|label| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size: 16,
+                usage: wgpu::BufferUsages::STORAGE,
+                mapped_at_creation: false,
+            })
         });
         Ok(Gpu {
             device,
             queue,
             pipeline,
+            sharpen,
+            spare,
             layout,
             name: format!("{} ({:?})", info.name, info.backend),
             max_buffer: limits.max_storage_buffer_binding_size.min(limits.max_buffer_size),
@@ -311,12 +354,13 @@ impl Gpu {
         &self.name
     }
 
-    /// Le GPU sait-il finir ce développement ? Non si l'accentuation doit s'appliquer
-    /// (pas encore portée) ou si l'image dépasse ce que le GPU accepte d'un bloc.
+    /// Le GPU sait-il finir ce développement ? Non si le Masquage de l'accentuation
+    /// doit s'appliquer (pas encore porté) ou si l'image dépasse ce que le GPU accepte
+    /// d'un bloc.
     pub fn can_finish(&self, s: &Settings, width: usize, height: usize, scale: f32) -> bool {
-        let sharpen = s.detail.sharpen_amount > 0.0 && scale >= 0.5;
+        let masking = s.detail.sharpen_masking > 0.0 && luma_image::detail::sharpening(&s.detail, scale).is_some();
         let bytes = (width * height * 16) as u64;
-        !sharpen && bytes <= self.max_buffer && width * height > 0
+        !masking && bytes <= self.max_buffer && width * height > 0
     }
 
     /// Finit `base` (sortie de `develop_base`, identifiée par `id`) et l'encode en RGBA
@@ -365,9 +409,26 @@ impl Gpu {
                     input,
                     output,
                     readback,
+                    sharp: None,
                 },
             );
             uploaded.truncate(UPLOADED);
+        }
+        let sharpening = luma_image::detail::sharpening(&s.detail, scale).is_some();
+        if sharpening && uploaded[0].sharp.is_none() {
+            let buffer = |label, size| {
+                self.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(label),
+                    size,
+                    usage: wgpu::BufferUsages::STORAGE,
+                    mapped_at_creation: false,
+                })
+            };
+            uploaded[0].sharp = Some([
+                buffer("avant accentuation", (n * 16) as u64),
+                buffer("plan A", (n * 4) as u64),
+                buffer("plan B", (n * 4) as u64),
+            ]);
         }
         let u = &uploaded[0];
 
@@ -385,36 +446,54 @@ impl Gpu {
         };
         let params = storage("paramètres", &params);
         let tables = storage("tables", &tables);
-        let bind = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("finition"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: u.input.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: params.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: tables.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: u.output.as_entire_binding(),
-                },
-            ],
-        });
+        let [mid, a, b] = u.sharp.as_ref().unwrap_or(&self.spare);
+        // Deux jeux de liaisons : le plan lu et le plan écrit échangés, pour les passes
+        // de flou qui se suivent.
+        let bind = |pin: &wgpu::Buffer, pout: &wgpu::Buffer| {
+            self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("finition"),
+                layout: &self.layout,
+                entries: &[
+                    entry(0, &u.input),
+                    entry(1, &params),
+                    entry(2, &tables),
+                    entry(3, &u.output),
+                    entry(4, mid),
+                    entry(5, pin),
+                    entry(6, pout),
+                ],
+            })
+        };
+        let (ab, ba) = (bind(a, b), bind(b, a));
+        let groups = (n as u32).div_ceil(WORKGROUP);
+        let x = groups.min(65535);
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind, &[]);
-            let groups = (n as u32).div_ceil(WORKGROUP);
-            let x = groups.min(65535);
-            pass.dispatch_workgroups(x, groups.div_ceil(x), 1);
+            let mut run = |pipeline: &wgpu::ComputePipeline, bind: &wgpu::BindGroup| {
+                pass.set_pipeline(pipeline);
+                pass.set_bind_group(0, bind, &[]);
+                pass.dispatch_workgroups(x, groups.div_ceil(x), 1);
+            };
+            if sharpening {
+                let [pre, box_h, box_v, post] = &self.sharpen;
+                // pre écrit le plan B ; trois flous horizontaux puis trois verticaux,
+                // en alternant ; le flou final est dans le plan B, que post lit.
+                run(pre, &ab);
+                for (pipeline, bind) in [
+                    (box_h, &ba),
+                    (box_h, &ab),
+                    (box_h, &ba),
+                    (box_v, &ab),
+                    (box_v, &ba),
+                    (box_v, &ab),
+                ] {
+                    run(pipeline, bind);
+                }
+                run(post, &ba);
+            } else {
+                run(&self.pipeline, &ab);
+            }
         }
         encoder.copy_buffer_to_buffer(&u.output, 0, &u.readback, 0, (n * 4) as u64);
         self.queue.submit([encoder.finish()]);
@@ -428,6 +507,14 @@ impl Gpu {
         let out = slice.get_mapped_range().expect("relecture du GPU").to_vec();
         u.readback.unmap();
         out
+    }
+}
+
+/// Une liaison du shader vers un tampon entier.
+fn entry(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
+    wgpu::BindGroupEntry {
+        binding,
+        resource: buffer.as_entire_binding(),
     }
 }
 

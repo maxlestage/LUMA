@@ -88,6 +88,28 @@ fn main() {
         }
         let adjust = median(runs);
         let mem_dup = memory_mb(&photo);
+        // À 3072 px (écran Retina, iPad Pro), l'accentuation s'applique : le GPU la fait
+        // maintenant ; avant, toute la finition repassait au processeur.
+        let big = photo
+            .base(&s, Size::Fit(3072), &Cancel::new(), &mut Timings::default())
+            .unwrap();
+        let (mut on_gpu, mut on_cpu) = (Vec::new(), Vec::new());
+        for i in 0..10 {
+            s.contrast = i as f32 * 2.0;
+            let t = Instant::now();
+            let _ = gpu.finish(&big.image, big.id, big.scale, &s, OutputSpace::DisplayP3);
+            on_gpu.push(ms(t));
+            let t = Instant::now();
+            let mut img = (*big.image).clone();
+            luma_image::finish(&mut img, big.scale, &s, &Cancel::new(), &mut Timings::default()).unwrap();
+            let _ = luma_image::encode8(&img, OutputSpace::DisplayP3);
+            on_cpu.push(ms(t));
+        }
+        let (retina, retina_cpu) = (median(on_gpu), median(on_cpu));
+        println!(
+            "{path} : réglage à 3072 px avec accentuation (×{:.2}) : {retina:.1} ms sur le GPU, {retina_cpu:.0} ms sur le processeur",
+            big.scale
+        );
         println!(
             "{path} : vignette {thumbnail:.0} ms (rendu {rendered:.0} ms) · ouverture {open_raw:.0} ms (RAW), {open_dup:.0} ms (doublon) · \
              réglage P50 {adjust:.1} ms · mémoire {mem_raw:.0} Mo (RAW), {mem_dup:.0} Mo (doublon)"
