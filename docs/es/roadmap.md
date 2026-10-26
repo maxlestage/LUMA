@@ -13,7 +13,7 @@ Es una estimación, no una garantía.
 | 2. Motor | M4–M6 | Pipeline f32, Display P3, EDR/HDR en pantallas XDR, memoria unificada sin copias, grafo de revelado, proyecto versionado | Pruebas del motor en CPU (alternativa) |
 | 3. Alfa | M7–M12 | Mac: fototeca, revelado, exportación. iPhone/iPad: importación desde PhotoKit y Archivos, máscaras con el Apple Pencil, gestos. TestFlight público | — |
 | 4. Beta | M13–M18 | IA local (sujeto, cielo, reducción de ruido) en GPU de Apple, perfiles de cámaras y objetivos, búsqueda, recuperación tras un cierre inesperado | Primera adaptación del renderizado a Vulkan/DX12 |
-| 5. 1.0 | M19–M24 | Mac App Store y App Store, accesibilidad, migración, documentación | — |
+| 5. 1.0 | M19–M24 | App Store (iPhone y iPad), descarga directa (Mac), accesibilidad, migración, documentación | — |
 | 6. Expansión | M25–M36 | Vídeo (timeline, etalonaje), captura conectada (tethering), impresión | Aplicaciones para Windows, Linux y Android sobre el mismo motor |
 
 ## Avance
@@ -52,7 +52,7 @@ Próximos pasos, por orden:
 - **M6**: renderizado idéntico Mac/iPhone con tolerancia ΔE documentada, vista previa P95 < 100 ms en Mac.
 - **M12**: un fotógrafo realiza un flujo completo (importación → selección → revelado → exportación) en Mac o iPad.
 - **M18**: las herramientas avanzadas superan las pruebas de calidad, compatibilidad y rendimiento.
-- **M24**: versión estable publicada en las dos App Store, matriz de compatibilidad pública.
+- **M24**: versión estable publicada en el App Store (iPhone y iPad) y en descarga directa (Mac), matriz de compatibilidad pública.
 
 ## Riesgos principales
 
