@@ -368,8 +368,10 @@ fn curve(d: &[u8]) -> Result<(Curve, usize)> {
                 1 => Curve::Gamma(f32::from(be16(d, 12)?) / 256.0),
                 _ => Curve::Table(
                     d[12..len]
-                        .chunks_exact(2)
-                        .map(|b| f32::from(u16::from_be_bytes([b[0], b[1]])) / 65535.0)
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
+                        .map(|b| f32::from(u16::from_be_bytes(*b)) / 65535.0)
                         .collect(),
                 ),
             }
@@ -423,8 +425,10 @@ fn clut(d: &[u8], grid: Vec<usize>, outputs: usize, bytes: usize) -> Result<Clut
     let data = if bytes == 1 {
         raw.iter().map(|&v| f32::from(v) / 255.0).collect()
     } else {
-        raw.chunks_exact(2)
-            .map(|b| f32::from(u16::from_be_bytes([b[0], b[1]])) / 65535.0)
+        raw.as_chunks::<2>()
+            .0
+            .iter()
+            .map(|b| f32::from(u16::from_be_bytes(*b)) / 65535.0)
             .collect()
     };
     Ok(Clut { grid, outputs, data })
@@ -465,8 +469,10 @@ fn lut_legacy(d: &[u8], xyz_input: bool) -> Result<Lut> {
         Ok(Curve::Table(if bytes == 1 {
             raw.iter().map(|&v| f32::from(v) / 255.0).collect()
         } else {
-            raw.chunks_exact(2)
-                .map(|b| f32::from(u16::from_be_bytes([b[0], b[1]])) / 65535.0)
+            raw.as_chunks::<2>()
+                .0
+                .iter()
+                .map(|b| f32::from(u16::from_be_bytes(*b)) / 65535.0)
                 .collect()
         }))
     };
@@ -594,8 +600,10 @@ fn text(d: &[u8]) -> Option<String> {
                 let (len, at) = (be32(r, 4).ok()? as usize, be32(r, 8).ok()? as usize);
                 let units: Vec<u16> = d
                     .get(at..at.checked_add(len)?)?
-                    .chunks_exact(2)
-                    .map(|b| u16::from_be_bytes([b[0], b[1]]))
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|b| u16::from_be_bytes(*b))
                     .collect();
                 Some((&r[..2] == b"en", String::from_utf16_lossy(&units)))
             });
