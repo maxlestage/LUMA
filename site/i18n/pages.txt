@@ -1124,3 +1124,11 @@ es = Ver las {n} funciones
 fr = Réduire
 en = Show less
 es = Mostrar menos
+
+fr = Réglage sur écran Retina
+en = Adjustment on a Retina display
+es = Ajuste en pantalla Retina
+
+fr = Aperçu de 3072 px avec l'accentuation, tout sur le GPU. Sur le processeur : {v} ms.
+en = A 3072 px preview with sharpening, all on the GPU. On the processor: {v} ms.
+es = Vista previa de 3072 px con enfoque, todo en la GPU. En el procesador: {v} ms.
