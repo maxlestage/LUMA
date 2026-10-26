@@ -5,7 +5,8 @@
 # 1. Le moteur (crates/luma-*) : aucune exception. Pas de crate de liaison vers une
 #    bibliothèque native (-sys), pas de compilateur C (cc, cmake), pas de bindgen.
 #    Suivent la règle 2 : luma-gpu, qui parle au pilote graphique (Metal, Vulkan),
-#    luma-apple, qui parle au décodeur d'images d'Apple (ImageIO : HEIC, AVIF…), et la
+#    luma-apple, qui parle au décodeur d'images d'Apple (ImageIO : HEIC, AVIF…) et à
+#    l'App Store (StoreKit, sur iPhone et iPad), et la
 #    ligne de commande luma-cli, qui l'utilise.
 # 2. L'application (apps/studio) et luma-gpu, sur macOS, iOS (la cible prioritaire) et sur Linux : seules
 #    les liaisons vers des composants du système d'exploitation sont admises, une par

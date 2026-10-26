@@ -1,6 +1,6 @@
 [package]
 name = "luma-apple"
-description = "Le décodeur d'images du système d'Apple (ImageIO) : HEIC, HEIF, AVIF… sur Mac, iPhone et iPad."
+description = "Les services du système d'Apple pour LÜMA : le décodeur d'images (ImageIO : HEIC, HEIF, AVIF…) sur Mac, iPhone et iPad, et l'App Store (StoreKit) sur iPhone et iPad."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,6 +16,12 @@ luma-color.workspace = true
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFURL", "CFString", "CFDictionary", "CFNumber", "CFData", "CFCGTypes"] }
 objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "CGImage", "CGColorSpace", "CGContext", "CGBitmapContext", "objc2"] }
 objc2-image-io = { version = "0.3", default-features = false, features = ["std", "CGImageSource", "CGImageProperties", "objc2-core-graphics"] }
+
+# L'App Store sur iPhone et iPad (StoreKit) : les abonnements de LÜMA Premium.
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSDate", "NSDecimalNumber", "NSEnumerator", "NSError", "NSFormatter", "NSLocale", "NSNumberFormatter", "NSObject", "NSSet", "NSString", "NSValue"] }
+objc2-store-kit = { version = "0.3", default-features = false, features = ["std", "SKError", "SKPayment", "SKPaymentQueue", "SKPaymentTransaction", "SKProduct", "SKProductsRequest", "SKRequest"] }
 
 # Les appels à ImageIO et à CoreGraphics demandent `unsafe` : ce crate est le seul de
 # LÜMA où il est permis (chaque bloc est justifié) ; le reste des lints est celui du
