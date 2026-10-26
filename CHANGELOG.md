@@ -63,6 +63,10 @@ La photothèque professionnelle, étape par étape.
 - **Filigrane logo** : votre logo en PNG, avec sa transparence et ses vraies couleurs,
   à l'un des neuf emplacements, taille et opacité ; seul ou avec le texte ; dans la
   fenêtre Exporter, les préréglages et `luma develop --logo signature.png`.
+- **Métadonnées d'export** : l'EXIF de la prise de vue (boîtier, objectif, réglages,
+  date) recopié dans les JPEG et PNG, votre nom et votre copyright, les mots‑clés, la
+  note et le libellé ; la position GPS est retirée par défaut, pour qu'une photo
+  partagée ne dise pas où vous habitez (`--keep-gps` la garde).
 
 ## 0.2.0 — octobre 2026
 

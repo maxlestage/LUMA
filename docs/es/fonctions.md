@@ -92,7 +92,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Enfoque de salida: pantalla, papel mate, papel brillante; bajo, estándar, alto; al tamaño final (`--output-sharpen`) | ✅ |
 | Marca de agua de texto (tipografía de LÜMA, suavizada): nueve posiciones, tamaño, opacidad, blanco o negro (`--watermark`) | ✅ |
 | Marca de agua con logotipo: un PNG con su transparencia, colores fieles, nueve posiciones, tamaño, opacidad (`--logo`) | ✅ |
-| Copia de los metadatos EXIF | ⏳ |
+| Metadatos de exportación: EXIF de la toma copiado (cámara, objetivo, ajustes, fecha), autor y copyright, palabras clave, valoración y etiqueta en XMP, ubicación GPS quitada por defecto (`--author`, `--keep-gps`) | ✅ |
+| Metadatos en los TIFF; IPTC completo (título, pie, lugar) | ⏳ |
 
 ## Biblioteca e interoperabilidad
 

@@ -109,6 +109,42 @@ pub struct Exif {
     pub focal_length: Option<f32>,
     pub lens: Option<String>,
     pub date: Option<String>,
+    /// L'auteur et le copyright inscrits par le boîtier.
+    pub artist: Option<String>,
+    pub copyright: Option<String>,
+    pub gps: Option<Gps>,
+}
+
+/// La position de la prise de vue : degrés (nord et est positifs), altitude en mètres.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Gps {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub altitude: Option<f64>,
+}
+
+/// Une coordonnée EXIF (degrés, minutes, secondes) et son hémisphère (`N`, `S`, `E`, `O`).
+fn gps_degrees(dms: &Option<[rawler::formats::tiff::Rational; 3]>, r: &Option<String>, negative: char) -> Option<f64> {
+    let v = dms.as_ref()?;
+    let part = |i: usize| (v[i].d != 0).then(|| f64::from(v[i].n) / f64::from(v[i].d));
+    let deg = part(0)? + part(1).unwrap_or(0.0) / 60.0 + part(2).unwrap_or(0.0) / 3600.0;
+    let neg = r.as_deref().is_some_and(|r| r.trim().starts_with(negative));
+    Some(if neg { -deg } else { deg })
+}
+
+fn gps(g: &Option<rawler::exif::ExifGPS>) -> Option<Gps> {
+    let g = g.as_ref()?;
+    let latitude = gps_degrees(&g.gps_latitude, &g.gps_latitude_ref, 'S')?;
+    let longitude = gps_degrees(&g.gps_longitude, &g.gps_longitude_ref, 'W')?;
+    let altitude = g.gps_altitude.filter(|a| a.d != 0).map(|a| {
+        let v = f64::from(a.n) / f64::from(a.d);
+        if g.gps_altitude_ref == Some(1) { -v } else { v }
+    });
+    (latitude.is_finite() && longitude.is_finite() && (latitude, longitude) != (0.0, 0.0)).then_some(Gps {
+        latitude,
+        longitude,
+        altitude,
+    })
 }
 
 /// Un RAW décodé et normalisé : 0 = noir, 1 = saturation du capteur.
@@ -202,6 +238,9 @@ fn metadata(source: &rawler::rawsource::RawSource, params: &rawler::decoders::Ra
                 .clone()
                 .or(m.lens.map(|l| format!("{} {}", l.lens_make, l.lens_model))),
             date: m.exif.date_time_original.clone(),
+            artist: m.exif.artist.clone().filter(|s| !s.trim().is_empty()),
+            copyright: m.exif.copyright.clone().filter(|s| !s.trim().is_empty()),
+            gps: gps(&m.exif.gps),
         },
     })
 }

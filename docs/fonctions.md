@@ -92,7 +92,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Accentuation de sortie : écran, papier mat, papier brillant ; faible, normale, forte ; à la taille finale (`--output-sharpen`) | ✅ |
 | Filigrane texte (police de LÜMA, lissé) : neuf emplacements, taille, opacité, blanc ou noir (`--watermark`) | ✅ |
 | Filigrane logo : un PNG avec sa transparence, couleurs fidèles, neuf emplacements, taille, opacité (`--logo`) | ✅ |
-| Copie des métadonnées EXIF | ⏳ |
+| Métadonnées d'export : EXIF de la prise de vue recopié (boîtier, objectif, réglages, date), auteur et copyright, mots‑clés, note et libellé en XMP, position GPS retirée par défaut (`--author`, `--keep-gps`) | ✅ |
+| Métadonnées dans les TIFF ; IPTC complet (titre, légende, lieu) | ⏳ |
 
 ## Bibliothèque et interopérabilité
 

@@ -63,6 +63,10 @@ La fototeca profesional, paso a paso.
   colores reales, en una de nueve posiciones, con tamaño y opacidad; solo o con el
   texto; en la ventana Exportar, los ajustes preestablecidos y
   `luma develop --logo firma.png`.
+- **Metadatos de exportación**: el EXIF de la toma (cámara, objetivo, ajustes, fecha)
+  copiado en los JPEG y PNG, su nombre y su copyright, palabras clave, valoración y
+  etiqueta; la ubicación GPS se quita por defecto, para que una foto compartida no diga
+  dónde vive (`--keep-gps` la conserva).
 
 ## 0.2.0 — octubre de 2026
 

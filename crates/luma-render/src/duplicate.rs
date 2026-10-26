@@ -26,7 +26,8 @@ use luma_raw::{Exif, Mosaic, Orientation, RawPhoto};
 use rayon::prelude::*;
 use serde_json::{Value, json};
 
-const MAGIC: &[u8; 8] = b"LUMADUP2";
+// 3 : l'auteur, le copyright et la position GPS (recopiés à l'export).
+const MAGIC: &[u8; 8] = b"LUMADUP3";
 /// Lignes par bande compressée.
 const BAND: usize = 64;
 /// Le plus petit niveau de la pyramide (grand côté), sous lequel on s'arrête.
@@ -107,6 +108,9 @@ fn meta(raw: &RawPhoto, source: (u64, u128)) -> Value {
             "focal_length": raw.exif.focal_length,
             "lens": raw.exif.lens,
             "date": raw.exif.date,
+            "artist": raw.exif.artist,
+            "copyright": raw.exif.copyright,
+            "gps": raw.exif.gps.map(|g| [Some(g.latitude), Some(g.longitude), g.altitude]),
         },
     })
 }
@@ -151,6 +155,15 @@ fn photo_of(m: &Value, width: usize, height: usize) -> Option<RawPhoto> {
             focal_length: f("focal_length"),
             lens: s("lens"),
             date: s("date"),
+            artist: s("artist"),
+            copyright: s("copyright"),
+            gps: e["gps"].as_array().and_then(|g| {
+                Some(luma_raw::Gps {
+                    latitude: g.first()?.as_f64()?,
+                    longitude: g.get(1)?.as_f64()?,
+                    altitude: g.get(2).and_then(Value::as_f64),
+                })
+            }),
         },
         rendered: m["rendered"].as_bool().unwrap_or(false),
     })

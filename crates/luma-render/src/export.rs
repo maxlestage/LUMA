@@ -13,19 +13,32 @@ use luma_core::{Cancel, RgbImage};
 use luma_project::Settings;
 use serde::{Deserialize, Serialize};
 
+use crate::metadata::insert_jpeg_xmp;
+pub use crate::metadata::{Embedded, MetadataOptions, PhotoMetadata};
 pub use crate::watermark::{Logo, Position, Watermark};
 use crate::{Photo, Size};
 
 /// Écrit l'image dans `path` : JPEG, PNG ou TIFF selon l'extension, 8 ou 16 bits (le
 /// JPEG est toujours sur 8 bits), avec le profil ICC de l'espace de sortie.
 pub fn write(path: &Path, img: &RgbImage, space: OutputSpace, quality: u8, bits: u8) -> Result<(), String> {
+    write_with(path, img, space, quality, bits, &Embedded::default())
+}
+
+/// `write`, avec les métadonnées : l'EXIF dans les JPEG et les PNG, le paquet XMP dans
+/// les JPEG (le TIFF n'en reçoit pas encore).
+pub fn write_with(
+    path: &Path,
+    img: &RgbImage,
+    space: OutputSpace,
+    quality: u8,
+    bits: u8,
+    meta: &Embedded,
+) -> Result<(), String> {
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("jpg")
         .to_ascii_lowercase();
-    let file = std::fs::File::create(path).map_err(|e| format!("{} : {e}", path.display()))?;
-    let writer = std::io::BufWriter::new(file);
     let (w, h) = (img.width as u32, img.height as u32);
     let profile = icc::profile(space);
     let err = |e: image::ImageError| e.to_string();
@@ -39,19 +52,32 @@ pub fn write(path: &Path, img: &RgbImage, space: OutputSpace, quality: u8, bits:
     } else {
         (luma_image::encode8(img, space), ExtendedColorType::Rgb8)
     };
+    let create = || std::fs::File::create(path).map_err(|e| format!("{} : {e}", path.display()));
     match ext.as_str() {
         "jpg" | "jpeg" => {
-            let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(writer, quality.clamp(1, 100));
+            // En mémoire d'abord : le paquet XMP s'insère après les premiers segments.
+            let mut out = Vec::new();
+            let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality.clamp(1, 100));
             let _ = enc.set_icc_profile(profile);
-            enc.write_image(&bytes, w, h, kind).map_err(err)
+            if !meta.exif.is_empty() {
+                let _ = enc.set_exif_metadata(meta.exif.clone());
+            }
+            enc.write_image(&bytes, w, h, kind).map_err(err)?;
+            if let Some(x) = &meta.xmp {
+                insert_jpeg_xmp(&mut out, x);
+            }
+            std::fs::write(path, out).map_err(|e| format!("{} : {e}", path.display()))
         }
         "png" => {
-            let mut enc = image::codecs::png::PngEncoder::new(writer);
+            let mut enc = image::codecs::png::PngEncoder::new(std::io::BufWriter::new(create()?));
             let _ = enc.set_icc_profile(profile);
+            if !meta.exif.is_empty() {
+                let _ = enc.set_exif_metadata(meta.exif.clone());
+            }
             enc.write_image(&bytes, w, h, kind).map_err(err)
         }
         "tif" | "tiff" => {
-            let mut enc = image::codecs::tiff::TiffEncoder::new(writer);
+            let mut enc = image::codecs::tiff::TiffEncoder::new(std::io::BufWriter::new(create()?));
             let _ = enc.set_icc_profile(profile);
             enc.write_image(&bytes, w, h, kind).map_err(err)
         }
@@ -107,6 +133,8 @@ pub struct Options {
     pub watermark: Option<Watermark>,
     /// Le logo en filigrane (PNG) ; `None` : aucun.
     pub logo: Option<Logo>,
+    /// Les métadonnées recopiées et ajoutées.
+    pub metadata: MetadataOptions,
 }
 
 impl Default for Options {
@@ -122,6 +150,7 @@ impl Default for Options {
             sharpen: None,
             watermark: None,
             logo: None,
+            metadata: MetadataOptions::default(),
         }
     }
 }
@@ -577,8 +606,15 @@ fn camera(make: &str, model: &str) -> String {
     }
 }
 
-/// Développe et écrit une photo selon les options (le dossier est créé au besoin).
-pub fn develop(photo: &Photo, settings: &Settings, out: &Path, options: &Options) -> Result<(), String> {
+/// Développe et écrit une photo selon les options (le dossier est créé au besoin) ;
+/// `meta` (note, libellé, mots‑clés du XMP) va dans les métadonnées de l'export.
+pub fn develop(
+    photo: &Photo,
+    settings: &Settings,
+    out: &Path,
+    options: &Options,
+    meta: &luma_project::xmp::Meta,
+) -> Result<(), String> {
     if let Some(dir) = out.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(dir).map_err(|e| format!("{} : {e}", dir.display()))?;
     }
@@ -622,7 +658,19 @@ pub fn develop(photo: &Photo, settings: &Settings, out: &Path, options: &Options
     } else {
         options.bits
     };
-    write(out, &image, options.space, options.quality, bits)
+    let raw = photo.raw();
+    let embedded = Embedded::new(
+        &PhotoMetadata {
+            make: raw.make.clone(),
+            model: raw.model.clone(),
+            exif: raw.exif.clone(),
+            meta: meta.clone(),
+        },
+        &options.metadata,
+        image.width,
+        image.height,
+    );
+    write_with(out, &image, options.space, options.quality, bits, &embedded)
 }
 
 /// Un préréglage d'export : un nom et des options.
@@ -709,6 +757,27 @@ struct StoredPreset {
     watermark: Option<StoredWatermark>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     logo: Option<StoredLogo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    metadata: Option<StoredMetadata>,
+}
+
+/// Les métadonnées, seulement si elles diffèrent de celles d'un export ordinaire.
+#[derive(Serialize, Deserialize)]
+struct StoredMetadata {
+    #[serde(default = "yes")]
+    copy_exif: bool,
+    #[serde(default)]
+    keep_gps: bool,
+    #[serde(default = "yes")]
+    keywords: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    copyright: Option<String>,
+}
+
+fn yes() -> bool {
+    true
 }
 
 #[derive(Serialize, Deserialize)]
@@ -761,6 +830,13 @@ impl StoredPreset {
                 position: l.position.id().into(),
                 size: l.size,
                 opacity: l.opacity,
+            }),
+            metadata: (o.metadata != MetadataOptions::default()).then(|| StoredMetadata {
+                copy_exif: o.metadata.copy_exif,
+                keep_gps: o.metadata.keep_gps,
+                keywords: o.metadata.keywords,
+                author: o.metadata.author.clone(),
+                copyright: o.metadata.copyright.clone(),
             }),
         }
     }
@@ -819,6 +895,15 @@ impl StoredPreset {
                     }),
                     None => None,
                 },
+                metadata: self
+                    .metadata
+                    .map_or_else(MetadataOptions::default, |m| MetadataOptions {
+                        copy_exif: m.copy_exif,
+                        keep_gps: m.keep_gps,
+                        keywords: m.keywords,
+                        author: m.author.filter(|a| !a.trim().is_empty()),
+                        copyright: m.copyright.filter(|c| !c.trim().is_empty()),
+                    }),
             },
         })
     }
@@ -940,6 +1025,9 @@ pub fn describe(o: &Options) -> String {
     }
     if let Some(l) = &o.logo {
         out += &format!(", {}", l.describe());
+    }
+    if let Some(m) = o.metadata.describe() {
+        out += &format!(", {m}");
     }
     if let Some(w) = &o.watermark {
         out += &format!(", {}", w.describe());
@@ -1281,6 +1369,11 @@ mod tests {
                     size: 25.0,
                     ..Logo::new("/logos/signature.png")
                 }),
+                metadata: MetadataOptions {
+                    keep_gps: true,
+                    author: Some("Maxime Lestage".into()),
+                    ..MetadataOptions::default()
+                },
                 ..Options::default()
             },
         };

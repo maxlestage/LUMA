@@ -91,7 +91,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Output sharpening: screen, matte paper, glossy paper; low, standard, high; at the final size (`--output-sharpen`) | ✅ |
 | Text watermark (LÜMA font, anti-aliased): nine positions, size, opacity, white or black (`--watermark`) | ✅ |
 | Logo watermark: a PNG with its transparency, faithful colours, nine positions, size, opacity (`--logo`) | ✅ |
-| Copying EXIF metadata | ⏳ |
+| Export metadata: capture EXIF copied (camera, lens, settings, date), author and copyright, keywords, rating and label as XMP, GPS location removed by default (`--author`, `--keep-gps`) | ✅ |
+| Metadata in TIFF files; full IPTC (title, caption, location) | ⏳ |
 
 ## Library and interoperability
 

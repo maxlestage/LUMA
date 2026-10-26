@@ -372,3 +372,129 @@ fn image_size(path: &Path) -> (usize, usize) {
     }
     panic!("pas de SOF dans {}", path.display());
 }
+
+/// Les balises EXIF d'un JPEG exporté : (numéro, octets de la valeur) de l'IFD racine,
+/// de l'IFD EXIF et de l'IFD GPS.
+fn jpeg_exif(path: &Path) -> Vec<(u16, Vec<u8>)> {
+    use image::ImageDecoder;
+    let file = std::io::BufReader::new(std::fs::File::open(path).unwrap());
+    let mut dec = image::codecs::jpeg::JpegDecoder::new(file).unwrap();
+    let Some(t) = dec.exif_metadata().unwrap() else {
+        return Vec::new();
+    };
+    let u16_at = |i: usize| u16::from_le_bytes([t[i], t[i + 1]]);
+    let u32_at = |i: usize| u32::from_le_bytes(t[i..i + 4].try_into().unwrap()) as usize;
+    let mut out = Vec::new();
+    let mut ifds = vec![u32_at(4)];
+    while let Some(o) = ifds.pop() {
+        for k in 0..usize::from(u16_at(o)) {
+            let e = o + 2 + 12 * k;
+            let (tag, kind, count) = (u16_at(e), u16_at(e + 2), u32_at(e + 4));
+            let size = [0, 1, 1, 2, 4, 8, 1, 1][usize::from(kind).min(7)] * count;
+            let at = if size <= 4 { e + 8 } else { u32_at(e + 8) };
+            if tag == 0x8769 || tag == 0x8825 {
+                ifds.push(u32_at(e + 8));
+            }
+            out.push((tag, t[at..at + size].to_vec()));
+        }
+    }
+    out
+}
+
+fn exif_text(tags: &[(u16, Vec<u8>)], tag: u16) -> Option<String> {
+    tags.iter()
+        .find(|t| t.0 == tag)
+        .map(|t| String::from_utf8_lossy(t.1.strip_suffix(&[0]).unwrap_or(&t.1)).into_owned())
+}
+
+#[test]
+fn exported_metadata() {
+    let corpus = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus");
+    let (nef, dng) = (corpus.join("DSC_0750.NEF"), corpus.join("IMG_1361.DNG"));
+    if !nef.is_file() || !dng.is_file() {
+        eprintln!("corpus vide : lancer scripts/fetch-corpus.sh");
+        return;
+    }
+    let dir = scratch("metadata");
+    let file = dir.join("Exports.json");
+    let out = dir.join("x.jpg");
+    let export = |raw: &Path, extra: &[&str]| {
+        let mut args = vec![
+            "develop",
+            raw.to_str().unwrap(),
+            "--no-sidecar",
+            "--resize",
+            "400",
+            "-o",
+            out.to_str().unwrap(),
+        ];
+        args.extend_from_slice(extra);
+        let (ok, text) = luma(&file, &args);
+        assert!(ok, "{text}");
+        (jpeg_exif(&out), std::fs::read(&out).unwrap())
+    };
+    // Le boîtier, ses réglages, l'auteur et le copyright inscrits par le boîtier.
+    let (t, _) = export(&nef, &[]);
+    assert_eq!(exif_text(&t, 0x010F).as_deref(), Some("Nikon"));
+    assert_eq!(exif_text(&t, 0x013B).as_deref(), Some("Ludger Heide"));
+    assert_eq!(exif_text(&t, 0x8298).as_deref(), Some("(CC-BY-SA 4.0) Ludger Heide"));
+    assert_eq!(exif_text(&t, 0x0131).as_deref(), Some("LÜMA"));
+    assert!(t.iter().any(|x| x.0 == 0x829A) && t.iter().any(|x| x.0 == 0x8827));
+    // Remplacés par ceux qu'on donne, et dans le XMP aussi.
+    let (t, bytes) = export(
+        &nef,
+        &["--author", "Maxime Lestage", "--copyright", "© 2026 Maxime Lestage"],
+    );
+    assert_eq!(exif_text(&t, 0x013B).as_deref(), Some("Maxime Lestage"));
+    let s = String::from_utf8_lossy(&bytes);
+    assert!(
+        s.contains("<dc:creator><rdf:Seq><rdf:li>Maxime Lestage</rdf:li>"),
+        "XMP absent"
+    );
+    // La position de l'iPhone : retirée par défaut, gardée sur demande.
+    let (t, _) = export(&dng, &[]);
+    assert!(t.iter().any(|x| x.0 == 0x0110) && !t.iter().any(|x| x.0 == 0x0002));
+    let (t, _) = export(&dng, &["--keep-gps"]);
+    let lat = &t.iter().find(|x| x.0 == 0x0002).expect("latitude").1;
+    let deg = u32::from_le_bytes(lat[..4].try_into().unwrap());
+    assert_eq!(deg, 34);
+    assert_eq!(exif_text(&t, 0x0003).as_deref(), Some("W"));
+    // Sans EXIF : plus de boîtier.
+    let (t, _) = export(&nef, &["--no-exif"]);
+    assert!(!t.iter().any(|x| x.0 == 0x010F));
+    // Mots‑clés et note du XMP de la photo, dans le JPEG.
+    let raw = dir.join("photo.NEF");
+    std::fs::copy(&nef, &raw).unwrap();
+    std::fs::write(
+        dir.join("photo.xmp"),
+        luma_project::xmp::write_with_meta(
+            &luma_project::Settings::default(),
+            &luma_project::xmp::Meta {
+                rating: 5,
+                keywords: vec!["Bretagne".into()],
+                ..Default::default()
+            },
+        ),
+    )
+    .unwrap();
+    let (ok, text) = luma(
+        &file,
+        &[
+            "develop",
+            raw.to_str().unwrap(),
+            "--resize",
+            "300",
+            "--author",
+            "M",
+            "-o",
+            out.to_str().unwrap(),
+        ],
+    );
+    assert!(ok, "{text}");
+    let s = String::from_utf8_lossy(&std::fs::read(&out).unwrap()).into_owned();
+    assert!(
+        s.contains("<rdf:li>Bretagne</rdf:li>") && s.contains("xmp:Rating=\"5\""),
+        "mots‑clés absents"
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}

@@ -10,6 +10,7 @@
 pub mod chart;
 pub mod duplicate;
 pub mod export;
+pub mod metadata;
 pub mod thumbnail;
 pub mod watermark;
 
@@ -483,7 +484,7 @@ mod tests {
         let src = Path::new("/x/IMG_1.CR3");
         let out = export::output_path(src, &options, &export::NameFields::of_file(src));
         assert_eq!(out, dir.join("sortie/IMG_1.png"));
-        export::develop(&p, &settings, &out, &options).unwrap();
+        export::develop(&p, &settings, &out, &options, &Default::default()).unwrap();
         let img = image::open(&out).unwrap();
         // 48 × 64 recadré de moitié en largeur : 24 × 64, réduit à 20 px de grand côté.
         assert_eq!((img.width(), img.height()), (8, 20));

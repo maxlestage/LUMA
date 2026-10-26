@@ -61,6 +61,10 @@ The professional photo library, step by step.
 - **Logo watermark**: your logo as a PNG, with its transparency and true colours, in
   one of nine positions, with size and opacity; alone or with the text; in the Export
   dialog, presets and `luma develop --logo signature.png`.
+- **Export metadata**: the capture EXIF (camera, lens, settings, date) copied into
+  JPEG and PNG files, your name and copyright, keywords, rating and label; the GPS
+  location is removed by default, so a shared photo doesn't say where you live
+  (`--keep-gps` keeps it).
 
 ## 0.2.0 — October 2026
 
