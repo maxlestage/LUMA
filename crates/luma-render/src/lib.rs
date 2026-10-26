@@ -10,6 +10,7 @@
 pub mod chart;
 pub mod duplicate;
 pub mod export;
+pub mod thumbnail;
 
 use std::collections::HashMap;
 use std::path::Path;

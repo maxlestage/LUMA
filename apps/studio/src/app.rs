@@ -853,11 +853,11 @@ impl Studio {
             let used = crate::dialogs::duplicates_dir()
                 .map_or(0, |d| luma_render::duplicate::usage(&d))
                 + self.photo.as_ref().map_or(0, |p| p.cached_bytes() as u64);
-            ui.label(trf("Doublons de travail et aperçus : {size}", &[("size", &format_bytes(used))]));
+            ui.label(trf("Doublons, vignettes et aperçus : {size}", &[("size", &format_bytes(used))]));
             if ui
                 .button(tr("Vider le cache"))
                 .on_hover_text(tr(
-                    "Supprime les doublons de travail et libère la mémoire des aperçus. Vos photos et vos réglages ne changent pas ; les doublons se refont à la prochaine ouverture.",
+                    "Supprime les doublons de travail et les vignettes enregistrées, et libère la mémoire des aperçus. Vos photos et vos réglages ne changent pas ; tout se refait à la prochaine ouverture.",
                 ))
                 .clicked()
             {
