@@ -399,8 +399,8 @@ struct Request {
     settings: Settings,
     size: Size,
     clipping: bool,
-    /// La version de la table d'épreuvage, s'il est actif.
-    proof: Option<u64>,
+    /// La version de la table d'épreuvage, la simulation et l'alerte de gamut.
+    proof: Option<(u64, bool, bool)>,
 }
 
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
@@ -408,6 +408,8 @@ struct Request {
 #[derive(Default)]
 struct Proofing {
     on: bool,
+    /// L'alerte de gamut : les couleurs que l'imprimante ne saura pas rendre.
+    gamut: bool,
     path: Option<PathBuf>,
     description: String,
     profile: Option<luma_color::profile::Profile>,
@@ -418,8 +420,13 @@ struct Proofing {
 }
 
 impl Proofing {
-    fn active(&self) -> Option<Arc<luma_color::proof::Proof>> {
-        self.table.clone().filter(|_| self.on)
+    fn active(&self) -> Option<crate::worker::Proofed> {
+        let table = self.table.clone().filter(|_| self.on || self.gamut)?;
+        Some(crate::worker::Proofed {
+            table,
+            simulate: self.on,
+            gamut: self.gamut,
+        })
     }
 
     fn intent(&self) -> luma_color::profile::Intent {
@@ -443,6 +450,7 @@ impl Proofing {
                 Err(_) => {
                     self.error = Some("Ce profil ne sait pas convertir vers l'imprimante");
                     self.on = false;
+                    self.gamut = false;
                 }
             }
         }
@@ -459,6 +467,10 @@ pub struct Studio {
     history: Vec<(String, Settings)>,
     history_pos: usize,
     clipboard: Option<Settings>,
+    /// La fenêtre « Coller une partie des réglages » et les groupes cochés (gardés
+    /// d'une fois sur l'autre).
+    paste_open: bool,
+    paste_groups: Vec<luma_project::paste::Group>,
     texture: Option<TextureHandle>,
     image_size: [usize; 2],
     histogram: [[u32; 256]; 3],
@@ -517,6 +529,8 @@ pub struct Studio {
     crop_tool: Option<CropTool>,
     /// Le masque sélectionné (ses poignées sont à l'écran).
     pub selected_mask: Option<usize>,
+    /// La partie combinée en cours de réglage : (masque, partie) ; aucune pour la forme principale.
+    pub selected_part: Option<(usize, usize)>,
     brush: masking::Brush,
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
@@ -645,6 +659,8 @@ impl Studio {
             history: Vec::new(),
             history_pos: 0,
             clipboard: None,
+            paste_open: false,
+            paste_groups: luma_project::paste::default_groups(),
             texture: None,
             image_size: [0, 0],
             histogram: [[0; 256]; 3],
@@ -690,6 +706,7 @@ impl Studio {
             export_all: false,
             crop_tool: None,
             selected_mask: None,
+            selected_part: None,
             brush: masking::Brush::default(),
             show_mask: false,
             mask_overlay: None,
@@ -1608,7 +1625,10 @@ impl Studio {
             settings,
             size,
             clipping: self.clipping,
-            proof: self.proofing.active().map(|_| self.proofing.version),
+            proof: self
+                .proofing
+                .active()
+                .map(|p| (self.proofing.version, p.simulate, p.gamut)),
         };
         if self.last_request.as_ref() == Some(&request) {
             return;
@@ -1636,6 +1656,8 @@ impl Studio {
                 action = Some("undo");
             } else if i.consume_key(cmd_shift, Key::C) {
                 action = Some("copy");
+            } else if i.consume_key(cmd_shift | Modifiers::ALT, Key::V) {
+                action = Some("paste_some");
             } else if i.consume_key(cmd_shift, Key::V) {
                 action = Some("paste");
             } else if i.consume_key(cmd_shift, Key::R) {
@@ -1727,6 +1749,13 @@ impl Studio {
                     self.touch();
                 }
             }
+            "paste_some" => {
+                if self.clipboard.is_some() && self.photo.is_some() {
+                    self.paste_open = true;
+                } else {
+                    self.status = tr("Copiez d'abord les réglages d'une photo.").into();
+                }
+            }
             "reset" => {
                 self.settings = self.default_settings();
                 self.commit(tr("Réinitialiser").into());
@@ -1783,6 +1812,8 @@ impl Studio {
                     self.settings.crop = t.saved;
                 } else if self.export_open {
                     self.export_open = false;
+                } else if self.paste_open {
+                    self.paste_open = false;
                 } else {
                     self.selected_mask = None;
                 }
@@ -1820,6 +1851,7 @@ impl Studio {
                     && i < self.settings.masks.len()
                 {
                     self.settings.masks.remove(i);
+                    self.selected_part = None;
                     self.commit(tr("Masque supprimé").into());
                     self.touch();
                 }
@@ -1971,6 +2003,57 @@ impl Studio {
     }
 
     /// La fenêtre Exporter.
+    /// « Coller une partie des réglages » : les groupes à coller, cochés (le recadrage
+    /// et les masques, propres à chaque photo, ne le sont pas d'abord).
+    fn paste_window(&mut self, ctx: &egui::Context) {
+        use luma_project::paste::{GROUPS, Group, paste};
+        let mut open = self.paste_open;
+        let mut go = false;
+        egui::Window::new(tr("Coller une partie des réglages"))
+            .id(egui::Id::unique("fenetre-coller"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .vscroll(true)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                // Le bouton en haut : toujours visible, même quand la liste défile.
+                ui.horizontal(|ui| {
+                    let label = trf("Coller ({n})", &[("n", &self.paste_groups.len())]);
+                    go = ui
+                        .add_enabled(!self.paste_groups.is_empty(), egui::Button::new(label))
+                        .clicked();
+                    if ui.button(tr("Tout")).clicked() {
+                        self.paste_groups = GROUPS.iter().map(|g| g.0).collect();
+                    }
+                    if ui.button(tr("Rien")).clicked() {
+                        self.paste_groups.clear();
+                    }
+                });
+                ui.add_space(6.0);
+                for (group, name) in GROUPS {
+                    let mut on = self.paste_groups.contains(&group);
+                    if ui.checkbox(&mut on, tr(name)).changed() {
+                        if on {
+                            self.paste_groups.push(group);
+                        } else {
+                            self.paste_groups.retain(|g| *g != group);
+                        }
+                    }
+                }
+            });
+        if go && let Some(source) = self.clipboard.clone() {
+            let groups: Vec<Group> = self.paste_groups.clone();
+            self.settings = paste(&self.settings, &source, &groups);
+            self.commit(trf(
+                "Coller une partie des réglages ({n})",
+                &[("n", &groups.len())],
+            ));
+            self.touch();
+        }
+        self.paste_open = open && !go;
+    }
+
     fn export_window(&mut self, ctx: &egui::Context) {
         let mut open = self.export_open;
         let mut go = false;
@@ -2233,6 +2316,9 @@ impl Studio {
         }
         if self.export_open && allowed {
             self.export_window(&ctx);
+        }
+        if self.paste_open && allowed {
+            self.paste_window(&ctx);
         }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
@@ -2683,6 +2769,11 @@ impl Studio {
                     ui.spacing_mut().item_spacing.x = 12.0;
                     for (label, action, tip) in [
                         (tr("Réinitialiser"), "reset", tr("Maj+Cmd+R")),
+                        (
+                            tr("Coller…"),
+                            "paste_some",
+                            tr("Alt+Maj+Cmd+V : choisir quoi coller"),
+                        ),
                         (tr("Coller"), "paste", tr("Maj+Cmd+V")),
                         (tr("Copier"), "copy", tr("Maj+Cmd+C")),
                         (tr("Rétablir"), "redo", tr("Maj+Cmd+Z")),
@@ -4049,7 +4140,22 @@ impl Studio {
                 }
             }
             let brush = self.brush;
-            let c = masking::edit(ui, target, &mut self.settings.masks[i], &brush);
+            // Une partie combinée choisie : ses poignées à la place de la forme principale.
+            let part = self
+                .selected_part
+                .filter(|&(m, p)| m == i && p < self.settings.masks[i].parts.len())
+                .map(|(_, p)| p);
+            let c = match part {
+                Some(j) => {
+                    let mut edited = Mask::full();
+                    let shape = &mut self.settings.masks[i].parts[j].shape;
+                    std::mem::swap(&mut edited.shape, shape);
+                    let c = masking::edit(ui, target, &mut edited, &brush);
+                    std::mem::swap(&mut edited.shape, shape);
+                    c
+                }
+                None => masking::edit(ui, target, &mut self.settings.masks[i], &brush),
+            };
             if c.changed {
                 self.touch();
             }
@@ -4109,8 +4215,11 @@ impl Studio {
         if self.clipping {
             badges.push(tr("Écrêtage (J)"));
         }
-        if self.proofing.active().is_some() {
+        if self.proofing.active().is_some_and(|p| p.simulate) {
             badges.push(tr("Épreuvage à l'écran"));
+        }
+        if self.proofing.active().is_some_and(|p| p.gamut) {
+            badges.push(tr("Alerte de gamut"));
         }
         if self.eyedropper {
             badges.push(tr("Pipette : cliquez un gris ou un blanc de la photo"));
@@ -4176,6 +4285,74 @@ impl Studio {
             label
         })
         .inner
+    }
+
+    /// Les combinaisons du masque `i` : d'autres formes ajoutées, retirées ou en
+    /// intersection ; la partie choisie se règle sur la photo.
+    fn parts_panel(&mut self, ui: &mut Ui, i: usize, commits: &mut Vec<String>) {
+        use luma_project::{Combine, Part};
+        sub_title(ui, tr("Combiner"));
+        ui.horizontal(|ui| {
+            for combine in [Combine::Add, Combine::Subtract, Combine::Intersect] {
+                ui.menu_button(tr(combine_name(combine)), |ui| {
+                    for mask in [Mask::linear(), Mask::radial(), Mask::brush()] {
+                        if ui.button(tr(&mask.name)).clicked() {
+                            let parts = &mut self.settings.masks[i].parts;
+                            parts.push(Part {
+                                combine,
+                                shape: mask.shape,
+                                invert: false,
+                            });
+                            self.selected_part = Some((i, parts.len() - 1));
+                            commits.push(trf(
+                                "Masque combiné : {shape}",
+                                &[("shape", &tr(&mask.name).to_lowercase())],
+                            ));
+                            ui.close();
+                        }
+                    }
+                })
+                .response
+                .on_hover_text(tr(combine_hint(combine)));
+            }
+        });
+        if self.settings.masks[i].parts.is_empty() {
+            return;
+        }
+        let current = self.selected_part.filter(|&(m, _)| m == i).map(|(_, p)| p);
+        let main = RichText::new(tr("Forme principale")).size(12.0);
+        if ui.selectable_label(current.is_none(), main).clicked() {
+            self.selected_part = None;
+        }
+        let mut remove = None;
+        for (j, part) in self.settings.masks[i].parts.iter_mut().enumerate() {
+            ui.horizontal(|ui| {
+                let text = format!(
+                    "{} · {}",
+                    tr(combine_name(part.combine)),
+                    tr(shape_name(&part.shape))
+                );
+                let text = RichText::new(text).size(12.0);
+                if ui.selectable_label(current == Some(j), text).clicked() {
+                    self.selected_part = (current != Some(j)).then_some((i, j));
+                }
+                if ui.checkbox(&mut part.invert, tr("Inverser")).changed() {
+                    commits.push(tr("Partie du masque inversée").into());
+                }
+                if ui
+                    .small_button("×")
+                    .on_hover_text(tr("Supprimer"))
+                    .clicked()
+                {
+                    remove = Some(j);
+                }
+            });
+        }
+        if let Some(j) = remove {
+            self.settings.masks[i].parts.remove(j);
+            self.selected_part = None;
+            commits.push(tr("Partie du masque supprimée").into());
+        }
     }
 
     /// Panneau Masquage : la liste des masques, et les curseurs du masque choisi.
@@ -4261,7 +4438,9 @@ impl Studio {
                         commits.push(tr("Masque inversé").into());
                     }
                     // Le pinceau qui suit les bords de la photo.
-                    if matches!(m.shape, luma_project::Shape::Brush { .. })
+                    let brush =
+                        |s: &luma_project::Shape| matches!(s, luma_project::Shape::Brush { .. });
+                    if (brush(&m.shape) || m.parts.iter().any(|p| brush(&p.shape)))
                         && ui
                             .checkbox(&mut m.edges, tr("Suivre les bords"))
                             .on_hover_text(tr("La zone peinte s'arrête aux contours de la photo"))
@@ -4279,6 +4458,7 @@ impl Studio {
                         self.act("mask_delete");
                     }
                 });
+                self.parts_panel(ui, i, commits);
                 let luts = self.luts.clone();
                 let Some(m) = self.settings.masks.get_mut(i) else {
                     return;
@@ -4586,7 +4766,16 @@ impl Studio {
     }
 
     pub fn proofing_active(&self) -> bool {
-        self.proofing.active().is_some()
+        self.proofing.active().is_some_and(|p| p.simulate)
+    }
+
+    /// Montre ou cache l'alerte de gamut (il faut un profil d'imprimante).
+    pub fn set_gamut_alert(&mut self, on: bool) {
+        self.proofing.gamut = on && self.proofing.table.is_some();
+    }
+
+    pub fn gamut_alert(&self) -> bool {
+        self.proofing.active().is_some_and(|p| p.gamut)
     }
 
     fn proofing_panel(&mut self, ui: &mut Ui) {
@@ -4595,8 +4784,14 @@ impl Studio {
             .default_open(self.proofing.profile.is_some())
             .show(ui, |ui| {
                 let (mut on, mut relative) = (self.proofing.on, self.proofing.relative);
+                let mut gamut = self.proofing.gamut;
                 ui.add_enabled_ui(self.proofing.table.is_some(), |ui| {
-                    ui.checkbox(&mut on, tr("Simuler l'impression"));
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut on, tr("Simuler l'impression"));
+                        ui.checkbox(&mut gamut, tr("Alerte de gamut")).on_hover_text(tr(
+                            "En bleu : les couleurs que l'imprimante ne saura pas rendre",
+                        ));
+                    });
                 });
                 ui.horizontal(|ui| {
                     if ui.button(tr("Choisir un profil ICC…")).clicked()
@@ -4628,6 +4823,9 @@ impl Studio {
                 }
                 if (on, relative) != (self.proofing.on, self.proofing.relative) {
                     self.set_proofing(on, relative);
+                }
+                if gamut != self.proofing.gamut {
+                    self.set_gamut_alert(gamut);
                 }
             });
     }
@@ -5132,6 +5330,34 @@ impl Studio {
             self.touch();
             self.commit(label);
         }
+    }
+}
+
+/// Le nom d'une combinaison de masques (à traduire).
+fn combine_name(c: luma_project::Combine) -> &'static str {
+    match c {
+        luma_project::Combine::Add => "Ajouter",
+        luma_project::Combine::Subtract => "Soustraire",
+        luma_project::Combine::Intersect => "Intersection",
+    }
+}
+
+/// L'aide d'une combinaison de masques (à traduire).
+fn combine_hint(c: luma_project::Combine) -> &'static str {
+    match c {
+        luma_project::Combine::Add => "Étendre le masque à une autre forme",
+        luma_project::Combine::Subtract => "Retirer une forme du masque",
+        luma_project::Combine::Intersect => "Ne garder que la partie commune avec une autre forme",
+    }
+}
+
+/// Le nom d'une forme de masque (à traduire).
+fn shape_name(s: &luma_project::Shape) -> &'static str {
+    match s {
+        luma_project::Shape::Linear { .. } => "Dégradé linéaire",
+        luma_project::Shape::Radial { .. } => "Dégradé radial",
+        luma_project::Shape::Brush { .. } => "Pinceau",
+        luma_project::Shape::Full => "Image entière",
     }
 }
 

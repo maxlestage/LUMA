@@ -6,3 +6,4 @@ site/dist/
 !/tests/raw-corpus/README.md
 # L'app à télécharger, récupérée dans la dernière Release au déploiement (heroku-build.sh).
 site/public/download/
+__pycache__/

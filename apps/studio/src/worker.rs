@@ -128,7 +128,15 @@ struct RenderJob {
     generation: u64,
     clipping: bool,
     /// L'épreuvage à l'écran, s'il est actif.
-    proof: Option<Arc<luma_color::proof::Proof>>,
+    proof: Option<Proofed>,
+}
+
+/// L'épreuvage demandé : la table, la simulation de l'impression, l'alerte de gamut.
+#[derive(Clone)]
+pub struct Proofed {
+    pub table: Arc<luma_color::proof::Proof>,
+    pub simulate: bool,
+    pub gamut: bool,
 }
 
 /// Le sidecar XMP d'un RAW (`IMG_0001.xmp` ou `IMG_0001.CR3.xmp`).
@@ -301,7 +309,7 @@ impl Worker {
         size: Size,
         generation: u64,
         clipping: bool,
-        proof: Option<Arc<luma_color::proof::Proof>>,
+        proof: Option<Proofed>,
     ) {
         self.running.lock().expect("annulation").cancel();
         let _ = self.render.send(RenderJob {
@@ -588,11 +596,20 @@ fn render_loop(
                 )
             }
         };
-        // L'épreuvage : l'aperçu tel qu'il sera imprimé (l'histogramme le suit).
-        if let Some(proof) = &job.proof {
-            proof.apply_rgba(&mut rgba);
+        // L'épreuvage : l'aperçu tel qu'il sera imprimé (l'histogramme le suit), et les
+        // couleurs d'origine hors de portée de l'imprimante, signalées par-dessus.
+        let gamut = job
+            .proof
+            .as_ref()
+            .filter(|p| p.gamut)
+            .map(|p| p.table.gamut_mask(&rgba));
+        if let Some(p) = job.proof.as_ref().filter(|p| p.simulate) {
+            p.table.apply_rgba(&mut rgba);
         }
         let histogram = histogram_rgba(&rgba);
+        if let Some(mask) = &gamut {
+            luma_color::proof::paint_alert(&mut rgba, mask);
+        }
         if job.clipping {
             clip_overlay(&mut rgba);
         }

@@ -581,6 +581,50 @@ fr = Pinceau qui suit les bords
 en = Edge-aware brush
 es = Pincel que sigue los bordes
 
+fr = Combiner
+en = Combine
+es = Combinar
+
+fr = Ajouter
+en = Add
+es = Añadir
+
+fr = Soustraire
+en = Subtract
+es = Restar
+
+fr = Intersection
+en = Intersect
+es = Intersección
+
+fr = Étendre le masque à une autre forme
+en = Extend the mask with another shape
+es = Extender la máscara con otra forma
+
+fr = Retirer une forme du masque
+en = Remove a shape from the mask
+es = Quitar una forma de la máscara
+
+fr = Ne garder que la partie commune avec une autre forme
+en = Keep only the area shared with another shape
+es = Conservar solo la zona común con otra forma
+
+fr = Masque combiné : {shape}
+en = Combined mask: {shape}
+es = Máscara combinada: {shape}
+
+fr = Forme principale
+en = Main shape
+es = Forma principal
+
+fr = Partie du masque inversée
+en = Mask part inverted
+es = Parte de la máscara invertida
+
+fr = Partie du masque supprimée
+en = Mask part deleted
+es = Parte de la máscara eliminada
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos
@@ -2632,3 +2676,67 @@ es = ¿Ya tienes una suscripción con esta cuenta de Apple?
 fr = Restaurer les achats
 en = Restore Purchases
 es = Restaurar compras
+
+fr = Alerte de gamut
+en = Gamut warning
+es = Aviso de gama
+
+fr = En bleu : les couleurs que l'imprimante ne saura pas rendre
+en = In blue: the colors the printer will not be able to reproduce
+es = En azul: los colores que la impresora no podrá reproducir
+
+fr = Contraste, hautes lumières, ombres, blancs, noirs
+en = Contrast, highlights, shadows, whites, blacks
+es = Contraste, altas luces, sombras, blancos, negros
+
+fr = Texture, clarté, voile, vibrance, saturation
+en = Texture, clarity, dehaze, vibrance, saturation
+es = Textura, claridad, neblina, intensidad, saturación
+
+fr = Détail (accentuation, bruit)
+en = Detail (sharpening, noise)
+es = Detalle (enfoque, ruido)
+
+fr = Effets (vignetage, grain)
+en = Effects (vignette, grain)
+es = Efectos (viñeta, grano)
+
+fr = Profil et film
+en = Profile and film
+es = Perfil y película
+
+fr = Objectif et transformation
+en = Lens and transform
+es = Objetivo y transformación
+
+fr = Coller…
+en = Paste…
+es = Pegar…
+
+fr = Alt+Maj+Cmd+V : choisir quoi coller
+en = Alt+Shift+Cmd+V: choose what to paste
+es = Alt+Mayús+Cmd+V: elegir qué pegar
+
+fr = Copiez d'abord les réglages d'une photo.
+en = Copy a photo's adjustments first.
+es = Copia primero los ajustes de una foto.
+
+fr = Coller une partie des réglages
+en = Paste some adjustments
+es = Pegar parte de los ajustes
+
+fr = Tout
+en = All
+es = Todo
+
+fr = Rien
+en = None
+es = Nada
+
+fr = Coller ({n})
+en = Paste ({n})
+es = Pegar ({n})
+
+fr = Coller une partie des réglages ({n})
+en = Paste some adjustments ({n})
+es = Pegar parte de los ajustes ({n})
