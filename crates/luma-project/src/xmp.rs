@@ -63,8 +63,12 @@ pub struct Meta {
     pub keywords: Vec<String>,
 }
 
-/// Le fichier XMP d'une photo : `IMG_0001.CR3.xmp` s'il existe, sinon `IMG_0001.xmp`.
+/// Le fichier XMP d'une photo : `IMG_0001.CR3.xmp` s'il existe, sinon `IMG_0001.xmp` ;
+/// celui d'une copie virtuelle, `IMG_0001.CR3.copie-2.xmp`.
 pub fn sidecar_path(photo: &std::path::Path) -> std::path::PathBuf {
+    if crate::copies::number(photo).is_some() {
+        return crate::copies::sidecar(photo);
+    }
     let long = std::path::PathBuf::from(format!("{}.xmp", photo.display()));
     if long.is_file() {
         long

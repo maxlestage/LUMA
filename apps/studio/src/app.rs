@@ -53,15 +53,30 @@ pub fn photo_extensions() -> Vec<String> {
 
 /// Les photos d'un dossier, triées par nom.
 pub fn scan(dir: &Path) -> Vec<PathBuf> {
-    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
-        .map(|d| {
-            d.flatten()
-                .map(|e| e.path())
-                .filter(|p| p.is_file() && is_photo(p))
-                .collect()
-        })
+    let paths: Vec<PathBuf> = std::fs::read_dir(dir)
+        .map(|d| d.flatten().map(|e| e.path()).collect())
         .unwrap_or_default();
-    files.sort();
+    let mut files: Vec<PathBuf> = paths
+        .iter()
+        .filter(|p| p.is_file() && is_photo(p))
+        .cloned()
+        .collect();
+    // Les copies virtuelles, d'après leur XMP (`IMG_0001.ARW.copie-2.xmp`), quand leur
+    // original est là.
+    let copies: Vec<PathBuf> = paths
+        .iter()
+        .filter_map(|p| p.to_str()?.strip_suffix(".xmp").map(PathBuf::from))
+        .filter(|c| luma_project::copies::number(c).is_some())
+        .filter(|c| files.contains(&luma_project::copies::source(c)))
+        .collect();
+    files.extend(copies);
+    // Chaque photo, puis ses copies dans l'ordre de leur numéro.
+    files.sort_by_key(|p| {
+        (
+            luma_project::copies::source(p),
+            luma_project::copies::number(p),
+        )
+    });
     files
 }
 
@@ -839,6 +854,69 @@ impl Studio {
         } else {
             self.status.clone()
         }
+    }
+
+    /// Crée une copie virtuelle de la photo affichée, avec ses réglages du moment, et
+    /// l'ouvre ; elle vient juste après la photo et ses autres copies.
+    pub fn create_copy(&mut self) -> Option<PathBuf> {
+        let current = self.current_path()?.to_path_buf();
+        let settings = if self.photo.is_some() && self.loading.is_none() {
+            self.settings.clone()
+        } else {
+            read_sidecar(&current).unwrap_or_default()
+        };
+        self.flush_xmp();
+        let copy = luma_project::copies::next(&current);
+        if let Err(e) = write_sidecar(&copy, &settings, &Meta::default()) {
+            self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
+            return None;
+        }
+        let source = luma_project::copies::source(&current);
+        let at = self
+            .folder
+            .iter()
+            .rposition(|p| luma_project::copies::source(p) == source)
+            .map_or(self.folder.len(), |i| i + 1);
+        self.folder.insert(at, copy.clone());
+        self.meta.insert(copy.clone(), Meta::default());
+        self.edits.insert(copy.clone(), presets::summary(&settings));
+        self.worker.thumbnail(copy.clone());
+        // Les rangs choisis après la copie se décalent : la sélection repart de zéro.
+        self.selected.clear();
+        self.select(at);
+        Some(copy)
+    }
+
+    /// Supprime la copie virtuelle affichée (son XMP) et revient à son original ; une
+    /// photo ordinaire n'est jamais supprimée.
+    pub fn delete_copy(&mut self) -> bool {
+        let Some(copy) = self.current_path().map(Path::to_path_buf) else {
+            return false;
+        };
+        if luma_project::copies::number(&copy).is_none() {
+            return false;
+        }
+        // Rien ne doit réécrire le XMP de la copie une fois supprimé.
+        self.xmp_due = None;
+        let _ = std::fs::remove_file(luma_project::copies::sidecar(&copy));
+        let source = luma_project::copies::source(&copy);
+        self.folder.retain(|p| *p != copy);
+        self.meta.remove(&copy);
+        self.edits.remove(&copy);
+        self.thumbs.remove(&copy);
+        self.selected.clear();
+        self.current = None;
+        if let Some(i) = self
+            .folder
+            .iter()
+            .position(|p| *p == source)
+            .or((!self.folder.is_empty()).then_some(0))
+        {
+            self.select(i);
+        } else {
+            self.photo = None;
+        }
+        true
     }
 
     /// La photo de rang `i` dans le film.
@@ -3303,6 +3381,25 @@ impl Studio {
         };
         section_title(ui, tr("Métadonnées"));
         ui.label(RichText::new(file_name(&path)).strong());
+        ui.horizontal(|ui| {
+            if ui
+                .small_button(tr("Copie virtuelle"))
+                .on_hover_text(tr(
+                    "Un autre développement de cette photo, sans dupliquer le fichier",
+                ))
+                .clicked()
+            {
+                self.create_copy();
+            }
+            if luma_project::copies::number(&path).is_some()
+                && ui
+                    .small_button(tr("Supprimer la copie"))
+                    .on_hover_text(tr("Supprime ses réglages ; l'original ne change pas"))
+                    .clicked()
+            {
+                self.delete_copy();
+            }
+        });
         let meta = self.current_meta();
         if let Some(n) = widgets::rating(ui, meta.rating, 20.0) {
             self.act(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n as usize]);
@@ -4943,9 +5040,18 @@ fn sub_title(ui: &mut Ui, title: &str) {
 }
 
 fn file_name(p: &Path) -> String {
-    p.file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default()
+    let name = |p: &Path| {
+        p.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
+    match luma_project::copies::number(p) {
+        Some(n) => trf(
+            "{file} (copie {n})",
+            &[("file", &name(&luma_project::copies::source(p))), ("n", &n)],
+        ),
+        None => name(p),
+    }
 }
 
 /// Le rectangle de taille `w × h` qui tient dans `area`, centré.

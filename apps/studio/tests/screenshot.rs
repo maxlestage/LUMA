@@ -297,6 +297,46 @@ fn library_catalog_views() {
 }
 
 #[test]
+fn library_virtual_copies() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("copies") else {
+        return;
+    };
+    s.keys(&[(NONE, Key::G), (NONE, Key::Num2)]);
+    let original = s.studio().current_path().unwrap().to_path_buf();
+    // Une copie : juste après son original, ouverte, avec son propre XMP.
+    let copy = s.studio().create_copy().unwrap();
+    s.wait();
+    assert_eq!(luma_project::copies::source(&copy), original);
+    assert_eq!(s.studio().current_path(), Some(copy.as_path()));
+    assert!(luma_project::copies::sidecar(&copy).is_file());
+    let dir = original.parent().unwrap().to_path_buf();
+    let listed = luma_studio::app::scan(&dir);
+    let at = listed.iter().position(|p| *p == original).unwrap();
+    assert_eq!(
+        listed[at + 1],
+        copy,
+        "relue dans le dossier, après son original"
+    );
+    // Sa note est la sienne ; l'original garde la sienne.
+    s.keys(&[(NONE, Key::Num5)]);
+    s.studio().flush_xmp();
+    assert_eq!(luma_studio::worker::read_meta(&copy).rating, 5);
+    assert_eq!(luma_studio::worker::read_meta(&original).rating, 2);
+    s.capture("bibliotheque-copie");
+    // Supprimée : son XMP disparaît, l'original reste et s'affiche.
+    assert!(s.studio().delete_copy());
+    s.wait();
+    assert!(!luma_project::copies::sidecar(&copy).exists());
+    assert!(original.is_file());
+    assert_eq!(s.studio().current_path(), Some(original.as_path()));
+    assert!(
+        !s.studio().delete_copy(),
+        "une photo ordinaire n'est jamais supprimée"
+    );
+}
+
+#[test]
 fn crop_tool_and_export_window() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("recadrage") else {
