@@ -108,6 +108,10 @@ La fototeca profesional, paso a paso.
   degradado.
 - **Zona de la máscara a su gusto**: la zona mostrada (O) puede ser roja, verde,
   azul, blanca o blanca sobre negro, con una opacidad del 10 al 100 %.
+- **Corrector y tampón** (Q): un clic sobre una mota de polvo o un detalle molesto, y
+  LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
+  toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
+  mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
 - **Perfiles ICC leídos** (un paso hacia la prueba en pantalla): perfiles de
   pantallas (matriz y curvas) y de impresoras y papeles (tablas lut8, lut16, A→B y
   B→A, versiones 2 y 4), en ambos sentidos y para las cuatro intenciones de
