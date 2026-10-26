@@ -138,6 +138,10 @@ La fototeca profesional, paso a paso.
   conectada, tarjeta copiada) entran en la fototeca y en la tira en cuanto están
   completas, y la última se abre (o solo se añade, a elegir); `luma watch carpeta`
   hace lo mismo desde la línea de comandos.
+- **Cámara conectada, en Mac** (Carpeta vigilada): «Conectar una cámara» abre la
+  cámara enchufada (USB, o red si lo permite) mediante el marco del sistema; cada
+  foto tomada llega a la carpeta vigilada y se abre, las que ya están en la tarjeta
+  se quedan donde están; «Disparar» para las cámaras que se disparan a distancia.
 
 ## 0.2.0 — octubre de 2026
 
