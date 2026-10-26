@@ -39,10 +39,27 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
   bibliothèque TLS compilée dans LÜMA).
 - **Limite** : sans base de données, le nombre d'appareils par clé n'est pas limité ; la
   clé porte le courriel de l'abonné, ce qui décourage le partage.
-- **iPhone et iPad** : vendus uniquement par l'App Store, avec ses achats intégrés ; ils
-  seront faits à la publication sur l'App Store (compte Apple Developer). D'ici là, l'app
-  iOS accepte encore une clé, vérifiée hors ligne, jusqu'à son terme.
+- **iPhone et iPad** : vendus uniquement par l'App Store, en achats intégrés
+  (StoreKit, appelé depuis Rust : `luma_apple::store`). L'écran Premium y montre les
+  deux abonnements à leur prix App Store (dans la devise de l'acheteur), « S'abonner »
+  et « Restaurer les achats ». Chaque achat, renouvellement ou restauration est
+  enregistré dans `licence.json` : l'abonnement vaut jusqu'au dernier paiement plus une
+  période, plus 14 jours. Les clés de licence n'y comptent pas (et l'app Mac ignore
+  l'App Store).
 - La ligne de commande `luma` reste libre.
+
+## Ouvrir l'App Store (iPhone et iPad, une fois)
+
+1. App Store Connect → l'app LÜMA (identifiant `app.luma.studio`) → **Abonnements** :
+   un groupe « LÜMA Premium », et deux abonnements renouvelables automatiquement :
+   - mensuel, identifiant `app.luma.studio.premium.monthly`, 1 mois, 19,99 € ;
+   - annuel, identifiant `app.luma.studio.premium.annual`, 1 an, 239,88 €.
+
+   D'autres identifiants ? Les donner à la compilation : variables
+   `LUMA_APPSTORE_MONTHLY` et `LUMA_APPSTORE_ANNUAL`.
+2. Accords, taxes et coordonnées bancaires : l'accord « Applications payantes » signé.
+3. Pour essayer sans payer : un compte **Sandbox** (Utilisateurs et accès → Sandbox),
+   puis l'app installée par TestFlight sur un iPhone ou un iPad.
 
 ## Ouvrir la boutique (une fois)
 
