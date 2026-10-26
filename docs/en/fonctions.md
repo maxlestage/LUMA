@@ -40,7 +40,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Color Grading | Shadows, midtones, highlights, global; blending, balance | ✅ |
 | Detail | Sharpening: amount, radius, detail, masking | ✅ |
 | | Luminance and colour noise reduction | ✅ |
-| | AI Denoise, Super Resolution | ⏳ |
+| | Advanced noise reduction (non-local means, wavelets), without AI | ⏳ |
 | Lens Corrections | Lateral chromatic aberration estimated from the photo, distortion, vignetting (amount, midpoint), purple and green defringe | ✅ |
 | | Lens profiles (database), longitudinal aberration | ⏳ |
 | Transform | Vertical and horizontal perspective, rotate, aspect, scale (homography, fixed centre) | ✅ |
@@ -50,7 +50,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Calibration | Shadows tint, hue and saturation of the primaries | ✅ |
 | Tools | Crop and straighten (free angle), on-screen tool with locked aspect ratio (R) | ✅ |
 | | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
-| | AI masks (subject, sky), luminance or colour range; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
+| | Luminance and colour range masks, edge-aware brush, combinations; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Snapshots, sync across multiple photos | ⏳ |
@@ -95,6 +95,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Folder filmstrip with thumbnails, ← → navigation | ✅ |
 | Grid, ratings (0 to 5), flags (P, X, U), filter by rating and flag, stored in the XMP | ✅ |
 | Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
+| Instant thumbnails (the preview embedded in the raw file, in 15 ms), then rendered with the adjustments and saved losslessly for later visits | ✅ |
+| Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
 | Catalogue in the app, collections, search and filters, virtual copies | ⏳ |
 | Importing existing catalogues | ⏳ |

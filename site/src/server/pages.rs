@@ -493,6 +493,56 @@ fn performance(lang: Lang) -> Element {
         )
 }
 
+/// Ce que LÜMA fait déjà : chaque fonction faite et testée de `docs/fonctions.md`,
+/// cochée, domaine par domaine.
+fn capabilities(lang: Lang) -> Element {
+    let f = super::docs::features(lang);
+    let groups = f.groups.iter().map(|(title, items)| {
+        article()
+            .class("cap-group reveal")
+            .child(h3().text(title.clone()))
+            .child(ul().children(items.iter().map(|(panel, feature)| {
+                li().child(
+                    span()
+                        .class("cap-check")
+                        .attr("aria-hidden", "true")
+                        .text("✔"),
+                )
+                .child(
+                    span()
+                        .child(
+                            panel
+                                .as_ref()
+                                .map(|p| span().class("cap-panel").text(p.clone())),
+                        )
+                        .children(rich(feature)),
+                )
+            })))
+    });
+    section()
+        .class("caps")
+        .id("fonctions")
+        .child(section_head(
+            t(lang, "Fonctions"),
+            heading(
+                h2,
+                &fill(t(lang, "*{n}* fonctions déjà là. Toutes testées."), &[("n", &f.done.to_string())]),
+            ),
+            Some(p().text(t(lang,
+                "Chaque fonction cochée est faite et vérifiée par les tests à chaque version. La liste s'allonge chaque jour.",
+            ))),
+        ))
+        .child(div().class("cap-grid").children(groups))
+        .child(
+            p().class("cap-more reveal").child(
+                a().href(page_link(lang, "/docs/fonctions/")).text(fill(
+                    t(lang, "Et ce qui vient : {n} fonctions en préparation →"),
+                    &[("n", &f.todo.to_string())],
+                )),
+            ),
+        )
+}
+
 /// La ligne d'objectif d'une carte de performance.
 fn p_note(text: String) -> Element {
     p().class("perf-note").text(text)
@@ -1022,6 +1072,7 @@ pub fn home(site: &Site, origin: &str, lang: Lang) -> Page {
                 .child(platforms(lang))
                 .child(architecture(lang))
                 .child(performance(lang))
+                .child(capabilities(lang))
                 .child(roadmap(lang))
                 .child(rust(lang))
                 .child(pricing(lang))

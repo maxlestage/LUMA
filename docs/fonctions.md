@@ -41,7 +41,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Étalonnage des couleurs | Ombres, tons moyens, hautes lumières, global ; fusion, balance | ✅ |
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |
-| | Débruitage par IA, super‑résolution | ⏳ |
+| | Réduction du bruit avancée (moyennes non locales, ondelettes), sans IA | ⏳ |
 | Corrections de l'objectif | Aberration chromatique latérale estimée sur la photo, distorsion, vignetage (gain, milieu), défrangeage violet et vert | ✅ |
 | | Profils d'objectifs (base de données), aberration longitudinale | ⏳ |
 | Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
@@ -51,7 +51,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
 | Outils | Recadrage et redressement (angle libre), outil à l'écran avec proportions verrouillées (R) | ✅ |
 | | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté | ✅ |
-| | Masques par IA (sujet, ciel), plage de luminance ou de couleur ; lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
+| | Masques par plage de luminance ou de couleur, pinceau qui suit les bords, combinaisons ; lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Correcteur, tampon, yeux rouges, suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |
@@ -96,6 +96,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Film du dossier avec vignettes, navigation ← → | ✅ |
 | Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
 | Catalogue local (`luma catalog`) : dossiers et sous‑dossiers, date de prise de vue, boîtier, objectif, ISO lus dans l'en‑tête sans décoder l'image, mise à jour incrémentale, tri par date | ✅ |
+| Vignettes instantanées (l'aperçu intégré au RAW, en 15 ms), puis rendues avec les réglages et enregistrées sans perte pour les visites suivantes | ✅ |
+| Doublon de travail en pleine définition : identique à l'original, ouverture plus rapide, mémoire divisée par deux et demi ; « Vider le cache » en un clic | ✅ |
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
 | Catalogue dans l'app, collections, recherche et filtres, copies virtuelles | ⏳ |
 | Import de catalogues existants | ⏳ |

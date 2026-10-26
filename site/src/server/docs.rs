@@ -262,9 +262,92 @@ fn resolve(dest: &str, link: &impl Fn(&str) -> String) -> Option<String> {
         })
 }
 
+/// Ce que fait LÜMA, lu dans `docs/fonctions.md` (dans la langue de la page) : par
+/// domaine, chaque fonction faite et testée (✅), avec son panneau s'il y en a un ; et le
+/// nombre de fonctions faites et à venir (🟡, ⏳). La page d'accueil se met ainsi à jour
+/// avec le document.
+/// Une fonction faite : son panneau (sur la première de chaque panneau) et son texte.
+pub type Feature = (Option<String>, String);
+
+pub struct Features {
+    pub groups: Vec<(String, Vec<Feature>)>,
+    pub done: usize,
+    pub todo: usize,
+}
+
+pub fn features(lang: Lang) -> Features {
+    let md = DOCS[1].markdown[Lang::ALL.iter().position(|l| *l == lang).unwrap_or(0)];
+    let mut f = Features {
+        groups: Vec::new(),
+        done: 0,
+        todo: 0,
+    };
+    // Le panneau en cours (tables du développement : colonne vide sous sa première
+    // ligne), affiché avec la première de ses fonctions faites.
+    let mut pending: Option<String> = None;
+    for line in md.lines() {
+        if let Some(title) = line.strip_prefix("## ") {
+            f.groups.push((title.trim().to_owned(), Vec::new()));
+            pending = None;
+            continue;
+        }
+        let Some(row) = line.strip_prefix('|') else {
+            continue;
+        };
+        let cells: Vec<&str> = row
+            .trim_end()
+            .trim_end_matches('|')
+            .split('|')
+            .map(str::trim)
+            .collect();
+        let Some(status) = cells.last() else {
+            continue;
+        };
+        let done = status.starts_with('✅');
+        if !done && !status.starts_with('🟡') && !status.starts_with('⏳') {
+            continue; // en-têtes et séparateurs
+        }
+        if cells.len() == 3 && !cells[0].is_empty() {
+            pending = Some(cells[0].to_owned());
+        }
+        if !done {
+            f.todo += 1;
+            continue;
+        }
+        f.done += 1;
+        let feature = cells[cells.len() - 2].to_owned();
+        if let Some(group) = f.groups.last_mut() {
+            group.1.push((pending.take(), feature));
+        }
+    }
+    f.groups.retain(|g| !g.1.is_empty());
+    f
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_done_features_are_counted_in_every_language() {
+        let fr = features(Lang::Fr);
+        assert!(
+            fr.done > 40 && fr.todo > 5,
+            "{} faites, {} à venir",
+            fr.done,
+            fr.todo
+        );
+        assert!(fr.groups.len() >= 4);
+        assert_eq!(fr.groups[0].1[0].0.as_deref(), Some("Profil"));
+        for lang in Lang::ALL {
+            let f = features(lang);
+            assert_eq!(
+                (f.done, f.todo),
+                (fr.done, fr.todo),
+                "{lang:?} : mêmes coches qu'en français"
+            );
+        }
+    }
 
     #[test]
     fn documents_link_to_each_other_and_not_to_the_repository() {

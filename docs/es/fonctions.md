@@ -41,7 +41,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Gradación de color | Sombras, medios tonos, altas luces, global; fusión, equilibrio | ✅ |
 | Detalle | Enfoque: cantidad, radio, detalle, máscara | ✅ |
 | | Reducción de ruido de luminancia y de color | ✅ |
-| | Reducción de ruido por IA, superresolución | ⏳ |
+| | Reducción de ruido avanzada (medias no locales, ondículas), sin IA | ⏳ |
 | Correcciones de lente | Aberración cromática lateral estimada en la foto, distorsión, viñeteado (cantidad, punto medio), eliminación de halos púrpuras y verdes | ✅ |
 | | Perfiles de objetivos (base de datos), aberración longitudinal | ⏳ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
@@ -51,7 +51,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Calibración | Matiz de las sombras, tono y saturación de los primarios | ✅ |
 | Herramientas | Recorte y enderezado (ángulo libre), herramienta en pantalla con proporciones bloqueadas (R) | ✅ |
 | | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad | ✅ |
-| | Máscaras por IA (sujeto, cielo), rango de luminancia o de color; lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
+| | Máscaras por rango de luminancia o de color, pincel que sigue los bordes, combinaciones; lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Corrección, clonar, ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Instantáneas, sincronización en varias fotos | ⏳ |
@@ -96,6 +96,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Tira de película de la carpeta con miniaturas, navegación ← → | ✅ |
 | Cuadrícula, valoraciones (0 a 5), banderas (P, X, U), filtro por valoración y bandera, en el XMP | ✅ |
 | Catálogo local (`luma catalog`): carpetas y subcarpetas, fecha de captura, cámara, objetivo, ISO leídos en la cabecera sin decodificar la imagen, actualización incremental, orden por fecha | ✅ |
+| Miniaturas instantáneas (la vista previa integrada en el RAW, en 15 ms), luego renderizadas con los ajustes y guardadas sin pérdida para las visitas siguientes | ✅ |
+| Copia de trabajo a resolución completa: idéntica al original, más rápida de abrir, dos veces y media menos memoria; «Vaciar la caché» en un clic | ✅ |
 | Palabras clave en el XMP (`dc:subject`), leídas y escritas | ✅ |
 | Catálogo en la app, colecciones, búsqueda y filtros, copias virtuales | ⏳ |
 | Importación de catálogos existentes | ⏳ |
