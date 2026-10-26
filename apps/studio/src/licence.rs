@@ -3,12 +3,14 @@
 //! en arrière‑plan, et l'écran Premium (les formules, la clé).
 //!
 //! Le réseau passe par `curl` (présent sur macOS et Linux) : pas de bibliothèque TLS
-//! compilée dans LÜMA. Sur iPhone et iPad, la clé est vérifiée hors ligne et vaut
-//! jusqu'à son terme ; l'abonnement y passera par l'App Store (achats intégrés).
+//! compilée dans LÜMA. Sur iPhone et iPad, l'abonnement s'achète uniquement dans l'App
+//! Store (`luma_apple::store`) : chaque achat, renouvellement ou restauration est
+//! enregistré dans `licence.json`, et les clés n'y comptent pas.
 
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
 
+use luma_apple::store;
 use luma_licence::{Access, Plan, Refused, State, Transport};
 
 use crate::i18n::{tr, trf};
@@ -96,6 +98,14 @@ pub struct Licence {
     pub key_input: String,
     /// Le dernier message (clé activée, refusée…).
     pub message: String,
+    /// Ce que répond l'App Store (iPhone et iPad).
+    store: Option<Receiver<store::Event>>,
+    /// Les abonnements de l'App Store, avec leur prix dans la devise de l'acheteur.
+    pub products: Vec<store::Product>,
+    /// Un achat ou une restauration est en cours dans l'App Store.
+    pub store_busy: bool,
+    /// Pendant une restauration : un achat est‑il revenu ?
+    restored_any: bool,
 }
 
 impl Licence {
@@ -120,6 +130,10 @@ impl Licence {
             pending: None,
             key_input: String::new(),
             message: String::new(),
+            store: store::start(&Plan::ALL.map(|p| p.app_store_id())),
+            products: Vec::new(),
+            store_busy: false,
+            restored_any: false,
         };
         if fresh {
             l.save();
@@ -147,7 +161,7 @@ impl Licence {
     }
 
     pub fn busy(&self) -> bool {
-        self.pending.is_some()
+        self.pending.is_some() || self.store_busy
     }
 
     fn save(&self) {
@@ -167,9 +181,86 @@ impl Licence {
         self.pending = Some(rx);
     }
 
+    /// L'App Store : produits, achats, renouvellements, restaurations. `true` si
+    /// l'état a changé.
+    fn poll_store(&mut self) -> bool {
+        let Some(rx) = &self.store else {
+            return false;
+        };
+        let events: Vec<store::Event> = rx.try_iter().collect();
+        let mut changed = false;
+        for e in events {
+            match e {
+                store::Event::Products(p) => self.products = p,
+                store::Event::Purchased { product, date } => {
+                    self.restored_any = true;
+                    if luma_licence::record_store(&mut self.state, &product, date) {
+                        self.save();
+                        changed = true;
+                        if self.store_busy {
+                            self.message = tr("Bienvenue dans LÜMA Premium.").into();
+                        }
+                    }
+                    self.store_busy = false;
+                }
+                store::Event::Deferred => {
+                    self.store_busy = false;
+                    self.message = tr("L'achat attend l'accord d'un parent.").into();
+                }
+                store::Event::Cancelled => {
+                    self.store_busy = false;
+                    self.message = tr("Achat annulé.").into();
+                }
+                store::Event::Failed(detail) => {
+                    self.store_busy = false;
+                    self.message = trf(
+                        "L'App Store a refusé l'achat : {detail}",
+                        &[("detail", &detail)],
+                    );
+                }
+                store::Event::Restored => {
+                    self.store_busy = false;
+                    self.message = if self.restored_any && self.access().is_allowed() {
+                        tr("Abonnement restauré.").into()
+                    } else {
+                        tr("Aucun abonnement en cours sur ce compte Apple.").into()
+                    };
+                }
+            }
+        }
+        changed
+    }
+
+    /// Le prix d'une formule dans l'App Store (dans la devise de l'acheteur), s'il est
+    /// arrivé.
+    pub fn store_price(&self, plan: Plan) -> Option<&str> {
+        self.products
+            .iter()
+            .find(|p| p.id == plan.app_store_id())
+            .map(|p| p.price.as_str())
+    }
+
+    /// Achète `plan` dans l'App Store.
+    pub fn buy(&mut self, plan: Plan) {
+        self.store_busy = true;
+        self.message.clear();
+        store::buy(plan.app_store_id());
+    }
+
+    /// Retrouve les abonnements de ce compte Apple.
+    pub fn restore(&mut self) {
+        self.store_busy = true;
+        self.restored_any = false;
+        self.message.clear();
+        store::restore();
+    }
+
     /// À chaque image : récupère le résultat d'une opération finie. `true` si l'état a
     /// changé.
     pub fn poll(&mut self) -> bool {
+        if self.poll_store() {
+            return true;
+        }
         let Some(rx) = &self.pending else {
             return false;
         };
