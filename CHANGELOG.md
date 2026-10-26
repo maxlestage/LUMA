@@ -115,6 +115,10 @@ La photothèque professionnelle, étape par étape.
   la texture et prend la lumière du bord de la zone ; le tampon en fait une copie
   exacte. Zone et source se déplacent à la souris ; taille, contour progressif,
   opacité. Enregistrés dans le XMP.
+- **Taches de capteur** : « Voir les taches » fait ressortir les poussières du capteur
+  en points sombres ; « Retirer les poussières » les trouve dans les zones unies (un
+  ciel, un mur) et pose un correcteur sur chacune, en laissant les textures, les
+  fils et le flou des arrière-plans.
 - **Profils ICC lus** (étape vers l'épreuvage à l'écran) : profils des écrans
   (matrice et courbes) et des imprimantes et papiers (tables lut8, lut16, A→B et
   B→A, versions 2 et 4), dans les deux sens et pour les quatre intentions de rendu,

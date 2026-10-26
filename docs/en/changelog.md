@@ -107,6 +107,9 @@ The professional photo library, step by step.
   LÜMA picks the part of the photo that replaces it. Healing keeps its texture and
   takes the light from the edge of the area; clone makes an exact copy. Area and
   source move with the mouse; size, feather, opacity. Saved in the XMP.
+- **Sensor spots**: “Show spots” makes sensor dust stand out as dark dots; “Remove
+  dust” finds it in even areas (a sky, a wall) and puts a healing spot on each one,
+  leaving textures, wires and background blur alone.
 - **ICC profiles read** (a step towards on-screen soft proofing): display profiles
   (matrix and curves) and printer and paper profiles (lut8, lut16, A→B and B→A
   tables, versions 2 and 4), in both directions and for all four rendering intents,
