@@ -776,7 +776,7 @@ fn site_footer(here: Here) -> Element {
                 .child(
                     p().class("footer-signature-name").text("Maxime Nathan Lestage"),
                 )
-                .child(p().class("footer-signature-made").text(t(lang, "Fabriqué en Rust, en France")))
+                .child(heading(p, t(lang, "*Fabriqué en Rust*, en France")).class("footer-signature-made"))
                 .child(
                     // Les lettres montent une à une quand le pied de page arrive, comme le titre
                     // de l'accueil.
