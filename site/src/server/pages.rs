@@ -777,7 +777,17 @@ fn site_footer(here: Here) -> Element {
                     p().class("footer-signature-name").text("Maxime Nathan Lestage"),
                 )
                 .child(p().class("footer-signature-made").text(t(lang, "Fabriqué en Rust, en France")))
-                .child(p().class("footer-wordmark").attr("aria-hidden", "true").text("LÜMA")),
+                .child(
+                    // Les lettres montent une à une quand le pied de page arrive, comme le titre
+                    // de l'accueil.
+                    p().class("footer-wordmark reveal")
+                        .attr("aria-hidden", "true")
+                        .children("LÜMA".chars().enumerate().map(|(n, c)| {
+                            span()
+                                .class("ch")
+                                .child(span().style(format!("--i:{n}")).text(c.to_string()))
+                        })),
+                ),
         )
         .child(
             div()
