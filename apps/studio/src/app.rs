@@ -1304,6 +1304,31 @@ impl Studio {
                             o.long_edge = resize.then_some(n);
                         });
                         ui.end_row();
+                        ui.label(tr("Nom des fichiers"));
+                        ui.vertical(|ui| {
+                            let mut text = o.name.clone().unwrap_or_default();
+                            let edit = ui
+                                .add(
+                                    egui::TextEdit::singleline(&mut text)
+                                        .hint_text("{nom}")
+                                        .desired_width(260.0),
+                                )
+                                .accessible_name(tr("Nom des fichiers"));
+                            if edit.changed() {
+                                o.name = Some(text.clone()).filter(|t| !t.trim().is_empty());
+                            }
+                            // Les repères du modèle, ou ce qui ne va pas.
+                            let note = if valid_name(&text) {
+                                RichText::new(tr(
+                                    "Repères : {nom} {date} {heure} {séquence} {boîtier} {objectif} {iso} {note} {libellé} ; « / » crée un sous-dossier",
+                                ))
+                                .color(theme::DIM)
+                            } else {
+                                RichText::new(tr("Repère inconnu ou accolade non fermée")).color(theme::ACCENT)
+                            };
+                            ui.label(note.small());
+                        });
+                        ui.end_row();
                         ui.label(tr("Dossier"));
                         ui.horizontal(|ui| {
                             let text = match &o.folder {
@@ -1325,8 +1350,12 @@ impl Studio {
                         ui.end_row();
                     });
                 ui.add_space(8.0);
+                let valid = valid_name(self.export_options.name.as_deref().unwrap_or(""));
                 ui.with_layout(egui::Layout::top_down(egui::Align::Max), |ui| {
-                    if ui.button(RichText::new(tr("Exporter")).strong()).clicked() {
+                    if ui
+                        .add_enabled(valid, egui::Button::new(RichText::new(tr("Exporter")).strong()))
+                        .clicked()
+                    {
                         go = true;
                     }
                 });
@@ -4253,6 +4282,11 @@ fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
     }
     let s = (area.width() / w as f32).min(area.height() / h as f32);
     egui::Rect::from_center_size(area.center(), vec2(w as f32 * s, h as f32 * s))
+}
+
+/// Le modèle du nom des fichiers exportés est‑il valable ?
+fn valid_name(template: &str) -> bool {
+    luma_render::export::check_template(template).is_ok()
 }
 
 #[cfg(test)]

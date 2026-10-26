@@ -23,6 +23,11 @@ La fototeca profesional, paso a paso.
   tamaño y carpeta guardados con un nombre; cuatro de serie (web, resolución completa,
   pantalla P3, impresión) y los suyos, compartidos por la app y la línea de comandos
   (`luma export-preset`, `luma develop --preset Web`).
+- **Nombres de los archivos exportados**: una plantilla como `{fecha}_{secuencia}` o
+  `{año}/{mes}/{cámara}_{nombre}`, con la fecha de captura, la cámara, el objetivo, el
+  ISO, la valoración, la etiqueta y el orden en la exportación; en la ventana Exportar,
+  los ajustes preestablecidos y `luma develop --name`. Dos fotos con el mismo nombre no
+  se sobrescriben (`-2`, `-3`…).
 
 ## 0.2.0 — octubre de 2026
 

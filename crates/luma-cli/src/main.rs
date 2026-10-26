@@ -33,13 +33,16 @@ USAGE
   luma develop <raw> [-o sortie.jpg|.png|.tif] [--size N] [--space srgb|p3|rec2020|prophoto]
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
-                     [--preset nom]
+                     [--preset nom] [--name modèle]
       Avec --preset, les options du préréglage d'export (format, qualité, espace, taille,
-      dossier) ; les options données les remplacent, --size est alors le grand côté de
-      l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par défaut).
+      dossier, nom) ; les options données les remplacent, --size est alors le grand côté
+      de l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par
+      défaut). --name donne le nom du fichier par un modèle : {nom} {date} {heure}
+      {année} {mois} {jour} {séquence} (ou {séquence:2}…) {boîtier} {marque} {objectif}
+      {iso} {note} {libellé} ; un « / » crée un sous‑dossier ({année}/{mois}/{nom}).
   luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
                      [--space srgb|p3|rec2020|prophoto] [--size N|0] [--folder d]
-                     [--next-to-original] [--delete]
+                     [--next-to-original] [--name modèle] [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
       (partagé avec l'app) ; --delete le retire.
@@ -103,6 +106,7 @@ struct Args {
     quality: Option<u8>,
     bits: Option<u8>,
     preset: Option<String>,
+    name: Option<String>,
     xmp: Option<PathBuf>,
     settings: Option<PathBuf>,
     sidecar: bool,
@@ -120,6 +124,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         quality: None,
         bits: None,
         preset: None,
+        name: None,
         xmp: None,
         settings: None,
         sidecar: true,
@@ -139,6 +144,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--quality" => a.quality = Some(value(&arg)?.parse().map_err(|_| "--quality : 1 à 100")?),
             "--bits" => a.bits = Some(value(&arg)?.parse().map_err(|_| "--bits : 8 ou 16")?),
             "--preset" => a.preset = Some(value(&arg)?),
+            "--name" => a.name = Some(value(&arg)?),
             "--xmp" => a.xmp = Some(value(&arg)?.into()),
             "--settings" => a.settings = Some(value(&arg)?.into()),
             "--no-sidecar" => a.sidecar = false,
@@ -383,13 +389,23 @@ fn develop(a: &Args) -> Result<(), String> {
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
-    if let Some(name) = &a.preset {
-        // Un préréglage d'export : ses options, que les options données remplacent.
-        let mut o = load_presets()?
-            .1
-            .get(name)
-            .ok_or_else(|| format!("préréglage d'export inconnu « {name} » (luma export-preset les liste)"))?
-            .options;
+    if a.preset.is_some() || a.name.is_some() {
+        // Un préréglage d'export (à défaut, les options par défaut) : ses options, que les
+        // options données remplacent.
+        let mut o = match &a.preset {
+            Some(name) => {
+                load_presets()?
+                    .1
+                    .get(name)
+                    .ok_or_else(|| format!("préréglage d'export inconnu « {name} » (luma export-preset les liste)"))?
+                    .options
+            }
+            None => export::Options::default(),
+        };
+        if let Some(t) = &a.name {
+            export::check_template(t)?;
+            o.name = Some(t.clone()).filter(|t| !t.trim().is_empty());
+        }
         o.space = a.space.unwrap_or(o.space);
         o.quality = a.quality.unwrap_or(o.quality);
         o.bits = a.bits.unwrap_or(o.bits);
@@ -402,7 +418,18 @@ fn develop(a: &Args) -> Result<(), String> {
         {
             o.format = f;
         }
-        let out = a.output.clone().unwrap_or_else(|| export::output_path(path, &o));
+        let meta = a
+            .sidecar
+            .then(|| sidecar(path))
+            .flatten()
+            .and_then(|x| std::fs::read_to_string(x).ok())
+            .map(|t| xmp::read_meta(&t))
+            .unwrap_or_default();
+        let fields = export::NameFields::of_photo(path, &photo, &meta, 1);
+        let out = a
+            .output
+            .clone()
+            .unwrap_or_else(|| export::output_path(path, &o, &fields));
         let t2 = Instant::now();
         export::develop(&photo, &settings, &out, &o)?;
         println!("{} → {} ({})", path.display(), out.display(), export::describe(&o));
@@ -482,6 +509,11 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
             }
             "--folder" => o.folder = Some(value()?.into()),
             "--next-to-original" => o.folder = None,
+            "--name" => {
+                let t = value()?;
+                export::check_template(&t)?;
+                o.name = Some(t).filter(|t| !t.trim().is_empty());
+            }
             "--delete" => delete = true,
             other => return Err(format!("option inconnue « {other} »")),
         }

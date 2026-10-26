@@ -357,6 +357,18 @@ fr = Grand côté en pixels
 en = Long edge in pixels
 es = Lado largo en píxeles
 
+fr = Nom des fichiers
+en = File names
+es = Nombre de los archivos
+
+fr = Repères : {nom} {date} {heure} {séquence} {boîtier} {objectif} {iso} {note} {libellé} ; « / » crée un sous-dossier
+en = Tokens: {nom} {date} {heure} {séquence} {boîtier} {objectif} {iso} {note} {libellé}; “/” creates a subfolder
+es = Marcadores: {nom} {date} {heure} {séquence} {boîtier} {objectif} {iso} {note} {libellé}; «/» crea una subcarpeta
+
+fr = Repère inconnu ou accolade non fermée
+en = Unknown token or unclosed brace
+es = Marcador desconocido o llave sin cerrar
+
 fr = Dossier
 en = Folder
 es = Carpeta

@@ -37,7 +37,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 
 - [x] 2.1 Préréglages d'export enregistrés (format, qualité, espace, taille, dossier),
   dans le moteur (`luma-render::export`) et la ligne de commande.
-- [ ] 2.2 Modèles de nom : `{date}`, `{nom}`, `{séquence}`, `{boîtier}`, `{note}`…
+- [x] 2.2 Modèles de nom : `{date}`, `{nom}`, `{séquence}`, `{boîtier}`, `{note}`…
 - [ ] 2.3 Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels.
 - [ ] 2.4 Accentuation de sortie : écran, papier mat, papier brillant ; faible, normale,
   forte.
@@ -158,6 +158,8 @@ et blanc, vignetage après recadrage et grain existent).
   le boîtier et l'objectif (aujourd'hui, date du fichier).
 - Doublons dans le catalogue (même date, même boîtier, même taille).
 - Vignettes du catalogue en cache sur disque, partagées entre la grille et le film.
+- Le test GPU `same_as_cpu` a planté une fois (SIGSEGV) sur le Vulkan logiciel de la CI,
+  sans changement de `luma-gpu` : à surveiller.
 - L'export en pleine définition prend 1,8 à 5,3 s par RAW (4 cœurs) : la piste de vitesse
   la plus visible pour l'export.
 - La suppression d'une branche distante par `git push --delete` est refusée par le
@@ -173,3 +175,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 1.2 Recherche et filtres du catalogue (`luma_library::Query`, `luma catalog --search`, `--keywords`) : mots sans accents, note, drapeau, libellé, dates partielles, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers, objectifs | Catalogue synthétique de 100 000 photos : filtres combinés 65 ms → 4 ms ; mot libre 82 ms → 14–25 ms (comparaison sans allocation, filtrage sur 4 cœurs) ; chargement de l'index JSON (34 Mo) : 314 ms, à alléger (étape 1.7) |
 | 2026-10-26 | 2.1 Préréglages d'export dans le moteur (`luma_render::export` : `Options`, `Preset`, `Presets`, `develop`), partagés par l'app et la ligne de commande : quatre de base (Web, Pleine définition, Écran P3, Impression) et ceux de l'utilisateur (`Exports.json`) ; `luma export-preset`, `luma develop --preset` | Export « Web » (2048 px) d'un RAW, rendu et encodage : 307 à 626 ms selon le boîtier ; « Pleine définition » : 1,8 à 5,3 s (4 cœurs) |
 | 2026-10-26 | 1.3 Collections manuelles et dynamiques dans le catalogue (`luma_library::Collection`, `luma catalog --smart`, `--add`, `--collections`, `--collection`) ; anciens index relus tels quels | Une collection dynamique coûte une recherche (4 à 25 ms pour 100 000 photos) ; index du corpus avec une collection de deux photos : 1,6 → 1,8 Ko |
+| 2026-10-26 | 2.2 Modèles de nom des fichiers exportés (`luma_render::export::file_name`, `NameFields`) : 13 repères (date et heure de prise de vue, séquence, boîtier, objectif, ISO, note, libellé…), alias anglais et espagnols, sous‑dossiers par « / », caractères interdits remplacés, noms en double numérotés ; fenêtre Exporter (modèle vérifié en direct), préréglages, `luma develop --name` | Nom calculé à partir de l'EXIF déjà lu : rien de plus à lire ni à décoder |
