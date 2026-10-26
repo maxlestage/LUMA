@@ -395,13 +395,19 @@ fn splines(img: &mut RgbImage, frame: Frame, knots: &[f64], distortion: &[Vec<f6
         })
         .collect();
     let (w, h) = (img.width, img.height);
-    let src = img.data.clone();
+    // L'image corrigée s'écrit dans une image neuve (des pages mises à zéro par le
+    // système, remplies en parallèle) : pas de copie de la source, qui coûtait un tiers
+    // du temps.
+    let src = std::mem::take(&mut img.data);
+    let mut out = vec![[0.0f32; 3]; w * h];
     let (cx, cy, unit) = (cx as f32, cy as f32, (m * zoom) as f32);
     let (mx, my) = ((w - 1) as f32, (h - 1) as f32);
-    img.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+    // L'écart au centre de chaque colonne, calculé une fois (la même formule, donc les
+    // mêmes valeurs au bit près).
+    let columns: Vec<f32> = (0..w).map(|x| (x as f32 + 0.5 - cx) / unit).collect();
+    out.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
         let dy = (y as f32 + 0.5 - cy) / unit;
-        for (x, px) in row.iter_mut().enumerate() {
-            let dx = (x as f32 + 0.5 - cx) / unit;
+        for (px, &dx) in row.iter_mut().zip(&columns) {
             let t = ((dx * dx + dy * dy) * N as f32).min(N as f32);
             let k = t as usize;
             let f = t - k as f32;
@@ -422,6 +428,7 @@ fn splines(img: &mut RgbImage, frame: Frame, knots: &[f64], distortion: &[Vec<f6
             }
         }
     });
+    img.data = out;
 }
 
 /// Le vignetage, sur une mosaïque (une valeur par photosite) : `OpcodeList2`, avant le
@@ -476,7 +483,9 @@ fn warp(img: &mut RgbImage, frame: Frame, planes: &[[f64; 6]], center: [f64; 2])
 /// bilinéaire).
 fn remap(img: &mut RgbImage, source: impl Fn(f64, f64, usize) -> (f64, f64) + Sync) {
     let (w, h) = (img.width, img.height);
-    let src = img.data.clone();
+    // Comme pour les courbes : une image neuve, pas de copie de la source.
+    let src = std::mem::take(&mut img.data);
+    let mut out = vec![[0.0f32; 3]; w * h];
     let sample = |x: f64, y: f64, c: usize| -> f32 {
         let x = x.clamp(0.0, (w - 1) as f64);
         let y = y.clamp(0.0, (h - 1) as f64);
@@ -488,7 +497,7 @@ fn remap(img: &mut RgbImage, source: impl Fn(f64, f64, usize) -> (f64, f64) + Sy
         let bottom = at(x0, y1) + (at(x1, y1) - at(x0, y1)) * fx;
         top + (bottom - top) * fy
     };
-    img.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+    out.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
         for (x, px) in row.iter_mut().enumerate() {
             for (c, v) in px.iter_mut().enumerate() {
                 let (sx, sy) = source(x as f64 + 0.5, y as f64 + 0.5, c);
@@ -496,6 +505,7 @@ fn remap(img: &mut RgbImage, source: impl Fn(f64, f64, usize) -> (f64, f64) + Sy
             }
         }
     });
+    img.data = out;
 }
 
 #[cfg(test)]

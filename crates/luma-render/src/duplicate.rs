@@ -7,8 +7,8 @@
 //! bits forts d'un flottant 32 bits, arrondis : 17 bits de précision, un écart relatif
 //! d'au plus 0,0008 %, bien en deçà des 14 bits d'un capteur ; vérifié par les tests au
 //! 1/255 près, même aux hautes lumières), avec ses réductions successives par deux (une
-//! pyramide). Chaque niveau est découpé en bandes compressées sans perte (LZ4, octets
-//! séparés par poids), décompressées en parallèle.
+//! pyramide). Chaque niveau est découpé en bandes compressées sans perte (écarts au
+//! pixel de gauche, octets séparés par poids, LZ4), décompressées en parallèle.
 //!
 //! À la retouche, seul le niveau utile est lu : l'aperçu n'a besoin que d'une image de
 //! la taille de l'écran ; la pleine définition n'est lue que pour le zoom 100 % et
@@ -26,8 +26,9 @@ use luma_raw::{Exif, Mosaic, Orientation, RawPhoto};
 use rayon::prelude::*;
 use serde_json::{Value, json};
 
-// 3 : l'auteur, le copyright et la position GPS (recopiés à l'export).
-const MAGIC: &[u8; 8] = b"LUMADUP3";
+// 3 : l'auteur, le copyright et la position GPS (recopiés à l'export) ; 4 : les écarts
+// au pixel de gauche (moitié moins gros).
+const MAGIC: &[u8; 8] = b"LUMADUP4";
 /// Lignes par bande compressée.
 const BAND: usize = 64;
 /// Le plus petit niveau de la pyramide (grand côté), sous lequel on s'arrête.
@@ -188,28 +189,63 @@ fn from_f24(b: u32) -> f32 {
     f32::from_bits(b << 8)
 }
 
-/// Une bande : les octets forts des flottants 24 bits, puis les moyens, puis les
-/// faibles (le bruit est dans les faibles : les forts se compressent bien), en LZ4.
-fn encode_band(px: &[[f32; 3]]) -> Vec<u8> {
+/// Une valeur 24 bits signée repliée sur les naturels : 0, −1, 1, −2… deviennent 0,
+/// 1, 2, 3… (les petits écarts, positifs ou négatifs, gardent des octets forts nuls).
+fn fold24(d: u32) -> u32 {
+    let d = ((d << 8) as i32) >> 8;
+    (((d << 1) ^ (d >> 31)) as u32) & 0xff_ffff
+}
+
+fn unfold24(z: u32) -> u32 {
+    ((z >> 1) ^ (z & 1).wrapping_neg()) & 0xff_ffff
+}
+
+/// Une bande : chaque flottant 24 bits remplacé par son écart au pixel de gauche (même
+/// couche, même ligne ; les bits d'un flottant positif croissent avec lui), replié ;
+/// puis les octets forts des écarts, les moyens, les faibles (le bruit est dans les
+/// faibles : les forts, presque tous nuls, se compressent très bien), en LZ4.
+/// Sans perte : les flottants relus sont ceux écrits, au bit près.
+fn encode_band(px: &[[f32; 3]], width: usize) -> Vec<u8> {
     let n = px.len() * 3;
     let mut planes = vec![0u8; n * 3];
-    for (i, v) in px.iter().flatten().enumerate() {
-        let b = to_f24(*v);
-        planes[i] = (b >> 16) as u8;
-        planes[n + i] = (b >> 8) as u8;
-        planes[2 * n + i] = b as u8;
+    let mut i = 0;
+    for row in px.chunks(width) {
+        let mut left = [0u32; 3];
+        for p in row {
+            for c in 0..3 {
+                let b = to_f24(p[c]);
+                let z = fold24(b.wrapping_sub(left[c]));
+                left[c] = b;
+                planes[i] = (z >> 16) as u8;
+                planes[n + i] = (z >> 8) as u8;
+                planes[2 * n + i] = z as u8;
+                i += 1;
+            }
+        }
     }
     lz4_flex::compress_prepend_size(&planes)
 }
 
-fn decode_band(bytes: &[u8], out: &mut [[f32; 3]]) -> Result<()> {
+fn decode_band(bytes: &[u8], out: &mut [[f32; 3]], width: usize) -> Result<()> {
     let planes = lz4_flex::decompress_size_prepended(bytes).map_err(|e| Error::Decode(e.to_string()))?;
     let n = out.len() * 3;
     if planes.len() != n * 3 {
         return Err(Error::Decode("doublon : bande de mauvaise taille".into()));
     }
-    for (i, v) in out.iter_mut().flatten().enumerate() {
-        *v = from_f24((u32::from(planes[i]) << 16) | (u32::from(planes[n + i]) << 8) | u32::from(planes[2 * n + i]));
+    let (high, rest) = planes.split_at(n);
+    let (mid, low) = rest.split_at(n);
+    let mut i = 0;
+    for row in out.chunks_mut(width) {
+        let mut left = [0u32; 3];
+        for p in row {
+            for c in 0..3 {
+                let z = (u32::from(high[i]) << 16) | (u32::from(mid[i]) << 8) | u32::from(low[i]);
+                let b = left[c].wrapping_add(unfold24(z)) & 0xff_ffff;
+                left[c] = b;
+                p[c] = from_f24(b);
+                i += 1;
+            }
+        }
     }
     Ok(())
 }
@@ -238,7 +274,11 @@ pub fn write(raw: &RawPhoto, source: &Path, path: &Path) -> Result<()> {
     let bodies: Vec<(usize, usize, Vec<Vec<u8>>)> = levels
         .iter()
         .map(|l| {
-            let bands = l.data.par_chunks(l.width * BAND).map(encode_band).collect();
+            let bands = l
+                .data
+                .par_chunks(l.width * BAND)
+                .map(|b| encode_band(b, l.width))
+                .collect();
             (l.width, l.height, bands)
         })
         .collect();
@@ -385,7 +425,7 @@ impl Duplicate {
         img.data
             .par_chunks_mut(l.width * BAND)
             .zip(starts.par_iter())
-            .try_for_each(|(out, &(s, n))| decode_band(&bytes[s..s + n], out))?;
+            .try_for_each(|(out, &(s, n))| decode_band(&bytes[s..s + n], out, l.width))?;
         Ok(img)
     }
 }
@@ -458,4 +498,48 @@ pub fn budget() -> u64 {
         .and_then(|v| v.parse::<u64>().ok())
         .unwrap_or(if cfg!(target_os = "ios") { 8 } else { 20 });
     gb * 1024 * 1024 * 1024
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bands_come_back_bit_for_bit() {
+        // Des pentes douces, des sauts, des négatifs, zéro, l'infini, du bruit : les
+        // flottants 24 bits relus sont exactement ceux écrits.
+        let width = 37;
+        let mut seed = 0x9e37_79b9_7f4a_7c15u64;
+        let mut noise = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            (seed >> 40) as f32 / (1u64 << 24) as f32
+        };
+        let px: Vec<[f32; 3]> = (0..width * 5)
+            .map(|i| match i % 9 {
+                0 => [0.0, -0.0, f32::INFINITY],
+                1 => [-0.25, 1e-30, 65504.0],
+                2 => [noise(), -noise(), noise() * 1000.0],
+                _ => [i as f32 * 0.001, 0.5 + noise() * 0.01, 1.0 - i as f32 * 1e-4],
+            })
+            .collect();
+        let mut back = vec![[1.0f32; 3]; px.len()];
+        decode_band(&encode_band(&px, width), &mut back, width).unwrap();
+        for (a, b) in px.iter().zip(&back) {
+            for c in 0..3 {
+                assert_eq!(from_f24(to_f24(a[c])).to_bits(), b[c].to_bits(), "{a:?} → {b:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn folding_is_reversible() {
+        for d in [0u32, 1, 2, 0xff_ffff, 0x80_0000, 0x7f_ffff, 0x12_3456] {
+            assert_eq!(unfold24(fold24(d)), d);
+        }
+        // Les petits écarts, dans un sens ou dans l'autre, restent petits.
+        assert_eq!(fold24(0xff_ffff), 1);
+        assert_eq!(fold24(1), 2);
+    }
 }
