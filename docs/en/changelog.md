@@ -102,6 +102,10 @@ The professional photo library, step by step.
   in pure Rust; a truncated or broken profile is rejected harmlessly. `luma icc`
   describes a profile: class, space, intents, media white, and the device's white,
   black and primaries.
+- **On-screen soft proofing** (below the histogram): choose the ICC profile of a
+  printer and paper, and the preview shows the photo as it will come out, with the
+  perceptual or relative colorimetric intent; the histogram follows. A view, not an
+  adjustment: nothing is written to the photo.
 
 ## 0.2.0 — October 2026
 

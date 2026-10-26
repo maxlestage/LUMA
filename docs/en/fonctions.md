@@ -85,6 +85,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Highlights clipped at the sensor rendered neutral (no pink skies) | ✅ |
 | EXIF orientation | ✅ |
 | ICC profiles read (versions 2 and 4): matrix and curves, lut8, lut16, A→B and B→A tables of printers and papers, four rendering intents (`luma icc`) | ✅ |
+| On-screen soft proofing: the preview as it will print with a printer profile, perceptual or relative colorimetric intent (histogram included) | ✅ |
 
 ## Export
 
