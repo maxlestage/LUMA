@@ -235,13 +235,15 @@ impl Worker {
             repaint();
             // Un RAW ouvert depuis l'original : son doublon de travail s'écrit
             // maintenant, puis la photo passe dessus.
+            // Une copie virtuelle partage le doublon de son original.
+            let source = luma_project::copies::source(&path);
             if let (Some(photo), Some(dir)) = (photo, crate::dialogs::duplicates_dir())
                 && photo.wants_duplicate()
                 && duplicate_fits(&photo)
-                && photo.write_duplicate(&path, &dir).is_ok()
+                && photo.write_duplicate(&source, &dir).is_ok()
             {
                 drop(photo);
-                if let Ok(next) = Photo::open_with_duplicates(&path, &dir)
+                if let Ok(next) = Photo::open_with_duplicates(&source, &dir)
                     && next.from_duplicate()
                 {
                     let _ = sender.send(Event::Reloaded {
@@ -259,7 +261,7 @@ impl Worker {
     pub fn reload_original(&self, path: PathBuf) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
-            if let Ok(photo) = Photo::open(&path) {
+            if let Ok(photo) = Photo::open(luma_project::copies::source(&path)) {
                 let _ = sender.send(Event::Reloaded {
                     path,
                     photo: Arc::new(photo),
@@ -333,7 +335,16 @@ impl Worker {
             .expect("fil de mesure");
     }
 
-    pub fn merge(&self, job: MergeJob, cancel: Cancel) {
+    pub fn merge(&self, mut job: MergeJob, cancel: Cancel) {
+        // Une copie virtuelle fusionne les pixels de son original, une seule fois.
+        let mut sources: Vec<PathBuf> = Vec::new();
+        for p in &job.paths {
+            let source = luma_project::copies::source(p);
+            if !sources.contains(&source) {
+                sources.push(source);
+            }
+        }
+        job.paths = sources;
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::Builder::new()
             .name("luma-fusion".into())
@@ -629,7 +640,8 @@ fn quick_thumbnail(
     sender: &Sender<Event>,
     repaint: &Arc<dyn Fn() + Send + Sync>,
 ) -> bool {
-    let Some(img) = luma_raw::RawPhoto::embedded_preview(path, 320) else {
+    let source = luma_project::copies::source(path);
+    let Some(img) = luma_raw::RawPhoto::embedded_preview(&source, 320) else {
         return false;
     };
     let size = [img.width() as usize, img.height() as usize];
