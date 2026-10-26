@@ -110,6 +110,11 @@ La photothèque professionnelle, étape par étape.
   visage sous un dégradé.
 - **Zone du masque à votre goût** : la zone affichée (O) se montre en rouge, vert,
   bleu, blanc ou blanc sur noir, avec une opacité de 10 à 100 %.
+- **Correcteur et tampon** (Q) : un clic sur une poussière ou un détail gênant, et
+  LÜMA choisit lui-même la partie de la photo qui le remplace. Le correcteur en garde
+  la texture et prend la lumière du bord de la zone ; le tampon en fait une copie
+  exacte. Zone et source se déplacent à la souris ; taille, contour progressif,
+  opacité. Enregistrés dans le XMP.
 - **Profils ICC lus** (étape vers l'épreuvage à l'écran) : profils des écrans
   (matrice et courbes) et des imprimantes et papiers (tables lut8, lut16, A→B et
   B→A, versions 2 et 4), dans les deux sens et pour les quatre intentions de rendu,
