@@ -25,6 +25,9 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Sony lens corrections**: the distortion, lateral chromatic aberration and
+  vignetting that the camera records in every ARW file are applied automatically, with
+  just enough enlargement to leave no empty border.
 - **DNG lens corrections**: the distortion, lateral chromatic aberration and
   vignetting that the camera or the software wrote into a DNG (`WarpRectilinear` and
   `FixVignetteRadial` opcodes) are applied automatically, in the preview as on export.
