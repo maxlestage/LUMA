@@ -12,6 +12,7 @@
 
 pub mod collections;
 pub mod query;
+mod store;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -24,7 +25,7 @@ use serde::{Deserialize, Serialize};
 pub use collections::{Collection, Content};
 pub use query::Query;
 
-/// La version du format de l'index ; un index d'une autre version est reconstruit.
+/// La version de l'ancien index JSON ; un index d'une autre version est reconstruit.
 const VERSION: u32 = 1;
 
 /// Une photo du catalogue.
@@ -105,7 +106,8 @@ pub struct Catalog {
     collections: Vec<Collection>,
 }
 
-#[derive(Serialize, Deserialize)]
+/// L'ancien index, en JSON : encore lu, plus écrit.
+#[derive(Deserialize)]
 struct Stored {
     version: u32,
     entries: Vec<Entry>,
@@ -115,29 +117,39 @@ struct Stored {
 }
 
 /// Le fichier du catalogue, dans le dossier de LÜMA : sur Mac
-/// `~/Library/Application Support/LÜMA/Catalogue.json`, sur iPhone et iPad
-/// `Library/Application Support/Catalogue.json` (hors de l'app Fichiers), ailleurs
-/// `~/.local/share/luma/catalogue.json`. `LUMA_CATALOG` le remplace.
+/// `~/Library/Application Support/LÜMA/Catalogue.lumacat`, sur iPhone et iPad
+/// `Library/Application Support/Catalogue.lumacat` (hors de l'app Fichiers), ailleurs
+/// `~/.local/share/luma/catalogue.lumacat`. `LUMA_CATALOG` le remplace. Le format est
+/// décrit dans `store.rs`.
 pub fn default_path() -> Option<PathBuf> {
     if let Some(p) = std::env::var_os("LUMA_CATALOG") {
         return Some(PathBuf::from(p));
     }
     let home = PathBuf::from(std::env::var_os("HOME")?);
     Some(if cfg!(target_os = "ios") {
-        home.join("Library/Application Support/Catalogue.json")
+        home.join("Library/Application Support/Catalogue.lumacat")
     } else if cfg!(target_os = "macos") {
-        home.join("Library/Application Support/LÜMA/Catalogue.json")
+        home.join("Library/Application Support/LÜMA/Catalogue.lumacat")
     } else {
         std::env::var_os("XDG_DATA_HOME")
             .map_or_else(|| home.join(".local/share"), PathBuf::from)
-            .join("luma/catalogue.json")
+            .join("luma/catalogue.lumacat")
     })
 }
 
 impl Catalog {
-    /// Lit un catalogue ; vide s'il n'existe pas, est illisible ou d'une autre version.
+    /// Lit un catalogue, binaire ou JSON (le format d'avant) ; vide s'il n'existe pas,
+    /// est illisible ou d'une autre version.
     pub fn load(path: &Path) -> Catalog {
-        let stored: Option<Stored> = std::fs::read(path).ok().and_then(|b| serde_json::from_slice(&b).ok());
+        // Le catalogue d'avant le format binaire, en JSON, à côté.
+        let old = path.with_extension("json");
+        let Ok(bytes) = std::fs::read(path).or_else(|_| std::fs::read(&old)) else {
+            return Catalog::default();
+        };
+        if store::is_binary(&bytes) {
+            return store::decode(&bytes).unwrap_or_default();
+        }
+        let stored: Option<Stored> = serde_json::from_slice(&bytes).ok();
         let Some(stored) = stored.filter(|s| s.version == VERSION) else {
             return Catalog::default();
         };
@@ -153,14 +165,8 @@ impl Catalog {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
         }
-        let stored = Stored {
-            version: VERSION,
-            entries: self.entries.values().cloned().collect(),
-            collections: self.collections.clone(),
-        };
-        let bytes = serde_json::to_vec(&stored).map_err(std::io::Error::other)?;
         let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, bytes)?;
+        std::fs::write(&tmp, store::encode(self))?;
         std::fs::rename(&tmp, path)
     }
 
@@ -508,6 +514,8 @@ mod tests {
         std::fs::write(&file, "{\"version\":1,\"entries\":[{\"path\":\"x.arw\",\"rating\":3}]}").unwrap();
         let old = Catalog::load(&file);
         assert_eq!((old.len(), old.collections().len()), (1, 0));
+        // Le nouveau fichier n'existe pas encore : l'ancien, en JSON, à côté.
+        assert_eq!(Catalog::load(&file.with_extension("lumacat")), old);
         assert!(Catalog::load(&dir.join("absent.json")).is_empty());
         std::fs::write(&file, "{\"version\":999,\"entries\":[]}").unwrap();
         assert!(Catalog::load(&file).is_empty(), "autre version : reconstruit");

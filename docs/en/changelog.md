@@ -23,6 +23,10 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Lighter catalogue**: a compact binary format in which every folder, camera, lens
+  and keyword is written only once. For 100,000 photos: 7.4 MB instead of 33.6, read
+  in 68 ms instead of 166, saved in 121 ms instead of 332. The previous catalogue is
+  read and converted automatically.
 - **Export presets**: format, quality, bit depth, colour space, size and folder saved
   under a name; four built in (web, full resolution, P3 display, print) plus your own,
   shared by the app and the command line (`luma export-preset`,

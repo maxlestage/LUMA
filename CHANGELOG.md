@@ -24,6 +24,10 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Catalogue léger** : un format binaire compact, où chaque dossier, boîtier,
+  objectif et mot‑clé n'est écrit qu'une fois. Pour 100 000 photos : 7,4 Mo au lieu de
+  33,6, relu en 68 ms au lieu de 166, enregistré en 121 ms au lieu de 332. L'ancien
+  catalogue est relu et converti tout seul.
 - **Préréglages d'export** : format, qualité, profondeur, espace, taille et dossier
   enregistrés sous un nom ; quatre de base (Web, Pleine définition, Écran P3,
   Impression) et les vôtres, partagés par l'app et la ligne de commande

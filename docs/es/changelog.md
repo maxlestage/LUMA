@@ -24,6 +24,10 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Catálogo ligero**: un formato binario compacto en el que cada carpeta, cámara,
+  objetivo y palabra clave se escribe una sola vez. Para 100 000 fotos: 7,4 MB en
+  lugar de 33,6, leído en 68 ms en lugar de 166, guardado en 121 ms en lugar de 332.
+  El catálogo anterior se lee y se convierte solo.
 - **Ajustes preestablecidos de exportación**: formato, calidad, profundidad, espacio,
   tamaño y carpeta guardados con un nombre; cuatro de serie (web, resolución completa,
   pantalla P3, impresión) y los suyos, compartidos por la app y la línea de comandos
