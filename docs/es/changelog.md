@@ -100,6 +100,12 @@ La fototeca profesional, paso a paso.
 - **Pincel que sigue los bordes**: marque «Seguir los bordes» y el pincel solo pinta
   los tonos cercanos al centro de cada toque; la zona se detiene en el contorno de un
   cielo, una pared o una cara, sin desbordar.
+- **Perfiles ICC leídos** (un paso hacia la prueba en pantalla): perfiles de
+  pantallas (matriz y curvas) y de impresoras y papeles (tablas lut8, lut16, A→B y
+  B→A, versiones 2 y 4), en ambos sentidos y para las cuatro intenciones de
+  reproducción, en Rust puro; un perfil truncado o dañado se rechaza sin daños.
+  `luma icc` describe un perfil: clase, espacio, intenciones, blanco del soporte, y
+  el blanco, el negro y los primarios del dispositivo.
 
 ## 0.2.0 — octubre de 2026
 

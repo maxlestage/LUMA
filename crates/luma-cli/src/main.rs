@@ -81,6 +81,10 @@ USAGE
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
+  luma icc <profil.icc>…
+      Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
+      A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
+      et ce que donnent le blanc, le noir et les primaires du périphérique.
   luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords]
                [--smart nom \"règle\"] [--add nom photo]… [--remove-collection nom]
                [--collections] [--collection nom]
@@ -1215,6 +1219,93 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// Décrit un profil ICC.
+fn icc(path: &Path) -> Result<(), String> {
+    use luma_color::profile::{Class, Intent, Pcs, Profile, Space, xyz_to_lab};
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let p = Profile::parse(&bytes).map_err(|e| e.to_string())?;
+    let class = match p.class {
+        Class::Input => "entrée",
+        Class::Display => "écran",
+        Class::Output => "sortie (imprimante)",
+        Class::Link => "liaison",
+        Class::ColorSpace => "espace de couleurs",
+        Class::Abstract => "abstrait",
+        Class::Named => "couleurs nommées",
+    };
+    let space = match p.space {
+        Space::Gray => "niveaux de gris".to_owned(),
+        Space::Rgb => "RVB".to_owned(),
+        Space::Cmy => "CMJ".to_owned(),
+        Space::Cmyk => "CMJN".to_owned(),
+        Space::Lab => "Lab".to_owned(),
+        Space::Xyz => "XYZ".to_owned(),
+        Space::Colors(n) => format!("{n} couleurs"),
+    };
+    let intent = |i: &Intent| match i {
+        Intent::Perceptual => "perceptuelle",
+        Intent::Relative => "colorimétrique relative",
+        Intent::Saturation => "saturation",
+        Intent::Absolute => "colorimétrique absolue",
+    };
+    let lab = |v: [f32; 3]| {
+        // + 0.0 : pas de « -0.0 » à l'affichage.
+        let l = xyz_to_lab(v).map(|c| (c * 10.0).round() / 10.0 + 0.0);
+        format!("L {:.1}  a {:.1}  b {:.1}", l[0], l[1], l[2])
+    };
+    println!("{}", path.display());
+    println!("  description  {}", p.description);
+    println!("  version      {}.{}", p.version.0, p.version.1);
+    println!(
+        "  classe       {class}, {space} ({} canaux) ↔ {}",
+        p.channels(),
+        if p.pcs == Pcs::Lab { "Lab" } else { "XYZ" }
+    );
+    let tables: Vec<&str> = p.tables().iter().map(intent).collect();
+    println!(
+        "  intentions   {} (en‑tête : {})",
+        if tables.is_empty() {
+            "matrice".to_owned()
+        } else {
+            tables.join(", ")
+        },
+        intent(&p.intent)
+    );
+    println!("  support      {}", lab(p.white));
+    let sens: Vec<&str> = [(p.reads(), "périphérique → XYZ"), (p.writes(), "XYZ → périphérique")]
+        .into_iter()
+        .filter_map(|(ok, s)| ok.then_some(s))
+        .collect();
+    println!("  sens         {}", sens.join(", "));
+    if !p.reads() || matches!(p.space, Space::Lab | Space::Xyz) {
+        return Ok(());
+    }
+    let n = p.channels();
+    // Le blanc et le noir du périphérique : sans encre et toutes encres pour une
+    // imprimante soustractive, l'inverse pour un écran.
+    let subtractive = matches!(p.space, Space::Cmy | Space::Cmyk | Space::Colors(_));
+    let (paper, ink) = if subtractive { (0.0, 1.0) } else { (1.0, 0.0) };
+    let mut samples = vec![("blanc".to_owned(), vec![paper; n]), ("noir".to_owned(), vec![ink; n])];
+    if matches!(p.space, Space::Rgb | Space::Cmy | Space::Cmyk) {
+        let names: &[&str] = match p.space {
+            Space::Rgb => &["rouge", "vert", "bleu"],
+            Space::Cmy => &["cyan", "magenta", "jaune"],
+            _ => &["cyan", "magenta", "jaune", "noir seul"],
+        };
+        for (i, name) in names.iter().enumerate() {
+            let mut v = vec![if subtractive { paper } else { ink }; n];
+            v[i] = if subtractive { ink } else { paper };
+            samples.push(((*name).to_owned(), v));
+        }
+    }
+    for (name, v) in samples {
+        if let Some(xyz) = p.to_pcs(&v, Intent::Relative) {
+            println!("  {name:<12} {}", lab(xyz));
+        }
+    }
+    Ok(())
+}
+
 fn main() -> ExitCode {
     // HEIC, AVIF… : le décodeur d'images du système (ImageIO sur Mac).
     luma_apple::install();
@@ -1289,6 +1380,16 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         };
+    }
+    if command == "icc" {
+        let mut ok = true;
+        for path in args {
+            if let Err(e) = icc(Path::new(&path)) {
+                eprintln!("erreur : {path} : {e}");
+                ok = false;
+            }
+        }
+        return if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE };
     }
     if command == "catalog" {
         return match catalog(args.collect()) {
