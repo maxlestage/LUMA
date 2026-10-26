@@ -220,7 +220,8 @@ fn several_bases_stay_uploaded_and_never_mix() {
 }
 
 /// L'accentuation, en plusieurs passes sur le GPU : la même que sur le processeur, à
-/// toutes les forces, tous les rayons et tous les détails, à 100 % et à 60 %.
+/// toutes les forces, tous les rayons et tous les détails, à 100 % et à 60 %, Masquage
+/// compris.
 #[test]
 fn sharpening_matches_the_cpu() {
     let _gpu = one_at_a_time();
@@ -253,9 +254,20 @@ fn sharpening_matches_the_cpu() {
     let mut s = Settings::default();
     s.detail.sharpen_amount = 0.0;
     compare_on(&gpu, &img, "sans accentuation", &s, OutputSpace::Srgb, 1.0);
-    // Le Masquage reste au processeur.
-    s.detail.sharpen_amount = 40.0;
-    s.detail.sharpen_masking = 30.0;
-    assert!(!gpu.can_finish(&s, 480, 320, 1.0));
-    assert!(gpu.can_finish(&s, 480, 320, 0.4), "sous 50 %, pas d'accentuation");
+    // Le Masquage aussi, à plusieurs seuils.
+    for masking in [10.0, 50.0, 100.0] {
+        for scale in [1.0, 0.7] {
+            let mut s = Settings::default();
+            s.detail.sharpen_amount = 120.0;
+            s.detail.sharpen_masking = masking;
+            compare_on(
+                &gpu,
+                &img,
+                &format!("masquage {masking} ×{scale}"),
+                &s,
+                OutputSpace::Srgb,
+                scale,
+            );
+        }
+    }
 }
