@@ -36,7 +36,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Point curves: luminance, red, green, blue | ✅ |
 | Color Mixer | Hue, saturation and luminance for 8 colours | ✅ |
 | | Black & white mix (±3 EV, `crs:GrayMixer*`) | ✅ |
-| | Targeted Adjustment Tool | ⏳ |
+| | Targeted adjustment tool (T): drag on a colour in the photo to adjust that colour's hue, saturation or luminance | ✅ |
 | Color Grading | Shadows, midtones, highlights, global; blending, balance | ✅ |
 | Detail | Sharpening: amount, radius, detail, masking | ✅ |
 | | Luminance and colour noise reduction | ✅ |

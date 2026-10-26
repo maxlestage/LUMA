@@ -16,6 +16,54 @@ fn smoothstep(e0: f32, e1: f32, x: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
+/// Les centres des huit bandes du mélangeur, croissants sur le cercle à partir du rouge.
+fn band_centers(ok: &OkLab) -> [f32; 8] {
+    let mut centers = BAND_DEGREES.map(|d| wheel_hue(ok, d));
+    for i in 1..8 {
+        while centers[i] < centers[i - 1] {
+            centers[i] += std::f32::consts::TAU;
+        }
+    }
+    centers
+}
+
+/// Les deux bandes qui encadrent la teinte `h`, et le poids de la première.
+fn bands_around(centers: &[f32; 8], h: f32) -> (usize, usize, f32) {
+    let tau = std::f32::consts::TAU;
+    let mut h = h;
+    while h < centers[0] {
+        h += tau;
+    }
+    while h >= centers[0] + tau {
+        h -= tau;
+    }
+    for i in 0..8 {
+        let (c0, c1) = (centers[i], if i == 7 { centers[0] + tau } else { centers[i + 1] });
+        if h < c1 {
+            // Poids lisse, sans trigonométrie (même allure que cos²).
+            let w = 1.0 - smoothstep(0.0, 1.0, (h - c0) / (c1 - c0));
+            return (i, (i + 1) % 8, w);
+        }
+    }
+    (7, 0, 1.0)
+}
+
+/// L'outil de ciblage direct : les bandes du mélangeur qu'une couleur affichée (sRGB,
+/// 0 à 255) touche, avec leur poids (somme 1), comme le rendu les pondère. `None` pour
+/// un gris, que le mélangeur ne touche pas.
+pub fn mixer_bands_at(srgb: [u8; 3]) -> Option<[(usize, f32); 2]> {
+    let lin = srgb.map(|v| color::srgb_decode(f32::from(v) / 255.0));
+    let to_working = color::rgb_to_rgb(&color::SRGB, &color::WORKING);
+    let ok = OkLab::for_working();
+    let [_, a, b] = ok.from_rgb(color::apply(&to_working, lin));
+    // Une teinte à peine visible suffit (un vert de pin terne, un ciel blanc bleuté).
+    if (a * a + b * b).sqrt() < 0.005 {
+        return None;
+    }
+    let (i, j, w) = bands_around(&band_centers(&ok), color::fast_atan2(b, a));
+    Some([(i, w), (j, 1.0 - w)])
+}
+
 /// La teinte OKLCh (radians) d'une teinte de roue chromatique (degrés, TSV du sRGB).
 pub fn wheel_hue(ok: &OkLab, degrees: f32) -> f32 {
     let h = degrees.rem_euclid(360.0) / 60.0;
@@ -118,13 +166,7 @@ impl ColorStage {
             return None;
         }
         let ok = OkLab::for_working();
-        let mut centers = BAND_DEGREES.map(|d| wheel_hue(&ok, d));
-        // Rendus croissants sur le cercle, à partir du rouge.
-        for i in 1..8 {
-            while centers[i] < centers[i - 1] {
-                centers[i] += std::f32::consts::TAU;
-            }
-        }
+        let centers = band_centers(&ok);
         let mut hsl = [[0.0; 3]; 8];
         for (i, band) in hsl.iter_mut().enumerate() {
             *band = [
@@ -157,30 +199,7 @@ impl ColorStage {
     /// Les deux bandes qui encadrent une teinte, et le poids de la première.
     #[inline]
     fn bands(&self, h: f32) -> (usize, usize, f32) {
-        let tau = std::f32::consts::TAU;
-        let mut h = h;
-        while h < self.centers[0] {
-            h += tau;
-        }
-        while h >= self.centers[0] + tau {
-            h -= tau;
-        }
-        for i in 0..8 {
-            let (c0, c1) = (
-                self.centers[i],
-                if i == 7 {
-                    self.centers[0] + tau
-                } else {
-                    self.centers[i + 1]
-                },
-            );
-            if h < c1 {
-                // Poids lisse, sans trigonométrie (même allure que cos²).
-                let w = 1.0 - smoothstep(0.0, 1.0, (h - c0) / (c1 - c0));
-                return (i, (i + 1) % 8, w);
-            }
-        }
-        (7, 0, 1.0)
+        bands_around(&self.centers, h)
     }
 
     /// L'écart angulaire entre une bande et sa voisine (sens positif ou négatif).
@@ -368,6 +387,24 @@ mod tests {
         assert!(close3(stage.apply([0.3, 0.3, 0.3]), [0.3, 0.3, 0.3], 1e-4));
         let red = stage.apply([0.5, 0.1, 0.1]);
         assert!(red[0] - red[1] > 0.4, "{red:?}");
+    }
+
+    #[test]
+    fn the_targeted_tool_finds_the_color_under_the_pointer() {
+        let main = |rgb: [u8; 3]| {
+            let b = mixer_bands_at(rgb).unwrap();
+            if b[0].1 >= b[1].1 { b[0].0 } else { b[1].0 }
+        };
+        // Rouge, orange, jaune, vert, bleu (bandes 0, 1, 2, 3, 5).
+        assert_eq!(main([220, 30, 30]), 0);
+        assert_eq!(main([240, 140, 30]), 1);
+        assert_eq!(main([230, 220, 40]), 2);
+        assert_eq!(main([40, 180, 60]), 3);
+        assert_eq!(main([40, 80, 220]), 5);
+        // Un gris : rien à cibler.
+        assert!(mixer_bands_at([128, 128, 128]).is_none());
+        let b = mixer_bands_at([200, 120, 60]).unwrap();
+        assert!((b[0].1 + b[1].1 - 1.0).abs() < 1e-6);
     }
 
     #[test]
