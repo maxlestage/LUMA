@@ -23,6 +23,10 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Keywords in the app** (Library): type them (several at once, separated by
+  commas) and they go to every selected photo (⌘‑click, Shift‑click); a cross removes
+  one. The folder's keywords, with their count, filter the grid in one click (case and
+  accents ignored).
 - **Lighter catalogue**: a compact binary format in which every folder, camera, lens
   and keyword is written only once. For 100,000 photos: 7.4 MB instead of 33.6, read
   in 68 ms instead of 166, saved in 121 ms instead of 332. The previous catalogue is

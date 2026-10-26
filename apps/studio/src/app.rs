@@ -11,7 +11,7 @@
 //! avant/après, ⌘Z, ⇧⌘C et ⇧⌘V, ⇧⌘E exporter, ← →, J écrêtage, Z zoom 1:1, G, D, M,
 //! Maj+M, K, R, W, O).
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -20,6 +20,7 @@ use egui::{
     vec2,
 };
 use luma_color::OutputSpace;
+use luma_library::query::fold;
 use luma_project::presets::{self, PRESETS};
 use luma_project::xmp::{Flag, Meta};
 use luma_project::{Crop, Mask, Profile, Settings, Shape, WhiteBalance};
@@ -32,7 +33,7 @@ use crate::masking;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
 use crate::worker::{
     Event, ExportJob, ExportOptions, Format, MergeJob, MergeKind, Worker, read_meta, read_sidecar,
-    write_sidecar,
+    write_meta, write_sidecar,
 };
 
 pub use luma_raw::{RAW_EXTENSIONS, is_photo, is_raw};
@@ -403,6 +404,10 @@ pub struct Studio {
     meta: HashMap<PathBuf, Meta>,
     min_rating: u8,
     flag_filter: FlagFilter,
+    /// Le mot‑clé choisi dans la Bibliothèque : seules ses photos s'affichent.
+    pub keyword_filter: Option<String>,
+    /// Le mot‑clé en cours de saisie.
+    keyword_input: String,
     export_options: ExportOptions,
     export_open: bool,
     export_all: bool,
@@ -487,6 +492,8 @@ impl Studio {
             meta: HashMap::new(),
             min_rating: 0,
             flag_filter: FlagFilter::All,
+            keyword_filter: None,
+            keyword_input: String::new(),
             export_options: ExportOptions::default(),
             export_open: false,
             export_all: false,
@@ -594,8 +601,108 @@ impl Studio {
                         FlagFilter::Picks => m.flag == Flag::Pick,
                         FlagFilter::NotRejected => m.flag != Flag::Reject,
                     }
+                    && self
+                        .keyword_filter
+                        .as_ref()
+                        .is_none_or(|k| m.keywords.iter().any(|w| fold(w) == fold(k)))
             })
             .collect()
+    }
+
+    /// Les mots‑clés du dossier et leur nombre de photos, par ordre alphabétique (sans
+    /// tenir compte des majuscules ni des accents).
+    pub fn folder_keywords(&self) -> Vec<(String, usize)> {
+        let mut groups: BTreeMap<String, (String, usize)> = BTreeMap::new();
+        for p in &self.folder {
+            for k in self
+                .meta
+                .get(p)
+                .map(|m| m.keywords.as_slice())
+                .unwrap_or_default()
+            {
+                groups.entry(fold(k)).or_insert_with(|| (k.clone(), 0)).1 += 1;
+            }
+        }
+        groups.into_values().collect()
+    }
+
+    /// Les photos que touche un mot‑clé : la sélection (⌘‑clic, Maj‑clic), sinon la
+    /// photo affichée.
+    fn keyword_targets(&self) -> Vec<PathBuf> {
+        if self.selected.is_empty() {
+            self.current_path()
+                .map(Path::to_path_buf)
+                .into_iter()
+                .collect()
+        } else {
+            self.selected
+                .iter()
+                .filter_map(|i| self.folder.get(*i).cloned())
+                .collect()
+        }
+    }
+
+    /// Les mots‑clés des photos visées, sans doublon, dans l'ordre où ils viennent.
+    pub fn target_keywords(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for p in self.keyword_targets() {
+            for k in self
+                .meta
+                .get(&p)
+                .map(|m| m.keywords.as_slice())
+                .unwrap_or_default()
+            {
+                if !out.iter().any(|o| fold(o) == fold(k)) {
+                    out.push(k.clone());
+                }
+            }
+        }
+        out
+    }
+
+    /// Change les métadonnées de plusieurs photos : celle qui est ouverte est
+    /// enregistrée avec ses réglages, les autres tout de suite.
+    fn edit_meta(&mut self, paths: &[PathBuf], f: impl Fn(&mut Meta)) {
+        let current = self.current_path().map(Path::to_path_buf);
+        for p in paths {
+            let meta = self.meta.entry(p.clone()).or_default();
+            f(meta);
+            if Some(p) == current.as_ref() {
+                self.touch();
+            } else if let Err(e) = write_meta(p, meta) {
+                self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
+            }
+        }
+    }
+
+    /// Ajoute des mots‑clés (séparés par des virgules) à la sélection, ou à la photo
+    /// affichée ; un mot‑clé déjà là (aux majuscules et accents près) n'est pas doublé.
+    /// Renvoie le nombre de photos touchées.
+    pub fn add_keywords(&mut self, text: &str) -> usize {
+        let words: Vec<String> = text
+            .split([',', ';'])
+            .map(str::trim)
+            .filter(|w| !w.is_empty())
+            .map(str::to_owned)
+            .collect();
+        let targets = self.keyword_targets();
+        if words.is_empty() || targets.is_empty() {
+            return 0;
+        }
+        self.edit_meta(&targets, |m| {
+            for w in &words {
+                if !m.keywords.iter().any(|k| fold(k) == fold(w)) {
+                    m.keywords.push(w.clone());
+                }
+            }
+        });
+        targets.len()
+    }
+
+    /// Retire un mot‑clé de la sélection, ou de la photo affichée.
+    pub fn remove_keyword(&mut self, word: &str) {
+        let targets = self.keyword_targets();
+        self.edit_meta(&targets, |m| m.keywords.retain(|k| fold(k) != fold(word)));
     }
 
     /// La note et le drapeau de la photo affichée.
@@ -2672,6 +2779,26 @@ impl Studio {
         ] {
             ui.radio_value(&mut self.flag_filter, f, name);
         }
+        let keywords = self.folder_keywords();
+        if !keywords.is_empty() {
+            ui.add_space(8.0);
+            ui.label(RichText::new(tr("Mots-clés")).color(theme::DIM).size(11.5));
+            if ui
+                .selectable_label(self.keyword_filter.is_none(), tr("Tous les mots-clés"))
+                .clicked()
+            {
+                self.keyword_filter = None;
+            }
+            for (k, n) in keywords {
+                let on = self
+                    .keyword_filter
+                    .as_ref()
+                    .is_some_and(|f| fold(f) == fold(&k));
+                if ui.selectable_label(on, format!("{k} ({n})")).clicked() {
+                    self.keyword_filter = if on { None } else { Some(k) };
+                }
+            }
+        }
         ui.add_space(14.0);
         section_title(ui, tr("Raccourcis"));
         for line in [
@@ -2710,6 +2837,8 @@ impl Studio {
             }
         });
         ui.add_space(8.0);
+        self.keywords_editor(ui);
+        ui.add_space(8.0);
         if let Some(photo) = &self.photo {
             let raw = photo.raw();
             let e = &raw.exif;
@@ -2745,6 +2874,45 @@ impl Studio {
                     ui.end_row();
                 }
             });
+        }
+    }
+
+    /// Les mots‑clés des photos visées (la sélection, sinon la photo affichée), × pour en
+    /// retirer un, et la saisie, qui les ajoute à toutes.
+    fn keywords_editor(&mut self, ui: &mut Ui) {
+        ui.label(RichText::new(tr("Mots-clés")).color(theme::DIM).size(11.5));
+        let mut removed = None;
+        ui.horizontal_wrapped(|ui| {
+            for k in self.target_keywords() {
+                if ui
+                    .small_button(format!("{k}  ×"))
+                    .on_hover_text(tr("Retirer ce mot-clé"))
+                    .clicked()
+                {
+                    removed = Some(k);
+                }
+            }
+        });
+        if let Some(k) = removed {
+            self.remove_keyword(&k);
+        }
+        let hint = if self.selected.len() > 1 {
+            trf(
+                "Ajouter aux {n} photos choisies",
+                &[("n", &self.selected.len())],
+            )
+        } else {
+            tr("Ajouter un mot-clé (virgule entre deux)").to_owned()
+        };
+        let edit = ui.add(
+            egui::TextEdit::singleline(&mut self.keyword_input)
+                .hint_text(hint)
+                .desired_width(f32::INFINITY),
+        );
+        if edit.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {
+            let text = std::mem::take(&mut self.keyword_input);
+            self.add_keywords(&text);
+            edit.request_focus();
         }
     }
 

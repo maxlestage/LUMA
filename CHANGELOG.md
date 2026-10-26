@@ -24,6 +24,10 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Mots‑clés dans l'app** (Bibliothèque) : on les tape (plusieurs à la fois, séparés
+  par une virgule), ils vont à toutes les photos choisies (⌘‑clic, Maj‑clic) ; une
+  croix en retire un. La liste des mots‑clés du dossier, avec leur nombre, filtre la
+  grille d'un clic (majuscules et accents mis à part).
 - **Catalogue léger** : un format binaire compact, où chaque dossier, boîtier,
   objectif et mot‑clé n'est écrit qu'une fois. Pour 100 000 photos : 7,4 Mo au lieu de
   33,6, relu en 68 ms au lieu de 166, enregistré en 121 ms au lieu de 332. L'ancien
