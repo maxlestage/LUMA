@@ -2598,3 +2598,37 @@ es = Elegir un perfil de impresora
 fr = Profil ICC
 en = ICC profile
 es = Perfil ICC
+
+# L'App Store (iPhone et iPad).
+
+fr = L'achat attend l'accord d'un parent.
+en = The purchase is waiting for a parent's approval.
+es = La compra está esperando la aprobación de un adulto.
+
+fr = Achat annulé.
+en = Purchase canceled.
+es = Compra cancelada.
+
+fr = L'App Store a refusé l'achat : {detail}
+en = The App Store declined the purchase: {detail}
+es = El App Store rechazó la compra: {detail}
+
+fr = Abonnement restauré.
+en = Subscription restored.
+es = Suscripción restaurada.
+
+fr = Aucun abonnement en cours sur ce compte Apple.
+en = No active subscription on this Apple Account.
+es = No hay ninguna suscripción activa en esta cuenta de Apple.
+
+fr = Pour gérer ou résilier votre abonnement : Réglages › votre nom › Abonnements.
+en = To manage or cancel your subscription: Settings › your name › Subscriptions.
+es = Para gestionar o cancelar tu suscripción: Ajustes › tu nombre › Suscripciones.
+
+fr = Déjà abonné avec ce compte Apple ?
+en = Already subscribed with this Apple Account?
+es = ¿Ya tienes una suscripción con esta cuenta de Apple?
+
+fr = Restaurer les achats
+en = Restore Purchases
+es = Restaurar compras

@@ -2359,7 +2359,11 @@ impl Studio {
         let (row, _) =
             ui.allocate_exact_size(vec2(ui.available_width(), 172.0), egui::Sense::hover());
         let card_w = ((row.width() - gap) / 2.0).floor();
+        // Sur iPhone et iPad, l'abonnement s'achète dans l'App Store ; sur Mac, par le
+        // lien de paiement Stripe.
+        let app_store = luma_apple::store::AVAILABLE;
         let mut chosen = None;
+        let mut buy = None;
         for (k, plan) in PLANS.into_iter().enumerate() {
             let best = plan == luma_licence::Plan::Annual;
             let rect = Rect::from_min_size(
@@ -2395,13 +2399,13 @@ impl Studio {
                     );
                 }
             });
+            // Le prix de l'App Store est dans la devise de l'acheteur.
+            let price = match self.licence.store_price(plan) {
+                Some(p) if app_store => p.to_owned(),
+                _ => tr(plan.price()).to_owned(),
+            };
             card.horizontal(|ui| {
-                ui.label(
-                    RichText::new(tr(plan.price()))
-                        .size(28.0)
-                        .strong()
-                        .color(theme::TEXT),
-                );
+                ui.label(RichText::new(price).size(28.0).strong().color(theme::TEXT));
                 ui.label(
                     RichText::new(tr(plan.period()))
                         .size(13.0)
@@ -2411,6 +2415,18 @@ impl Studio {
             card.label(RichText::new(tr(plan.note())).size(12.0).color(theme::DIM));
             card.add_space(8.0);
             let size = vec2(card.available_width(), 30.0);
+            if app_store {
+                if card
+                    .add_enabled(
+                        !self.licence.busy(),
+                        egui::Button::new(tr("S'abonner")).min_size(size),
+                    )
+                    .clicked()
+                {
+                    buy = Some(plan);
+                }
+                continue;
+            }
             match plan.checkout_url() {
                 Some(url) => {
                     if card
@@ -2429,6 +2445,9 @@ impl Studio {
                 }
             }
         }
+        if let Some(plan) = buy {
+            self.licence.buy(plan);
+        }
         if let Some(url) = chosen {
             if open_url(url) {
                 self.licence.message =
@@ -2439,7 +2458,38 @@ impl Studio {
             }
         }
         ui.add_space(16.0);
-        if matches!(access, Access::Premium { .. }) {
+        if app_store {
+            // L'App Store : restaurer un abonnement, le gérer dans les Réglages.
+            if matches!(access, Access::Premium { .. }) {
+                ui.label(
+                    RichText::new(tr(
+                        "Pour gérer ou résilier votre abonnement : Réglages › votre nom › Abonnements.",
+                    ))
+                    .size(12.5)
+                    .color(theme::DIM),
+                );
+            } else {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new(tr("Déjà abonné avec ce compte Apple ?"))
+                            .size(12.5)
+                            .color(theme::DIM),
+                    );
+                    if ui
+                        .add_enabled(
+                            !self.licence.busy(),
+                            egui::Button::new(tr("Restaurer les achats")),
+                        )
+                        .clicked()
+                    {
+                        self.licence.restore();
+                    }
+                    if self.licence.busy() {
+                        ui.spinner();
+                    }
+                });
+            }
+        } else if matches!(access, Access::Premium { .. }) {
             ui.horizontal(|ui| {
                 if let Some(url) = luma_licence::billing_portal()
                     && ui.button(tr("Gérer mon abonnement")).clicked()
