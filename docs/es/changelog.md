@@ -112,6 +112,10 @@ La fototeca profesional, paso a paso.
   un papel, y la vista previa muestra la foto tal como saldrá, con la intención
   perceptual o colorimétrica relativa; el histograma la sigue. Una vista, no un
   ajuste: no se escribe nada en la foto.
+- **LÜMA Premium en el App Store** (iPhone y iPad): las dos suscripciones a su precio del
+  App Store, «Suscribirse» y «Restaurar compras»; cada compra y renovación abre
+  Premium. En iPhone y iPad, solo el App Store vende la suscripción; en Mac, solo el
+  sitio web (Stripe).
 
 ## 0.2.0 — octubre de 2026
 
