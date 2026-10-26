@@ -1413,6 +1413,26 @@ fr = Aucune photo ne répond à cette recherche.
 en = No photo matches this search.
 es = Ninguna foto coincide con esta búsqueda.
 
+fr = {file} (copie {n})
+en = {file} (copy {n})
+es = {file} (copia {n})
+
+fr = Copie virtuelle
+en = Virtual copy
+es = Copia virtual
+
+fr = Un autre développement de cette photo, sans dupliquer le fichier
+en = Another development of this photo, without duplicating the file
+es = Otro revelado de esta foto, sin duplicar el archivo
+
+fr = Supprimer la copie
+en = Delete copy
+es = Eliminar la copia
+
+fr = Supprime ses réglages ; l'original ne change pas
+en = Deletes its settings; the original does not change
+es = Elimina sus ajustes; el original no cambia
+
 fr = Appareil
 en = Camera
 es = Cámara

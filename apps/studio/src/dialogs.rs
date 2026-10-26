@@ -84,6 +84,8 @@ pub fn duplicates_dir() -> Option<PathBuf> {
 
 /// Ouvre une photo par son doublon de travail s'il existe, sinon par l'original.
 pub fn open_photo(path: &Path) -> luma_core::Result<luma_render::Photo> {
+    // Une copie virtuelle : les pixels de son original.
+    let path = &luma_project::copies::source(path);
     match duplicates_dir() {
         Some(dir) => luma_render::Photo::open_with_duplicates(path, &dir),
         None => luma_render::Photo::open(path),

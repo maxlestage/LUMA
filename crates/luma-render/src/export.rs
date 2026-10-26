@@ -366,6 +366,9 @@ pub struct NameFields {
 impl NameFields {
     /// Le nom de l'original et la date du fichier, sans rien lire d'autre.
     pub fn of_file(source: &Path) -> NameFields {
+        // Une copie virtuelle : le nom de son original et son numéro (`IMG_0001-2`).
+        let copy = luma_project::copies::number(source);
+        let source = &luma_project::copies::source(source);
         let date = std::fs::metadata(source)
             .and_then(|m| m.modified())
             .ok()
@@ -375,7 +378,8 @@ impl NameFields {
             name: source
                 .file_stem()
                 .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_default(),
+                .unwrap_or_default()
+                + &copy.map(|n| format!("-{n}")).unwrap_or_default(),
             date,
             sequence: 1,
             ..NameFields::default()
@@ -914,6 +918,12 @@ mod tests {
         let src = Path::new("/x/IMG_1.CR3");
         let f = NameFields::of_file(src);
         assert_eq!(output_path(src, &o, &f), PathBuf::from("/x/LÜMA/IMG_1.jpg"));
+        // Une copie virtuelle : le nom de son original, suivi de son numéro.
+        let copy = luma_project::copies::path(src, 2);
+        assert_eq!(
+            output_path(&copy, &o, &NameFields::of_file(&copy)),
+            PathBuf::from("/x/LÜMA/IMG_1-2.jpg")
+        );
         o.format = Format::Tiff;
         o.folder = Some("/sortie".into());
         assert_eq!(output_path(src, &o, &f), PathBuf::from("/sortie/IMG_1.tif"));

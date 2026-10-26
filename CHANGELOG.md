@@ -26,6 +26,10 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Copies virtuelles** : plusieurs développements d'une même photo, sans dupliquer le
+  fichier ; chaque copie a ses réglages, sa note, ses mots‑clés et sa vignette, à côté
+  de son original, et s'exporte sous le nom `IMG_0001-2`. La supprimer ne touche jamais
+  l'original.
 - **La photothèque dans l'app** (Bibliothèque) : chaque dossier ouvert y entre, en
   arrière‑plan ; toutes les photos, les collections et les dossiers, chacun avec son
   nombre de photos, et une recherche (« mer note:3 date:2024 ») ; ces vues sont triées

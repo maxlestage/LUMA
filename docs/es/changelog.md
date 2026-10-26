@@ -26,6 +26,9 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Copias virtuales**: varios revelados de una misma foto sin duplicar el archivo;
+  cada copia tiene sus ajustes, su valoración, sus palabras clave y su miniatura, junto
+  a su original, y se exporta como `IMG_0001-2`. Eliminarla nunca toca el original.
 - **La fototeca en la app** (Biblioteca): cada carpeta abierta entra en ella en
   segundo plano; todas las fotos, las colecciones y las carpetas, cada una con su
   número de fotos, y una búsqueda («mar rating:3 date:2024»); estas vistas se ordenan
