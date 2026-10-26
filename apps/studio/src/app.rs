@@ -23,7 +23,7 @@ use luma_color::OutputSpace;
 use luma_library::query::fold;
 use luma_project::presets::{self, PRESETS};
 use luma_project::xmp::{Flag, Meta};
-use luma_project::{Crop, Mask, Profile, Settings, Shape, WhiteBalance};
+use luma_project::{Crop, Mask, Profile, Range, Settings, Shape, WhiteBalance};
 use luma_render::{Photo, Size};
 
 use crate::crop;
@@ -469,6 +469,9 @@ pub struct Studio {
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
     mask_overlay: Option<(Mask, TextureHandle)>,
+    /// La copie réduite de la base envoyée avec la dernière image, quand un masque a
+    /// une plage.
+    scene_map: Option<Arc<luma_core::RgbImage>>,
     /// L'outil choisi dans le rail.
     pub tool: Tool,
     /// Les photos choisies dans le film ou la grille (⌘‑clic, Maj‑clic), pour la fusion.
@@ -636,6 +639,7 @@ impl Studio {
             brush: masking::Brush::default(),
             show_mask: false,
             mask_overlay: None,
+            scene_map: None,
             tool: Tool::Light,
             selected: BTreeSet::new(),
             merge_stack: true,
@@ -1168,6 +1172,11 @@ impl Studio {
                     self.histogram = frame.histogram;
                     self.image_size = frame.size;
                     self.pick_map = pick_map(frame.size, &frame.rgba);
+                    // Une nouvelle base : la zone d'un masque à plage est à relire.
+                    if frame.scene.is_some() {
+                        self.mask_overlay = None;
+                    }
+                    self.scene_map = frame.scene.clone();
                     let image = ColorImage::from_rgba_unmultiplied(frame.size, &frame.rgba);
                     match &mut self.texture {
                         Some(t) => t.set(image, TextureOptions::LINEAR),
@@ -3889,7 +3898,7 @@ impl Studio {
                 let stale = self.mask_overlay.as_ref().is_none_or(|(m, _)| m != mask);
                 if stale {
                     let (w, h) = luma_core::RgbImage::fit(iw, ih, 400);
-                    let image = masking::overlay(mask, w, h);
+                    let image = masking::overlay(mask, w, h, self.scene_map.as_deref());
                     match &mut self.mask_overlay {
                         Some((m, tex)) => {
                             tex.set(image, TextureOptions::LINEAR);
@@ -4251,6 +4260,102 @@ impl Studio {
                             ],
                         ));
                     }
+                }
+                // La plage : la zone ne garde que certains tons, ou certaines couleurs.
+                sub_title(ui, tr("Plage"));
+                let kinds = [tr("Aucune"), tr("Luminance"), tr("Couleur")];
+                let current = match m.range {
+                    None => 0,
+                    Some(Range::Luminance { .. }) => 1,
+                    Some(Range::Color { .. }) => 2,
+                };
+                let mut pick = current;
+                ui.horizontal(|ui| {
+                    for (k, label) in kinds.iter().enumerate() {
+                        if ui.selectable_label(pick == k, *label).clicked() {
+                            pick = k;
+                        }
+                    }
+                });
+                if pick != current {
+                    m.range = match pick {
+                        1 => Some(Range::luminance()),
+                        2 => Some(Range::color()),
+                        _ => None,
+                    };
+                    changed = true;
+                    commits.push(trf(
+                        "Masque {mask} : plage {kind}",
+                        &[("mask", &name), ("kind", &kinds[pick].to_lowercase())],
+                    ));
+                }
+                let range_rows: Vec<(SliderSpec, &mut f32)> = match &mut m.range {
+                    Some(Range::Luminance { low, high, feather }) => vec![
+                        (
+                            SliderSpec {
+                                default: 60.0,
+                                track: Track::Gradient(&widgets::GREYS),
+                                ..spec("Minimum", 0.0, 100.0, 0)
+                            },
+                            low,
+                        ),
+                        (
+                            SliderSpec {
+                                default: 100.0,
+                                track: Track::Gradient(&widgets::GREYS),
+                                ..spec("Maximum", 0.0, 100.0, 0)
+                            },
+                            high,
+                        ),
+                        (
+                            SliderSpec {
+                                default: 30.0,
+                                ..spec("Fondu", 0.0, 100.0, 0)
+                            },
+                            feather,
+                        ),
+                    ],
+                    Some(Range::Color {
+                        hue,
+                        width,
+                        feather,
+                    }) => vec![
+                        (
+                            SliderSpec {
+                                default: 255.0,
+                                track: Track::Gradient(&widgets::HUE),
+                                ..spec("Teinte|mélangeur", 0.0, 360.0, 0)
+                            },
+                            hue,
+                        ),
+                        (
+                            SliderSpec {
+                                default: 30.0,
+                                ..spec("Largeur", 0.0, 180.0, 0)
+                            },
+                            width,
+                        ),
+                        (
+                            SliderSpec {
+                                default: 50.0,
+                                ..spec("Fondu", 0.0, 100.0, 0)
+                            },
+                            feather,
+                        ),
+                    ],
+                    None => Vec::new(),
+                };
+                let mut range_committed = false;
+                for (spec, value) in range_rows {
+                    let c = widgets::slider(ui, &spec, value);
+                    changed |= c.changed;
+                    range_committed |= c.committed;
+                }
+                if range_committed {
+                    if let Some(r) = &mut m.range {
+                        r.clamp();
+                    }
+                    commits.push(trf("Masque {mask} : plage", &[("mask", &name)]));
                 }
                 if matches!(m.shape, Shape::Brush { .. }) {
                     sub_title(ui, tr("Pinceau"));

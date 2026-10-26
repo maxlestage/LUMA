@@ -54,7 +54,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Calibration | Shadows tint, hue and saturation of the primaries | ✅ |
 | Tools | Crop and straighten (free angle), on-screen tool with locked aspect ratio (R) | ✅ |
 | | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
-| | Luminance and colour range masks, edge-aware brush, combinations; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
+| | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
+| | Edge-aware brush, combinations; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Snapshots, sync across multiple photos | ⏳ |
@@ -73,10 +74,10 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 
 | Feature | Status |
 |---|---|
-| Bayer RAW: Sony ARW, Canon CR3, Nikon NEF (and the other formats read by rawler) | ✅ 3 camera bodies checked continuously |
+| Bayer RAW: Sony ARW, Canon CR3, Nikon NEF (and the other common RAW formats) | ✅ 3 camera bodies checked continuously |
 | X‑Trans RAW (Fujifilm) | ✅ dedicated demosaicing |
 | Linear DNG, Apple ProRAW (with `BaselineExposure`) | ✅ |
-| Rendered images: JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG (pure Rust); HEIC, HEIF, AVIF (Apple ImageIO); unknown extensions read by content | ✅ “Original” profile: identical on opening |
+| Rendered images: JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG; HEIC, HEIF, AVIF (Apple ImageIO); unknown extensions read by content | ✅ “Original” profile: identical on opening |
 | DNG colour: two matrices interpolated by temperature | ✅ |
 | 32-bit floating-point pipeline, linear Rec. 2020 working space | ✅ |
 | Highlights clipped at the sensor rendered neutral (no pink skies) | ✅ |

@@ -86,6 +86,10 @@ The professional photo library, step by step.
 - **Export to several presets at once**: tick “Web” and “Print” in the Export dialog
   and each photo goes to both in one go; save your settings as a preset;
   `luma export *.ARW --preset Web --preset Impression`.
+- **Range masks**: a mask's area (gradient, brush, whole image) can keep only some
+  tones (luminance range: minimum, maximum, smoothness) or some colours (colour range:
+  hue, width, smoothness; greys are left out). Measured in OKLab on the photo, before
+  the masks' adjustments; the area is shown in red (O).
 
 ## 0.2.0 — October 2026
 

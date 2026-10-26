@@ -251,15 +251,18 @@ mod catalog_tests {
             add(title);
             add(detail);
         }
-        for ph in &ROADMAP {
-            add(ph.name);
-            add(ph.goal);
-            ph.items.iter().for_each(|i| add(i));
-        }
-        DENY.iter().filter(|d| d.0 == "c").for_each(|d| add(d.1));
-        for (name, body) in RULES {
-            add(name);
+        for (_, title, body) in STEPS {
+            add(title);
             add(body);
+        }
+        FILMS.iter().for_each(|f| add(f.1));
+        for (title, body) in PRIVACY {
+            add(title);
+            add(body);
+        }
+        for (question, answer) in FAQ {
+            add(question);
+            add(answer);
         }
         for (title, links) in FOOTER {
             add(title);
