@@ -111,6 +111,20 @@ pub fn pick_lut() -> Option<PathBuf> {
     None
 }
 
+/// Un logo à poser en filigrane sur les exports.
+#[cfg(not(target_os = "ios"))]
+pub fn pick_logo() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title(tr("Choisir un logo"))
+        .add_filter(tr("Logo"), &["png", "PNG"])
+        .pick_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_logo() -> Option<PathBuf> {
+    None
+}
+
 /// Le scan d'une pellicule, pour la mesurer.
 #[cfg(not(target_os = "ios"))]
 pub fn pick_scan() -> Option<PathBuf> {

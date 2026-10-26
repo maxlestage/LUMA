@@ -91,7 +91,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Plantillas de nombre de archivo: `{nom}` (o `{nombre}`), `{date}` (`{fecha}`), `{séquence}` (`{secuencia}`), `{boîtier}` (`{cámara}`), `{objectif}` (`{objetivo}`), `{iso}`, `{note}` (`{valoración}`), `{libellé}` (`{etiqueta}`)…, subcarpetas con «/»; en la ventana Exportar, los ajustes preestablecidos y `luma develop --name` | ✅ |
 | Enfoque de salida: pantalla, papel mate, papel brillante; bajo, estándar, alto; al tamaño final (`--output-sharpen`) | ✅ |
 | Marca de agua de texto (tipografía de LÜMA, suavizada): nueve posiciones, tamaño, opacidad, blanco o negro (`--watermark`) | ✅ |
-| Marca de agua con logotipo (PNG), copia de los metadatos EXIF | ⏳ |
+| Marca de agua con logotipo: un PNG con su transparencia, colores fieles, nueve posiciones, tamaño, opacidad (`--logo`) | ✅ |
+| Copia de los metadatos EXIF | ⏳ |
 
 ## Biblioteca e interoperabilidad
 

@@ -410,6 +410,168 @@ impl OutlinePen for Pen<'_> {
     }
 }
 
+/// Un logo en filigrane : une image (PNG, avec sa transparence) posée à l'un des neuf
+/// emplacements.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Logo {
+    pub path: std::path::PathBuf,
+    pub position: Position,
+    /// Le grand côté du logo, en pour cent du petit côté de l'image (1 à 50).
+    pub size: f32,
+    /// 0 à 1.
+    pub opacity: f32,
+}
+
+impl Logo {
+    /// Un logo en bas à droite, d'un huitième du petit côté de l'image.
+    pub fn new(path: impl Into<std::path::PathBuf>) -> Logo {
+        Logo {
+            path: path.into(),
+            position: Position::BottomRight,
+            size: 12.0,
+            opacity: 0.8,
+        }
+    }
+
+    /// Lit le logo : ses couleurs (sRGB, celles de tout fichier sans profil) ramenées en
+    /// valeurs perçues de l'espace de travail, prémultipliées par la transparence.
+    pub fn load(&self) -> Result<LogoImage, String> {
+        let img = image::open(&self.path)
+            .map_err(|e| format!("logo {} : {e}", self.path.display()))?
+            .to_rgba8();
+        Ok(LogoImage::from_rgba(
+            img.width() as usize,
+            img.height() as usize,
+            img.as_raw(),
+        ))
+    }
+
+    /// Pose le logo sur l'image (linéaire, à sa taille finale).
+    pub fn apply(&self, img: &mut RgbImage) -> Result<(), String> {
+        let opacity = self.opacity.clamp(0.0, 1.0);
+        if opacity <= 0.0 || img.width < 8 || img.height < 8 {
+            return Ok(());
+        }
+        let logo = self.load()?;
+        logo.apply(img, self.position, self.size, opacity);
+        Ok(())
+    }
+
+    /// En clair : « logo signature.png, en bas à droite, 12 %, 80 % ».
+    pub fn describe(&self) -> String {
+        let name = self
+            .path
+            .file_name()
+            .map_or_else(|| self.path.display().to_string(), |n| n.to_string_lossy().into_owned());
+        format!(
+            "logo {name}, {}, {} %, {} %",
+            self.position.label().to_lowercase(),
+            self.size,
+            (self.opacity * 100.0).round()
+        )
+    }
+}
+
+/// Un logo lu : couleur perçue prémultipliée et transparence, en flottants.
+pub struct LogoImage {
+    pub width: usize,
+    pub height: usize,
+    /// `[r, g, b, a]`, couleur multipliée par `a`.
+    pub data: Vec<[f32; 4]>,
+}
+
+impl LogoImage {
+    pub fn from_rgba(width: usize, height: usize, rgba: &[u8]) -> LogoImage {
+        let m = luma_color::rgb_to_rgb(&luma_color::SRGB, &luma_color::WORKING);
+        let data = rgba
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|p| {
+                let lin = [0, 1, 2].map(|c| luma_color::srgb_decode(f32::from(p[c]) / 255.0));
+                let w = luma_color::apply(&m, lin).map(|v| v.max(0.0).powf(1.0 / 2.2));
+                let a = f32::from(p[3]) / 255.0;
+                [w[0] * a, w[1] * a, w[2] * a, a]
+            })
+            .collect();
+        LogoImage { width, height, data }
+    }
+
+    /// Le logo réduit (moyenne des surfaces) à `width × height` ; jamais agrandi au‑delà
+    /// de son fichier, pour ne pas flouter un petit logo.
+    fn resized(&self, width: usize, height: usize) -> LogoImage {
+        if (width, height) == (self.width, self.height) {
+            return LogoImage {
+                width,
+                height,
+                data: self.data.clone(),
+            };
+        }
+        let color = RgbImage {
+            width: self.width,
+            height: self.height,
+            data: self.data.iter().map(|p| [p[0], p[1], p[2]]).collect(),
+        }
+        .resize_area(width, height);
+        let alpha = RgbImage {
+            width: self.width,
+            height: self.height,
+            data: self.data.iter().map(|p| [p[3]; 3]).collect(),
+        }
+        .resize_area(width, height);
+        LogoImage {
+            width,
+            height,
+            data: color
+                .data
+                .iter()
+                .zip(&alpha.data)
+                .map(|(c, a)| [c[0], c[1], c[2], a[0]])
+                .collect(),
+        }
+    }
+
+    /// Pose le logo : `size` est son grand côté en pour cent du petit côté de l'image.
+    pub fn apply(&self, img: &mut RgbImage, position: Position, size: f32, opacity: f32) {
+        if self.width == 0 || self.height == 0 {
+            return;
+        }
+        let short = img.width.min(img.height) as f32;
+        let target = (short * size.clamp(1.0, 50.0) / 100.0).round().max(4.0) as usize;
+        let (w, h) = RgbImage::fit(self.width, self.height, target);
+        let logo = self.resized(w, h);
+        let margin = (short * 0.03).round() as isize;
+        let (ax, ay) = position.anchor();
+        let free_x = img.width as isize - w as isize - 2 * margin;
+        let free_y = img.height as isize - h as isize - 2 * margin;
+        let x0 = margin + (free_x.max(0) as f32 * ax).round() as isize;
+        let y0 = margin + (free_y.max(0) as f32 * ay).round() as isize;
+        for ly in 0..h {
+            let y = y0 + ly as isize;
+            if y < 0 || y >= img.height as isize {
+                continue;
+            }
+            for lx in 0..w {
+                let x = x0 + lx as isize;
+                if x < 0 || x >= img.width as isize {
+                    continue;
+                }
+                let l = logo.data[ly * w + lx];
+                let a = l[3] * opacity;
+                if a <= 0.0 {
+                    continue;
+                }
+                // Comme le texte : le mélange en valeurs perçues.
+                let p = &mut img.data[y as usize * img.width + x as usize];
+                for (c, v) in p.iter_mut().enumerate() {
+                    let base = v.max(0.0).powf(1.0 / 2.2);
+                    *v = (base * (1.0 - a) + l[c] * opacity).max(0.0).powf(2.2);
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -534,6 +696,90 @@ mod tests {
             ..Watermark::new("un très long filigrane")
         }
         .apply(&mut tiny);
+    }
+
+    /// Un logo de 40 × 20 : la moitié gauche rouge opaque, la droite transparente.
+    fn logo() -> LogoImage {
+        let mut rgba = Vec::new();
+        for _ in 0..20 {
+            for x in 0..40 {
+                rgba.extend_from_slice(&if x < 20 { [255, 0, 0, 255] } else { [0, 0, 0, 0] });
+            }
+        }
+        LogoImage::from_rgba(40, 20, &rgba)
+    }
+
+    #[test]
+    fn the_logo_keeps_its_colors_and_transparency() {
+        let img = RgbImage::from_fn(400, 300, |_, _| [0.2; 3]);
+        let mut a = img.clone();
+        // 20 % de 300 = 60 px demandés, mais un logo n'est jamais agrandi : il reste à
+        // 40 × 20, à 9 px des bords.
+        logo().apply(&mut a, Position::TopLeft, 20.0, 1.0);
+        let px = |x: usize, y: usize| a.data[y * 400 + x];
+        // La moitié opaque : du rouge sRGB, ramené dans l'espace de travail.
+        let red = luma_color::apply(
+            &luma_color::rgb_to_rgb(&luma_color::SRGB, &luma_color::WORKING),
+            [1.0, 0.0, 0.0],
+        );
+        let inside = px(9 + 10, 9 + 10);
+        for c in 0..3 {
+            assert!((inside[c] - red[c].max(0.0)).abs() < 1e-3, "{inside:?} {red:?}");
+        }
+        // La moitié transparente et le reste de l'image ne bougent pas.
+        assert_eq!(px(9 + 45, 9 + 10), [0.2; 3]);
+        assert_eq!(px(200, 150), [0.2; 3]);
+        assert_eq!(px(5, 5), [0.2; 3]);
+        // À moitié opaque : entre les deux, en valeurs perçues.
+        let mut half = img.clone();
+        logo().apply(&mut half, Position::TopLeft, 20.0, 0.5);
+        let h = half.data[19 * 400 + 19];
+        let expected = (0.2f32.powf(1.0 / 2.2) * 0.5 + red[0].max(0.0).powf(1.0 / 2.2) * 0.5).powf(2.2);
+        assert!((h[0] - expected).abs() < 1e-3, "{h:?} {expected}");
+        // En bas à droite : seul ce coin change.
+        let mut br = img.clone();
+        logo().apply(&mut br, Position::BottomRight, 20.0, 1.0);
+        assert_ne!(br.data[(300 - 9 - 10) * 400 + (400 - 9 - 35)], [0.2; 3]);
+        assert_eq!(br.data[20 * 400 + 20], [0.2; 3]);
+        // Réduit : 10 % de 100 = 10 px de grand côté, proportions gardées, bord adouci.
+        let mut small = RgbImage::from_fn(200, 100, |_, _| [0.2; 3]);
+        logo().apply(&mut small, Position::TopLeft, 10.0, 1.0);
+        let changed: Vec<(usize, usize)> = (0..100)
+            .flat_map(|y| (0..200).map(move |x| (x, y)))
+            .filter(|&(x, y)| small.data[y * 200 + x] != [0.2; 3])
+            .collect();
+        let xs = changed.iter().map(|p| p.0).max().unwrap() - changed.iter().map(|p| p.0).min().unwrap() + 1;
+        let ys = changed.iter().map(|p| p.1).max().unwrap() - changed.iter().map(|p| p.1).min().unwrap() + 1;
+        assert_eq!((xs, ys), (5, 5));
+        // Un logo plus grand que l'image : coupé, sans planter.
+        let mut tiny = RgbImage::from_fn(20, 20, |_, _| [0.2; 3]);
+        logo().apply(&mut tiny, Position::Center, 50.0, 1.0);
+    }
+
+    #[test]
+    fn a_logo_file_is_read_or_refused() {
+        let dir = std::env::temp_dir().join(format!("luma-logo-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("logo.png");
+        let mut png = image::RgbaImage::new(8, 4);
+        for (x, _, p) in png.enumerate_pixels_mut() {
+            *p = image::Rgba(if x < 4 { [255, 255, 255, 255] } else { [0, 0, 0, 0] });
+        }
+        png.save(&path).unwrap();
+        let mut img = RgbImage::from_fn(200, 100, |_, _| [0.1; 3]);
+        Logo::new(&path).apply(&mut img).unwrap();
+        assert!(img.data.iter().any(|p| p[0] > 0.5));
+        assert!(
+            Logo::new(dir.join("absent.png"))
+                .apply(&mut img)
+                .unwrap_err()
+                .contains("absent.png")
+        );
+        assert_eq!(
+            Logo::new(&path).describe(),
+            "logo logo.png, en bas à droite, 12 %, 80 %"
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

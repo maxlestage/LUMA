@@ -60,6 +60,9 @@ La photothèque professionnelle, étape par étape.
 - **Filigrane texte** : « © votre nom » dessiné avec la police de LÜMA, lissé au
   pixel près, à l'un des neuf emplacements, taille, opacité, blanc ou noir ; dans la
   fenêtre Exporter, les préréglages et `luma develop --watermark`.
+- **Filigrane logo** : votre logo en PNG, avec sa transparence et ses vraies couleurs,
+  à l'un des neuf emplacements, taille et opacité ; seul ou avec le texte ; dans la
+  fenêtre Exporter, les préréglages et `luma develop --logo signature.png`.
 
 ## 0.2.0 — octobre 2026
 
