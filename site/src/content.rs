@@ -307,7 +307,7 @@ pub struct Perf {
 }
 
 /// Ce qui est déjà fait pour iPhone et iPad, avec le gain mesuré : (titre, détail).
-pub const PHONE_GAINS: [(&str, &str); 4] = [
+pub const PHONE_GAINS: [(&str, &str); 5] = [
     (
         "Les curseurs suivent le doigt",
         "Pendant un geste, un aperçu plus petit, puis la pleine netteté au lâcher : 12 fois plus rapide (417 → 35 ms par image).",
@@ -319,6 +319,10 @@ pub const PHONE_GAINS: [(&str, &str); 4] = [
     (
         "Jamais fermée faute de mémoire",
         "LÜMA surveille la mémoire que le système lui laisse et libère ses caches sous 300 Mo, avant qu'il ne ferme l'app.",
+    ),
+    (
+        "Photos en portrait plus vite ouvertes",
+        "L'image est réduite avant d'être tournée : 5 fois moins de temps pour la tourner (91 → 18 ms pour un ProRAW de l'iPhone).",
     ),
     (
         "Vignettes instantanées",
