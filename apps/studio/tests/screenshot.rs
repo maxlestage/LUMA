@@ -586,6 +586,19 @@ fn masks_combined() {
     s.wait();
     s.keys(&[(NONE, Key::O)]);
     s.capture("masques-combines");
+    // La même zone en blanc sur noir, puis en bleu à 35 %.
+    s.studio().mask_style = luma_studio::masking::Overlay {
+        color: luma_studio::masking::COLORS.len() - 1,
+        opacity: 100.0,
+    };
+    s.wait();
+    s.capture("masques-noir-blanc");
+    s.studio().mask_style = luma_studio::masking::Overlay {
+        color: 2,
+        opacity: 35.0,
+    };
+    s.wait();
+    s.capture("masques-bleu");
     let st = s.studio();
     assert_eq!(st.settings.masks[0].parts.len(), 1);
     assert_eq!(st.selected_part, Some((0, 0)));
