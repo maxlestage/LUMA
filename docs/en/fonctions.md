@@ -29,7 +29,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Auto white balance, presets (Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash), eyedropper (W) | ✅ |
 | | Exposure, Contrast | ✅ |
 | | Highlights, Shadows (image-adaptive) | ✅ |
-| | Whites, Blacks | 🟡 fixed, not yet image-adaptive |
+| | Whites, Blacks (adaptive: bring the photo's real extremes to white and black) | ✅ |
 | | Texture, Clarity, Dehaze | ✅ |
 | | Vibrance, Saturation | ✅ |
 | Tone Curve | Parametric (4 regions, 3 splits) | ✅ |

@@ -30,7 +30,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Balance de blancos automático, ajustes preestablecidos (luz de día, nublado, sombra, tungsteno, fluorescente, flash), cuentagotas (W) | ✅ |
 | | Exposición, Contraste | ✅ |
 | | Altas luces, Sombras (adaptativas a la imagen) | ✅ |
-| | Blancos, Negros | 🟡 fijos, todavía no adaptativos a la imagen |
+| | Blancos, Negros (adaptativos: llevan los extremos reales de la foto al blanco y al negro) | ✅ |
 | | Textura, Claridad, Neblina | ✅ |
 | | Intensidad, Saturación | ✅ |
 | Curva de tonos | Paramétrica (4 regiones, 3 divisiones) | ✅ |

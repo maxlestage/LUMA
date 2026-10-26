@@ -322,6 +322,9 @@ impl Gpu {
     /// Finit `base` (sortie de `develop_base`, identifiée par `id`) et l'encode en RGBA
     /// 8 bits dans `space`. La base n'est envoyée au GPU que si `id` a changé.
     pub fn finish(&self, base: &RgbImage, id: u64, scale: f32, s: &Settings, space: OutputSpace) -> Vec<u8> {
+        // Les Blancs et les Noirs, adaptés à la base comme sur le processeur.
+        let adapted = luma_image::adaptive_ends(base, s);
+        let s = &adapted;
         let (w, h) = (base.width, base.height);
         let n = w * h;
         let mut uploaded = self.uploaded.lock().expect("GPU");
