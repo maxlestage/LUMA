@@ -87,6 +87,42 @@ fn presets_listed_created_and_deleted() {
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--output-sharpen", "none"]);
     assert!(ok && !out.contains("accentuation"), "{out}");
 
+    // Le filigrane : créé, réglé, puis retiré.
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export-preset",
+            "Galerie",
+            "--watermark",
+            "© Moi",
+            "--watermark-position",
+            "haut-gauche",
+            "--watermark-size",
+            "5",
+        ],
+    );
+    assert!(
+        ok && out.contains("filigrane « © Moi », en haut à gauche, 5 %, 70 %"),
+        "{out}"
+    );
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export-preset",
+            "Galerie",
+            "--watermark-opacity",
+            "40",
+            "--watermark-dark",
+        ],
+    );
+    assert!(ok && out.contains("en haut à gauche, 5 %, 40 %, noir"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--watermark-position", "dessus"]);
+    assert!(!ok && out.contains("emplacement inconnu"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--watermark-size", "90"]);
+    assert!(!ok && out.contains("0.5 à 25"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--no-watermark"]);
+    assert!(ok && !out.contains("filigrane"), "{out}");
+
     // Le modèle de nom, vérifié.
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--name", "{date}_{séquence:3}"]);
     assert!(ok, "{out}");
@@ -192,6 +228,34 @@ fn develop_with_a_preset() {
     let (a, b) = (std::fs::read(&plain).unwrap(), std::fs::read(&sharp).unwrap());
     assert!(a != b && a.len().abs_diff(b.len()) < a.len());
 
+    // Le filigrane marque le coin demandé, et lui seul.
+    let marked = dir.join("filigrane.png");
+    let (ok, out) = luma(
+        &file,
+        &[
+            "develop",
+            raw.to_str().unwrap(),
+            "--no-sidecar",
+            "--resize",
+            "300",
+            "--watermark",
+            "LÜMA",
+            "--watermark-size",
+            "10",
+            "-o",
+            marked.to_str().unwrap(),
+        ],
+    );
+    assert!(ok, "{out}");
+    let (a, b) = (png_rgb(&plain), png_rgb(&marked));
+    assert_eq!((a.0, a.1), (b.0, b.1));
+    let (w, h) = (a.0, a.1);
+    let changed = |x0: usize, y0: usize| {
+        (y0..y0 + h / 2).any(|y| (x0..x0 + w / 2).any(|x| a.2[(y * w + x) * 3..][..3] != b.2[(y * w + x) * 3..][..3]))
+    };
+    assert!(changed(w / 2, h / 2), "coin en bas à droite");
+    assert!(!changed(0, 0) && !changed(w / 2, 0) && !changed(0, h / 2));
+
     // Petit côté, puis un cadre, puis des mégapixels : la taille exacte du JPEG.
     for (resize, check) in [
         (
@@ -225,6 +289,12 @@ fn develop_with_a_preset() {
         assert!(check(w, h), "{resize} : {w} × {h}");
     }
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// Les pixels d'un PNG 8 bits RGB : largeur, hauteur, octets.
+fn png_rgb(path: &Path) -> (usize, usize, Vec<u8>) {
+    let img = image::open(path).unwrap().to_rgb8();
+    (img.width() as usize, img.height() as usize, img.into_raw())
 }
 
 /// La taille d'un JPEG, lue dans son marqueur SOF.

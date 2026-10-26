@@ -13,6 +13,7 @@ use luma_core::{Cancel, RgbImage};
 use luma_project::Settings;
 use serde::{Deserialize, Serialize};
 
+pub use crate::watermark::{Position, Watermark};
 use crate::{Photo, Size};
 
 /// Écrit l'image dans `path` : JPEG, PNG ou TIFF selon l'extension, 8 ou 16 bits (le
@@ -102,6 +103,8 @@ pub struct Options {
     pub name: Option<String>,
     /// L'accentuation de sortie, après le redimensionnement ; `None` : aucune.
     pub sharpen: Option<OutputSharpen>,
+    /// Le filigrane texte, posé en dernier ; `None` : aucun.
+    pub watermark: Option<Watermark>,
 }
 
 impl Default for Options {
@@ -115,6 +118,7 @@ impl Default for Options {
             folder: None,
             name: None,
             sharpen: None,
+            watermark: None,
         }
     }
 }
@@ -599,6 +603,10 @@ pub fn develop(photo: &Photo, settings: &Settings, out: &Path, options: &Options
     if let Some(sh) = options.sharpen {
         sh.apply(&mut image);
     }
+    // Le filigrane après l'accentuation : ses lettres ne sont pas accentuées.
+    if let Some(w) = &options.watermark {
+        w.apply(&mut image);
+    }
     let bits = if options.format == Format::Jpeg {
         8
     } else {
@@ -687,6 +695,18 @@ struct StoredPreset {
     name_template: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     sharpen: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    watermark: Option<StoredWatermark>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct StoredWatermark {
+    text: String,
+    position: String,
+    size: f32,
+    opacity: f32,
+    #[serde(default)]
+    dark: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -709,6 +729,13 @@ impl StoredPreset {
             folder: o.folder.clone(),
             name_template: o.name.clone(),
             sharpen: o.sharpen.map(OutputSharpen::id),
+            watermark: o.watermark.as_ref().map(|w| StoredWatermark {
+                text: w.text.clone(),
+                position: w.position.id().into(),
+                size: w.size,
+                opacity: w.opacity,
+                dark: w.dark,
+            }),
         }
     }
 
@@ -730,6 +757,24 @@ impl StoredPreset {
                 sharpen: match self.sharpen {
                     Some(v) => Some(OutputSharpen::parse(&v)?),
                     None => None,
+                },
+                watermark: match self.watermark {
+                    Some(w) if !w.text.trim().is_empty() => Some(Watermark {
+                        position: Position::parse(&w.position)?,
+                        size: if w.size.is_finite() {
+                            w.size.clamp(0.5, 25.0)
+                        } else {
+                            3.0
+                        },
+                        opacity: if w.opacity.is_finite() {
+                            w.opacity.clamp(0.0, 1.0)
+                        } else {
+                            0.7
+                        },
+                        dark: w.dark,
+                        text: w.text,
+                    }),
+                    _ => None,
                 },
             },
         })
@@ -849,6 +894,9 @@ pub fn describe(o: &Options) -> String {
     let mut out = format!("{format}, {space}, {size}, {folder}");
     if let Some(sh) = o.sharpen {
         out += &format!(", {}", sh.describe());
+    }
+    if let Some(w) = &o.watermark {
+        out += &format!(", {}", w.describe());
     }
     if let Some(n) = &o.name {
         out += &format!(", {n}");
@@ -1170,6 +1218,11 @@ mod tests {
                 sharpen: Some(OutputSharpen {
                     medium: Medium::Matte,
                     strength: Strength::High,
+                }),
+                watermark: Some(Watermark {
+                    position: Position::TopLeft,
+                    dark: true,
+                    ..Watermark::new("© Maxime Lestage")
                 }),
                 ..Options::default()
             },

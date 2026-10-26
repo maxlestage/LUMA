@@ -41,8 +41,9 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 - [x] 2.3 Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels.
 - [x] 2.4 Accentuation de sortie : écran, papier mat, papier brillant ; faible, normale,
   forte.
-- [ ] 2.5 Filigrane texte (police embarquée en Rust) puis logo (PNG), position, taille,
-  opacité.
+- [x] 2.5 Filigrane texte (police embarquée, lissage exact maison) : position, taille,
+  opacité, blanc ou noir.
+- [ ] 2.5 bis Filigrane logo (PNG) : position, taille, opacité.
 - [ ] 2.6 Métadonnées : EXIF d'origine recopié, auteur, copyright, IPTC, mots‑clés,
   retrait du GPS.
 - [ ] 2.7 Export par lot vers plusieurs préréglages à la fois, dans l'app et en ligne de
@@ -192,3 +193,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 2.4 Accentuation de sortie (`luma_render::export::OutputSharpen`) : écran (rayon 0,5 px), papier brillant et mat (rayon plus large, qui grandit avec l'image), trois intensités, masque des aplats ; appliquée après le redimensionnement ; fenêtre Exporter, préréglages, `--output-sharpen` | Coût sur un export 2048 px : environ +40 ms (NEF, 4 cœurs) ; en pleine définition 24 Mpx : 0,1 à 0,3 s |
 | 2026-10-26 | 1.5 La photothèque dans l'app : chaque dossier ouvert entre au catalogue dans un fil à part (enregistré ensuite), panneau Photothèque (recherche, toutes les photos, collections, dossiers avec leur nombre), vues par date de prise de vue ; correction : changer de film enregistre d'abord les réglages en attente de la photo qui les porte | Test de l'interface sur le corpus : 5 photos indexées sans bloquer l'interface, vue « toutes » par date, recherche, collection dynamique ; capture `studio-bibliotheque-phototheque.png` |
 | 2026-10-26 | Vitesse : les six passes de boîte d'un flou (`Plane::blur`, aussi au cœur du filtre guidé) écrivent dans deux tampons qui alternent au lieu de six images neuves | Flou d'un plan 24 Mpx : 439 → 81 ms ; pleine définition (meilleur de 5, 4 cœurs, machine virtuelle bruitée) : accentuation NEF 642 → 362 ms, CR3 1339 → 627 ms, RAF 683 → 440 ms, DNG 166 → 127 ms ; rendu complet NEF 1488 → 1179 ms, CR3 3058 → 2166 ms, RAF 1892 → 1544 ms ; aperçu 2048 px inchangé ; JPEG identiques octet pour octet, test au bit près contre les passes chaînées |
+| 2026-10-26 | 2.5 Filigrane texte (`luma_render::watermark`) : police Ubuntu Light déjà embarquée par l'interface, contours lus par `skrifa` (déjà dans le dépôt : aucune nouvelle crate compilée), rastérisation maison par aires signées (couverture exacte), neuf emplacements, taille en % du petit côté, opacité mélangée en valeurs perçues, blanc ou noir ; fenêtre Exporter, préréglages, `--watermark` | Dessin et pose d'un filigrane (meilleur de 5) : 0,85 ms sur un export 1600 px, 9,4 ms en pleine définition 24 Mpx |

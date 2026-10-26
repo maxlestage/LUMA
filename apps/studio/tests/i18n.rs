@@ -158,6 +158,12 @@ fn texts() -> Vec<(String, String)> {
         .map(str::to_owned)
         .to_vec(),
     );
+    // Les emplacements du filigrane (fenêtre Exporter).
+    use luma_render::export::Position;
+    add(
+        "luma-render",
+        Position::ALL.iter().map(|p| p.label().to_owned()).collect(),
+    );
     out.retain(|(_, t)| t.chars().any(char::is_alphabetic));
     out
 }

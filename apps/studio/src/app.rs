@@ -1665,6 +1665,9 @@ impl Studio {
                         ui.label(tr("Accentuation de sortie"));
                         ui.horizontal(|ui| sharpen_editor(ui, &mut o.sharpen));
                         ui.end_row();
+                        ui.label(tr("Filigrane"));
+                        ui.vertical(|ui| watermark_editor(ui, &mut o.watermark));
+                        ui.end_row();
                         ui.label(tr("Nom des fichiers"));
                         ui.vertical(|ui| {
                             let mut text = o.name.clone().unwrap_or_default();
@@ -4805,6 +4808,69 @@ fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
     }
     let s = (area.width() / w as f32).min(area.height() / h as f32);
     egui::Rect::from_center_size(area.center(), vec2(w as f32 * s, h as f32 * s))
+}
+
+/// Le filigrane texte d'un export : le texte (vide : aucun), puis son emplacement, sa
+/// taille, son opacité et sa couleur.
+fn watermark_editor(ui: &mut Ui, watermark: &mut Option<luma_render::export::Watermark>) {
+    use luma_render::export::{Position, Watermark};
+    let mut text = watermark
+        .as_ref()
+        .map(|w| w.text.clone())
+        .unwrap_or_default();
+    let edit = ui
+        .add(
+            egui::TextEdit::singleline(&mut text)
+                .hint_text(tr("© votre nom"))
+                .desired_width(260.0),
+        )
+        .accessible_name(tr("Filigrane"));
+    if edit.changed() {
+        *watermark = if text.trim().is_empty() {
+            None
+        } else {
+            Some(match watermark.take() {
+                Some(w) => Watermark { text, ..w },
+                None => Watermark::new(&text),
+            })
+        };
+    }
+    let Some(w) = watermark else {
+        return;
+    };
+    ui.horizontal(|ui| {
+        egui::ComboBox::from_id_salt("filigrane-position")
+            .selected_text(tr(w.position.label()))
+            .show_ui(ui, |ui| {
+                for p in Position::ALL {
+                    ui.selectable_value(&mut w.position, p, tr(p.label()));
+                }
+            })
+            .response
+            .accessible_name(tr("Emplacement du filigrane"));
+        ui.add(
+            egui::DragValue::new(&mut w.size)
+                .range(0.5..=25.0)
+                .speed(0.1)
+                .suffix(" %"),
+        )
+        .on_hover_text(tr("Taille, en pour cent du petit côté"))
+        .accessible_name(tr("Taille du filigrane"));
+        let mut opacity = (w.opacity * 100.0).round();
+        if ui
+            .add(
+                egui::DragValue::new(&mut opacity)
+                    .range(0.0..=100.0)
+                    .suffix(" %"),
+            )
+            .on_hover_text(tr("Opacité"))
+            .accessible_name(tr("Opacité du filigrane"))
+            .changed()
+        {
+            w.opacity = opacity / 100.0;
+        }
+        ui.checkbox(&mut w.dark, tr("Noir"));
+    });
 }
 
 /// L'accentuation de sortie d'un export : le support, puis l'intensité.

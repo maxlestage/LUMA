@@ -53,6 +53,9 @@ La photothèque professionnelle, étape par étape.
 - **Accentuation de sortie** : pour l'écran, le papier mat ou le papier brillant,
   faible, normale ou forte, appliquée à l'image à sa taille finale (sur papier, le
   rayon suit la taille du tirage) ; les aplats restent lisses.
+- **Filigrane texte** : « © votre nom » dessiné avec la police de LÜMA, lissé au
+  pixel près, à l'un des neuf emplacements, taille, opacité, blanc ou noir ; dans la
+  fenêtre Exporter, les préréglages et `luma develop --watermark`.
 
 ## 0.2.0 — octobre 2026
 

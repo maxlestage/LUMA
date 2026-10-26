@@ -35,6 +35,8 @@ USAGE
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille]
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
+                     [--watermark texte] [--watermark-position bottom-right]
+                     [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
       Avec --preset, les options du préréglage d'export (format, qualité, espace, taille,
       dossier, nom) ; les options données les remplacent, --size est alors le grand côté
       de l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par
@@ -45,9 +47,14 @@ USAGE
       (l'image tient dans le cadre), 12mp (mégapixels) ; jamais d'agrandissement.
       --output-sharpen : l'accentuation de sortie, à la taille finale, pour l'écran ou
       le papier mat ou brillant (écran, mat, brillant ; faible, normale, forte aussi).
+      --watermark : un filigrane texte (police de LÜMA), blanc ou noir (--watermark-dark),
+      à l'un des neuf emplacements (top-left, top, top-right, left, center, right,
+      bottom-left, bottom, bottom-right ; ou haut-gauche… bas-droite), taille en % du
+      petit côté (3 par défaut), opacité en % (70 par défaut).
   luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
                      [--space srgb|p3|rec2020|prophoto] [--size taille|0] [--folder d]
                      [--next-to-original] [--name modèle] [--output-sharpen s|none]
+                     [--watermark texte …|--no-watermark]
                      [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
@@ -115,6 +122,7 @@ struct Args {
     name: Option<String>,
     resize: Option<export::Resize>,
     output_sharpen: Option<export::OutputSharpen>,
+    watermark: WatermarkArgs,
     xmp: Option<PathBuf>,
     settings: Option<PathBuf>,
     sidecar: bool,
@@ -135,6 +143,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         name: None,
         resize: None,
         output_sharpen: None,
+        watermark: WatermarkArgs::default(),
         xmp: None,
         settings: None,
         sidecar: true,
@@ -155,6 +164,14 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--bits" => a.bits = Some(value(&arg)?.parse().map_err(|_| "--bits : 8 ou 16")?),
             "--preset" => a.preset = Some(value(&arg)?),
             "--name" => a.name = Some(value(&arg)?),
+            s if s.starts_with("--watermark") => {
+                let v = if s == "--watermark-dark" {
+                    String::new()
+                } else {
+                    value(&arg)?
+                };
+                a.watermark.read(s, v)?;
+            }
             "--output-sharpen" => {
                 let v = value(&arg)?;
                 a.output_sharpen = Some(export::OutputSharpen::parse(&v).ok_or_else(|| sharpen_error(&v))?);
@@ -407,7 +424,12 @@ fn develop(a: &Args) -> Result<(), String> {
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
-    if a.preset.is_some() || a.name.is_some() || a.resize.is_some() || a.output_sharpen.is_some() {
+    if a.preset.is_some()
+        || a.name.is_some()
+        || a.resize.is_some()
+        || a.output_sharpen.is_some()
+        || !a.watermark.is_empty()
+    {
         // Un préréglage d'export (à défaut, les options par défaut) : ses options, que les
         // options données remplacent.
         let mut o = match &a.preset {
@@ -426,6 +448,7 @@ fn develop(a: &Args) -> Result<(), String> {
         }
         o.space = a.space.unwrap_or(o.space);
         o.sharpen = a.output_sharpen.or(o.sharpen);
+        a.watermark.apply(&mut o.watermark);
         o.quality = a.quality.unwrap_or(o.quality);
         o.bits = a.bits.unwrap_or(o.bits);
         o.resize = a
@@ -485,6 +508,67 @@ fn develop(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// Les options `--watermark…` : le texte, puis ce qui le règle ; appliquées à un
+/// filigrane existant (celui d'un préréglage) ou à un nouveau.
+#[derive(Default)]
+struct WatermarkArgs {
+    text: Option<String>,
+    position: Option<export::Position>,
+    size: Option<f32>,
+    opacity: Option<f32>,
+    dark: bool,
+}
+
+impl WatermarkArgs {
+    fn read(&mut self, option: &str, v: String) -> Result<(), String> {
+        let number = |v: &str, min: f32, max: f32| {
+            v.trim()
+                .replace(',', ".")
+                .parse::<f32>()
+                .ok()
+                .filter(|n| (min..=max).contains(n))
+                .ok_or_else(|| format!("{option} : un nombre de {min} à {max}"))
+        };
+        match option {
+            "--watermark" => self.text = Some(v),
+            "--watermark-position" => {
+                self.position = Some(export::Position::parse(&v).ok_or_else(|| {
+                    let all: Vec<&str> = export::Position::ALL.iter().map(|p| p.id()).collect();
+                    format!("emplacement inconnu « {v} » ({})", all.join(", "))
+                })?);
+            }
+            "--watermark-size" => self.size = Some(number(&v, 0.5, 25.0)?),
+            "--watermark-opacity" => self.opacity = Some(number(&v, 0.0, 100.0)? / 100.0),
+            "--watermark-dark" => self.dark = true,
+            other => return Err(format!("option inconnue « {other} »")),
+        }
+        Ok(())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.text.is_none() && self.position.is_none() && self.size.is_none() && self.opacity.is_none() && !self.dark
+    }
+
+    fn apply(&self, w: &mut Option<export::Watermark>) {
+        if let Some(t) = &self.text {
+            *w = if t.trim().is_empty() {
+                None
+            } else {
+                Some(match w.take() {
+                    Some(old) => export::Watermark { text: t.clone(), ..old },
+                    None => export::Watermark::new(t),
+                })
+            };
+        }
+        if let Some(w) = w {
+            w.position = self.position.unwrap_or(w.position);
+            w.size = self.size.unwrap_or(w.size);
+            w.opacity = self.opacity.unwrap_or(w.opacity);
+            w.dark |= self.dark;
+        }
+    }
+}
+
 fn sharpen_error(v: &str) -> String {
     format!("accentuation inconnue « {v} » (screen, matte, glossy, suivis de :low, :standard ou :high)")
 }
@@ -538,6 +622,17 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
                 } else {
                     Some(export::Resize::parse(&v).ok_or_else(|| resize_error(&v))?)
                 };
+            }
+            "--no-watermark" => o.watermark = None,
+            s if s.starts_with("--watermark") => {
+                let v = if s == "--watermark-dark" {
+                    String::new()
+                } else {
+                    value()?
+                };
+                let mut w = WatermarkArgs::default();
+                w.read(s, v)?;
+                w.apply(&mut o.watermark);
             }
             "--output-sharpen" => {
                 let v = value()?;

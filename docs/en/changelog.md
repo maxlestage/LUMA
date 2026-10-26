@@ -52,6 +52,9 @@ The professional photo library, step by step.
 - **Output sharpening**: for screen, matte paper or glossy paper, low, standard or
   high, applied to the image at its final size (on paper, the radius follows the print
   size); flat areas stay smooth.
+- **Text watermark**: “© your name” drawn in the LÜMA typeface, anti-aliased to the
+  pixel, in one of nine positions, with size, opacity, white or black; in the Export
+  dialog, presets and `luma develop --watermark`.
 
 ## 0.2.0 — October 2026
 
