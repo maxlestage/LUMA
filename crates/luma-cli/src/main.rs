@@ -9,6 +9,7 @@
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
 //! luma presets [dossier]            exporte les 100 films en préréglages XMP
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
+//! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! luma licence-keys                 une paire de clés pour signer les licences
 //! ```
@@ -36,6 +37,10 @@ USAGE
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
+  luma catalog [dossier]… [--flat] [--catalog f.json] [--list]
+      La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
+      au catalogue de LÜMA, ou le remet à jour ; seuls les fichiers modifiés sont relus.
+      --list affiche les photos par date de prise de vue.
   luma cameras [--markdown] [--corpus dossier]
       Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
       --corpus marque ceux dont un vrai RAW est dans le dossier.
@@ -161,6 +166,58 @@ fn load_settings(a: &Args, raw: Option<&Path>) -> Result<Settings, String> {
         s.lut = Some(luma_project::Look { name, amount });
     }
     Ok(s)
+}
+
+fn catalog(args: Vec<String>) -> Result<(), String> {
+    let mut file = luma_library::default_path();
+    let (mut folders, mut recursive, mut show) = (Vec::new(), true, false);
+    let mut it = args.into_iter();
+    while let Some(arg) = it.next() {
+        match arg.as_str() {
+            "--catalog" => file = Some(it.next().ok_or("--catalog attend un fichier")?.into()),
+            "--flat" => recursive = false,
+            "--list" => show = true,
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => folders.push(PathBuf::from(arg)),
+        }
+    }
+    let file = file.ok_or("pas de dossier personnel pour le catalogue : --catalog f.json")?;
+    let t = Instant::now();
+    let mut cat = luma_library::Catalog::load(&file);
+    let loaded = t.elapsed();
+    for dir in &folders {
+        let dir = dir.canonicalize().map_err(|e| format!("{} : {e}", dir.display()))?;
+        let t = Instant::now();
+        let u = cat.add_folder(&dir, recursive);
+        println!(
+            "{} : {} nouvelles, {} relues, {} inchangées, {} retirées ({:.0} ms)",
+            dir.display(),
+            u.added,
+            u.updated,
+            u.unchanged,
+            u.removed,
+            ms(t.elapsed())
+        );
+    }
+    if !folders.is_empty() {
+        cat.save(&file).map_err(|e| format!("{} : {e}", file.display()))?;
+    }
+    println!("{} : {} photos (lu en {:.1} ms)", file.display(), cat.len(), ms(loaded));
+    if show {
+        for e in cat.by_date() {
+            let iso = e.iso.map(|i| format!("ISO {i}")).unwrap_or_default();
+            println!(
+                "{}  {}  {}  {}  {}  {}",
+                e.date.replace('T', " "),
+                "★".repeat(e.rating.into()),
+                e.camera(),
+                e.lens,
+                iso,
+                e.path.display()
+            );
+        }
+    }
+    Ok(())
 }
 
 fn info(a: &Args) -> Result<(), String> {
@@ -600,6 +657,15 @@ fn main() -> ExitCode {
                 );
                 ExitCode::SUCCESS
             }
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "catalog" {
+        return match catalog(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");
                 ExitCode::FAILURE
