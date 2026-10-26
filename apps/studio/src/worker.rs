@@ -129,6 +129,16 @@ struct RenderJob {
     clipping: bool,
     /// L'épreuvage à l'écran, s'il est actif.
     proof: Option<Proofed>,
+    /// Joindre une copie réduite de la base (la retouche y cherche ses sources).
+    scene: bool,
+}
+
+/// Ce qu'un rendu joint à l'image : l'écrêtage peint par‑dessus, une copie réduite de
+/// la base.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Extras {
+    pub clipping: bool,
+    pub scene: bool,
 }
 
 /// L'épreuvage demandé : la table, la simulation de l'impression, l'alerte de gamut.
@@ -308,7 +318,7 @@ impl Worker {
         settings: Settings,
         size: Size,
         generation: u64,
-        clipping: bool,
+        extras: Extras,
         proof: Option<Proofed>,
     ) {
         self.running.lock().expect("annulation").cancel();
@@ -317,8 +327,9 @@ impl Worker {
             settings,
             size,
             generation,
-            clipping,
+            clipping: extras.clipping,
             proof,
+            scene: extras.scene,
         });
     }
 
@@ -613,15 +624,16 @@ fn render_loop(
         if job.clipping {
             clip_overlay(&mut rgba);
         }
-        let scene = job
-            .settings
-            .masks
-            .iter()
-            .any(|m| m.range.is_some() || m.edges)
-            .then(|| {
-                let (sw, sh) = RgbImage::fit(w, h, 256);
-                Arc::new(base.image.resize_area(sw, sh))
-            });
+        let scene = (job.scene
+            || job
+                .settings
+                .masks
+                .iter()
+                .any(|m| m.range.is_some() || m.edges))
+        .then(|| {
+            let (sw, sh) = RgbImage::fit(w, h, 256);
+            Arc::new(base.image.resize_area(sw, sh))
+        });
         let frame = Frame {
             generation: job.generation,
             size: [w, h],
