@@ -99,7 +99,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Vignettes instantanées (l'aperçu intégré au RAW, en 15 ms), puis rendues avec les réglages et enregistrées sans perte pour les visites suivantes | ✅ |
 | Doublon de travail en pleine définition : identique à l'original, ouverture plus rapide, mémoire divisée par deux et demi ; « Vider le cache » en un clic | ✅ |
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
-| Catalogue dans l'app, collections, recherche et filtres, copies virtuelles | ⏳ |
+| Recherche et filtres (`luma catalog --search`) : mots sans tenir compte des accents ; note, drapeau, libellé, dates, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers et objectifs | ✅ |
+| Catalogue dans l'app, collections, copies virtuelles | ⏳ |
 | Import de catalogues existants | ⏳ |
 
 ## Ce qui distingue LÜMA

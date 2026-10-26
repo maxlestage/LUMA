@@ -11,6 +11,11 @@ La photothèque professionnelle, étape par étape.
   Photos rangées par date de prise de vue.
 - **Mots‑clés** : lus et écrits dans le XMP (`dc:subject`), comme le font tous les
   logiciels photo.
+- **Recherche et filtres** : `luma catalog --search "mer note:3 date:2024-06 iso:..800
+  boîtier:sony"` ; des mots (nom, boîtier, objectif, libellé, mots‑clés, sans tenir
+  compte des accents) et des filtres (note, drapeau, libellé, dates, ISO, focale,
+  boîtier, objectif, mot‑clé). 100 000 photos fouillées en 4 à 25 ms.
+  `--keywords` compte les mots‑clés, boîtiers et objectifs.
 
 ## 0.2.0 — octobre 2026
 

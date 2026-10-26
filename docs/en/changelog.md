@@ -11,6 +11,11 @@ The professional photo library, step by step.
   sorted by capture date.
 - **Keywords**: read and written in the XMP (`dc:subject`), as every photo application
   does.
+- **Search and filters**: `luma catalog --search "sea rating:3 date:2024-06 iso:..800
+  camera:sony"`; words (file name, camera, lens, label, keywords, accents ignored) and
+  filters (rating, flag, label, dates, ISO, focal length, camera, lens, keyword).
+  100,000 photos searched in 4 to 25 ms. `--keywords` counts keywords, cameras and
+  lenses.
 
 ## 0.2.0 — October 2026
 
