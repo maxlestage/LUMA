@@ -283,7 +283,11 @@ impl Plane {
                 let src = &self.data[y * w..(y + 1) * w];
                 for (ox, v) in row.iter_mut().enumerate() {
                     let (x0, x1) = (ox * k, ((ox + 1) * k).min(w));
-                    *v += src[x0..x1].iter().sum::<f32>();
+                    let s = src[x0..x1].iter().sum::<f32>();
+                    // La première ligne écrit sans lire : une mémoire neuve lue avant
+                    // d'être écrite coûte deux fautes de page (la page de zéros, puis sa
+                    // copie). `0.0 + s` garde exactement la somme d'avant.
+                    *v = if y == y0 { 0.0 + s } else { *v + s };
                 }
             }
             for (ox, v) in row.iter_mut().enumerate() {
@@ -320,27 +324,44 @@ impl Plane {
 
     /// Agrandissement bilinéaire (centres de pixels alignés).
     pub fn upsample(&self, width: usize, height: usize) -> Plane {
-        let sx = self.width as f32 / width as f32;
-        let sy = self.height as f32 / height as f32;
         let mut out = Plane::new(width, height);
-        out.data.par_chunks_mut(width).enumerate().for_each(|(y, row)| {
-            let fy = ((y as f32 + 0.5) * sy - 0.5).clamp(0.0, (self.height - 1) as f32);
-            let y0 = fy.floor() as usize;
-            let y1 = (y0 + 1).min(self.height - 1);
-            let ty = fy - y0 as f32;
-            let r0 = &self.data[y0 * self.width..(y0 + 1) * self.width];
-            let r1 = &self.data[y1 * self.width..(y1 + 1) * self.width];
-            for (x, v) in row.iter_mut().enumerate() {
+        let columns = self.upsample_columns(width);
+        out.data
+            .par_chunks_mut(width)
+            .enumerate()
+            .for_each(|(y, row)| self.upsample_row(y, height, &columns, row));
+        out
+    }
+
+    /// Pour chaque colonne d'un agrandissement à `width` : les deux colonnes voisines et
+    /// le poids de la seconde (les mêmes pour toutes les lignes).
+    pub fn upsample_columns(&self, width: usize) -> Vec<(usize, usize, f32)> {
+        let sx = self.width as f32 / width as f32;
+        (0..width)
+            .map(|x| {
                 let fx = ((x as f32 + 0.5) * sx - 0.5).clamp(0.0, (self.width - 1) as f32);
                 let x0 = fx.floor() as usize;
-                let x1 = (x0 + 1).min(self.width - 1);
-                let tx = fx - x0 as f32;
-                let top = r0[x0] + (r0[x1] - r0[x0]) * tx;
-                let bottom = r1[x0] + (r1[x1] - r1[x0]) * tx;
-                *v = top + (bottom - top) * ty;
-            }
-        });
-        out
+                (x0, (x0 + 1).min(self.width - 1), fx - x0 as f32)
+            })
+            .collect()
+    }
+
+    /// La ligne `y` de l'agrandissement bilinéaire à `row.len() × height`, les colonnes
+    /// données par `upsample_columns` (le calcul d'`upsample`, une ligne à la fois :
+    /// sans garder l'image agrandie).
+    pub fn upsample_row(&self, y: usize, height: usize, columns: &[(usize, usize, f32)], row: &mut [f32]) {
+        let sy = self.height as f32 / height as f32;
+        let fy = ((y as f32 + 0.5) * sy - 0.5).clamp(0.0, (self.height - 1) as f32);
+        let y0 = fy.floor() as usize;
+        let y1 = (y0 + 1).min(self.height - 1);
+        let ty = fy - y0 as f32;
+        let r0 = &self.data[y0 * self.width..(y0 + 1) * self.width];
+        let r1 = &self.data[y1 * self.width..(y1 + 1) * self.width];
+        for (v, &(x0, x1, tx)) in row.iter_mut().zip(columns) {
+            let top = r0[x0] + (r0[x1] - r0[x0]) * tx;
+            let bottom = r1[x0] + (r1[x1] - r1[x0]) * tx;
+            *v = top + (bottom - top) * ty;
+        }
     }
 
     /// Filtre guidé (He et al.) auto‑guidé : lisse en respectant les contours. `eps`
@@ -449,6 +470,34 @@ mod tests {
         assert_eq!(d.data[0], (0.0 + 1.0 + 5.0 + 6.0) / 4.0);
         assert_eq!(d.data[2], (4.0 + 9.0) / 2.0);
         assert_eq!(d.data[5], 14.0);
+    }
+
+    #[test]
+    fn downscale_keeps_the_exact_sums() {
+        // Écrire la première ligne sans la lire ne change aucun bit : même ordre de
+        // somme qu'une accumulation partant de zéro, zéros négatifs compris.
+        let p = Plane {
+            width: 7,
+            height: 5,
+            data: (0..35)
+                .map(|i| if i % 6 == 0 { -0.0 } else { (i as f32 * 0.37).sin() })
+                .collect(),
+        };
+        for k in [2, 3] {
+            let d = p.downscale(k);
+            for oy in 0..d.height {
+                for ox in 0..d.width {
+                    let mut v = 0.0f32;
+                    let ys = oy * k..((oy + 1) * k).min(p.height);
+                    let xs = ox * k..((ox + 1) * k).min(p.width);
+                    for y in ys.clone() {
+                        v += p.data[y * p.width + xs.start..y * p.width + xs.end].iter().sum::<f32>();
+                    }
+                    v /= (ys.len() * xs.len()) as f32;
+                    assert_eq!(d.data[oy * d.width + ox].to_bits(), v.to_bits());
+                }
+            }
+        }
     }
 
     #[test]
