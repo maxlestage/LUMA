@@ -8,6 +8,7 @@
 
 pub mod copies;
 pub mod masks;
+pub mod paste;
 pub mod presets;
 pub mod xmp;
 
