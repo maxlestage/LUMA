@@ -25,7 +25,23 @@ fn test_image(w: usize, h: usize) -> RgbImage {
 }
 
 fn compare(gpu: &Gpu, name: &str, s: &Settings, space: OutputSpace, scale: f32) {
-    let base = test_image(480, 320);
+    compare_on(gpu, &test_image(480, 320), name, s, space, scale);
+}
+
+/// Une image pleine de détails, pour l'accentuation : rayures fines, damier, bords nets
+/// et dégradé de couleurs.
+fn detailed_image(w: usize, h: usize) -> RgbImage {
+    let base = test_image(w, h);
+    RgbImage::from_fn(w, h, |x, y| {
+        let p = base.data[y * w + x];
+        let stripes = if (x / 2 + y / 3) % 2 == 0 { 1.25 } else { 0.8 };
+        let block = if (x / 24 + y / 24) % 2 == 0 { 1.4 } else { 0.7 };
+        p.map(|v| v * stripes * block)
+    })
+}
+
+fn compare_on(gpu: &Gpu, base: &RgbImage, name: &str, s: &Settings, space: OutputSpace, scale: f32) {
+    let base = base.clone();
     let mut cpu = base.clone();
     luma_image::finish(&mut cpu, scale, s, &Cancel::new(), &mut Timings::default()).unwrap();
     let cpu = luma_image::encode8(&cpu, space);
@@ -165,13 +181,15 @@ fn every_per_pixel_stage_matches_the_cpu() {
     }
 }
 
+/// Les réglages par défaut (accentuation 40) restent sur le GPU à toutes les tailles,
+/// 1:1 compris.
 #[test]
-fn sharpening_at_full_size_stays_on_the_cpu() {
+fn default_sharpening_stays_on_the_gpu() {
     let _gpu = one_at_a_time();
     let Some(gpu) = Gpu::any() else { return };
     let s = Settings::default();
     assert!(gpu.can_finish(&s, 100, 100, 0.3));
-    assert!(!gpu.can_finish(&s, 100, 100, 1.0), "accentuation visible à 100 %");
+    assert!(gpu.can_finish(&s, 100, 100, 1.0), "accentuation à 100 % sur le GPU");
 }
 
 /// Plusieurs bases (la photo, les films de masques qui ont la leur) restent sur le GPU :
@@ -199,4 +217,45 @@ fn several_bases_stay_uploaded_and_never_mix() {
             .unwrap();
         assert!(worst <= 2, "base {id} : écart {worst}");
     }
+}
+
+/// L'accentuation, en plusieurs passes sur le GPU : la même que sur le processeur, à
+/// toutes les forces, tous les rayons et tous les détails, à 100 % et à 60 %.
+#[test]
+fn sharpening_matches_the_cpu() {
+    let _gpu = one_at_a_time();
+    let Some(gpu) = Gpu::any() else {
+        eprintln!("pas de GPU : test ignoré");
+        return;
+    };
+    let img = detailed_image(480, 320);
+    for (amount, radius, detail) in [
+        (40.0, 1.0, 25.0),
+        (150.0, 0.5, 0.0),
+        (100.0, 3.0, 100.0),
+        (60.0, 2.0, 50.0),
+    ] {
+        for scale in [1.0, 0.6] {
+            let mut s = Settings {
+                contrast: 15.0,
+                vibrance: 20.0,
+                ..Settings::default()
+            };
+            s.detail.sharpen_amount = amount;
+            s.detail.sharpen_radius = radius;
+            s.detail.sharpen_detail = detail;
+            s.effects.grain_amount = 20.0;
+            let name = format!("accentuation {amount} r{radius} d{detail} ×{scale}");
+            compare_on(&gpu, &img, &name, &s, OutputSpace::Srgb, scale);
+        }
+    }
+    // Sans accentuation à 100 % (force nulle), le chemin d'une seule passe.
+    let mut s = Settings::default();
+    s.detail.sharpen_amount = 0.0;
+    compare_on(&gpu, &img, "sans accentuation", &s, OutputSpace::Srgb, 1.0);
+    // Le Masquage reste au processeur.
+    s.detail.sharpen_amount = 40.0;
+    s.detail.sharpen_masking = 30.0;
+    assert!(!gpu.can_finish(&s, 480, 320, 1.0));
+    assert!(gpu.can_finish(&s, 480, 320, 0.4), "sous 50 %, pas d'accentuation");
 }
