@@ -131,6 +131,8 @@ pub fn base_key(s: &Settings) -> Settings {
 /// Les étapes par pixel de la fin (rendu, couleur, effets) et l'accentuation. Les
 /// étapes par pixel ont un double sur le GPU (`luma-gpu`).
 pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<()> {
+    let adapted = t.time("blancs et noirs", || adaptive_ends(img, s));
+    let s = &adapted;
     t.time("rendu", || render_stage(img, s));
     cancel.check()?;
     t.time("couleur", || {
@@ -216,6 +218,90 @@ pub fn finish_layers(
             });
     }
     Ok(out)
+}
+
+/// Les Blancs et les Noirs, adaptés à la photo. Le curseur ne déplace pas une valeur
+/// fixe : il amène les vrais extrêmes de l'image (ses 0,5 % les plus clairs, ses 0,5 %
+/// les plus sombres, mesurés sur la base, avant la courbe) vers le blanc et le noir.
+/// Une photo déjà claire ne brûle pas à +100 ; une photo terne s'ouvre en entier.
+/// Rend des réglages où `whites` et `blacks` sont les valeurs effectives de la courbe
+/// filmique ; à zéro (et pour le profil Original), rien ne change. Le GPU appelle la
+/// même fonction sur la même base : rendus identiques.
+pub fn adaptive_ends(base: &RgbImage, s: &Settings) -> Settings {
+    let mut out = s.clone();
+    if (s.whites == 0.0 && s.blacks == 0.0) || s.profile == luma_project::Profile::Original {
+        return out;
+    }
+    let (dark, bright) = luminance_extremes(base);
+    let look = s.profile.look().0;
+    if s.whites != 0.0 {
+        // La luminance de scène rendue blanche : 1,2 à zéro (comme avant), puis vers
+        // l'extrême clair de la photo (+100) ou bien au‑dessus (−100), en stops.
+        let neutral: f32 = 1.2;
+        let up = bright.min(neutral * (-0.2f32).exp2());
+        let down = (bright * 2.5).max(neutral * 0.35f32.exp2());
+        let k = (s.whites / 100.0).clamp(-1.0, 1.0);
+        let target = if k > 0.0 { up } else { down };
+        let hdr_max = neutral * (target / neutral).powf(k.abs());
+        out.whites = (-(hdr_max / neutral).log2() / 1.4 * 100.0).clamp(-200.0, 200.0);
+    }
+    if s.blacks != 0.0 {
+        // Le plancher : à −100, l'extrême sombre de la photo devient noir (au moins
+        // un peu, au plus 8 %) ; à +100, des noirs relevés d'autant moins qu'ils le
+        // sont déjà.
+        let y0 = Filmic::with_look(s.contrast, out.whites, 0.0, look).apply(dark);
+        let k = (s.blacks / 100.0).clamp(-1.0, 1.0);
+        let floor = if k < 0.0 {
+            -k * y0.clamp(0.01, 0.08)
+        } else {
+            -k * 0.025 * (1.0 - y0 / 0.1).clamp(0.3, 1.0)
+        };
+        out.blacks = -floor / 0.025 * 100.0;
+    }
+    out
+}
+
+/// Les luminances des 0,5 % les plus sombres et des 0,5 % les plus clairs de l'image
+/// (histogramme en 1/32 de stop, un pixel sur trois).
+fn luminance_extremes(img: &RgbImage) -> (f32, f32) {
+    const LOW: f32 = -14.0;
+    const STEPS: f32 = 32.0;
+    const BINS: usize = 20 * 32;
+    let hist = img
+        .data
+        .par_chunks(3 * 4096)
+        .map(|chunk| {
+            let mut h = vec![0u32; BINS];
+            for p in chunk.iter().step_by(3) {
+                let y = luminance(*p).max(1e-6);
+                let b = ((y.log2() - LOW) * STEPS).clamp(0.0, (BINS - 1) as f32) as usize;
+                h[b] += 1;
+            }
+            h
+        })
+        .reduce(
+            || vec![0u32; BINS],
+            |mut a, b| {
+                a.iter_mut().zip(b).for_each(|(x, y)| *x += y);
+                a
+            },
+        );
+    let total: u64 = hist.iter().map(|&c| u64::from(c)).sum();
+    if total == 0 {
+        return (0.0, 1.0);
+    }
+    let at = |q: f64| -> f32 {
+        let goal = (total as f64 * q).ceil() as u64;
+        let mut seen = 0;
+        for (i, &c) in hist.iter().enumerate() {
+            seen += u64::from(c);
+            if seen >= goal.max(1) {
+                return ((i as f32 + 0.5) / STEPS + LOW).exp2();
+            }
+        }
+        ((BINS as f32) / STEPS + LOW).exp2()
+    };
+    (at(0.005), at(0.995).max(0.05))
 }
 
 /// Les tables de l'étape de rendu, pour le GPU : la courbe filmique (8193 valeurs,
@@ -396,6 +482,58 @@ pub fn histogram(encoded: &[u8]) -> [[u32; 256]; 3] {
 
 #[cfg(test)]
 mod tests {
+
+    /// Les Blancs et les Noirs suivent la photo : à +100, une photo terne s'ouvre
+    /// jusqu'au blanc, une photo déjà claire ne brûle pas ; à −100, l'extrême sombre
+    /// devient noir. À zéro, rien ne change.
+    #[test]
+    fn whites_and_blacks_follow_the_photo() {
+        use super::*;
+        // Une scène terne (0,01 à 0,3) et une scène claire (0,02 à 3) : des dégradés.
+        let scene = |lo: f32, hi: f32| {
+            RgbImage::from_fn(200, 100, |x, _| {
+                let v = lo * (hi / lo).powf(x as f32 / 199.0);
+                [v, v, v]
+            })
+        };
+        let (dull, bright) = (scene(0.01, 0.3), scene(0.02, 3.0));
+        let render = |img: &RgbImage, whites: f32, blacks: f32| -> (f32, f32) {
+            let s = Settings {
+                whites,
+                blacks,
+                ..Settings::default()
+            };
+            let a = adaptive_ends(img, &s);
+            let f = Filmic::with_look(a.contrast, a.whites, a.blacks, a.profile.look().0);
+            let ys: Vec<f32> = img.data.iter().map(|p| f.apply(p[0])).collect();
+            let top = ys.iter().cloned().fold(0.0, f32::max);
+            let clipped = ys.iter().filter(|&&y| y >= 0.999).count() as f32 / ys.len() as f32;
+            (top, clipped)
+        };
+        assert_eq!(adaptive_ends(&dull, &Settings::default()), Settings::default());
+        // Terne : à 0 elle reste loin du blanc ; à +100, elle l'atteint presque.
+        let (top0, _) = render(&dull, 0.0, 0.0);
+        let (top100, clipped) = render(&dull, 100.0, 0.0);
+        assert!(top0 < 0.6 && top100 > 0.95, "terne : {top0} → {top100}");
+        assert!(clipped < 0.03, "terne : {clipped} écrêté");
+        // Claire : +100 éclaircit sans tout brûler.
+        let (b0, c0) = render(&bright, 0.0, 0.0);
+        let (b100, c100) = render(&bright, 100.0, 0.0);
+        assert!(b100 >= b0 && c100 < c0 + 0.05, "claire : {c0} → {c100} écrêté");
+        // −100 : le plus sombre devient noir ; +100 le relève.
+        let s = |blacks| {
+            adaptive_ends(
+                &dull,
+                &Settings {
+                    blacks,
+                    ..Settings::default()
+                },
+            )
+        };
+        let floor = |st: Settings| Filmic::with_look(st.contrast, st.whites, st.blacks, 1.0).apply(0.0105);
+        assert!(floor(s(-100.0)) < 0.002, "{}", floor(s(-100.0)));
+        assert!(floor(s(100.0)) > floor(s(0.0)));
+    }
 
     #[test]
     fn mask_films_stack_where_their_masks_are() {
