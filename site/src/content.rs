@@ -306,7 +306,7 @@ pub struct Perf {
     pub note: Option<(&'static str, f32)>,
 }
 
-pub const PERF: [Perf; 4] = [
+pub const PERF: [Perf; 5] = [
     Perf {
         name: "Aperçu après réglage",
         unit: "ms",
@@ -315,6 +315,18 @@ pub const PERF: [Perf; 4] = [
         mac_target: 100,
         phone_target: 150,
         note: None,
+    },
+    Perf {
+        name: "Réglage sur écran Retina",
+        unit: "ms",
+        mac: 22.5,
+        decimals: 1,
+        mac_target: 100,
+        phone_target: 150,
+        note: Some((
+            "Aperçu de 3072 px avec l'accentuation, tout sur le GPU. Sur le processeur : {v} ms.",
+            341.0,
+        )),
     },
     Perf {
         name: "Ouverture d'une photo",
