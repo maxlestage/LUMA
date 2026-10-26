@@ -79,6 +79,29 @@ pub enum Track {
     Gradient(&'static [Color32]),
 }
 
+/// Du noir au blanc, pour la plage de luminance d'un masque.
+pub const GREYS: [Color32; 2] = [
+    Color32::from_rgb(20, 20, 22),
+    Color32::from_rgb(240, 240, 240),
+];
+
+/// Le tour des teintes (OKLab, de 0 à 360°), pour la plage de couleur d'un masque.
+pub const HUE: [Color32; 13] = [
+    Color32::from_rgb(230, 128, 161),
+    Color32::from_rgb(235, 131, 115),
+    Color32::from_rgb(223, 143, 72),
+    Color32::from_rgb(196, 160, 50),
+    Color32::from_rgb(154, 176, 75),
+    Color32::from_rgb(98, 187, 120),
+    Color32::from_rgb(6, 191, 168),
+    Color32::from_rgb(0, 186, 209),
+    Color32::from_rgb(75, 174, 237),
+    Color32::from_rgb(133, 159, 246),
+    Color32::from_rgb(177, 145, 234),
+    Color32::from_rgb(210, 133, 203),
+    Color32::from_rgb(230, 128, 161),
+];
+
 pub const TEMPERATURE: [Color32; 2] = [
     Color32::from_rgb(0x4a, 0x8c, 0xff),
     Color32::from_rgb(0xff, 0xc0, 0x3c),

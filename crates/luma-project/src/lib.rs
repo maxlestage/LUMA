@@ -11,7 +11,7 @@ pub mod masks;
 pub mod presets;
 pub mod xmp;
 
-pub use masks::{Dab, Local, Look, Mask, Shape};
+pub use masks::{Dab, Local, Look, Mask, Range, Shape};
 
 use serde::{Deserialize, Serialize};
 
@@ -447,6 +447,9 @@ impl Settings {
         clamp(&mut s.transform.scale, 50.0, 150.0);
         for m in &mut s.masks {
             m.local.clamp();
+            if let Some(r) = &mut m.range {
+                r.clamp();
+            }
             clamp(&mut m.amount, 0.0, 100.0);
             if let Some(l) = &mut m.look {
                 clamp(&mut l.amount, 0.0, 100.0);

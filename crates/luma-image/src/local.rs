@@ -1,13 +1,14 @@
 //! Les retouches locales du panneau Masquage : la zone de chaque masque (dégradé
-//! linéaire, dégradé radial, pinceau), puis ses curseurs appliqués en proportion.
+//! linéaire, dégradé radial, pinceau), restreinte à une plage de tons ou de couleurs
+//! s'il en a une, puis ses curseurs appliqués en proportion.
 //!
 //! Elles agissent sur l'image linéaire de la scène, après la tonalité locale et avant
 //! la courbe filmique, comme les curseurs du panneau Base : une exposition locale de
 //! −1 assombrit d'un IL, exactement comme le curseur global.
 
-use luma_color::luminance;
+use luma_color::{OkLab, Vec3, fast_atan2, luminance};
 use luma_core::{Plane, RgbImage};
-use luma_project::{Mask, Shape};
+use luma_project::{Mask, Range, Shape};
 use rayon::prelude::*;
 
 #[inline]
@@ -91,7 +92,68 @@ pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
     plane
 }
 
-/// Applique les masques actifs à l'image (linéaire, espace de travail).
+/// Ce qu'une plage garde d'un pixel (linéaire, espace de travail) : de 0 à 1.
+#[inline]
+pub fn range_factor(range: &Range, lab: &OkLab, p: Vec3) -> f32 {
+    let [l, a, b] = lab.from_rgb(p.map(|v| v.max(0.0)));
+    match *range {
+        Range::Luminance { low, high, feather } => {
+            let l = (l * 100.0).clamp(0.0, 100.0);
+            let f = feather * 0.5;
+            // Les bornes extrêmes gardent tout ce qui les dépasse (un blanc brûlé, un
+            // noir bouché).
+            let above = if low <= 0.0 { 1.0 } else { smoothstep(low - f, low, l) };
+            let below = if high >= 100.0 {
+                1.0
+            } else {
+                1.0 - smoothstep(high, high + f, l)
+            };
+            above * below
+        }
+        Range::Color { hue, width, feather } => {
+            let chroma = a.hypot(b);
+            let h = fast_atan2(b, a).to_degrees();
+            let d = (h - hue).rem_euclid(360.0);
+            let d = d.min(360.0 - d);
+            let fade = 4.0 + feather * 0.6;
+            // Les gris n'ont pas de teinte : ils ne sont pas pris.
+            (1.0 - smoothstep(width, width + fade, d)) * smoothstep(0.012, 0.045, chroma)
+        }
+    }
+}
+
+/// Restreint une zone (`plane`) à la plage, lue sur `img` (linéaire, espace de travail),
+/// qui peut être d'une autre taille : chaque point y prend le pixel correspondant.
+pub fn restrict(plane: &mut Plane, range: &Range, img: &RgbImage) {
+    let (w, h) = (plane.width, plane.height);
+    if img.width == 0 || img.height == 0 || w == 0 {
+        return;
+    }
+    let lab = OkLab::for_working();
+    let (kx, ky) = (img.width as f32 / w as f32, img.height as f32 / h as f32);
+    plane.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+        let sy = (((y as f32 + 0.5) * ky) as usize).min(img.height - 1);
+        for (x, v) in row.iter_mut().enumerate() {
+            if *v <= 0.0 {
+                continue;
+            }
+            let sx = (((x as f32 + 0.5) * kx) as usize).min(img.width - 1);
+            *v *= range_factor(range, &lab, img.data[sy * img.width + sx]);
+        }
+    });
+}
+
+/// La zone d'un masque sur `img`, plage comprise (sans plage : [`weights`]).
+pub fn weights_on(mask: &Mask, img: &RgbImage) -> Plane {
+    let mut plane = weights(mask, img.width, img.height);
+    if let Some(r) = &mask.range {
+        restrict(&mut plane, r, img);
+    }
+    plane
+}
+
+/// Applique les masques actifs à l'image (linéaire, espace de travail). Les plages sont
+/// lues sur l'image d'avant les masques : un masque n'en déplace pas un autre.
 pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
     let active: Vec<&Mask> = masks.iter().filter(|m| m.is_active()).collect();
     if active.is_empty() {
@@ -100,13 +162,17 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
     let (w, h) = (img.width, img.height);
     let diag = ((w * w + h * h) as f32).sqrt();
     let stops = Plane::from_rgb(img, |p| (luminance(p).max(1e-6) / 0.18).log2());
+    let before = active.iter().any(|m| m.range.is_some()).then(|| img.clone());
     // La base de la clarté, comme pour la Clarté globale : une fois pour tous les masques.
     let clarity_base = active
         .iter()
         .any(|m| m.local.clarity != 0.0)
         .then(|| stops.guided(0.008 * diag, 0.5));
     for mask in active {
-        let weights = weights(mask, w, h);
+        let mut weights = weights(mask, w, h);
+        if let (Some(r), Some(before)) = (&mask.range, &before) {
+            restrict(&mut weights, r, before);
+        }
         let l = &mask.local;
         let k = |v: f32| v / 100.0;
         let (contrast, hl, sh, wh, bl) = (k(l.contrast), k(l.highlights), k(l.shadows), k(l.whites), k(l.blacks));
@@ -150,6 +216,74 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
 mod tests {
     use super::*;
     use luma_project::{Dab, Local};
+
+    /// Une image de `n` pixels en dégradé de gris, du noir au blanc.
+    fn greys(n: usize) -> RgbImage {
+        let mut img = RgbImage::new(n, 1);
+        for (i, p) in img.data.iter_mut().enumerate() {
+            let v = (i as f32 / (n - 1) as f32).powf(2.4);
+            *p = [v, v, v];
+        }
+        img
+    }
+
+    #[test]
+    fn luminance_range_keeps_only_its_tones() {
+        let mut m = Mask::full();
+        m.range = Some(Range::Luminance {
+            low: 60.0,
+            high: 100.0,
+            feather: 0.0,
+        });
+        let img = greys(101);
+        let p = weights_on(&m, &img);
+        assert!(p.data[5] == 0.0, "les ombres ne sont pas prises");
+        assert!(p.data[100] > 0.99, "le blanc est pris");
+        // Fondu : des valeurs entre 0 et 1 autour de la borne basse.
+        m.range = Some(Range::Luminance {
+            low: 60.0,
+            high: 100.0,
+            feather: 40.0,
+        });
+        let p = weights_on(&m, &img);
+        assert!(p.data.iter().any(|&v| v > 0.05 && v < 0.95));
+        // Les valeurs montent avec la luminosité.
+        assert!(p.data.windows(2).all(|w| w[1] >= w[0] - 1e-6));
+    }
+
+    #[test]
+    fn color_range_picks_a_hue_and_leaves_greys() {
+        let lab = OkLab::for_working();
+        let blue = lab.to_rgb([0.6, -0.03, -0.12]);
+        let orange = lab.to_rgb([0.7, 0.08, 0.1]);
+        let grey = [0.2, 0.2, 0.2];
+        let hue = fast_atan2(-0.12, -0.03).to_degrees().rem_euclid(360.0);
+        let r = Range::Color {
+            hue,
+            width: 20.0,
+            feather: 0.0,
+        };
+        assert!(range_factor(&r, &lab, blue) > 0.99);
+        assert!(range_factor(&r, &lab, orange) == 0.0);
+        assert!(range_factor(&r, &lab, grey) == 0.0);
+    }
+
+    #[test]
+    fn a_range_mask_only_touches_its_pixels() {
+        // À gauche des gris sombres, à droite des gris clairs : +1 IL sur les clairs.
+        let mut img = RgbImage::new(2, 1);
+        img.data = vec![[0.02; 3], [0.6; 3]];
+        let mut m = Mask::full();
+        m.local.exposure = 1.0;
+        m.range = Some(Range::luminance());
+        apply(&mut img, &[m]);
+        assert!((img.data[0][0] - 0.02).abs() < 1e-6, "le sombre ne bouge pas");
+        assert!(
+            (img.data[1][0] - 1.2).abs() < 1e-3,
+            "le clair double : {}",
+            img.data[1][0]
+        );
+    }
 
     #[test]
     fn linear_gradient_fades_from_start_to_end() {

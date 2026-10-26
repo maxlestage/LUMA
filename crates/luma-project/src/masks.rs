@@ -5,6 +5,10 @@
 //!
 //! Les positions sont en fractions de l'image recadrée (0 à 1 en largeur et en
 //! hauteur) : le masque suit la photo à toutes les tailles de rendu.
+//!
+//! Une plage ([`Range`]) peut restreindre la zone d'un masque aux tons (luminosité) ou
+//! aux couleurs (teinte) de la photo : le ciel bleu sous un dégradé, les hautes
+//! lumières d'un visage sous un pinceau.
 
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +31,60 @@ pub enum Shape {
     Brush { dabs: Vec<Dab> },
     /// Toute l'image : pour empiler des films (chacun avec son intensité).
     Full,
+}
+
+/// Une plage : la zone du masque ne garde que les pixels de certains tons ou de
+/// certaines couleurs. Mesurées en OKLab sur la photo linéaire, avant les retouches
+/// des masques.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Range {
+    /// La luminosité perçue (0 noir, 100 blanc) : plein effet de `low` à `high`, fondu
+    /// de `feather` (0 à 100) de part et d'autre.
+    Luminance { low: f32, high: f32, feather: f32 },
+    /// La teinte (OKLab, en degrés) : plein effet à moins de `width` degrés de `hue`,
+    /// fondu de `feather` (0 à 100) au‑delà ; les gris (sans couleur) sont laissés.
+    Color { hue: f32, width: f32, feather: f32 },
+}
+
+impl Range {
+    /// Les tons clairs.
+    pub fn luminance() -> Range {
+        Range::Luminance {
+            low: 60.0,
+            high: 100.0,
+            feather: 30.0,
+        }
+    }
+
+    /// Les bleus du ciel.
+    pub fn color() -> Range {
+        Range::Color {
+            hue: 255.0,
+            width: 30.0,
+            feather: 50.0,
+        }
+    }
+
+    /// Ramène les valeurs dans leurs plages (bornes dans l'ordre, teinte de 0 à 360).
+    pub fn clamp(&mut self) {
+        let fix = |v: &mut f32, lo: f32, hi: f32, d: f32| *v = if v.is_finite() { v.clamp(lo, hi) } else { d };
+        match self {
+            Range::Luminance { low, high, feather } => {
+                fix(low, 0.0, 100.0, 0.0);
+                fix(high, 0.0, 100.0, 100.0);
+                if *low > *high {
+                    std::mem::swap(low, high);
+                }
+                fix(feather, 0.0, 100.0, 0.0);
+            }
+            Range::Color { hue, width, feather } => {
+                *hue = if hue.is_finite() { hue.rem_euclid(360.0) } else { 0.0 };
+                fix(width, 0.0, 180.0, 30.0);
+                fix(feather, 0.0, 100.0, 0.0);
+            }
+        }
+    }
 }
 
 /// Un film (préréglage) appliqué dans la zone d'un masque : son nom et son intensité
@@ -105,6 +163,9 @@ pub struct Mask {
     /// Un film dans la zone du masque.
     #[serde(default)]
     pub look: Option<Look>,
+    /// La plage qui restreint la zone (tons ou couleurs), s'il y en a une.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub range: Option<Range>,
 }
 
 fn full() -> f32 {
@@ -124,6 +185,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 
@@ -141,6 +203,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 
@@ -153,6 +216,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 
@@ -165,6 +229,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 

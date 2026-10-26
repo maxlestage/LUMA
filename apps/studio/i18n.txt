@@ -2486,3 +2486,29 @@ es = Ajuste selectivo: arrastra sobre un color, hacia arriba para más
 fr = Ciblage direct : {kind} {color}
 en = Targeted adjustment: {kind} {color}
 es = Ajuste selectivo: {kind} {color}
+
+# Les plages des masques (luminance, couleur).
+
+fr = Plage
+en = Range
+es = Rango
+
+fr = Minimum
+en = Minimum
+es = Mínimo
+
+fr = Fondu
+en = Smoothness
+es = Suavizado
+
+fr = Largeur
+en = Width
+es = Anchura
+
+fr = Masque {mask} : plage {kind}
+en = Mask {mask}: {kind} range
+es = Máscara {mask}: rango {kind}
+
+fr = Masque {mask} : plage
+en = Mask {mask}: range
+es = Máscara {mask}: rango
