@@ -84,6 +84,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | 32-bit floating-point pipeline, linear Rec. 2020 working space | ✅ |
 | Highlights clipped at the sensor rendered neutral (no pink skies) | ✅ |
 | EXIF orientation | ✅ |
+| ICC profiles read (versions 2 and 4): matrix and curves, lut8, lut16, A→B and B→A tables of printers and papers, four rendering intents (`luma icc`) | ✅ |
 
 ## Export
 

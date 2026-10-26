@@ -96,6 +96,12 @@ The professional photo library, step by step.
 - **Edge-aware brush**: tick “Follow edges” and the brush paints only tones close to
   the centre of each dab; the area stops at the edge of a sky, a wall, a face,
   without spilling over.
+- **ICC profiles read** (a step towards on-screen soft proofing): display profiles
+  (matrix and curves) and printer and paper profiles (lut8, lut16, A→B and B→A
+  tables, versions 2 and 4), in both directions and for all four rendering intents,
+  in pure Rust; a truncated or broken profile is rejected harmlessly. `luma icc`
+  describes a profile: class, space, intents, media white, and the device's white,
+  black and primaries.
 
 ## 0.2.0 — October 2026
 

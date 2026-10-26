@@ -85,6 +85,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Pipeline en virgule flottante 32 bits, espace de travail Rec. 2020 linéaire | ✅ |
 | Hautes lumières saturées au capteur rendues neutres (pas de ciel rose) | ✅ |
 | Orientation EXIF | ✅ |
+| Profils ICC lus (versions 2 et 4) : matrice et courbes, tables lut8, lut16, A→B et B→A des imprimantes et des papiers, quatre intentions de rendu (`luma icc`) | ✅ |
 
 ## Export
 

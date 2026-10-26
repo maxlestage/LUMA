@@ -101,6 +101,12 @@ La photothèque professionnelle, étape par étape.
 - **Pinceau qui suit les bords** : cochez « Suivre les bords » et le pinceau ne peint
   que les tons proches du centre de chaque touche ; la zone s'arrête au contour d'un
   ciel, d'un mur, d'un visage, sans déborder.
+- **Profils ICC lus** (étape vers l'épreuvage à l'écran) : profils des écrans
+  (matrice et courbes) et des imprimantes et papiers (tables lut8, lut16, A→B et
+  B→A, versions 2 et 4), dans les deux sens et pour les quatre intentions de rendu,
+  en Rust pur ; un profil tronqué ou faux est refusé sans dommage. `luma icc`
+  décrit un profil : classe, espace, intentions, blanc du support, blanc, noir et
+  primaires du périphérique.
 
 ## 0.2.0 — octobre 2026
 
