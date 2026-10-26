@@ -1090,6 +1090,10 @@ impl Studio {
             let meta = self.meta.get(&path).cloned().unwrap_or_default();
             if let Err(e) = write_sidecar(&path, &settings, &meta) {
                 self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
+            } else {
+                // La miniature montre la photo avec ses retouches (relue telle quelle si les
+                // réglages n'ont pas changé).
+                self.worker.thumbnail(path.clone());
             }
             self.edits.insert(path, presets::summary(&settings));
         }
