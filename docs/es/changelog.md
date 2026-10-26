@@ -112,6 +112,11 @@ La fototeca profesional, paso a paso.
   reproducción, en Rust puro; un perfil truncado o dañado se rechaza sin daños.
   `luma icc` describe un perfil: clase, espacio, intenciones, blanco del soporte, y
   el blanco, el negro y los primarios del dispositivo.
+- **Más rápido, más ligero**: las correcciones de objetivo grabadas en los RAW (Sony,
+  Fujifilm, OM System, Panasonic) ya no copian la imagen, entre un 17 y un 35 % más
+  rápidas a resolución completa (ARW 602 → 408 ms, RW2 523 → 339 ms), con píxeles
+  idénticos bit a bit; los duplicados de trabajo, entre un 5 y un 9 % más ligeros y
+  leídos hasta un 17 % más rápido (CR3 331 → 274 ms), siempre sin pérdida.
 - **Prueba en pantalla** (bajo el histograma): elija el perfil ICC de una impresora y
   un papel, y la vista previa muestra la foto tal como saldrá, con la intención
   perceptual o colorimétrica relativa; el histograma la sigue. Una vista, no un

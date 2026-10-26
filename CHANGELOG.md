@@ -114,6 +114,11 @@ La photothèque professionnelle, étape par étape.
   en Rust pur ; un profil tronqué ou faux est refusé sans dommage. `luma icc`
   décrit un profil : classe, espace, intentions, blanc du support, blanc, noir et
   primaires du périphérique.
+- **Plus rapide, plus léger** : les corrections d'objectif enregistrées dans les RAW
+  (Sony, Fujifilm, OM System, Panasonic) sans copie de l'image, 17 à 35 % plus
+  vite en pleine définition (ARW 602 → 408 ms, RW2 523 → 339 ms), pixels identiques
+  au bit près ; les doublons de travail 5 à 9 % plus légers et relus jusqu'à 17 %
+  plus vite (CR3 331 → 274 ms), toujours sans perte.
 - **Épreuvage à l'écran** (sous l'histogramme) : choisissez le profil ICC d'une
   imprimante et d'un papier, et l'aperçu montre la photo telle qu'elle sortira, en
   intention perceptuelle ou colorimétrique relative ; l'histogramme suit. Une vue,
