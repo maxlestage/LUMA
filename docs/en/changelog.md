@@ -103,6 +103,10 @@ The professional photo library, step by step.
   subtracted becomes a ring, a subtracted brush spares a face under a gradient.
 - **Mask area your way**: the area shown (O) can be red, green, blue, white or white
   on black, with an opacity from 10 to 100%.
+- **Healing and clone** (Q): one click on a dust spot or a distracting detail, and
+  LÜMA picks the part of the photo that replaces it. Healing keeps its texture and
+  takes the light from the edge of the area; clone makes an exact copy. Area and
+  source move with the mouse; size, feather, opacity. Saved in the XMP.
 - **ICC profiles read** (a step towards on-screen soft proofing): display profiles
   (matrix and curves) and printer and paper profiles (lut8, lut16, A→B and B→A
   tables, versions 2 and 4), in both directions and for all four rendering intents,
