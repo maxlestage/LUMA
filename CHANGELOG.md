@@ -108,6 +108,8 @@ La photothèque professionnelle, étape par étape.
   d'une autre forme (dégradé linéaire, radial, pinceau, chacune inversable) ; un
   radial dont on retire un autre devient un anneau, un pinceau soustrait épargne un
   visage sous un dégradé.
+- **Zone du masque à votre goût** : la zone affichée (O) se montre en rouge, vert,
+  bleu, blanc ou blanc sur noir, avec une opacité de 10 à 100 %.
 - **Profils ICC lus** (étape vers l'épreuvage à l'écran) : profils des écrans
   (matrice et courbes) et des imprimantes et papiers (tables lut8, lut16, A→B et
   B→A, versions 2 et 4), dans les deux sens et pour les quatre intentions de rendu,
