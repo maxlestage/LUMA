@@ -258,6 +258,13 @@ impl Plane {
             });
     }
 
+    /// Le rayon des trois boîtes successives qui approchent une gaussienne d'écart type
+    /// `sigma` (théorème central limite) ; le GPU s'en sert aussi.
+    pub fn box_radius(sigma: f32) -> usize {
+        let ideal = (12.0 * sigma * sigma / 3.0 + 1.0).sqrt();
+        ((ideal - 1.0) / 2.0).round().max(1.0) as usize
+    }
+
     /// Flou gaussien d'écart type `sigma` (en pixels de ce plan).
     pub fn blur(&self, sigma: f32) -> Plane {
         if sigma < 0.3 || self.width < 2 || self.height < 2 {
@@ -271,9 +278,7 @@ impl Plane {
             let small = self.downscale(factor).blur(sigma / factor as f32);
             return small.upsample(self.width, self.height);
         }
-        // Trois boîtes successives approchent la gaussienne (théorème central limite).
-        let ideal = (12.0 * sigma * sigma / 3.0 + 1.0).sqrt();
-        let r = ((ideal - 1.0) / 2.0).round().max(1.0) as usize;
+        let r = Self::box_radius(sigma);
         // Six passes, deux tampons qui alternent.
         let (mut a, mut b) = (Plane::new(self.width, self.height), Plane::new(self.width, self.height));
         self.box_rows_into(r, &mut a);

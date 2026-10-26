@@ -1,7 +1,9 @@
 // Les étapes par pixel de la fin du développement, sur le GPU : rendu (courbe filmique,
 // courbes des tonalités), couleur (OKLab : vibrance, saturation, mélangeur,
 // étalonnage), film mesuré (LUT 3D), effets (vignetage, grain), puis encodage vers
-// l'espace de sortie.
+// l'espace de sortie. Avec l'accentuation, en plusieurs passes : `pre` (jusqu'au film
+// mesuré, et la luminance perçue), six passes de flou boîte (`box_h`, `box_v`), puis
+// `post` (accentuation, effets, encodage).
 //
 // C'est le double, ligne à ligne, du code Rust de luma-image (lib.rs, color.rs,
 // effects.rs) : les tests de luma-gpu comparent les deux sorties.
@@ -13,6 +15,11 @@
 @group(0) @binding(1) var<storage, read> P: array<f32>;
 @group(0) @binding(2) var<storage, read> T: array<f32>;
 @group(0) @binding(3) var<storage, read_write> dst: array<u32>;
+// L'accentuation : l'image avant accentuation (RGB, et la luminance perçue en w), et
+// deux plans de travail pour le flou (lu dans `pin`, écrit dans `pout`).
+@group(0) @binding(4) var<storage, read_write> mid: array<vec4<f32>>;
+@group(0) @binding(5) var<storage, read_write> pin: array<f32>;
+@group(0) @binding(6) var<storage, read_write> pout: array<f32>;
 
 const TAU: f32 = 6.283185307179586;
 const PI: f32 = 3.141592653589793;
@@ -384,14 +391,16 @@ fn byte(v: f32) -> u32 {
     return min(u32(lut(T_OUTPUT, v) * 255.0 + 0.5), 255u);
 }
 
-@compute @workgroup_size(256)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
-    let index = gid.y * groups.x * 256u + gid.x;
-    let width = u32(P[P_WIDTH]);
-    let count = width * u32(P[P_HEIGHT]);
-    if index >= count {
-        return;
-    }
+fn pixel_index(gid: vec3<u32>, groups: vec3<u32>) -> u32 {
+    return gid.y * groups.x * 256u + gid.x;
+}
+
+fn pixel_count() -> u32 {
+    return u32(P[P_WIDTH]) * u32(P[P_HEIGHT]);
+}
+
+// Rendu, couleur et film mesuré : tout ce qui précède l'accentuation.
+fn develop(index: u32) -> vec3<f32> {
     var p = src[index].xyz;
     p = render(p);
     if P[P_COLOR] != 0.0 {
@@ -400,7 +409,93 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     if P[P_CUBE] != 0.0 {
         p = film_lut(p);
     }
-    p = effects(p, index % width, index / width);
+    return p;
+}
+
+// Effets et encodage, la fin commune.
+fn write(index: u32, p0: vec3<f32>) {
+    let width = u32(P[P_WIDTH]);
+    let p = effects(p0, index % width, index / width);
     let o = to_output(p);
     dst[index] = byte(o.x) | (byte(o.y) << 8u) | (byte(o.z) << 16u) | (255u << 24u);
+}
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    write(index, develop(index));
+}
+
+// Accentuation, 1 : l'image développée et sa luminance perçue (gamma 2,2), qui part
+// au flou.
+@compute @workgroup_size(256)
+fn pre(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    let p = develop(index);
+    let v = pow(max(lum(p), 0.0), 1.0 / 2.2);
+    mid[index] = vec4<f32>(p, v);
+    pout[index] = v;
+}
+
+// Accentuation, 2 : un flou boîte de rayon P_SHARPEN_R, bords répétés (comme
+// Plane::box_rows_into et box_cols_into).
+fn box_at(index: u32, horizontal: bool) -> f32 {
+    let width = i32(P[P_WIDTH]);
+    let height = i32(P[P_HEIGHT]);
+    let r = i32(P[P_SHARPEN_R]);
+    let x = i32(index) % width;
+    let y = i32(index) / width;
+    var sum = 0.0;
+    for (var k = -r; k <= r; k++) {
+        if horizontal {
+            sum += pin[u32(y * width + clamp(x + k, 0, width - 1))];
+        } else {
+            sum += pin[u32(clamp(y + k, 0, height - 1) * width + x)];
+        }
+    }
+    return sum / f32(2 * r + 1);
+}
+
+@compute @workgroup_size(256)
+fn box_h(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    pout[index] = box_at(index, true);
+}
+
+@compute @workgroup_size(256)
+fn box_v(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    pout[index] = box_at(index, false);
+}
+
+// Accentuation, 3 : l'écart au flou, borné par le Détail, ramené en gain sur les trois
+// couches (detail::sharpen), puis effets et encodage.
+@compute @workgroup_size(256)
+fn post(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    let m = mid[index];
+    let v = m.w;
+    let limit = P[P_SHARPEN_LIMIT];
+    let diff = clamp(v - pin[index], -limit, limit);
+    let sharp = max(v + P[P_SHARPEN_AMOUNT] * diff, 0.0);
+    var gain = 1.0;
+    if v > 1e-4 {
+        gain = pow(sharp / v, 2.2);
+    }
+    write(index, m.xyz * gain);
 }

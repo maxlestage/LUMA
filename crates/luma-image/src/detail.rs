@@ -139,18 +139,33 @@ fn half_chroma(img: &RgbImage, ycc: &(impl Fn([f32; 3]) -> (f32, f32, f32) + Syn
     (cr, cb)
 }
 
+/// Les paramètres de l'accentuation : force, rayon du flou (en pixels de l'image) et
+/// borne de l'écart (le Détail). `None` quand elle ne s'applique pas : nulle, ou à moins
+/// de 50 %, où elle ne se juge pas (elle ne se voit qu'à partir de l'affichage 1:1).
+/// Le GPU s'en sert aussi.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Sharpening {
+    pub amount: f32,
+    pub radius: f32,
+    pub limit: f32,
+}
+
+pub fn sharpening(d: &Detail, scale: f32) -> Option<Sharpening> {
+    let amount = d.sharpen_amount / 100.0 * 1.4;
+    (amount > 0.0 && scale >= 0.5).then(|| Sharpening {
+        amount,
+        radius: (d.sharpen_radius * scale).max(0.5),
+        limit: 0.015 + d.sharpen_detail / 100.0 * 0.12,
+    })
+}
+
 /// Accentuation, sur l'image déjà rendue pour l'écran (linéaire, 0 à 1).
 pub fn sharpen(img: &mut RgbImage, d: &Detail, scale: f32) {
-    let amount = d.sharpen_amount / 100.0 * 1.4;
-    // L'accentuation s'évalue à 100 % : très en dessous, on ne l'applique pas : elle
-    // ne se juge qu'à partir de l'affichage 1:1.
-    if amount <= 0.0 || scale < 0.5 {
+    let Some(Sharpening { amount, radius, limit }) = sharpening(d, scale) else {
         return;
-    }
-    let radius = (d.sharpen_radius * scale).max(0.5);
+    };
     let perceived = Plane::from_rgb(img, |p| luminance(p).max(0.0).powf(1.0 / 2.2));
     let blurred = perceived.blur(radius);
-    let limit = 0.015 + d.sharpen_detail / 100.0 * 0.12;
     let mask = if d.sharpen_masking > 0.0 {
         let th = d.sharpen_masking / 100.0 * 0.06;
         let edges = blurred.blur(1.0);
