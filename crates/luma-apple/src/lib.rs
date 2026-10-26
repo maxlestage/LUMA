@@ -12,6 +12,8 @@
 //! Ce crate est le seul endroit de LÜMA où du code `unsafe` est permis : les appels à
 //! ImageIO et à CoreGraphics, chacun justifié.
 
+pub mod store;
+
 /// Installe le décodeur du système dans le moteur (sans effet hors d'Apple).
 pub fn install() {
     #[cfg(any(target_os = "macos", target_os = "ios"))]
