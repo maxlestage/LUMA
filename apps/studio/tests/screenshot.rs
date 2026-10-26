@@ -514,6 +514,35 @@ fn masks_linear_and_radial() {
 }
 
 #[test]
+fn masks_combined() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("masques-combines") else {
+        return;
+    };
+    // Un radial éclairci dont on retire un autre radial : un anneau, vu en rouge.
+    s.keys(&[(Modifiers::SHIFT, Key::M)]);
+    let st = s.studio();
+    st.settings.masks[0].local.exposure = 1.0;
+    st.settings.masks[0].parts.push(luma_project::Part {
+        combine: luma_project::Combine::Subtract,
+        shape: luma_project::Shape::Radial {
+            center: (0.5, 0.5),
+            radius: (0.12, 0.12),
+            angle: 0.0,
+            feather: 30.0,
+        },
+        invert: false,
+    });
+    st.selected_part = Some((0, 0));
+    s.wait();
+    s.keys(&[(NONE, Key::O)]);
+    s.capture("masques-combines");
+    let st = s.studio();
+    assert_eq!(st.settings.masks[0].parts.len(), 1);
+    assert_eq!(st.selected_part, Some((0, 0)));
+}
+
+#[test]
 fn iphone_layout() {
     let _gpu = one_at_a_time();
     // Un iPhone en portrait (points), écran Retina ×3.

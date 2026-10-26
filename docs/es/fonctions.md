@@ -58,7 +58,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad | ✅ |
 | | Máscaras restringidas a un rango de luminancia (mínimo, máximo, suavizado) o de color (tono, anchura, suavizado; grises excluidos), leído sobre la foto; zona visible (O) | ✅ |
 | | Pincel que sigue los bordes: cada toque solo pinta los tonos cercanos a su centro, la zona se detiene en los contornos de la foto | ✅ |
-| | Combinaciones de máscaras; lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
+| | Combinaciones de máscaras: añadir, restar, intersecar otras formas (cada una invertible) | ✅ |
+| | Lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Corrección, clonar, ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Instantáneas, sincronización en varias fotos | ⏳ |

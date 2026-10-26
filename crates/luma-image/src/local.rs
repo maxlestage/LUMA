@@ -8,7 +8,7 @@
 
 use luma_color::{OkLab, Vec3, fast_atan2, luminance};
 use luma_core::{Plane, RgbImage};
-use luma_project::{Mask, Range, Shape};
+use luma_project::{Combine, Mask, Range, Shape};
 use rayon::prelude::*;
 
 #[inline]
@@ -30,10 +30,37 @@ pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
 /// suit les bords : chaque touche ne peint que les pixels d'une clarté proche de celle de
 /// son centre, puis un filtre guidé lisse la zone sans traverser les contours.
 fn weights_guided(mask: &Mask, w: usize, h: usize, guide: Option<&Plane>) -> Plane {
-    let (fw, fh) = (w as f32, h as f32);
     let guide = guide.filter(|g| mask.edges && (g.width, g.height) == (w, h));
+    let mut plane = shape_plane(&mask.shape, w, h, guide);
+    // Les parties combinées, dans l'ordre : chacune ajoute, retire ou restreint.
+    for part in &mask.parts {
+        let mut p = shape_plane(&part.shape, w, h, guide);
+        if part.invert {
+            p.data.par_iter_mut().for_each(|v| *v = 1.0 - *v);
+        }
+        plane.data.par_iter_mut().zip(&p.data).for_each(|(v, &q)| {
+            *v = match part.combine {
+                Combine::Add => *v + q - *v * q,
+                Combine::Subtract => *v * (1.0 - q),
+                Combine::Intersect => *v * q,
+            };
+        });
+    }
+    let amount = (mask.amount / 100.0).clamp(0.0, 1.0);
+    let invert = mask.invert;
+    plane.data.par_iter_mut().for_each(|v| {
+        let m = if invert { 1.0 - *v } else { *v };
+        *v = m * amount;
+    });
+    plane
+}
+
+/// La zone d'une forme seule (0 à 1), sans inversion ni intensité ; `guide` : la clarté
+/// de la photo, pour un pinceau qui suit les bords.
+fn shape_plane(shape: &Shape, w: usize, h: usize, guide: Option<&Plane>) -> Plane {
+    let (fw, fh) = (w as f32, h as f32);
     let mut plane = Plane::new(w, h);
-    match &mask.shape {
+    match shape {
         Shape::Full => plane.data.iter_mut().for_each(|v| *v = 1.0),
         Shape::Linear { start, end } => {
             // En pixels, pour que le fondu soit le même dans les deux directions.
@@ -100,7 +127,7 @@ fn weights_guided(mask: &Mask, w: usize, h: usize, guide: Option<&Plane>) -> Pla
             }
         }
     }
-    if let (Some(g), Shape::Brush { dabs }) = (guide, &mask.shape)
+    if let (Some(g), Shape::Brush { dabs }) = (guide, shape)
         && !dabs.is_empty()
     {
         // Lisser sans franchir les bords : le grain de la photo ne laisse pas de trous.
@@ -139,12 +166,6 @@ fn weights_guided(mask: &Mask, w: usize, h: usize, guide: Option<&Plane>) -> Pla
             }
         }
     }
-    let amount = (mask.amount / 100.0).clamp(0.0, 1.0);
-    let invert = mask.invert;
-    plane.data.par_iter_mut().for_each(|v| {
-        let m = if invert { 1.0 - *v } else { *v };
-        *v = m * amount;
-    });
     plane
 }
 
@@ -221,7 +242,9 @@ pub fn lightness_plane(img: &RgbImage, w: usize, h: usize) -> Plane {
 /// quelconque) : le pinceau qui suit les bords, puis la plage de tons ou de couleurs.
 pub fn weights_for(mask: &Mask, w: usize, h: usize, img: &RgbImage) -> Plane {
     // Le guide un peu lissé : le grain de la photo n'est pas un bord.
-    let guide = (mask.edges && matches!(mask.shape, Shape::Brush { .. })).then(|| lightness_plane(img, w, h).blur(1.5));
+    let brush = |s: &Shape| matches!(s, Shape::Brush { .. });
+    let guide = (mask.edges && (brush(&mask.shape) || mask.parts.iter().any(|p| brush(&p.shape))))
+        .then(|| lightness_plane(img, w, h).blur(1.5));
     let mut plane = weights_guided(mask, w, h, guide.as_ref());
     if let Some(r) = &mask.range {
         restrict(&mut plane, r, img);
@@ -297,6 +320,50 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn combined_masks_add_subtract_intersect() {
+        let (w, h) = (100, 50);
+        // Un dégradé radial à gauche, un autre à droite (sans fondu : des disques).
+        let disc = |cx: f32| Shape::Radial {
+            center: (cx, 0.5),
+            radius: (0.15, 0.4),
+            angle: 0.0,
+            feather: 0.0,
+        };
+        let mut m = Mask::radial();
+        m.shape = disc(0.3);
+        let at = |m: &Mask, x: usize| weights(m, w, h).data[25 * w + x];
+        assert_eq!((at(&m, 30), at(&m, 70)), (1.0, 0.0));
+        // Ajouter : les deux disques.
+        m.parts = vec![luma_project::Part {
+            combine: Combine::Add,
+            shape: disc(0.7),
+            invert: false,
+        }];
+        assert_eq!((at(&m, 30), at(&m, 70), at(&m, 50)), (1.0, 1.0, 0.0));
+        // Soustraire un disque qui recouvre la moitié droite du premier.
+        m.parts = vec![luma_project::Part {
+            combine: Combine::Subtract,
+            shape: disc(0.45),
+            invert: false,
+        }];
+        assert_eq!((at(&m, 20), at(&m, 40)), (1.0, 0.0));
+        // Intersection : seule la partie commune reste.
+        m.parts[0].combine = Combine::Intersect;
+        assert_eq!((at(&m, 20), at(&m, 40), at(&m, 60)), (0.0, 1.0, 0.0));
+        // Une partie inversée : soustraire « tout sauf le disque » revient à l'intersection.
+        m.parts = vec![luma_project::Part {
+            combine: Combine::Subtract,
+            shape: disc(0.45),
+            invert: true,
+        }];
+        assert_eq!((at(&m, 20), at(&m, 40), at(&m, 60)), (0.0, 1.0, 0.0));
+        // L'inversion et l'intensité du masque s'appliquent au tout.
+        m.invert = true;
+        m.amount = 50.0;
+        assert_eq!((at(&m, 20), at(&m, 40)), (0.5, 0.0));
+    }
 
     #[test]
     fn an_edge_aware_brush_stops_at_the_edge() {

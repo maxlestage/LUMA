@@ -517,6 +517,8 @@ pub struct Studio {
     crop_tool: Option<CropTool>,
     /// Le masque sélectionné (ses poignées sont à l'écran).
     pub selected_mask: Option<usize>,
+    /// La partie combinée en cours de réglage : (masque, partie) ; aucune pour la forme principale.
+    pub selected_part: Option<(usize, usize)>,
     brush: masking::Brush,
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
@@ -690,6 +692,7 @@ impl Studio {
             export_all: false,
             crop_tool: None,
             selected_mask: None,
+            selected_part: None,
             brush: masking::Brush::default(),
             show_mask: false,
             mask_overlay: None,
@@ -1820,6 +1823,7 @@ impl Studio {
                     && i < self.settings.masks.len()
                 {
                     self.settings.masks.remove(i);
+                    self.selected_part = None;
                     self.commit(tr("Masque supprimé").into());
                     self.touch();
                 }
@@ -3999,7 +4003,22 @@ impl Studio {
                 }
             }
             let brush = self.brush;
-            let c = masking::edit(ui, target, &mut self.settings.masks[i], &brush);
+            // Une partie combinée choisie : ses poignées à la place de la forme principale.
+            let part = self
+                .selected_part
+                .filter(|&(m, p)| m == i && p < self.settings.masks[i].parts.len())
+                .map(|(_, p)| p);
+            let c = match part {
+                Some(j) => {
+                    let mut edited = Mask::full();
+                    let shape = &mut self.settings.masks[i].parts[j].shape;
+                    std::mem::swap(&mut edited.shape, shape);
+                    let c = masking::edit(ui, target, &mut edited, &brush);
+                    std::mem::swap(&mut edited.shape, shape);
+                    c
+                }
+                None => masking::edit(ui, target, &mut self.settings.masks[i], &brush),
+            };
             if c.changed {
                 self.touch();
             }
@@ -4128,6 +4147,74 @@ impl Studio {
         .inner
     }
 
+    /// Les combinaisons du masque `i` : d'autres formes ajoutées, retirées ou en
+    /// intersection ; la partie choisie se règle sur la photo.
+    fn parts_panel(&mut self, ui: &mut Ui, i: usize, commits: &mut Vec<String>) {
+        use luma_project::{Combine, Part};
+        sub_title(ui, tr("Combiner"));
+        ui.horizontal(|ui| {
+            for combine in [Combine::Add, Combine::Subtract, Combine::Intersect] {
+                ui.menu_button(tr(combine_name(combine)), |ui| {
+                    for mask in [Mask::linear(), Mask::radial(), Mask::brush()] {
+                        if ui.button(tr(&mask.name)).clicked() {
+                            let parts = &mut self.settings.masks[i].parts;
+                            parts.push(Part {
+                                combine,
+                                shape: mask.shape,
+                                invert: false,
+                            });
+                            self.selected_part = Some((i, parts.len() - 1));
+                            commits.push(trf(
+                                "Masque combiné : {shape}",
+                                &[("shape", &tr(&mask.name).to_lowercase())],
+                            ));
+                            ui.close();
+                        }
+                    }
+                })
+                .response
+                .on_hover_text(tr(combine_hint(combine)));
+            }
+        });
+        if self.settings.masks[i].parts.is_empty() {
+            return;
+        }
+        let current = self.selected_part.filter(|&(m, _)| m == i).map(|(_, p)| p);
+        let main = RichText::new(tr("Forme principale")).size(12.0);
+        if ui.selectable_label(current.is_none(), main).clicked() {
+            self.selected_part = None;
+        }
+        let mut remove = None;
+        for (j, part) in self.settings.masks[i].parts.iter_mut().enumerate() {
+            ui.horizontal(|ui| {
+                let text = format!(
+                    "{} · {}",
+                    tr(combine_name(part.combine)),
+                    tr(shape_name(&part.shape))
+                );
+                let text = RichText::new(text).size(12.0);
+                if ui.selectable_label(current == Some(j), text).clicked() {
+                    self.selected_part = (current != Some(j)).then_some((i, j));
+                }
+                if ui.checkbox(&mut part.invert, tr("Inverser")).changed() {
+                    commits.push(tr("Partie du masque inversée").into());
+                }
+                if ui
+                    .small_button("×")
+                    .on_hover_text(tr("Supprimer"))
+                    .clicked()
+                {
+                    remove = Some(j);
+                }
+            });
+        }
+        if let Some(j) = remove {
+            self.settings.masks[i].parts.remove(j);
+            self.selected_part = None;
+            commits.push(tr("Partie du masque supprimée").into());
+        }
+    }
+
     /// Panneau Masquage : la liste des masques, et les curseurs du masque choisi.
     fn masks_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
         let editing = self.selected_mask.is_some();
@@ -4211,7 +4298,9 @@ impl Studio {
                         commits.push(tr("Masque inversé").into());
                     }
                     // Le pinceau qui suit les bords de la photo.
-                    if matches!(m.shape, luma_project::Shape::Brush { .. })
+                    let brush =
+                        |s: &luma_project::Shape| matches!(s, luma_project::Shape::Brush { .. });
+                    if (brush(&m.shape) || m.parts.iter().any(|p| brush(&p.shape)))
                         && ui
                             .checkbox(&mut m.edges, tr("Suivre les bords"))
                             .on_hover_text(tr("La zone peinte s'arrête aux contours de la photo"))
@@ -4229,6 +4318,7 @@ impl Studio {
                         self.act("mask_delete");
                     }
                 });
+                self.parts_panel(ui, i, commits);
                 let luts = self.luts.clone();
                 let Some(m) = self.settings.masks.get_mut(i) else {
                     return;
@@ -5082,6 +5172,34 @@ impl Studio {
             self.touch();
             self.commit(label);
         }
+    }
+}
+
+/// Le nom d'une combinaison de masques (à traduire).
+fn combine_name(c: luma_project::Combine) -> &'static str {
+    match c {
+        luma_project::Combine::Add => "Ajouter",
+        luma_project::Combine::Subtract => "Soustraire",
+        luma_project::Combine::Intersect => "Intersection",
+    }
+}
+
+/// L'aide d'une combinaison de masques (à traduire).
+fn combine_hint(c: luma_project::Combine) -> &'static str {
+    match c {
+        luma_project::Combine::Add => "Étendre le masque à une autre forme",
+        luma_project::Combine::Subtract => "Retirer une forme du masque",
+        luma_project::Combine::Intersect => "Ne garder que la partie commune avec une autre forme",
+    }
+}
+
+/// Le nom d'une forme de masque (à traduire).
+fn shape_name(s: &luma_project::Shape) -> &'static str {
+    match s {
+        luma_project::Shape::Linear { .. } => "Dégradé linéaire",
+        luma_project::Shape::Radial { .. } => "Dégradé radial",
+        luma_project::Shape::Brush { .. } => "Pinceau",
+        luma_project::Shape::Full => "Image entière",
     }
 }
 

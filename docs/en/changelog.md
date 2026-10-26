@@ -98,6 +98,9 @@ The professional photo library, step by step.
 - **Edge-aware brush**: tick “Follow edges” and the brush paints only tones close to
   the centre of each dab; the area stops at the edge of a sky, a wall, a face,
   without spilling over.
+- **Combined masks**: “Combine” adds, subtracts or intersects another shape (linear
+  or radial gradient, brush, each one invertible); a radial with another one
+  subtracted becomes a ring, a subtracted brush spares a face under a gradient.
 - **ICC profiles read** (a step towards on-screen soft proofing): display profiles
   (matrix and curves) and printer and paper profiles (lut8, lut16, A→B and B→A
   tables, versions 2 and 4), in both directions and for all four rendering intents,

@@ -581,6 +581,50 @@ fr = Pinceau qui suit les bords
 en = Edge-aware brush
 es = Pincel que sigue los bordes
 
+fr = Combiner
+en = Combine
+es = Combinar
+
+fr = Ajouter
+en = Add
+es = Añadir
+
+fr = Soustraire
+en = Subtract
+es = Restar
+
+fr = Intersection
+en = Intersect
+es = Intersección
+
+fr = Étendre le masque à une autre forme
+en = Extend the mask with another shape
+es = Extender la máscara con otra forma
+
+fr = Retirer une forme du masque
+en = Remove a shape from the mask
+es = Quitar una forma de la máscara
+
+fr = Ne garder que la partie commune avec une autre forme
+en = Keep only the area shared with another shape
+es = Conservar solo la zona común con otra forma
+
+fr = Masque combiné : {shape}
+en = Combined mask: {shape}
+es = Máscara combinada: {shape}
+
+fr = Forme principale
+en = Main shape
+es = Forma principal
+
+fr = Partie du masque inversée
+en = Mask part inverted
+es = Parte de la máscara invertida
+
+fr = Partie du masque supprimée
+en = Mask part deleted
+es = Parte de la máscara eliminada
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos
