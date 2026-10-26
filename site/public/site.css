@@ -525,9 +525,58 @@ html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(11
 .legal p { color: var(--muted); line-height: 1.7; margin: 0 0 12px; }
 .legal .todo { color: var(--gold); border-left: 2px solid var(--gold); padding-left: 12px; }
 
+/* ── Les quatre étapes ─────────────────────────────────── */
+.step-grid { list-style: none; padding: 0; margin: 0 auto; max-width: 1240px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; counter-reset: none; }
+.step { position: relative; padding: 30px 26px 32px; border-radius: 26px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+.step::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--spectrum); transform: scaleX(0); transform-origin: 0 50%; transition: transform 1.2s var(--ease-out) calc(var(--d, 0s) + .3s); }
+.step.in::before { transform: none; }
+.step-num { display: block; font-family: var(--serif); font-style: italic; font-size: 3.4rem; line-height: 1; background: var(--spectrum); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.step h3 { font-size: 1.35rem; margin: 18px 0 10px; letter-spacing: -.01em; }
+.step p { color: var(--muted); margin: 0; font-size: .97rem; line-height: 1.55; }
+
+/* ── Les films : la pellicule se pose en balayant la photo ─ */
+.film-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1240px; margin: 0 auto; }
+.film { margin: 0; }
+.film-frame { position: relative; aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden; background: var(--bg-2); box-shadow: 0 18px 40px rgba(0,0,0,.35), inset 0 0 0 1px var(--line); }
+.film-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease-out); }
+.film-look { clip-path: inset(0 100% 0 0); transition: clip-path 1.4s var(--ease-out) calc(.35s + var(--k, 0) * 90ms), transform 1.2s var(--ease-out) !important; }
+.film.in .film-look, html:not(.hydrated) .film-look { clip-path: inset(0 0 0 0); }
+.film-frame::after { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; left: 0; background: #fff; box-shadow: 0 0 18px rgba(255,255,255,.8); opacity: 0; }
+.film.in .film-frame::after { animation: film-wipe 1.4s var(--ease-out) calc(.35s + var(--k, 0) * 90ms) both; }
+@keyframes film-wipe { 0% { left: 0; opacity: 1; } 85% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+.film:hover .film-frame img { transform: scale(1.06); }
+.film:hover .film-look { clip-path: inset(0 0 0 50%); }
+.film figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 12px; }
+.film figcaption b { font-weight: 600; }
+.film figcaption span { color: var(--muted); font-size: .82rem; }
+.films-note { text-align: center; color: var(--dim); font-size: .85rem; margin: 30px auto 0; max-width: 620px; }
+
+/* ── Vos photos, chez vous ─────────────────────────────── */
+.privacy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; max-width: 1240px; margin: 0 auto; }
+.privacy-item { padding: 28px 24px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); }
+.privacy-mark { display: block; width: 38px; height: 38px; border-radius: 50%; position: relative;
+  background: conic-gradient(var(--gold), var(--orange), var(--violet), var(--blue), var(--mint), var(--gold)); animation: spin 8s linear infinite; }
+.privacy-mark::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--bg-2); }
+.privacy-mark::before { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; font-weight: 700; color: var(--gold); animation: spin 8s linear infinite reverse; }
+.privacy-item h3 { font-size: 1.15rem; margin: 20px 0 8px; }
+.privacy-item p { color: var(--muted); margin: 0; font-size: .95rem; line-height: 1.55; }
+
+/* ── Questions ─────────────────────────────────────────── */
+.faq-list { max-width: 860px; margin: 0 auto; display: grid; gap: 12px; }
+.faq-item { border-radius: 20px; background: var(--panel); border: 1px solid var(--line); transition: background .4s, border-color .4s; }
+.faq-item[open] { background: var(--panel-2); border-color: rgba(255, 207, 74, .35); }
+.faq-item summary { list-style: none; cursor: pointer; padding: 20px 56px 20px 24px; font-weight: 600; font-size: 1.05rem; position: relative; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: "+"; position: absolute; right: 22px; top: 50%; translate: 0 -50%; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--panel-2); font-weight: 400; transition: transform .4s var(--ease-out), background .4s, color .4s; }
+.faq-item[open] summary::after { transform: rotate(45deg); background: var(--gold); color: var(--bg); }
+.faq-item p { margin: 0; padding: 0 24px 22px; color: var(--muted); line-height: 1.6; animation: faq-open .5s var(--ease-out); }
+@keyframes faq-open { from { opacity: 0; transform: translateY(-6px); } }
+
 /* ── Tablettes et téléphones ───────────────────────────── */
 @media (max-width: 1000px) {
   .stats, .perf-grid { grid-template-columns: repeat(2, 1fr); }
+  .step-grid, .film-grid, .privacy-grid { grid-template-columns: repeat(2, 1fr); }
+  .film figcaption { flex-direction: column; gap: 2px; }
   .pipeline-sticky { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 0; padding-top: 90px; }
   .pipeline-steps { margin-top: 18px; grid-template-columns: repeat(5, 1fr); gap: 4px; }
   .pipeline-steps li { padding: 10px 6px 8px; font-size: 0; text-align: center; }
@@ -558,7 +607,8 @@ html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(11
 }
 @media (max-width: 560px) {
   body { font-size: 16px; }
-  .stats, .perf-grid, .platform-grid { grid-template-columns: 1fr; }
+  .stats, .perf-grid, .platform-grid, .step-grid, .privacy-grid { grid-template-columns: 1fr; }
+  .film-grid { gap: 12px; }
   .nav .btn-small { display: none; }
   .nav .lang-switch { margin-left: auto; }
   .menu-toggle { margin-left: 0; }
