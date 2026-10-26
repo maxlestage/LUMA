@@ -83,6 +83,11 @@ La photothèque professionnelle, étape par étape.
 - **Export vers plusieurs préréglages à la fois** : cochez « Web » et « Impression »
   dans la fenêtre Exporter, chaque photo part vers les deux en une fois ; enregistrez
   vos réglages comme préréglage ; `luma export *.ARW --preset Web --preset Impression`.
+- **Masques par plage** : la zone d'un masque (dégradé, pinceau, image entière) peut
+  ne garder que certains tons (plage de luminance : minimum, maximum, fondu) ou
+  certaines couleurs (plage de couleur : teinte, largeur, fondu ; les gris sont
+  laissés). Mesurées en OKLab sur la photo, avant les retouches des masques ; la zone
+  s'affiche en rouge (O).
 
 ## 0.2.0 — octobre 2026
 

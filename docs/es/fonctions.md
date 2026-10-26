@@ -53,7 +53,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Calibración | Matiz de las sombras, tono y saturación de los primarios | ✅ |
 | Herramientas | Recorte y enderezado (ángulo libre), herramienta en pantalla con proporciones bloqueadas (R) | ✅ |
 | | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad | ✅ |
-| | Máscaras por rango de luminancia o de color, pincel que sigue los bordes, combinaciones; lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
+| | Máscaras restringidas a un rango de luminancia (mínimo, máximo, suavizado) o de color (tono, anchura, suavizado; grises excluidos), leído en OKLab sobre la foto; zona visible (O) | ✅ |
+| | Pincel que sigue los bordes, combinaciones; lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Corrección, clonar, ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Instantáneas, sincronización en varias fotos | ⏳ |

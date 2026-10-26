@@ -52,7 +52,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Calibration | Shadows tint, hue and saturation of the primaries | ✅ |
 | Tools | Crop and straighten (free angle), on-screen tool with locked aspect ratio (R) | ✅ |
 | | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
-| | Luminance and colour range masks, edge-aware brush, combinations; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
+| | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read in OKLab on the photo; area shown (O) | ✅ |
+| | Edge-aware brush, combinations; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Snapshots, sync across multiple photos | ⏳ |
