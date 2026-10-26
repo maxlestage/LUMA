@@ -140,8 +140,8 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   XMP (`.xmp`). **Export** en préréglages XMP : clic droit
   sur un film pour l'exporter seul, ou « Exporter tous les préréglages » pour un dossier
   rangé par famille (les pellicules mesurées emportent leur `.cube`).
-- **LÜMA Premium** : 14 jours d'essai, puis un abonnement à 9,99 € par mois ou
-  79,99 € par an ; la puce de la barre du haut ouvre l'écran Premium (formules, clé de
+- **LÜMA Premium** : 14 jours d'essai, puis un abonnement à 19,99 € par mois ou
+  239,88 € par an ; la puce de la barre du haut ouvre l'écran Premium (formules, clé de
   licence). Paiement par Stripe, clé signée vérifiée hors ligne : [docs/premium.md](docs/premium.md).
 - **Télécharger** : sur le site (section Tarifs) et dans les Releases GitHub (app Mac
   universelle, app iPhone et iPad non signée, ligne de commande Mac et Linux).

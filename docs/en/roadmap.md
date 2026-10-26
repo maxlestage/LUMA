@@ -13,7 +13,7 @@ This is an estimate, not a guarantee.
 | 2. Engine | M4–M6 | f32 pipeline, Display P3, EDR/HDR on XDR displays, zero-copy unified memory, edit graph, versioned project | Engine tests on the CPU (fallback) |
 | 3. Alpha | M7–M12 | Mac: photo library, editing, export. iPhone/iPad: import from PhotoKit and Files, Apple Pencil masking, gestures. Public TestFlight | — |
 | 4. Beta | M13–M18 | On-device AI (subject, sky, denoise) on Apple GPUs, camera/lens profiles, search, crash recovery | First Vulkan/DX12 port of the renderer |
-| 5. 1.0 | M19–M24 | Mac App Store and App Store, accessibility, migration, documentation | — |
+| 5. 1.0 | M19–M24 | App Store (iPhone and iPad), direct download (Mac), accessibility, migration, documentation | — |
 | 6. Expansion | M25–M36 | Video (timeline, colour grading), tethering, printing | Windows, Linux and Android apps on the same engine |
 
 ## Progress
@@ -52,7 +52,7 @@ Next steps, in order:
 - **M6**: identical rendering on Mac/iPhone within a documented ΔE tolerance, P95 preview < 100 ms on Mac.
 - **M12**: a photographer completes a full workflow (import → culling → editing → export) on Mac or iPad.
 - **M18**: the advanced tools pass the quality, compatibility and performance tests.
-- **M24**: stable version released on both App Stores, public compatibility matrix.
+- **M24**: stable version released on the App Store (iPhone and iPad) and as a direct download (Mac), public compatibility matrix.
 
 ## Main risks
 

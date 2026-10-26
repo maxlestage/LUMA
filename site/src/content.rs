@@ -20,16 +20,16 @@ pub const NAV: [(&str, &str); 6] = [
 pub const PLANS: [(&str, &str, &str, &str, &str); 2] = [
     (
         "Mensuel",
-        "9,99 €",
+        "19,99 €",
         "par mois",
         "Sans engagement, résiliable à tout moment.",
         "LUMA_CHECKOUT_MONTHLY",
     ),
     (
         "Annuel",
-        "79,99 €",
+        "239,88 €",
         "par an",
-        "Deux mois offerts : 6,67 € par mois.",
+        "Soit 19,99 € par mois, en un seul paiement.",
         "LUMA_CHECKOUT_ANNUAL",
     ),
 ];
@@ -41,7 +41,7 @@ pub const PREMIUM: [&str; 6] = [
     "Masques, films empilés, recadrage et géométrie",
     "Empilements, ciel étoilé, panoramas en DNG",
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
-    "Mac, iPhone et iPad, et toutes les mises à jour",
+    "Sur Mac, avec toutes les mises à jour",
 ];
 
 pub const MARQUEE: [&str; 9] = [
@@ -144,7 +144,7 @@ pub const PLATFORMS: [(&str, &str, &str, bool); 6] = [
     (
         "macOS",
         "Phase 1",
-        "Apple Silicon, Metal, EDR, Mac App Store.",
+        "Apple Silicon, Metal, EDR, téléchargement direct.",
         true,
     ),
     (
@@ -409,7 +409,7 @@ pub const ROADMAP: [Phase; 6] = [
         when: "M19 – M24",
         name: "1.0",
         items: &[
-            "Mac App Store et App Store",
+            "App Store (iPhone et iPad), téléchargement direct (Mac)",
             "Accessibilité, migration",
             "Matrice de compatibilité publique",
         ],
@@ -667,9 +667,10 @@ pub const LEGAL: [Legal; 3] = [
                 "abonnement",
                 "Abonnement et clé de licence",
                 &[
-                    "Deux formules : Mensuel, 9,99 € par mois, et Annuel, 79,99 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.",
+                    "Deux formules : Mensuel, 19,99 € par mois, et Annuel, 239,88 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.",
                     "Après le paiement, votre clé de licence s'affiche sur le site (gardez l'adresse de la page : elle redonne la clé à tout moment). Saisissez‑la dans LÜMA (puce « Essai » en haut de l'app) ; elle vaut pour vos propres appareils, pour votre usage personnel ou professionnel.",
                     "La clé est valable jusqu'à la fin de la période payée, plus 14 jours. En ligne, l'app la renouvelle d'elle‑même chaque jour tant que l'abonnement court.",
+                    "Sur Mac, LÜMA Premium s'achète uniquement sur ce site, payé par Stripe ; il n'est pas vendu sur le Mac App Store. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store, par un abonnement intégré distinct de l'abonnement Mac : il est facturé par Apple, aux prix affichés dans l'App Store, et se gère ou se résilie dans les réglages de votre compte Apple. Les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac.",
                 ],
             ),
             (

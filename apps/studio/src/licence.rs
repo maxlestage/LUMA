@@ -242,7 +242,7 @@ pub const FEATURES: [&str; 6] = [
     "Masques, films empilés, recadrage et géométrie",
     "Empilements, ciel étoilé, panoramas en DNG",
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
-    "Mac, iPhone et iPad, et toutes les mises à jour",
+    "Sur Mac, avec toutes les mises à jour",
 ];
 
 /// Les formules, dans l'ordre d'affichage.

@@ -2298,7 +2298,7 @@ impl Studio {
                 ui.label(RichText::new(tr(plan.name())).size(15.0).color(theme::TEXT));
                 if best {
                     ui.label(
-                        RichText::new(tr("Le plus avantageux"))
+                        RichText::new(tr("Un seul paiement par an"))
                             .size(11.0)
                             .color(theme::ACCENT),
                     );
