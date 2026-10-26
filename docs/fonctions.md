@@ -95,7 +95,9 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Lecture des XMP (sidecar `IMG_0001.xmp`), écriture au même format | ✅ enregistrement automatique dans l'app |
 | Film du dossier avec vignettes, navigation ← → | ✅ |
 | Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
-| Import, catalogue, collections, mots‑clés, recherche | ⏳ |
+| Catalogue local (`luma catalog`) : dossiers et sous‑dossiers, date de prise de vue, boîtier, objectif, ISO lus dans l'en‑tête sans décoder l'image, mise à jour incrémentale, tri par date | ✅ |
+| Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
+| Catalogue dans l'app, collections, recherche et filtres, copies virtuelles | ⏳ |
 | Import de catalogues existants | ⏳ |
 
 ## Ce qui distingue LÜMA

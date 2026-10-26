@@ -17,6 +17,7 @@ luma-raw.workspace = true
 luma-project.workspace = true
 luma-image.workspace = true
 luma-render.workspace = true
+luma-library.workspace = true
 luma-merge.workspace = true
 luma-licence.workspace = true
 luma-apple.workspace = true

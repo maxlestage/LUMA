@@ -1,5 +1,17 @@
 # Novedades
 
+## 0.3.0 — próximamente
+
+La fototeca profesional, paso a paso.
+
+- **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
+  fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
+  focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en
+  94 ms), y después solo se vuelven a leer los archivos modificados (menos de un
+  milisegundo). Fotos ordenadas por fecha de captura.
+- **Palabras clave**: leídas y escritas en el XMP (`dc:subject`), como hacen todas las
+  aplicaciones de fotografía.
+
 ## 0.2.0 — octubre de 2026
 
 Todos los formatos de imagen, tres idiomas y la tienda.

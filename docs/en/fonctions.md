@@ -94,7 +94,9 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Reads XMP files (`IMG_0001.xmp` sidecar), writes the same format | ✅ automatic saving in the app |
 | Folder filmstrip with thumbnails, ← → navigation | ✅ |
 | Grid, ratings (0 to 5), flags (P, X, U), filter by rating and flag, stored in the XMP | ✅ |
-| Import, catalogue, collections, keywords, search | ⏳ |
+| Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
+| Keywords in the XMP (`dc:subject`), read and written | ✅ |
+| Catalogue in the app, collections, search and filters, virtual copies | ⏳ |
 | Importing existing catalogues | ⏳ |
 
 ## What sets LÜMA apart
