@@ -1076,3 +1076,7 @@ es = Objetivo: menos de {v} {unit}.
 fr = **8,3 ms** : le budget d'une image à 120 Hz. Un aperçu après réglage en prend **{v} ms** sur le GPU du Mac : l'image suit le curseur, sans retard.
 en = **8.3 ms**: the time budget of one frame at 120 Hz. A preview after an adjustment takes **{v} ms** on the Mac's GPU: the image follows the slider, with no lag.
 es = **8,3 ms**: el presupuesto de una imagen a 120 Hz. Una vista previa tras un ajuste tarda **{v} ms** en la GPU del Mac: la imagen sigue al control, sin retraso.
+
+fr = L'aperçu intégré au RAW, aussitôt ; puis le vrai rendu : {v} ms.
+en = The preview embedded in the raw file, at once; then the true rendering: {v} ms.
+es = La vista previa integrada en el RAW, al instante; luego el renderizado real: {v} ms.
