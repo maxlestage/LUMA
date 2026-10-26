@@ -62,8 +62,8 @@ mod ios {
 
     use block2::{Block, RcBlock};
     use objc2::rc::{Allocated, Retained};
-    use objc2::runtime::{AnyClass, AnyObject, NSObject, NSObjectProtocol};
-    use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
+    use objc2::runtime::{AnyClass, AnyObject, AnyProtocol, NSObject, NSObjectProtocol};
+    use objc2::{ClassType, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
     use objc2_foundation::{NSArray, NSError, NSString, NSURL};
     use objc2_photos_ui::{
         PHPickerConfiguration, PHPickerConfigurationAssetRepresentationMode, PHPickerFilter, PHPickerResult,
@@ -138,25 +138,23 @@ mod ios {
         let _ = unsafe { provider.loadFileRepresentationForTypeIdentifier_completionHandler(&kind, &copy) };
     }
 
-    /// Le contrôleur au premier plan, qui présentera le sélecteur.
+    /// Le contrôleur au premier plan, qui présentera le sélecteur : celui de la fenêtre
+    /// principale, cherchée dans les scènes, sinon parmi les fenêtres de l'app (une app
+    /// sans scène déclarée n'en a pas toujours).
+    #[allow(deprecated)]
     fn top_controller(mtm: MainThreadMarker) -> Option<Retained<UIViewController>> {
         let app = UIApplication::sharedApplication(mtm);
-        let scenes = app.connectedScenes();
-        let mut root = None;
-        for scene in scenes.iter() {
+        let mut windows = Vec::new();
+        for scene in app.connectedScenes().iter() {
             if let Ok(window_scene) = scene.downcast::<UIWindowScene>() {
-                let windows = window_scene.windows();
-                let window = windows
-                    .iter()
-                    .find(|w| w.isKeyWindow())
-                    .or_else(|| windows.firstObject());
-                root = window.and_then(|w| w.rootViewController());
-                if root.is_some() {
-                    break;
-                }
+                windows.extend(window_scene.windows().iter());
             }
         }
-        let mut top = root?;
+        windows.extend(app.keyWindow());
+        windows.extend(app.windows().iter());
+        // La fenêtre principale d'abord, puis n'importe laquelle qui a un contrôleur.
+        windows.sort_by_key(|w| !w.isKeyWindow());
+        let mut top = windows.iter().find_map(|w| w.rootViewController())?;
         while let Some(next) = top.presentedViewController() {
             top = next;
         }
@@ -182,6 +180,15 @@ mod ios {
             config.setPreferredAssetRepresentationMode(PHPickerConfigurationAssetRepresentationMode::Current);
             config
         };
+        // Le délégué se déclare conforme au protocole du sélecteur, que celui‑ci peut
+        // vérifier avant de lui répondre.
+        if let Some(protocol) = AnyProtocol::get(c"PHPickerViewControllerDelegate") {
+            // SAFETY: ajouter un protocole à une classe déjà inscrite est permis ; sans
+            // effet s'il y est déjà.
+            unsafe {
+                objc2::ffi::class_addProtocol(Delegate::class() as *const AnyClass as *mut AnyClass, protocol);
+            }
+        }
         let delegate = Delegate::alloc(mtm).set_ivars(Ivars { dest });
         // SAFETY: `init` de NSObject sur une instance neuve.
         let delegate: Retained<Delegate> = unsafe { msg_send![super(delegate), init] };
