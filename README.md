@@ -48,7 +48,7 @@ target/release/luma presets ~/Desktop                                   # les 10
 ### Vérifier
 
 ```sh
-scripts/fetch-corpus.sh          # 5 vrais RAW : Sony, Canon, Nikon, Fujifilm X-Trans, iPhone ProRAW
+scripts/fetch-corpus.sh          # 7 vrais RAW : Sony, Canon, Nikon, Fujifilm X-Trans, iPhone ProRAW, OM System, Panasonic
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace           # tests unitaires + développement de tout le corpus

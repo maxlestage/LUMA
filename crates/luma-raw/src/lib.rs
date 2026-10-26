@@ -241,11 +241,20 @@ fn dng_opcodes(path: &Path) -> (Vec<opcodes::Opcode>, Vec<opcodes::Opcode>) {
 }
 
 /// Les corrections d'objectif rangées par le boîtier dans un RAW qui n'est pas un DNG :
-/// aujourd'hui celles des ARW de Sony et des RAF de Fujifilm.
+/// les ARW de Sony, les RAF de Fujifilm, les ORF d'Olympus et d'OM System, les RW2 de
+/// Panasonic.
 fn maker_corrections(path: &Path) -> Vec<opcodes::Opcode> {
     use rawler::formats::tiff::reader::TiffReader;
-    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("raf")) {
-        return fuji_corrections(path).into_iter().collect();
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    match ext.as_str() {
+        "raf" => return fuji_corrections(path).into_iter().collect(),
+        "orf" => return olympus_corrections(path).into_iter().collect(),
+        "rw2" | "rwl" => return panasonic_corrections(path).into_iter().collect(),
+        _ => {}
     }
     let is_arw = path
         .extension()
@@ -337,6 +346,75 @@ fn fuji_corrections(path: &Path) -> Option<opcodes::Opcode> {
         &rationals(0xF010),
         fuji_crop(path),
     )
+}
+
+/// Les entrées d'un IFD en petit‑boutiste : (étiquette, type, nombre, position de la
+/// valeur ou de son décalage).
+fn ifd_le(bytes: &[u8], at: usize) -> Vec<(u16, u16, u32, usize)> {
+    let u16_at = |i: usize| bytes.get(i..i + 2).map(|b| u16::from_le_bytes([b[0], b[1]]));
+    let u32_at = |i: usize| {
+        bytes
+            .get(i..i + 4)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+    };
+    let n = u16_at(at).unwrap_or(0).min(1024) as usize;
+    (0..n)
+        .filter_map(|k| {
+            let e = at + 2 + 12 * k;
+            Some((u16_at(e)?, u16_at(e + 2)?, u32_at(e + 4)?, e + 8))
+        })
+        .collect()
+}
+
+/// Les corrections d'un ORF d'Olympus ou d'OM System : dans la note du fabricant
+/// (« OLYMPUS » ou « OM SYSTEM », petit‑boutiste, décalages comptés depuis son début),
+/// le sous‑IFD ImageProcessing (0x2040), étiquettes 0x150A et 0x150C (flottants).
+fn olympus_corrections(path: &Path) -> Option<opcodes::Opcode> {
+    let head = read_head(path, 1 << 20)?;
+    let (base, start) = [(b"OM SYSTEM\0\0\0II".as_slice(), 16), (b"OLYMPUS\0II".as_slice(), 12)]
+        .iter()
+        .find_map(|(sig, len)| head.windows(sig.len()).position(|w| w == *sig).map(|p| (p, p + len)))?;
+    let u32_at = |i: usize| head.get(i..i + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
+    let processing = ifd_le(&head, start).into_iter().find(|e| e.0 == 0x2040)?;
+    let sub = base + u32_at(processing.3)? as usize;
+    let entries = ifd_le(&head, sub);
+    let floats = |tag: u16| -> Vec<f64> {
+        let Some(&(_, 11, count, pos)) = entries.iter().find(|e| e.0 == tag) else {
+            return Vec::new();
+        };
+        let Some(at) = (if count * 4 <= 4 {
+            Some(pos)
+        } else {
+            u32_at(pos).map(|o| base + o as usize)
+        }) else {
+            return Vec::new();
+        };
+        (0..count.min(64) as usize)
+            .map_while(|i| head.get(at + 4 * i..at + 4 * i + 4))
+            .map(|b| f64::from(f32::from_le_bytes([b[0], b[1], b[2], b[3]])))
+            .collect()
+    };
+    opcodes::olympus(&floats(0x150A), &floats(0x150C))
+}
+
+/// La distorsion d'un RW2 de Panasonic : étiquette 0x0119 de son premier IFD, 32 octets.
+fn panasonic_corrections(path: &Path) -> Option<opcodes::Opcode> {
+    let head = read_head(path, 256 << 10)?;
+    // « IIU\0 » : l'en‑tête TIFF propre au RW2.
+    if !head.starts_with(b"IIU\0") {
+        return None;
+    }
+    let first = u32::from_le_bytes(head.get(4..8)?.try_into().ok()?) as usize;
+    let &(_, 7, 32, pos) = ifd_le(&head, first).iter().find(|e| e.0 == 0x0119)? else {
+        return None;
+    };
+    let at = u32::from_le_bytes(head.get(pos..pos + 4)?.try_into().ok()?) as usize;
+    let block = head.get(at..at + 32)?;
+    let v: Vec<i16> = block
+        .chunks_exact(2)
+        .map(|b| i16::from_le_bytes([b[0], b[1]]))
+        .collect();
+    opcodes::panasonic(&v)
 }
 
 /// 1,25 quand le Fujifilm photographiait en mode recadré (étiquette CropMode 0x104D de sa

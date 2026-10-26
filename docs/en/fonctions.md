@@ -45,7 +45,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Lens corrections written in DNG files (`WarpRectilinear` and `FixVignetteRadial` opcodes): distortion, lateral chromatic aberration and vignetting, applied automatically at every size | ✅ |
 | | Lens corrections of Sony ARW files (distortion, lateral chromatic aberration, vignetting, recorded by the camera), applied automatically with no empty border | ✅ |
 | | Lens corrections of Fujifilm RAF files (distortion, lateral chromatic aberration, vignetting, recorded by the camera, crop mode included), applied automatically | ✅ |
-| | Lens corrections read from Olympus/OM, Panasonic… RAW files, longitudinal aberration | ⏳ |
+| | Lens corrections of Olympus and OM System ORF files (distortion, lateral chromatic aberration) and Panasonic RW2 files (distortion), recorded by the camera, applied automatically | ✅ |
+| | Longitudinal chromatic aberration, corrections of other brands (Canon, Nikon, Pentax…) | ⏳ |
 | Transform | Vertical and horizontal perspective, rotate, aspect, scale (homography, fixed centre) | ✅ |
 | | Automatic and guided straightening | ⏳ |
 | Effects | Post-crop vignetting (amount, midpoint, roundness, feather, highlights) | ✅ |

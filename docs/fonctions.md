@@ -46,7 +46,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Corrections d'objectif écrites dans les DNG (opcodes `WarpRectilinear` et `FixVignetteRadial`) : distorsion, aberration chromatique latérale et vignetage, appliqués automatiquement à toutes les tailles | ✅ |
 | | Corrections d'objectif des ARW de Sony (distorsion, aberration chromatique latérale, vignetage, enregistrées par le boîtier), appliquées automatiquement sans bord vide | ✅ |
 | | Corrections d'objectif des RAF de Fujifilm (distorsion, aberration chromatique latérale, vignetage, enregistrées par le boîtier, mode recadré compris), appliquées automatiquement | ✅ |
-| | Corrections d'objectif lues dans les RAW Olympus/OM, Panasonic…, aberration longitudinale | ⏳ |
+| | Corrections d'objectif des ORF d'Olympus et d'OM System (distorsion, aberration chromatique latérale) et des RW2 de Panasonic (distorsion), enregistrées par le boîtier, appliquées automatiquement | ✅ |
+| | Aberration chromatique longitudinale, corrections des autres marques (Canon, Nikon, Pentax…) | ⏳ |
 | Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
 | | Redressement automatique, guidé | ⏳ |
 | Effets | Vignetage après recadrage (gain, milieu, arrondi, contour progressif, hautes lumières) | ✅ |

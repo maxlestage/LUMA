@@ -27,7 +27,7 @@ This is an estimate, not a guarantee.
 - complete Develop module, panel by panel (see
   [`fonctions.md`](fonctions.md)), reading and writing `crs:` XMP;
 - JPEG, PNG, 8/16-bit TIFF export in sRGB or Display P3 with an ICC profile;
-- 5 camera bodies developed on every push (Sony, Canon, Nikon, Fujifilm, iPhone), responsiveness
+- 7 camera bodies developed on every push (Sony, Canon, Nikon, Fujifilm, iPhone, OM System, Panasonic), responsiveness
   measurements published;
 - LÜMA Studio, the Mac app (`apps/studio`): complete Develop module, history,
   automatic XMP, filmstrip, keyboard shortcuts, Library (ratings, flags,
@@ -58,7 +58,7 @@ Next steps, in order:
 
 | Risk | Level | Response | Where we stand |
 |---|---|---|---|
-| RAW coverage | Very high | Real corpus, per-camera matrix published and extended with every release | **Done.** [`boitiers.md`](boitiers.md): 735 camera bodies from 20 brands, 714 with calibrated colour, generated from the decoder's database (`luma cameras --markdown`) and checked by CI on every push. 5 real RAW files developed on every test run (Sony, Canon, Nikon, Fujifilm, iPhone ProRAW); any DNG can be read. To extend: one more real RAW per release (Canon CR2, Olympus, Panasonic, Pentax). |
+| RAW coverage | Very high | Real corpus, per-camera matrix published and extended with every release | **Done.** [`boitiers.md`](boitiers.md): 735 camera bodies from 20 brands, 714 with calibrated colour, generated from the decoder's database (`luma cameras --markdown`) and checked by CI on every push. 7 real RAW files developed on every test run (Sony, Canon, Nikon, Fujifilm, iPhone ProRAW, OM System, Panasonic); any DNG can be read. To extend: one more real RAW per release (Canon CR2, Pentax). |
 | Video without third-party libraries | Very high | Decoding via Apple's system frameworks, or a reduced scope; audit from M0 | **Decided: reduced scope.** v1 is a photo editor, without video. The audit: decoding H.264/HEVC/ProRes in pure Rust is not realistic; AVFoundation (a system framework, allowed) requires Objective‑C bindings, and therefore `unsafe` code, which is currently forbidden in LÜMA. If video comes back, it will live in an isolated `luma-platform` layer, the only one allowed to use `unsafe`, audited separately. |
 | iOS integration in Rust (UIKit, Pencil, PhotoKit) | High | Prototype from M0, thin and tested `luma-platform` layer | **Prototype done**: the app runs on iPhone and iPad (simulator launched on every push, screenshot verified), Metal, RAW via the Files app. **Remaining**: PhotoKit (photo library), Apple Pencil (pressure for the brush), sharing. All of these require Objective‑C bindings: same rule as for video, an isolated `luma-platform` layer. |
 | Colour not accurate enough | High | Colorimetric tests, reference renders | **Tests in place** (`crates/luma-render/tests/color.rs`): a ColorChecker chart seen by a real sensor (Sony A7 III), ΔE 2000 < 1 in daylight and under a 3200 K lamp (matrix interpolation), hues preserved through the full development; 100 films measured on a test chart (`luma-image/tests/presets.rs`), GPU identical to the CPU. **Measurement on a real camera**: `luma colorchecker photo.RAW` (a photo of a real chart, cropped) gives the ΔE 2000 of each patch. **Remaining**: photos of real charts in the corpus, and profiles that go beyond matrices (hue tables, DCP profiles). |
