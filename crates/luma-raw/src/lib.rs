@@ -240,6 +240,32 @@ fn dng_opcodes(path: &Path) -> (Vec<opcodes::Opcode>, Vec<opcodes::Opcode>) {
     )
 }
 
+/// Les corrections d'objectif rangées par le boîtier dans un RAW qui n'est pas un DNG :
+/// aujourd'hui celles des ARW de Sony.
+fn maker_corrections(path: &Path) -> Vec<opcodes::Opcode> {
+    use rawler::formats::tiff::reader::TiffReader;
+    let is_arw = path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("arw") || e.eq_ignore_ascii_case("sr2"));
+    let Some(tiff) = is_arw
+        .then(|| std::fs::File::open(path).ok())
+        .flatten()
+        .and_then(|mut f| rawler::formats::tiff::GenericTiffReader::new(&mut f, 0, 0, None, &[]).ok())
+    else {
+        return Vec::new();
+    };
+    let values = |tag: u16| -> Vec<i32> {
+        tiff.root_ifd()
+            .find_first_ifd_with_tag(tag)
+            .and_then(|ifd| ifd.get_entry(tag))
+            .map(|e| (0..e.value.count()).map(|i| e.value.force_i32(i)).collect())
+            .unwrap_or_default()
+    };
+    opcodes::sony(&values(0x7037), &values(0x7035), &values(0x7032))
+        .into_iter()
+        .collect()
+}
+
 /// Ce que dit l'en‑tête d'une photo, sans décoder ses pixels : de quoi la ranger dans
 /// la photothèque.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -346,7 +372,18 @@ impl RawPhoto {
         } else {
             opcodes::apply_to_mosaic(&before, &mut photo.data, photo.width, frame);
         }
-        if !after.is_empty() {
+        // Les corrections que le boîtier a rangées dans son RAW, autour du centre de
+        // l'image.
+        let own = maker_corrections(path);
+        if !own.is_empty() && after.is_empty() {
+            let image = opcodes::Frame {
+                x: 0.0,
+                y: 0.0,
+                width: photo.width as f64,
+                height: photo.height as f64,
+            };
+            photo.opcodes = Some((own, image));
+        } else if !after.is_empty() {
             photo.opcodes = Some((after, frame));
         }
         Ok(photo)
