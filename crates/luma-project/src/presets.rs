@@ -1616,9 +1616,9 @@ pub const PRESETS: &[Preset] = &[
         "L'instantané d'aujourd'hui : clair, frais, légère dominante cyan.",
         |s| {
             base(s, 6.0, 4.0, 6.0);
-            tones(s, -10.0, 10.0, 5.0, 0.0);
+            tones(s, -10.0, 10.0, 15.0, 0.0);
             fade(s, 14.0, 246.0);
-            cross(s, [-5.0, -3.0, 0.0], [2.0, 2.0, 2.0], [7.0, 5.0, 3.0]);
+            cross(s, [-5.0, -3.0, 0.0], [2.0, 2.0, 2.0], [4.0, 6.0, 8.0]);
         }
     ),
     preset!(
