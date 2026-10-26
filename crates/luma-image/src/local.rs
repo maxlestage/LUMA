@@ -23,7 +23,15 @@ fn smoothstep(e0: f32, e1: f32, x: f32) -> f32 {
 /// La zone d'un masque sur une image de `w × h` pixels : 1 où il agit pleinement, 0
 /// où il n'agit pas (inversion et intensité comprises).
 pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
+    weights_guided(mask, w, h, None)
+}
+
+/// [`weights`], avec la clarté de la photo (`guide`, de même taille) pour un pinceau qui
+/// suit les bords : chaque touche ne peint que les pixels d'une clarté proche de celle de
+/// son centre, puis un filtre guidé lisse la zone sans traverser les contours.
+fn weights_guided(mask: &Mask, w: usize, h: usize, guide: Option<&Plane>) -> Plane {
     let (fw, fh) = (w as f32, h as f32);
+    let guide = guide.filter(|g| mask.edges && (g.width, g.height) == (w, h));
     let mut plane = Plane::new(w, h);
     match &mask.shape {
         Shape::Full => plane.data.iter_mut().for_each(|v| *v = 1.0),
@@ -67,6 +75,11 @@ pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
                 let inner = 1.0 - d.feather.clamp(0.0, 100.0) / 100.0;
                 let flow = (d.flow / 100.0).clamp(0.0, 1.0);
                 let (cx, cy) = (d.x * fw, d.y * fh);
+                // La clarté sous le centre de la touche : celle qu'elle peint.
+                let center = guide.map(|g| {
+                    let (gx, gy) = ((cx as usize).min(w - 1), (cy as usize).min(h - 1));
+                    g.data[gy * w + gx]
+                });
                 let x0 = (cx - r).floor().max(0.0) as usize;
                 let x1 = ((cx + r).ceil().max(0.0) as usize).min(w);
                 let y0 = (cy - r).floor().max(0.0) as usize;
@@ -75,10 +88,53 @@ pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
                     let py = y as f32 + 0.5 - cy;
                     for x in x0..x1 {
                         let px = x as f32 + 0.5 - cx;
-                        let a = (1.0 - smoothstep(inner, 1.0, (px * px + py * py).sqrt() / r)) * flow;
+                        let mut a = (1.0 - smoothstep(inner, 1.0, (px * px + py * py).sqrt() / r)) * flow;
+                        if let (Some(g), Some(c)) = (guide, center) {
+                            // Un écart de clarté de 0,06 passe, au‑delà de 0,14 plus rien.
+                            a *= 1.0 - smoothstep(0.06, 0.14, (g.data[y * w + x] - c).abs());
+                        }
                         let v = &mut plane.data[y * w + x];
                         *v = if d.erase { *v * (1.0 - a) } else { *v + (1.0 - *v) * a };
                     }
+                }
+            }
+        }
+    }
+    if let (Some(g), Shape::Brush { dabs }) = (guide, &mask.shape)
+        && !dabs.is_empty()
+    {
+        // Lisser sans franchir les bords : le grain de la photo ne laisse pas de trous.
+        let radius = dabs.iter().map(|d| d.radius).sum::<f32>() / dabs.len() as f32 * fw;
+        let sigma = (radius * 0.15).clamp(1.0, 20.0);
+        // Seulement autour des touches (marge de quatre rayons du filtre) : un trait
+        // court ne fait pas filtrer toute l'image.
+        let margin = sigma * 4.0;
+        let (mut x0, mut y0, mut x1, mut y1) = (fw, fh, 0.0f32, 0.0f32);
+        for d in dabs {
+            let r = (d.radius * fw).max(0.5) + margin;
+            x0 = x0.min(d.x * fw - r);
+            y0 = y0.min(d.y * fh - r);
+            x1 = x1.max(d.x * fw + r);
+            y1 = y1.max(d.y * fh + r);
+        }
+        let (x0, y0) = (x0.max(0.0) as usize, y0.max(0.0) as usize);
+        let (x1, y1) = (
+            (x1.ceil().max(0.0) as usize).min(w),
+            (y1.ceil().max(0.0) as usize).min(h),
+        );
+        if x1 > x0 + 1 && y1 > y0 + 1 {
+            let (cw, ch) = (x1 - x0, y1 - y0);
+            let crop = |p: &Plane| Plane {
+                width: cw,
+                height: ch,
+                data: (y0..y1)
+                    .flat_map(|y| p.data[y * w + x0..y * w + x1].iter().copied())
+                    .collect(),
+            };
+            let smooth = crop(&plane).guided_by(&crop(g), sigma, 0.0016);
+            for (k, row) in smooth.data.chunks(cw).enumerate() {
+                for (v, s) in plane.data[(y0 + k) * w + x0..(y0 + k) * w + x1].iter_mut().zip(row) {
+                    *v = s.clamp(0.0, 1.0);
                 }
             }
         }
@@ -143,13 +199,39 @@ pub fn restrict(plane: &mut Plane, range: &Range, img: &RgbImage) {
     });
 }
 
-/// La zone d'un masque sur `img`, plage comprise (sans plage : [`weights`]).
-pub fn weights_on(mask: &Mask, img: &RgbImage) -> Plane {
-    let mut plane = weights(mask, img.width, img.height);
+/// La clarté perçue de `img` (linéaire, espace de travail) à la taille `w × h` : le guide
+/// d'un pinceau qui suit les bords.
+pub fn lightness_plane(img: &RgbImage, w: usize, h: usize) -> Plane {
+    let mut guide = Plane::new(w, h);
+    if img.width == 0 || img.height == 0 || w == 0 {
+        return guide;
+    }
+    let (kx, ky) = (img.width as f32 / w as f32, img.height as f32 / h as f32);
+    guide.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+        let sy = (((y as f32 + 0.5) * ky) as usize).min(img.height - 1);
+        for (x, v) in row.iter_mut().enumerate() {
+            let sx = (((x as f32 + 0.5) * kx) as usize).min(img.width - 1);
+            *v = luma_color::fast_cbrt(luminance(img.data[sy * img.width + sx]).max(0.0)).min(1.0);
+        }
+    });
+    guide
+}
+
+/// La zone d'un masque à la taille `w × h`, affinée selon la photo `img` (d'une taille
+/// quelconque) : le pinceau qui suit les bords, puis la plage de tons ou de couleurs.
+pub fn weights_for(mask: &Mask, w: usize, h: usize, img: &RgbImage) -> Plane {
+    // Le guide un peu lissé : le grain de la photo n'est pas un bord.
+    let guide = (mask.edges && matches!(mask.shape, Shape::Brush { .. })).then(|| lightness_plane(img, w, h).blur(1.5));
+    let mut plane = weights_guided(mask, w, h, guide.as_ref());
     if let Some(r) = &mask.range {
         restrict(&mut plane, r, img);
     }
     plane
+}
+
+/// La zone d'un masque sur `img`, plage comprise (sans plage : [`weights`]).
+pub fn weights_on(mask: &Mask, img: &RgbImage) -> Plane {
+    weights_for(mask, img.width, img.height, img)
 }
 
 /// Applique les masques actifs à l'image (linéaire, espace de travail). Les plages sont
@@ -162,17 +244,17 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
     let (w, h) = (img.width, img.height);
     let diag = ((w * w + h * h) as f32).sqrt();
     let stops = Plane::from_rgb(img, |p| (luminance(p).max(1e-6) / 0.18).log2());
-    let before = active.iter().any(|m| m.range.is_some()).then(|| img.clone());
+    let before = active.iter().any(|m| m.range.is_some() || m.edges).then(|| img.clone());
     // La base de la clarté, comme pour la Clarté globale : une fois pour tous les masques.
     let clarity_base = active
         .iter()
         .any(|m| m.local.clarity != 0.0)
         .then(|| stops.guided(0.008 * diag, 0.5));
     for mask in active {
-        let mut weights = weights(mask, w, h);
-        if let (Some(r), Some(before)) = (&mask.range, &before) {
-            restrict(&mut weights, r, before);
-        }
+        let weights = match &before {
+            Some(b) => weights_for(mask, w, h, b),
+            None => weights(mask, w, h),
+        };
         let l = &mask.local;
         let k = |v: f32| v / 100.0;
         let (contrast, hl, sh, wh, bl) = (k(l.contrast), k(l.highlights), k(l.shadows), k(l.whites), k(l.blacks));
@@ -215,6 +297,58 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_edge_aware_brush_stops_at_the_edge() {
+        // Une photo : sombre à gauche, claire à droite (bord net à x = 60) ; un trait de
+        // pinceau centré à x = 55 qui déborde sur le côté clair.
+        let (w, h) = (120, 60);
+        let img = RgbImage::from_fn(w, h, |x, _| if x < 60 { [0.03; 3] } else { [0.5; 3] });
+        let mut m = Mask::brush();
+        if let Shape::Brush { dabs } = &mut m.shape {
+            for k in 0..6 {
+                dabs.push(luma_project::Dab {
+                    x: 55.0 / w as f32,
+                    y: (10.0 + 8.0 * k as f32) / h as f32,
+                    radius: 12.0 / w as f32,
+                    feather: 20.0,
+                    flow: 100.0,
+                    erase: false,
+                });
+            }
+        }
+        m.local.exposure = 1.0;
+        let plain = weights_on(&m, &img);
+        m.edges = true;
+        let edged = weights_on(&m, &img);
+        let at = |p: &Plane, x: usize| p.data[30 * w + x];
+        // Du côté sombre, la zone reste ; du côté clair, elle recule nettement.
+        assert!(at(&edged, 52) > 0.85, "{}", at(&edged, 52));
+        assert!(
+            at(&plain, 63) > 0.9 && at(&edged, 63) < 0.35,
+            "{} {}",
+            at(&plain, 63),
+            at(&edged, 63)
+        );
+        assert!(edged.data.iter().all(|v| (0.0..=1.0).contains(v)));
+        // Une photo granuleuse du même côté : pas de trous dans le trait.
+        let grainy = RgbImage::from_fn(w, h, |x, y| {
+            let n = (((x * 7919 + y * 104_729) % 97) as f32 / 97.0 - 0.5) * 0.02;
+            if x < 60 { [0.03 + n; 3] } else { [0.5 + n; 3] }
+        });
+        let g = weights_on(&m, &grainy);
+        let inner = (47..58).map(|x| g.data[30 * w + x]).fold(1.0f32, f32::min);
+        assert!(inner > 0.8, "{inner}");
+        // Les autres formes ne sont pas touchées par l'option.
+        let mut radial = Mask::radial();
+        radial.edges = true;
+        assert_eq!(weights_on(&radial, &img).data, weights(&radial, w, h).data);
+        // Appliqué : le côté clair, hors du trait corrigé, ne bouge presque pas.
+        let mut out = img.clone();
+        apply(&mut out, std::slice::from_ref(&m));
+        assert!(out.data[30 * w + 63][1] < 0.5 * 1.35, "{:?}", out.data[30 * w + 63]);
+        assert!(out.data[30 * w + 52][1] > 0.03 * 1.8, "{:?}", out.data[30 * w + 52]);
+    }
     use luma_project::{Dab, Local};
 
     /// Une image de `n` pixels en dégradé de gris, du noir au blanc.

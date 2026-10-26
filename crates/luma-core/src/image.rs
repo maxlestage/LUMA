@@ -405,6 +405,41 @@ impl Plane {
         out
     }
 
+    /// Filtre guidé croisé : ce plan lissé en suivant les contours de `guide` (de même
+    /// taille). Une zone de masque y épouse les bords de la photo. Grand rayon : les
+    /// coefficients sur des plans réduits, comme [`Plane::guided`].
+    pub fn guided_by(&self, guide: &Plane, sigma: f32, eps: f32) -> Plane {
+        let factor = ((sigma / 4.0).floor() as usize)
+            .min(self.width / 8)
+            .min(self.height / 8);
+        let (a, b) = if factor >= 2 {
+            let (a, b) =
+                self.downscale(factor)
+                    .cross_coefficients(&guide.downscale(factor), sigma / factor as f32, eps);
+            (a.upsample(self.width, self.height), b.upsample(self.width, self.height))
+        } else {
+            self.cross_coefficients(guide, sigma, eps)
+        };
+        let mut out = a.zip(guide, |a, i| a * i);
+        out.data.par_iter_mut().zip(&b.data).for_each(|(o, b)| *o += b);
+        out
+    }
+
+    fn cross_coefficients(&self, guide: &Plane, sigma: f32, eps: f32) -> (Plane, Plane) {
+        let mean_i = guide.blur(sigma);
+        let mean_p = self.blur(sigma);
+        let corr_ip = guide.zip(self, |i, p| i * p).blur(sigma);
+        let corr_ii = guide.map(|v| v * v).blur(sigma);
+        let mut a = Plane::new(self.width, self.height);
+        a.data.par_iter_mut().enumerate().for_each(|(k, a)| {
+            let (mi, mp) = (mean_i.data[k], mean_p.data[k]);
+            let var = (corr_ii.data[k] - mi * mi).max(0.0);
+            *a = (corr_ip.data[k] - mi * mp) / (var + eps);
+        });
+        let b = mean_p.zip(&a.zip(&mean_i, |a, mi| a * mi), |mp, ami| mp - ami);
+        (a.blur(sigma), b.blur(sigma))
+    }
+
     fn guided_coefficients(&self, sigma: f32, eps: f32) -> (Plane, Plane) {
         let mean = self.blur(sigma);
         let sq = self.map(|v| v * v).blur(sigma);
@@ -472,6 +507,35 @@ mod tests {
                 "sigma {sigma}"
             );
         }
+    }
+
+    #[test]
+    fn cross_guided_filter_follows_the_guide_edges() {
+        // Un guide coupé net au milieu ; une zone qui déborde de trois pixels sur le
+        // côté droit : le filtre la ramène vers le bord du guide.
+        let (w, h) = (40, 20);
+        let guide = Plane {
+            width: w,
+            height: h,
+            data: (0..w * h).map(|i| if i % w < 20 { 0.2 } else { 0.8 }).collect(),
+        };
+        let zone = Plane {
+            width: w,
+            height: h,
+            data: (0..w * h).map(|i| if i % w < 23 { 1.0 } else { 0.0 }).collect(),
+        };
+        let out = zone.guided_by(&guide, 4.0, 1e-4);
+        let at = |x: usize| out.data[10 * w + x];
+        assert!(at(10) > 0.95, "{}", at(10));
+        assert!(at(21) < 0.5, "{}", at(21));
+        // Sans bord dans le guide, rien ne la retient : un simple lissage.
+        let flat = Plane {
+            width: w,
+            height: h,
+            data: vec![0.5; w * h],
+        };
+        let soft = zone.guided_by(&flat, 4.0, 1e-4);
+        assert!(soft.data[10 * w + 21] > 0.5);
     }
 
     #[test]

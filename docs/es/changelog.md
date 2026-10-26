@@ -97,6 +97,9 @@ La fototeca profesional, paso a paso.
   suavizado) o algunos colores (rango de color: tono, anchura, suavizado; los grises
   quedan fuera). Medidos en OKLab sobre la foto, antes de los ajustes de las máscaras;
   la zona se muestra en rojo (O).
+- **Pincel que sigue los bordes**: marque «Seguir los bordes» y el pincel solo pinta
+  los tonos cercanos al centro de cada toque; la zona se detiene en el contorno de un
+  cielo, una pared o una cara, sin desbordar.
 
 ## 0.2.0 — octubre de 2026
 
