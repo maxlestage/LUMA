@@ -8,10 +8,11 @@
 
 pub mod copies;
 pub mod masks;
+pub mod paste;
 pub mod presets;
 pub mod xmp;
 
-pub use masks::{Dab, Local, Look, Mask, Range, Shape};
+pub use masks::{Combine, Dab, Local, Look, Mask, Part, Range, Shape};
 
 use serde::{Deserialize, Serialize};
 

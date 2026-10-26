@@ -57,9 +57,11 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
 | | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
-| | Mask combinations; reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
+| | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
+| | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
+| | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
 | | Snapshots, sync across multiple photos | ⏳ |
 | | iPhone and iPad: smaller preview during a gesture (12 times faster), memory watched, caches freed before the system closes the app | ✅ |
 | | Histogram, clipping indicator (J), before/after (`\`), 1:1 zoom | ✅ |
@@ -86,6 +88,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | EXIF orientation | ✅ |
 | ICC profiles read (versions 2 and 4): matrix and curves, lut8, lut16, A→B and B→A tables of printers and papers, four rendering intents (`luma icc`) | ✅ |
 | On-screen soft proofing: the preview as it will print with a printer profile, perceptual or relative colorimetric intent (histogram included) | ✅ |
+| Gamut warning: the colors the printer will not be able to reproduce, shown in blue on the preview (relative colorimetric round trip, beyond ΔE 3) | ✅ |
 
 ## Export
 

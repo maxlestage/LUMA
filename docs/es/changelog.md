@@ -102,6 +102,10 @@ La fototeca profesional, paso a paso.
 - **Pincel que sigue los bordes**: marque «Seguir los bordes» y el pincel solo pinta
   los tonos cercanos al centro de cada toque; la zona se detiene en el contorno de un
   cielo, una pared o una cara, sin desbordar.
+- **Combinaciones de máscaras**: «Combinar» añade, resta o interseca otra forma
+  (degradado lineal o radial, pincel, cada una invertible); un radial al que se le
+  resta otro se convierte en un anillo, un pincel restado protege una cara bajo un
+  degradado.
 - **Perfiles ICC leídos** (un paso hacia la prueba en pantalla): perfiles de
   pantallas (matriz y curvas) y de impresoras y papeles (tablas lut8, lut16, A→B y
   B→A, versiones 2 y 4), en ambos sentidos y para las cuatro intenciones de
@@ -116,6 +120,9 @@ La fototeca profesional, paso a paso.
   App Store, «Suscribirse» y «Restaurar compras»; cada compra y renovación abre
   Premium. En iPhone y iPad, solo el App Store vende la suscripción; en Mac, solo el
   sitio web (Stripe).
+- **Aviso de gama** (en la prueba en pantalla): los colores que la impresora no podrá
+  reproducir se vuelven azules en la vista previa, con o sin la simulación de la
+  impresión.
 
 ## 0.2.0 — octubre de 2026
 

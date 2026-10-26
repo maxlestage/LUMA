@@ -58,9 +58,11 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad | ✅ |
 | | Máscaras restringidas a un rango de luminancia (mínimo, máximo, suavizado) o de color (tono, anchura, suavizado; grises excluidos), leído sobre la foto; zona visible (O) | ✅ |
 | | Pincel que sigue los bordes: cada toque solo pinta los tonos cercanos a su centro, la zona se detiene en los contornos de la foto | ✅ |
-| | Combinaciones de máscaras; lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
+| | Combinaciones de máscaras: añadir, restar, intersecar otras formas (cada una invertible) | ✅ |
+| | Lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Corrección, clonar, ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
+| | Copiar y pegar selectivo de ajustes («Pegar…», Alt+Mayús+Cmd+V): catorce grupos a elegir, recorte y máscaras propios de cada foto por defecto | ✅ |
 | | Instantáneas, sincronización en varias fotos | ⏳ |
 | | iPhone y iPad: vista previa reducida durante un gesto (12 veces más rápida), memoria vigilada, cachés liberadas antes de que el sistema cierre la app | ✅ |
 | | Histograma, indicador de recorte (J), antes/después (`\`), zoom 1:1 | ✅ |
@@ -87,6 +89,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Orientación EXIF | ✅ |
 | Perfiles ICC leídos (versiones 2 y 4): matriz y curvas, tablas lut8, lut16, A→B y B→A de impresoras y papeles, cuatro intenciones de reproducción (`luma icc`) | ✅ |
 | Prueba en pantalla: la vista previa tal como se imprimirá con un perfil de impresora, intención perceptual o colorimétrica relativa (histograma incluido) | ✅ |
+| Aviso de gama: los colores que la impresora no podrá reproducir, en azul sobre la vista previa (ida y vuelta en colorimétrico relativo, diferencia superior a ΔE 3) | ✅ |
 
 ## Exportación
 
