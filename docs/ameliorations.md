@@ -55,7 +55,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 
 - [x] 3.1 DNG : opcodes `WarpRectilinear` et `FixVignetteRadial` (OpcodeList1‑3) lus et
   appliqués.
-- [ ] 3.2 Sony : distorsion, vignetage et aberration chromatique des makernotes ARW.
+- [x] 3.2 Sony : distorsion, vignetage et aberration chromatique des makernotes ARW.
 - [ ] 3.3 Fujifilm : données de correction du RAF.
 - [ ] 3.4 Olympus/OM et Panasonic : distorsion et vignetage des makernotes.
 - [ ] 3.5 Application automatique à l'ouverture, case « Corrections du boîtier »,
@@ -155,6 +155,9 @@ et blanc, vignetage après recadrage et grain existent).
 
 ## Idées
 
+- Corrections d'objectif sur le GPU : la correction des Sony coûte environ 150 ms sur
+  l'aperçu de 6 Mpx et 0,6 s en pleine taille à la première ouverture (ensuite, le
+  doublon de travail est déjà corrigé).
 - Une fusion (empilement, panorama) de DNG à opcodes n'applique pas leurs corrections
   d'objectif au résultat ; et un doublon de travail écrit avant la lecture des opcodes
   garde l'image non corrigée jusqu'à ce qu'il soit refait.
@@ -211,3 +214,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | Vitesse (photothèque) : `luma_raw::info` ne lit que le début du fichier (256 Ko, puis 1 et 4 Mo, le fichier entier en dernier recours et pour le CR3, dont des métadonnées sont dans les pistes) ; résultat identique au décodage complet, vérifié sur le corpus | `cargo run --release -p luma-raw --example info -- tests/raw-corpus/*`, cache du système vidé : lu sur le disque 189 → 34 Mo pour les 5 RAW (hors CR3 : 161 → 4 Mo) ; NEF 17–23 → 1,5 ms (47,6 → 1,9 Mo) ; RAF 22–25 → 0,6 ms (56,1 → 0,6 Mo) ; DNG 11–19 → 0,5 ms (29,2 → 0,5 Mo) ; ARW 28,5 → 1,0 Mo ; CR3 inchangé |
 | 2026-10-26 | 2.6 bis Métadonnées dans les TIFF : le TIFF est désormais écrit par LÜMA (une bande RVB non compressée, 8 ou 16 bits, profil ICC, EXIF avec IFD EXIF et GPS, XMP), avec le même écrivain d'IFD que l'EXIF des JPEG ; pixels écrits à la suite de l'en‑tête, sans copie | TIFF 16 bits ProPhoto d'un NEF 24 Mpx : pixels identiques à l'ancien encodeur, 146 030 650 octets au lieu de 146 030 934 ; rendu et écriture : 1667 ms au mieux contre 1613 (dans le bruit de la machine) |
 | 2026-10-26 | 3.1 Opcodes DNG (`luma_raw::opcodes`) : `WarpRectilinear` (distorsion radiale et tangentielle, par plan : aberration chromatique latérale) et `FixVignetteRadial` lus dans `OpcodeList2` et `OpcodeList3`, appliqués sur la mosaïque ou après le dématriçage, à toutes les tailles, au centre optique du capteur même recadré ; autres opcodes ignorés | Tests : lecture (et liste tronquée sans débordement), vignetage ×2 aux coins et inchangé au centre, distorsion nulle sans effet, barillet, trois plans, image recadrée ; même gain dans l'aperçu et en pleine taille. Le ProRAW du corpus n'a pas d'opcodes : rendu inchangé |
+| 2026-10-26 | 3.2 Corrections Sony (`opcodes::sony`, `Opcode::Spline`) : distorsion (0x7037), aberration chromatique rouge et bleue (0x7035) et vignetage (0x7032) lus dans le sous‑IFD de l'ARW, en courbes sur 16 nœuds ; une passe tabulée (rapport de rayon par couleur, gain de lumière) ; agrandissement minimal sans bord vide | Sony A7 III du corpus (FE 16‑35 GM à 32 mm) : coins +10 % de lumière au moins, zoom < 5 % ; aperçu 3000×2000 : 46 → 201 ms à la première ouverture (première version : 376 ms ; ensuite le doublon est déjà corrigé), pleine taille 24 Mpx : +0,6 s (jusqu'à 1,5 s à froid) ; les 246 tests du dépôt inchangés |
