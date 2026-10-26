@@ -428,35 +428,44 @@ impl Worker {
     }
 
     /// Exporte les photos l'une après l'autre, en arrière-plan.
-    pub fn export(&self, jobs: Vec<ExportJob>, options: ExportOptions) {
+    /// Exporte chaque photo vers chacun des réglages (ceux de la fenêtre, des
+    /// préréglages) : chaque photo est ouverte une fois ; deux fichiers du même nom sont
+    /// numérotés.
+    pub fn export(&self, jobs: Vec<ExportJob>, targets: Vec<ExportOptions>) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
-            let total = jobs.len();
+            let total = jobs.len() * targets.len();
             let mut taken = std::collections::HashSet::new();
+            let mut done = 0;
             for (k, job) in jobs.into_iter().enumerate() {
-                let result = match job.photo {
+                let photo = match job.photo {
                     Some(p) => Ok(p),
                     None => crate::dialogs::open_photo(&job.source)
                         .map(Arc::new)
                         .map_err(|e| e.to_string()),
+                };
+                // Le nom vient du modèle : date, boîtier, note… et le rang dans l'export.
+                let meta = read_meta(&job.source);
+                for options in &targets {
+                    let result = photo
+                        .clone()
+                        .and_then(|photo| {
+                            let fields = NameFields::of_photo(&job.source, &photo, &meta, k + 1);
+                            let out = luma_render::export::unique(
+                                export_path(&job.source, options, &fields),
+                                &mut taken,
+                            );
+                            export_one(&photo, &job.settings, &out, options, &meta).map(|()| out)
+                        })
+                        .map_err(|e| format!("{} : {e}", job.source.display()));
+                    done += 1;
+                    let _ = sender.send(Event::Exported {
+                        done,
+                        total,
+                        result,
+                    });
+                    repaint();
                 }
-                .and_then(|photo| {
-                    // Le nom vient du modèle : date, boîtier, note… et le rang dans l'export.
-                    let meta = read_meta(&job.source);
-                    let fields = NameFields::of_photo(&job.source, &photo, &meta, k + 1);
-                    let out = luma_render::export::unique(
-                        export_path(&job.source, &options, &fields),
-                        &mut taken,
-                    );
-                    export_one(&photo, &job.settings, &out, &options, &meta).map(|()| out)
-                })
-                .map_err(|e| format!("{} : {e}", job.source.display()));
-                let _ = sender.send(Event::Exported {
-                    done: k + 1,
-                    total,
-                    result,
-                });
-                repaint();
             }
         });
     }

@@ -76,6 +76,9 @@ La fototeca profesional, paso a paso.
   etiqueta; la ubicación GPS se quita por defecto, para que una foto compartida no diga
   dónde vive (`--keep-gps` la conserva). Los TIFF también los reciben (EXIF, XMP), con
   exactamente los mismos píxeles que antes.
+- **Exportación a varios ajustes preestablecidos a la vez**: marque «Web» e
+  «Impresión» en la ventana Exportar y cada foto va a los dos de una vez; guarde sus
+  ajustes como preestablecido; `luma export *.ARW --preset Web --preset Impression`.
 
 ## 0.2.0 — octubre de 2026
 

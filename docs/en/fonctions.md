@@ -87,6 +87,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | sRGB, Display P3, Rec. 2020, ProPhoto, with an embedded ICC profile | ✅ |
 | Resizing: long edge, short edge, width × height, megapixels, never enlarging (`--resize`) | ✅ |
 | Export dialog: format, quality, bit depth, colour space, size, folder; export every photo in the filter | ✅ |
+| Export to several presets at once (Export dialog: checkboxes, use, save; `luma export --preset A --preset B`) | ✅ |
 | Export presets (format, quality, bit depth, colour space, size, folder): web, full resolution, P3 display, print, and your own; `luma export-preset`, `luma develop --preset` | ✅ |
 | File name templates: `{nom}` (or `{name}`), `{date}`, `{séquence}` (`{sequence}`), `{boîtier}` (`{camera}`), `{objectif}` (`{lens}`), `{iso}`, `{note}` (`{rating}`), `{libellé}` (`{label}`)…, subfolders with “/”; in the Export dialog, presets and `luma develop --name` | ✅ |
 | Output sharpening: screen, matte paper, glossy paper; low, standard, high; at the final size (`--output-sharpen`) | ✅ |

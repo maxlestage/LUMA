@@ -73,6 +73,9 @@ The professional photo library, step by step.
   location is removed by default, so a shared photo doesn't say where you live
   (`--keep-gps` keeps it). TIFF files get them too (EXIF, XMP), with exactly the same
   pixels as before.
+- **Export to several presets at once**: tick “Web” and “Print” in the Export dialog
+  and each photo goes to both in one go; save your settings as a preset;
+  `luma export *.ARW --preset Web --preset Impression`.
 
 ## 0.2.0 — October 2026
 

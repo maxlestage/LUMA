@@ -533,6 +533,42 @@ fr = © 2026 votre nom
 en = © 2026 your name
 es = © 2026 su nombre
 
+fr = Exporter vers
+en = Export to
+es = Exportar a
+
+fr = Les réglages ci-dessous
+en = The settings below
+es = Los ajustes de abajo
+
+fr = Reprendre
+en = Use
+es = Usar
+
+fr = Enregistrer ces réglages
+en = Save these settings
+es = Guardar estos ajustes
+
+fr = Préréglage d'export enregistré : {name}
+en = Export preset saved: {name}
+es = Ajuste de exportación guardado: {name}
+
+fr = petit côté {n} px
+en = short edge {n} px
+es = lado corto {n} px
+
+fr = Web
+en = Web
+es = Web
+
+fr = Écran P3
+en = P3 display
+es = Pantalla P3
+
+fr = Impression
+en = Print
+es = Impresión
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos
