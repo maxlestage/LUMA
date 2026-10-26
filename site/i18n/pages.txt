@@ -1168,3 +1168,11 @@ es = La vista previa integrada en el RAW en 15 ms, luego las miniaturas retocada
 fr = Gains mesurés avec le même moteur sur Mac et sur Linux. Les temps sur iPhone et iPad remplaceront les objectifs dès les essais sur appareil.
 en = Gains measured with the same engine on Mac and Linux. Times on iPhone and iPad will replace the targets as soon as on-device testing begins.
 es = Mejoras medidas con el mismo motor en Mac y Linux. Los tiempos en iPhone y iPad sustituirán a los objetivos en cuanto empiecen las pruebas en el dispositivo.
+
+fr = Photos en portrait plus vite ouvertes
+en = Portrait photos open faster
+es = Las fotos en vertical se abren más rápido
+
+fr = L'image est réduite avant d'être tournée : 5 fois moins de temps pour la tourner (91 → 18 ms pour un ProRAW de l'iPhone).
+en = The image is reduced before it is rotated: 5 times less time to rotate it (91 → 18 ms for an iPhone ProRAW).
+es = La imagen se reduce antes de girarla: 5 veces menos tiempo para girarla (91 → 18 ms en un ProRAW del iPhone).
