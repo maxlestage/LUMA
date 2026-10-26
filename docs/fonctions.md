@@ -30,7 +30,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Balance automatique, préréglages (lumière du jour, nuageux, ombre, tungstène, fluorescent, flash), pipette (W) | ✅ |
 | | Exposition, Contraste | ✅ |
 | | Hautes lumières, Ombres (adaptatifs à l'image) | ✅ |
-| | Blancs, Noirs | 🟡 fixes, pas encore adaptatifs à l'image |
+| | Blancs, Noirs (adaptatifs : amènent les vrais extrêmes de la photo au blanc et au noir) | ✅ |
 | | Texture, Clarté, Correction du voile | ✅ |
 | | Vibrance, Saturation | ✅ |
 | Courbe des tonalités | Paramétrique (4 régions, 3 séparations) | ✅ |
