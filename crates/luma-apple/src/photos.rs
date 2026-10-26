@@ -19,8 +19,8 @@ pub fn imported() -> usize {
 }
 
 /// Ouvre le sélecteur de Photos ; les photos choisies arrivent dans `dest`. À appeler sur
-/// le fil principal. `false` s'il n'a pas pu s'ouvrir (ailleurs qu'iPhone et iPad).
-pub fn pick(dest: PathBuf) -> bool {
+/// le fil principal. En cas d'échec, ce qui a manqué (pour le dire à l'utilisateur).
+pub fn pick(dest: PathBuf) -> Result<(), &'static str> {
     #[cfg(target_os = "ios")]
     {
         ios::pick(dest)
@@ -28,7 +28,7 @@ pub fn pick(dest: PathBuf) -> bool {
     #[cfg(not(target_os = "ios"))]
     {
         let _ = dest;
-        false
+        Err("pas de Photos ici")
     }
 }
 
@@ -161,16 +161,24 @@ mod ios {
         Some(top)
     }
 
-    pub fn pick(dest: PathBuf) -> bool {
-        let Some(mtm) = MainThreadMarker::new() else {
-            return false;
-        };
-        let Some(top) = top_controller(mtm) else {
-            return false;
-        };
-        let Some(class) = AnyClass::get(c"PHPickerViewController") else {
-            return false;
-        };
+    unsafe extern "C" {
+        fn dlopen(path: *const std::ffi::c_char, mode: std::ffi::c_int) -> *mut std::ffi::c_void;
+    }
+
+    /// La classe du sélecteur ; si PhotosUI n'est pas encore chargé, on le charge.
+    fn picker_class() -> Option<&'static AnyClass> {
+        AnyClass::get(c"PHPickerViewController").or_else(|| {
+            // SAFETY: dlopen d'un framework du système, par son chemin fixe ; le
+            // pointeur rendu n'est pas utilisé (le framework reste chargé).
+            let _ = unsafe { dlopen(c"/System/Library/Frameworks/PhotosUI.framework/PhotosUI".as_ptr(), 1) };
+            AnyClass::get(c"PHPickerViewController")
+        })
+    }
+
+    pub fn pick(dest: PathBuf) -> Result<(), &'static str> {
+        let mtm = MainThreadMarker::new().ok_or("hors du fil principal")?;
+        let class = picker_class().ok_or("PhotosUI introuvable")?;
+        let top = top_controller(mtm).ok_or("fenêtre introuvable")?;
         // SAFETY: configuration du sélecteur, objets neufs ; « Current » garde le fichier
         // d'origine (pas de conversion en JPEG), 0 = autant de photos qu'on veut.
         let config = unsafe {
@@ -203,7 +211,7 @@ mod ios {
                 msg_send![&top, presentViewController: &*picker, animated: true, completion: None::<&Block<dyn Fn()>>];
         }
         DELEGATE.with(|d| *d.borrow_mut() = Some(delegate));
-        true
+        Ok(())
     }
 }
 

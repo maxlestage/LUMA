@@ -2002,10 +2002,11 @@ impl Studio {
                 // Sur iPhone et iPad : le sélecteur de Photos ; les photos choisies sont
                 // copiées dans le dossier de LÜMA, relu dès qu'elles arrivent.
                 if luma_apple::photos::AVAILABLE {
-                    let opened = crate::dialogs::documents().is_some_and(luma_apple::photos::pick);
-                    if !opened {
-                        self.status =
-                            tr("Photos ne s'ouvre pas : réessayez dans un instant.").to_owned();
+                    let opened = crate::dialogs::documents()
+                        .ok_or("dossier Documents introuvable")
+                        .and_then(luma_apple::photos::pick);
+                    if let Err(why) = opened {
+                        self.status = trf("Photos ne s'ouvre pas ({why}).", &[("why", &why)]);
                     }
                 } else if let Some(p) = crate::dialogs::pick_raw() {
                     self.open_path(&p);
