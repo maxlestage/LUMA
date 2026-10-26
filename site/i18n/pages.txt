@@ -1092,3 +1092,15 @@ es = **8,3 ms**: el presupuesto de una imagen a 120 Hz. Una vista previa tras un
 fr = L'aperçu intégré au RAW, aussitôt ; puis le vrai rendu : {v} ms.
 en = The preview embedded in the raw file, at once; then the true rendering: {v} ms.
 es = La vista previa integrada en el RAW, al instante; luego el renderizado real: {v} ms.
+
+fr = *{n}* fonctions déjà là. Toutes testées.
+en = *{n}* features already here. All tested.
+es = *{n}* funciones ya disponibles. Todas probadas.
+
+fr = Chaque fonction cochée est faite et vérifiée par les tests à chaque version. La liste s'allonge chaque jour.
+en = Every ticked feature is done and checked by the tests with every release. The list grows every day.
+es = Cada función marcada está hecha y verificada por las pruebas en cada versión. La lista crece cada día.
+
+fr = Et ce qui vient : {n} fonctions en préparation →
+en = And what's next: {n} features in the works →
+es = Y lo que viene: {n} funciones en preparación →

@@ -326,6 +326,23 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 
 /* ── Performance ───────────────────────────────────────── */
 .perf { background: var(--bg); }
+/* Ce que LÜMA fait : les fonctions faites et testées, cochées. */
+.caps { background: var(--bg); }
+.cap-grid { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cap-group:first-child { grid-row: span 3; }
+.cap-group:first-child ul { display: block; columns: 2 260px; column-gap: 28px; }
+.cap-group:first-child li { break-inside: avoid; margin-bottom: 10px; }
+.cap-group { padding: 26px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); }
+.cap-group h3 { font-size: 1.05rem; letter-spacing: -0.01em; margin: 0 0 16px; }
+.cap-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cap-group li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: .9rem; line-height: 1.45; color: var(--muted); }
+.cap-check { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: .72rem; font-weight: 700; color: var(--bg); background: var(--spectrum); }
+.cap-panel { display: block; color: var(--text); font-weight: 600; font-size: .82rem; margin-bottom: 2px; }
+.cap-group code { font-size: .8em; }
+.cap-more { text-align: center; margin: 36px 0 0; }
+.cap-more a { color: var(--gold); }
+.cap-more a:hover { color: var(--text); }
+@media (max-width: 900px) { .cap-grid { grid-template-columns: 1fr; } .cap-group:first-child { grid-row: auto; } }
 .perf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1240px; margin: 0 auto; }
 .perf-card { padding: 26px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); }
 .perf-card h3 { font-size: 1.05rem; letter-spacing: -0.01em; margin-bottom: 20px; }
