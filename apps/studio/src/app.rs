@@ -70,14 +70,18 @@ pub fn scan(dir: &Path) -> Vec<PathBuf> {
         .filter(|c| files.contains(&luma_project::copies::source(c)))
         .collect();
     files.extend(copies);
-    // Chaque photo, puis ses copies dans l'ordre de leur numéro.
+    sort_photos(&mut files);
+    files
+}
+
+/// Chaque photo, puis ses copies dans l'ordre de leur numéro.
+fn sort_photos(files: &mut [PathBuf]) {
     files.sort_by_key(|p| {
         (
             luma_project::copies::source(p),
             luma_project::copies::number(p),
         )
     });
-    files
 }
 
 /// Un réglage du panneau : son curseur et l'endroit où il vit dans les réglages.
@@ -513,6 +517,13 @@ pub struct Studio {
     catalog_path: Option<PathBuf>,
     indexing: Option<std::sync::mpsc::Receiver<luma_library::Catalog>>,
     pending_index: Vec<PathBuf>,
+    /// Le dossier surveillé, et quand le relever.
+    watch: Option<luma_library::watch::Watch>,
+    watch_next: f64,
+    /// Les photos arrivées depuis le début de la surveillance.
+    watch_count: usize,
+    /// Chaque photo arrivée est ouverte.
+    watch_follow: bool,
     /// Les dossiers et les collections du catalogue, avec leur nombre de photos
     /// (recalculés quand le catalogue change, pas à chaque image).
     catalog_folders: Vec<(PathBuf, usize)>,
@@ -695,6 +706,10 @@ impl Studio {
             catalog_path: None,
             indexing: None,
             pending_index: Vec::new(),
+            watch: None,
+            watch_next: 0.0,
+            watch_count: 0,
+            watch_follow: true,
             catalog_folders: Vec::new(),
             catalog_collections: Vec::new(),
             view: View::Folder,
@@ -847,6 +862,87 @@ impl Studio {
             let _ = tx.send(catalog);
         });
         self.indexing = Some(rx);
+    }
+
+    /// Surveille un dossier : il s'ouvre, et les photos qui y arriveront entreront dans
+    /// la photothèque et dans le film.
+    pub fn watch_folder(&mut self, dir: &Path) {
+        self.open_path(dir);
+        self.watch = Some(luma_library::watch::Watch::new(dir));
+        self.watch_count = 0;
+    }
+
+    pub fn stop_watching(&mut self) {
+        self.watch = None;
+    }
+
+    /// Le dossier surveillé, et le nombre de photos arrivées.
+    pub fn watching(&self) -> Option<(&Path, usize)> {
+        self.watch.as_ref().map(|w| (w.dir(), self.watch_count))
+    }
+
+    /// Ouvrir chaque photo arrivée, ou seulement l'ajouter au film.
+    pub fn set_watch_follow(&mut self, follow: bool) {
+        self.watch_follow = follow;
+    }
+
+    /// Relève le dossier surveillé (toutes les secondes ; les essais l'appellent
+    /// eux‑mêmes) : les photos complètes entrent dans la photothèque et, si le dossier
+    /// est à l'écran, dans le film ; la dernière est ouverte.
+    pub fn poll_watch(&mut self) {
+        let Some(w) = &mut self.watch else { return };
+        let new = w.poll();
+        if new.is_empty() {
+            return;
+        }
+        let dir = w.dir().to_path_buf();
+        self.watch_count += new.len();
+        self.index_folder(dir.clone());
+        let shown = self.view == View::Folder
+            && self
+                .folder
+                .first()
+                .and_then(|p| p.parent())
+                .is_none_or(|d| d == dir);
+        if !shown {
+            return;
+        }
+        let current = self.current_path().map(Path::to_path_buf);
+        // La sélection suit ses photos, pas leurs places dans le film.
+        let selected: Vec<PathBuf> = self
+            .selected
+            .iter()
+            .filter_map(|&i| self.folder.get(i).cloned())
+            .collect();
+        for p in &new {
+            if self.folder.contains(p) {
+                continue;
+            }
+            self.folder.push(p.clone());
+            self.worker.thumbnail(p.clone());
+            self.meta.insert(p.clone(), read_meta(p));
+            let edits = read_sidecar(p)
+                .map(|s| presets::summary(&s))
+                .unwrap_or_default();
+            self.edits.insert(p.clone(), edits);
+        }
+        sort_photos(&mut self.folder);
+        self.selected = selected
+            .iter()
+            .filter_map(|s| self.folder.iter().position(|p| p == s))
+            .collect();
+        let follow = self.watch_follow || current.is_none();
+        let target = if follow { new.last().cloned() } else { current };
+        if let Some(i) = target.and_then(|t| self.folder.iter().position(|p| *p == t)) {
+            if follow {
+                // Une autre photo est peut‑être à cette place, désormais.
+                self.current = None;
+                self.select(i);
+            } else {
+                // Le film a changé d'ordre : la photo ouverte garde la sienne.
+                self.current = Some(i);
+            }
+        }
     }
 
     /// Reprend le catalogue mis à jour, s'il est prêt.
@@ -1019,6 +1115,11 @@ impl Studio {
     }
 
     /// Les photos qui passent le filtre, dans l'ordre du dossier.
+    /// Les photos du film, dans l'ordre.
+    pub fn photos(&self) -> &[PathBuf] {
+        &self.folder
+    }
+
     pub fn visible(&self) -> Vec<usize> {
         (0..self.folder.len())
             .filter(|i| {
@@ -2217,6 +2318,14 @@ impl Studio {
             }
         }
         self.poll_catalog();
+        if self.watch.is_some() {
+            let now = ctx.input(|i| i.time);
+            if now >= self.watch_next {
+                self.watch_next = now + 1.0;
+                self.poll_watch();
+            }
+            ctx.request_repaint_after(std::time::Duration::from_secs(1));
+        }
         // Corrections du boîtier coupées sur une photo ouverte depuis son doublon, qui les
         // porte dans ses pixels : la relire depuis le RAW.
         if let (Some(photo), Some(path)) = (&self.photo, self.current_path())
@@ -3567,6 +3676,8 @@ impl Studio {
     fn library_left(&mut self, ui: &mut Ui) {
         self.catalog_panel(ui);
         ui.add_space(14.0);
+        self.watch_panel(ui);
+        ui.add_space(14.0);
         section_title(ui, tr("Dossier"));
         let dir = match &self.view {
             View::Folder => self
@@ -3641,6 +3752,59 @@ impl Studio {
 
     /// La photothèque : la recherche, toutes les photos, les collections et les dossiers
     /// du catalogue, chacun avec son nombre de photos.
+    fn watch_panel(&mut self, ui: &mut Ui) {
+        section_title(ui, tr("Dossier surveillé"));
+        let mut stop = false;
+        let mut follow = self.watch_follow;
+        if let Some((dir, n)) = self.watching() {
+            let name = dir.file_name().map_or_else(
+                || dir.display().to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            );
+            ui.label(RichText::new(name).size(12.0))
+                .on_hover_text(dir.display().to_string());
+            ui.label(
+                RichText::new(if n == 1 {
+                    tr("1 nouvelle photo").to_owned()
+                } else {
+                    trf("{n} nouvelles photos", &[("n", &n)])
+                })
+                .size(11.5)
+                .color(theme::DIM),
+            );
+            ui.checkbox(&mut follow, tr("Ouvrir chaque nouvelle photo"));
+            stop = ui.button(tr("Arrêter la surveillance")).clicked();
+        } else {
+            ui.label(
+                RichText::new(tr(
+                    "Les photos qui arrivent dans le dossier (boîtier relié, carte copiée) s'affichent aussitôt",
+                ))
+                .size(11.0)
+                .color(theme::DIM),
+            );
+            let current = (self.view == View::Folder)
+                .then(|| self.folder.first().and_then(|p| p.parent()))
+                .flatten()
+                .map(Path::to_path_buf);
+            ui.horizontal_wrapped(|ui| {
+                if let Some(dir) = current
+                    && ui.button(tr("Surveiller ce dossier")).clicked()
+                {
+                    self.watch_folder(&dir);
+                }
+                if ui.button(tr("Choisir un dossier…")).clicked()
+                    && let Some(dir) = crate::dialogs::pick_folder(tr("Dossier à surveiller"))
+                {
+                    self.watch_folder(&dir);
+                }
+            });
+        }
+        self.watch_follow = follow;
+        if stop {
+            self.stop_watching();
+        }
+    }
+
     fn catalog_panel(&mut self, ui: &mut Ui) {
         section_title(ui, tr("Photothèque"));
         let edit = ui.add(
@@ -4210,6 +4374,9 @@ impl Studio {
         let mut badges = Vec::new();
         if self.before {
             badges.push(tr("Avant"));
+        }
+        if self.watch.is_some() {
+            badges.push(tr("Dossier surveillé"));
         }
         if self.loading.is_some() || self.shown != self.generation {
             badges.push(tr("Rendu…"));

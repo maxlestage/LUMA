@@ -81,6 +81,10 @@ USAGE
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
+  luma watch <dossier> [--catalog f.lumacat] [--interval secondes]
+      Surveille un dossier (prise de vue en connexion, carte copiée) : chaque photo
+      arrivée, une fois complète, entre dans la photothèque et s'affiche (boîtier,
+      objectif, réglages). Relevé toutes les secondes par défaut ; Ctrl+C pour arrêter.
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -1219,6 +1223,63 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// Surveille un dossier : chaque photo arrivée entre dans la photothèque.
+fn watch(args: Vec<String>) -> Result<(), String> {
+    let mut dir = None;
+    let mut file = None;
+    let mut interval = 1.0f64;
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--catalog" => file = Some(PathBuf::from(it.next().ok_or("--catalog : fichier attendu")?)),
+            "--interval" => {
+                interval = it
+                    .next()
+                    .and_then(|v| v.replace(',', ".").parse().ok())
+                    .filter(|v: &f64| *v >= 0.1)
+                    .ok_or("--interval : nombre de secondes attendu (0,1 au moins)")?
+            }
+            _ => dir = Some(PathBuf::from(a)),
+        }
+    }
+    let dir = dir.ok_or("il faut un dossier à surveiller")?;
+    if !dir.is_dir() {
+        return Err(format!("{} n'est pas un dossier", dir.display()));
+    }
+    let file = file
+        .or_else(luma_library::default_path)
+        .ok_or("pas de photothèque (--catalog)")?;
+    let mut catalog = luma_library::Catalog::load(&file);
+    let mut w = luma_library::watch::Watch::new(&dir);
+    eprintln!("surveillance de {} (Ctrl+C pour arrêter)", dir.display());
+    loop {
+        let new = w.poll();
+        if !new.is_empty() {
+            catalog.add_folder(&dir, false);
+            catalog.save(&file).map_err(|e| e.to_string())?;
+            for p in new {
+                let name = p
+                    .file_name()
+                    .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+                let about = catalog.get(&p).map_or_else(String::new, |e| {
+                    let mut parts = vec![format!("{} {}", e.make, e.model).trim().to_owned()];
+                    parts.push(e.lens.clone());
+                    if let Some(iso) = e.iso {
+                        parts.push(format!("ISO {iso}"));
+                    }
+                    if let Some(f) = e.aperture {
+                        parts.push(format!("f/{f:.1}"));
+                    }
+                    parts.retain(|s| !s.is_empty());
+                    parts.join(" · ")
+                });
+                println!("{name}\t{about}");
+            }
+        }
+        std::thread::sleep(Duration::from_secs_f64(interval));
+    }
+}
+
 /// Décrit un profil ICC.
 fn icc(path: &Path) -> Result<(), String> {
     use luma_color::profile::{Class, Intent, Pcs, Profile, Space, xyz_to_lab};
@@ -1375,6 +1436,15 @@ fn main() -> ExitCode {
                 );
                 ExitCode::SUCCESS
             }
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "watch" {
+        return match watch(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");
                 ExitCode::FAILURE
