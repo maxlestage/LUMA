@@ -106,6 +106,8 @@ La fototeca profesional, paso a paso.
   (degradado lineal o radial, pincel, cada una invertible); un radial al que se le
   resta otro se convierte en un anillo, un pincel restado protege una cara bajo un
   degradado.
+- **Zona de la máscara a su gusto**: la zona mostrada (O) puede ser roja, verde,
+  azul, blanca o blanca sobre negro, con una opacidad del 10 al 100 %.
 - **Perfiles ICC leídos** (un paso hacia la prueba en pantalla): perfiles de
   pantallas (matriz y curvas) y de impresoras y papeles (tablas lut8, lut16, A→B y
   B→A, versiones 2 y 4), en ambos sentidos y para las cuatro intenciones de

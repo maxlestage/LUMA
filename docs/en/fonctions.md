@@ -58,6 +58,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
 | | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
+| | Mask area shown (O) in red, green, blue, white or white on black, opacity from 10 to 100% | ✅ |
 | | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing, clone, red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
