@@ -2794,3 +2794,41 @@ es = Elija sus fotos en Fotos: RAW, ProRAW, HEIC, JPEG.
 fr = Aucune photo pour l'instant : touchez « Importer des photos ».
 en = No photos yet: tap “Import photos”.
 es = Aún no hay fotos: toque «Importar fotos».
+
+# ----- Dossier surveillé -----
+
+fr = Dossier surveillé
+en = Watched folder
+es = Carpeta vigilada
+
+fr = {n} nouvelles photos
+en = {n} new photos
+es = {n} fotos nuevas
+
+fr = 1 nouvelle photo
+en = 1 new photo
+es = 1 foto nueva
+
+fr = Ouvrir chaque nouvelle photo
+en = Open each new photo
+es = Abrir cada foto nueva
+
+fr = Arrêter la surveillance
+en = Stop watching
+es = Dejar de vigilar
+
+fr = Les photos qui arrivent dans le dossier (boîtier relié, carte copiée) s'affichent aussitôt
+en = Photos arriving in the folder (tethered camera, copied card) appear right away
+es = Las fotos que llegan a la carpeta (cámara conectada, tarjeta copiada) aparecen al instante
+
+fr = Surveiller ce dossier
+en = Watch this folder
+es = Vigilar esta carpeta
+
+fr = Choisir un dossier…
+en = Choose a folder…
+es = Elegir una carpeta…
+
+fr = Dossier à surveiller
+en = Folder to watch
+es = Carpeta que vigilar

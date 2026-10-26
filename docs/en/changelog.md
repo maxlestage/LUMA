@@ -128,6 +128,10 @@ The professional photo library, step by step.
   and brightness, “Black ink” the ink's real black, lighter than the screen's;
   without them, the paper white and the ink black are mapped to the screen's white
   and black.
+- **Watched folder** (Library): photos arriving in a folder (tethered camera, copied
+  card) enter the catalog and the filmstrip as soon as they are complete, and the
+  latest one opens (or is only added, your choice); `luma watch folder` does the same
+  from the command line.
 
 ## 0.2.0 — October 2026
 
