@@ -591,9 +591,9 @@ fr = Fermer
 en = Close
 es = Cerrar
 
-fr = Le plus avantageux
-en = Best value
-es = La mejor opción
+fr = Un seul paiement par an
+en = One payment a year
+es = Un solo pago al año
 
 fr = S'abonner
 en = Subscribe
@@ -679,9 +679,9 @@ fr = Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto
 en = JPEG, PNG and 16-bit TIFF export, in P3 and ProPhoto
 es = Exportación JPEG, PNG y TIFF de 16 bits, en P3 y ProPhoto
 
-fr = Mac, iPhone et iPad, et toutes les mises à jour
-en = Mac, iPhone and iPad, and every update
-es = Mac, iPhone y iPad, y todas las actualizaciones
+fr = Sur Mac, avec toutes les mises à jour
+en = On Mac, with every update
+es = En Mac, con todas las actualizaciones
 
 fr = Mensuel
 en = Monthly
@@ -691,13 +691,13 @@ fr = Annuel
 en = Annual
 es = Anual
 
-fr = 9,99 €
-en = €9.99
-es = 9,99 €
+fr = 19,99 €
+en = €19.99
+es = 19,99 €
 
-fr = 79,99 €
-en = €79.99
-es = 79,99 €
+fr = 239,88 €
+en = €239.88
+es = 239,88 €
 
 fr = par mois
 en = per month
@@ -711,9 +711,9 @@ fr = Sans engagement, résiliable à tout moment.
 en = No commitment, cancel anytime.
 es = Sin permanencia, cancela cuando quieras.
 
-fr = Deux mois offerts : 6,67 € par mois.
-en = Two months free: €6.67 per month.
-es = Dos meses gratis: 6,67 € al mes.
+fr = Soit 19,99 € par mois, en un seul paiement.
+en = That's €19.99 per month, in a single payment.
+es = O sea 19,99 € al mes, en un solo pago.
 
 # Les refus de clé (luma-licence) et du serveur des clés (site).
 

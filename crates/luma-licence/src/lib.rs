@@ -53,8 +53,8 @@ impl Plan {
     /// Le prix affiché (TTC, en euros).
     pub fn price(self) -> &'static str {
         match self {
-            Plan::Monthly => "9,99 €",
-            Plan::Annual => "79,99 €",
+            Plan::Monthly => "19,99 €",
+            Plan::Annual => "239,88 €",
         }
     }
 
@@ -69,7 +69,7 @@ impl Plan {
     pub fn note(self) -> &'static str {
         match self {
             Plan::Monthly => "Sans engagement, résiliable à tout moment.",
-            Plan::Annual => "Deux mois offerts : 6,67 € par mois.",
+            Plan::Annual => "Soit 19,99 € par mois, en un seul paiement.",
         }
     }
 
@@ -499,7 +499,7 @@ mod tests {
 
     #[test]
     fn plans_have_their_prices_and_forms_are_encoded() {
-        assert_eq!(Plan::Annual.price(), "79,99 €");
+        assert_eq!(Plan::Annual.price(), "239,88 €");
         assert_eq!(Plan::from_interval("year"), Plan::Annual);
         assert_eq!(form_encode(&[("a b", "é&=")]), "a+b=%C3%A9%26%3D");
         let (secret, public) = keypair([3; 32]);
