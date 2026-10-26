@@ -553,7 +553,11 @@ mod tests {
         assert!(html.contains("cargo deny --target aarch64-apple-ios check"));
         assert!(html.contains("/js/scenes.js?v="));
         assert!(html.contains(r#"id="tarifs""#));
-        assert!(html.contains("239,88 €") && html.contains("19,99 €"));
+        // Les prix : le montant (qui monte à l'écran) puis le symbole.
+        assert!(
+            html.contains(r#"data-sep=",">239,88</i> €"#)
+                && html.contains(r#"data-sep=",">19,99</i> €"#)
+        );
         // Le téléchargement est fermé tant que LUMA_DOWNLOADS ne vaut pas 1.
         assert!(!html.contains("/download/LUMA-macos.zip") && !html.contains("Télécharger"));
         assert!(
@@ -700,7 +704,11 @@ mod tests {
         let client = client().await;
         let en = client.get("/en/").await.text();
         assert!(en.contains("<title>LÜMA — Light, developed in Rust</title>"));
-        assert!(en.contains("€19.99") && en.contains("€239.88") && en.contains("per month"));
+        assert!(
+            en.contains(r#"€<i data-count="19.99""#)
+                && en.contains(">239.88</i>")
+                && en.contains("per month")
+        );
         assert!(en.contains(r#"data-island="lab" data-props="en""#));
         assert!(en.contains(r#"data-island="crates" data-props="en""#));
         assert!(
@@ -731,7 +739,7 @@ mod tests {
         }
         let es = client.get("/es/").await.text();
         assert!(es.contains("<title>LÜMA — La luz, revelada en Rust</title>"));
-        assert!(es.contains("19,99 €") && es.contains("al mes"));
+        assert!(es.contains(">19,99</i> €") && es.contains("al mes"));
         assert!(es.contains(r#"data-props="es""#));
         for french in [
             "Télécharger",

@@ -587,7 +587,16 @@ html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(11
 .download .apple-logo { width: 18px; height: 18px; display: block; }
 .download-note { color: var(--muted); font-size: .9rem; max-width: 420px; }
 .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
-.plan { padding: 30px; border-radius: 26px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 10px; }
+.plan { position: relative; padding: 30px; border-radius: 26px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 10px; }
+/* L'annuel : un anneau de lumière aux couleurs du spectre tourne sur son bord. */
+@property --ring { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.plan-best::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--ring), transparent 0 55%, var(--gold) 70%, var(--orange) 78%, var(--violet) 86%, var(--blue) 93%, transparent);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: ring 6s linear infinite; }
+@keyframes ring { to { --ring: 360deg; } }
+.plan-price i { font-style: normal; font-variant-numeric: tabular-nums; }
 .plan-best { background: linear-gradient(160deg, rgba(255, 196, 102, .10), rgba(76, 198, 255, .06) 60%, rgba(157, 88, 255, .08)); box-shadow: inset 0 0 0 1.5px rgba(255, 181, 71, .7); }
 .plan-name { font-weight: 600; letter-spacing: .02em; display: flex; gap: 12px; align-items: baseline; }
 .plan-tag { font-size: .75rem; font-weight: 500; color: var(--gold); }

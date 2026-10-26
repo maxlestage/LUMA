@@ -501,23 +501,26 @@ fn capabilities(lang: Lang) -> Element {
         article()
             .class("cap-group reveal")
             .child(h3().text(title.clone()))
-            .child(ul().children(items.iter().map(|(panel, feature)| {
-                li().child(
-                    span()
-                        .class("cap-check")
-                        .attr("aria-hidden", "true")
-                        .text("✔"),
-                )
-                .child(
-                    span()
+            .child(
+                ul().children(items.iter().enumerate().map(|(k, (panel, feature))| {
+                    li().style(format!("--i:{}", k.min(24)))
                         .child(
-                            panel
-                                .as_ref()
-                                .map(|p| span().class("cap-panel").text(p.clone())),
+                            span()
+                                .class("cap-check")
+                                .attr("aria-hidden", "true")
+                                .text("✔"),
                         )
-                        .children(rich(feature)),
-                )
-            })))
+                        .child(
+                            span()
+                                .child(
+                                    panel
+                                        .as_ref()
+                                        .map(|p| span().class("cap-panel").text(p.clone())),
+                                )
+                                .children(rich(feature)),
+                        )
+                })),
+            )
     });
     section()
         .class("caps")
@@ -684,6 +687,15 @@ fn cta(lang: Lang) -> Element {
 /// Tarifs et téléchargement : LÜMA Premium, 14 jours d'essai, puis au mois ou à l'an.
 /// Les liens de paiement viennent de `LUMA_CHECKOUT_MONTHLY` et `LUMA_CHECKOUT_ANNUAL`
 /// (liens de paiement Stripe) ; sans eux, les boutons attendent.
+/// Un prix en trois morceaux : ce qui précède le montant, le montant, ce qui le suit.
+fn price_parts(price: &str) -> (&str, &str, &str) {
+    let start = price.find(|c: char| c.is_ascii_digit()).unwrap_or(0);
+    let end = price
+        .rfind(|c: char| c.is_ascii_digit())
+        .map_or(price.len(), |i| i + 1);
+    (&price[..start], &price[start..end], &price[end..])
+}
+
 fn pricing(lang: Lang) -> Element {
     type Plan = (
         &'static str,
@@ -712,9 +724,9 @@ fn pricing(lang: Lang) -> Element {
         };
         div()
             .class(if best {
-                "plan plan-best reveal"
+                "plan plan-best reveal tilt"
             } else {
-                "plan reveal"
+                "plan reveal tilt"
             })
             .child(
                 p().class("plan-name")
@@ -725,11 +737,21 @@ fn pricing(lang: Lang) -> Element {
                             .text(t(lang, "Un seul paiement par an"))
                     })),
             )
-            .child(
+            .child({
+                // Le montant monte de zéro à l'écran, comme les compteurs ; le symbole
+                // reste à sa place (« 19,99 € », « €19.99 »).
+                let (before, amount, after) = price_parts(t(lang, price));
                 p().class("plan-price")
-                    .text(t(lang, price))
-                    .child(span().text(format!(" {}", t(lang, period)))),
-            )
+                    .child(text(before))
+                    .child(
+                        i().attr("data-count", amount.replace(',', "."))
+                            .attr("data-decimals", "2")
+                            .attr("data-sep", if amount.contains(',') { "," } else { "." })
+                            .text(amount),
+                    )
+                    .child(text(after))
+                    .child(span().text(format!(" {}", t(lang, period))))
+            })
             .child(p().class("plan-note").text(t(lang, note)))
             .child(button)
     };
