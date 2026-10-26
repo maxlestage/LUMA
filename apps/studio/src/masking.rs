@@ -289,7 +289,53 @@ pub fn edit(ui: &mut Ui, rect: Rect, mask: &mut Mask, brush: &Brush) -> Change {
     change
 }
 
-/// Le masque en rouge par‑dessus la photo (touche O) : une image de `w × h`. La plage
+/// Les couleurs de l'affichage de la zone (O) ; la dernière montre la zone en blanc sur
+/// noir, sans la photo.
+pub const COLORS: [(&str, Color32); 5] = [
+    ("Rouge", Color32::from_rgb(255, 40, 60)),
+    ("Vert", Color32::from_rgb(40, 220, 90)),
+    ("Bleu", Color32::from_rgb(40, 120, 255)),
+    ("Blanc", Color32::WHITE),
+    ("Blanc sur noir", Color32::WHITE),
+];
+
+/// L'affichage de la zone du masque : une couleur de [`COLORS`] et son opacité (10 à
+/// 100 %). Changer l'un ou l'autre ne recalcule pas la zone : la teinte s'applique au
+/// dessin.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Overlay {
+    pub color: usize,
+    pub opacity: f32,
+}
+
+impl Default for Overlay {
+    fn default() -> Self {
+        Self {
+            color: 0,
+            opacity: 60.0,
+        }
+    }
+}
+
+impl Overlay {
+    fn alpha(&self) -> u8 {
+        (self.opacity.clamp(10.0, 100.0) * 2.55).round() as u8
+    }
+
+    /// La teinte de l'image de [`overlay`] (blanche) : sa couleur à son opacité.
+    pub fn tint(&self) -> Color32 {
+        let c = COLORS[self.color.min(COLORS.len() - 1)].1;
+        Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), self.alpha())
+    }
+
+    /// Le fond posé sous la zone : du noir pour « Blanc sur noir ».
+    pub fn backdrop(&self) -> Option<Color32> {
+        (self.color >= COLORS.len() - 1).then(|| Color32::from_black_alpha(self.alpha()))
+    }
+}
+
+/// La zone du masque par‑dessus la photo (touche O) : une image blanche de `w × h`, dont
+/// l'opacité est le poids du masque, teintée au dessin par [`Overlay::tint`]. La plage
 /// du masque, s'il en a une, se lit sur `scene` (une copie réduite de la base).
 pub fn overlay(
     mask: &Mask,
@@ -304,7 +350,44 @@ pub fn overlay(
     let pixels = weights
         .data
         .iter()
-        .map(|&v| Color32::from_rgba_unmultiplied(255, 40, 60, (v.clamp(0.0, 1.0) * 150.0) as u8))
+        .map(|&v| Color32::from_white_alpha((v.clamp(0.0, 1.0) * 255.0).round() as u8))
         .collect();
     egui::ColorImage::new([w, h], pixels)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlay_is_tinted_when_drawn() {
+        let mask = Mask::full();
+        let image = overlay(&mask, 4, 3, None);
+        assert!(image.pixels.iter().all(|&p| p == Color32::WHITE));
+        // Par défaut : rouge à 60 %, comme avant les réglages.
+        let style = Overlay::default();
+        assert_eq!(
+            style.tint(),
+            Color32::from_rgba_unmultiplied(255, 40, 60, 153)
+        );
+        assert_eq!(style.backdrop(), None);
+        // Le dessin multiplie la teinte par l'image : une zone à moitié couverte reste à
+        // moitié aussi opaque.
+        let half = Color32::from_white_alpha(128);
+        let drawn = style.tint().to_srgba_unmultiplied();
+        assert_eq!(drawn[3] as u32 * half.a() as u32 / 255, 76);
+        let bw = Overlay {
+            color: COLORS.len() - 1,
+            opacity: 100.0,
+        };
+        assert_eq!(bw.tint(), Color32::WHITE);
+        assert_eq!(bw.backdrop(), Some(Color32::BLACK));
+        // Hors des bornes : ramené à 10 % et à la dernière couleur.
+        let odd = Overlay {
+            color: 99,
+            opacity: 0.0,
+        };
+        assert_eq!(odd.tint().a(), 26);
+        assert!(odd.backdrop().is_some());
+    }
 }

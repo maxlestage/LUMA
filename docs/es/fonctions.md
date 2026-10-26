@@ -59,6 +59,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Máscaras restringidas a un rango de luminancia (mínimo, máximo, suavizado) o de color (tono, anchura, suavizado; grises excluidos), leído sobre la foto; zona visible (O) | ✅ |
 | | Pincel que sigue los bordes: cada toque solo pinta los tonos cercanos a su centro, la zona se detiene en los contornos de la foto | ✅ |
 | | Combinaciones de máscaras: añadir, restar, intersecar otras formas (cada una invertible) | ✅ |
+| | Zona de la máscara mostrada (O) en rojo, verde, azul, blanco o blanco sobre negro, opacidad del 10 al 100 % | ✅ |
 | | Lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Corrección, clonar, ojos rojos, eliminar | ⏳ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
