@@ -132,6 +132,10 @@ The professional photo library, step by step.
   card) enter the catalog and the filmstrip as soon as they are complete, and the
   latest one opens (or is only added, your choice); `luma watch folder` does the same
   from the command line.
+- **Tethered camera, on Mac** (Watched folder): “Tether a camera” opens the plugged-in
+  camera (USB, or network if it allows) through the system framework; each photo
+  taken arrives in the watched folder and opens, those already on the card stay
+  where they are; “Release shutter” for cameras that can be triggered remotely.
 
 ## 0.2.0 — October 2026
 

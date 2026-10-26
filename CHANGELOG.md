@@ -140,6 +140,11 @@ La photothèque professionnelle, étape par étape.
   (boîtier relié, carte copiée) entrent dans la photothèque et le film dès qu'elles
   sont complètes, et la dernière s'ouvre (ou s'ajoute seulement, au choix) ;
   `luma watch dossier` fait de même en ligne de commande.
+- **Boîtier relié, sur Mac** (Dossier surveillé) : « Relier un boîtier » ouvre le
+  boîtier branché (USB, ou réseau s'il le permet) par le cadre du système ; chaque
+  photo prise arrive dans le dossier surveillé et s'ouvre, celles déjà sur la carte
+  restent où elles sont ; « Déclencher » pour les boîtiers qui se déclenchent à
+  distance.
 
 ## 0.2.0 — octobre 2026
 

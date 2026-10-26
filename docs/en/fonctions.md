@@ -125,6 +125,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Keywords in the app: entry (several at once, separated by commas), added to and removed from every selected photo, the folder's keywords with their count, grid filter | ✅ |
 | Catalog in the app: every folder you open is added (in the background); all photos, collections and folders, each with its number of photos; search and filters; views sorted by capture date | ✅ |
 | Watched folder (tethered shooting, copied card): each complete photo enters the catalog and the filmstrip, and opens; `luma watch` | ✅ |
+| On Mac, tethered camera (USB, or network if it allows) through the system framework: each photo taken arrives in the watched folder, shutter release from LÜMA for cameras that allow it | ✅ |
 | Virtual copies: several developments of a photo without duplicating the file (one XMP per copy), each with its own rating, keywords and thumbnail, next to its original; exported as `IMG_0001-2`; deleted without touching the original | ✅ |
 | Importing existing catalogues | ⏳ |
 

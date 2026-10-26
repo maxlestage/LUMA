@@ -888,6 +888,7 @@ impl Studio {
 
     pub fn stop_watching(&mut self) {
         self.watch = None;
+        luma_apple::tether::stop();
     }
 
     /// Le dossier surveillé, et le nombre de photos arrivées.
@@ -3858,6 +3859,8 @@ impl Studio {
                 .color(theme::DIM),
             );
             ui.checkbox(&mut follow, tr("Ouvrir chaque nouvelle photo"));
+            let dir = dir.to_path_buf();
+            self.tether_panel(ui, &dir);
             stop = ui.button(tr("Arrêter la surveillance")).clicked();
         } else {
             ui.label(
@@ -3888,6 +3891,44 @@ impl Studio {
         if stop {
             self.stop_watching();
         }
+    }
+
+    /// Sur Mac : les boîtiers reliés, dont les photos arrivent dans le dossier surveillé.
+    fn tether_panel(&mut self, ui: &mut Ui, dir: &Path) {
+        use luma_apple::tether;
+        if !tether::AVAILABLE {
+            return;
+        }
+        let status = tether::status();
+        if !status.running {
+            if ui
+                .button(tr("Relier un boîtier"))
+                .on_hover_text(tr(
+                    "Les photos prises boîtier relié (USB) arrivent dans ce dossier",
+                ))
+                .clicked()
+            {
+                tether::start(dir.to_path_buf());
+            }
+            return;
+        }
+        let text = if status.cameras.is_empty() {
+            tr("Branchez le boîtier et allumez-le").to_owned()
+        } else {
+            trf(
+                "Boîtier relié : {name}",
+                &[("name", &status.cameras.join(", "))],
+            )
+        };
+        ui.label(RichText::new(text).size(11.5).color(theme::DIM));
+        ui.horizontal_wrapped(|ui| {
+            if status.can_trigger && ui.button(tr("Déclencher")).clicked() {
+                tether::trigger();
+            }
+            if ui.button(tr("Déconnecter le boîtier")).clicked() {
+                tether::stop();
+            }
+        });
     }
 
     fn catalog_panel(&mut self, ui: &mut Ui) {
