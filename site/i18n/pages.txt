@@ -236,9 +236,9 @@ en = This demo runs on your device's GPU, driven by Rust compiled to WebAssembly
 es = Esta demo se ejecuta en la GPU de tu dispositivo, controlada por Rust compilado a WebAssembly: una escena generada en luz lineal (el sol supera el blanco) y, después, exposición, balance de blancos, altas luces, sombras y contraste aplicados como parámetros. Desliza la barra para comparar con el original. Es una ilustración del principio, todavía no el motor de LÜMA.
 
 # Apple.
-fr = macOS & iOS d'abord
-en = macOS & iOS first
-es = macOS e iOS primero
+fr = macOS, iOS & iPadOS d'abord
+en = macOS, iOS & iPadOS first
+es = macOS, iOS e iPadOS primero
 
 fr = Conçu pour *Apple Silicon*.
 en = Built for *Apple Silicon*.
@@ -326,9 +326,9 @@ fr = Un workspace Cargo. *Une crate*, une responsabilité.
 en = One Cargo workspace. *One crate*, one responsibility.
 es = Un workspace de Cargo. *Un crate*, una responsabilidad.
 
-fr = Le moteur ne dépend jamais de la plateforme. Seules l'interface et les applications voient macOS ou iOS.
-en = The engine never depends on the platform. Only the interface and the apps see macOS or iOS.
-es = El motor nunca depende de la plataforma. Solo la interfaz y las aplicaciones ven macOS o iOS.
+fr = Le moteur ne dépend jamais de la plateforme. Seules l'interface et les applications voient macOS, iOS ou iPadOS.
+en = The engine never depends on the platform. Only the interface and the apps see macOS, iOS or iPadOS.
+es = El motor nunca depende de la plataforma. Solo la interfaz y las aplicaciones ven macOS, iOS o iPadOS.
 
 # Performance.
 fr = Performance

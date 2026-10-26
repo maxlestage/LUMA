@@ -365,7 +365,7 @@ fn apple(lang: Lang) -> Element {
                     .child(
                         p().class("kicker")
                             .child(span().class("kicker-mark").html(APPLE_SVG))
-                            .child(text(format!(" {}", t(lang, "macOS & iOS d'abord")))),
+                            .child(text(format!(" {}", t(lang, "macOS, iOS & iPadOS d'abord")))),
                     )
                     .child(panels)
                     .child(div().class("apple-dots").children([i(), i(), i(), i()])),
@@ -402,7 +402,7 @@ fn architecture(lang: Lang) -> Element {
             t(lang, "Architecture"),
             heading(h2, t(lang, "Un workspace Cargo. *Une crate*, une responsabilité.")),
             Some(p().text(t(lang,
-                "Le moteur ne dépend jamais de la plateforme. Seules l'interface et les applications voient macOS ou iOS.",
+                "Le moteur ne dépend jamais de la plateforme. Seules l'interface et les applications voient macOS, iOS ou iPadOS.",
             ))),
         ))
         .child(island("crates", lang.code(), islands::crates))
