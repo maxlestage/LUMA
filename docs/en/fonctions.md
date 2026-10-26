@@ -90,7 +90,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | File name templates: `{nom}` (or `{name}`), `{date}`, `{séquence}` (`{sequence}`), `{boîtier}` (`{camera}`), `{objectif}` (`{lens}`), `{iso}`, `{note}` (`{rating}`), `{libellé}` (`{label}`)…, subfolders with “/”; in the Export dialog, presets and `luma develop --name` | ✅ |
 | Output sharpening: screen, matte paper, glossy paper; low, standard, high; at the final size (`--output-sharpen`) | ✅ |
 | Text watermark (LÜMA font, anti-aliased): nine positions, size, opacity, white or black (`--watermark`) | ✅ |
-| Logo watermark (PNG), copying EXIF metadata | ⏳ |
+| Logo watermark: a PNG with its transparency, faithful colours, nine positions, size, opacity (`--logo`) | ✅ |
+| Copying EXIF metadata | ⏳ |
 
 ## Library and interoperability
 

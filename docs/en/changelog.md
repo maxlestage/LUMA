@@ -58,6 +58,9 @@ The professional photo library, step by step.
 - **Text watermark**: “© your name” drawn in the LÜMA typeface, anti-aliased to the
   pixel, in one of nine positions, with size, opacity, white or black; in the Export
   dialog, presets and `luma develop --watermark`.
+- **Logo watermark**: your logo as a PNG, with its transparency and true colours, in
+  one of nine positions, with size and opacity; alone or with the text; in the Export
+  dialog, presets and `luma develop --logo signature.png`.
 
 ## 0.2.0 — October 2026
 

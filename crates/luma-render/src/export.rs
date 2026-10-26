@@ -13,7 +13,7 @@ use luma_core::{Cancel, RgbImage};
 use luma_project::Settings;
 use serde::{Deserialize, Serialize};
 
-pub use crate::watermark::{Position, Watermark};
+pub use crate::watermark::{Logo, Position, Watermark};
 use crate::{Photo, Size};
 
 /// Écrit l'image dans `path` : JPEG, PNG ou TIFF selon l'extension, 8 ou 16 bits (le
@@ -105,6 +105,8 @@ pub struct Options {
     pub sharpen: Option<OutputSharpen>,
     /// Le filigrane texte, posé en dernier ; `None` : aucun.
     pub watermark: Option<Watermark>,
+    /// Le logo en filigrane (PNG) ; `None` : aucun.
+    pub logo: Option<Logo>,
 }
 
 impl Default for Options {
@@ -119,6 +121,7 @@ impl Default for Options {
             name: None,
             sharpen: None,
             watermark: None,
+            logo: None,
         }
     }
 }
@@ -608,6 +611,9 @@ pub fn develop(photo: &Photo, settings: &Settings, out: &Path, options: &Options
         sh.apply(&mut image);
     }
     // Le filigrane après l'accentuation : ses lettres ne sont pas accentuées.
+    if let Some(l) = &options.logo {
+        l.apply(&mut image)?;
+    }
     if let Some(w) = &options.watermark {
         w.apply(&mut image);
     }
@@ -701,6 +707,16 @@ struct StoredPreset {
     sharpen: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     watermark: Option<StoredWatermark>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    logo: Option<StoredLogo>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct StoredLogo {
+    path: PathBuf,
+    position: String,
+    size: f32,
+    opacity: f32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -739,6 +755,12 @@ impl StoredPreset {
                 size: w.size,
                 opacity: w.opacity,
                 dark: w.dark,
+            }),
+            logo: o.logo.as_ref().map(|l| StoredLogo {
+                path: l.path.clone(),
+                position: l.position.id().into(),
+                size: l.size,
+                opacity: l.opacity,
             }),
         }
     }
@@ -779,6 +801,23 @@ impl StoredPreset {
                         text: w.text,
                     }),
                     _ => None,
+                },
+                logo: match self.logo {
+                    Some(l) => Some(Logo {
+                        position: Position::parse(&l.position)?,
+                        size: if l.size.is_finite() {
+                            l.size.clamp(1.0, 50.0)
+                        } else {
+                            12.0
+                        },
+                        opacity: if l.opacity.is_finite() {
+                            l.opacity.clamp(0.0, 1.0)
+                        } else {
+                            0.8
+                        },
+                        path: l.path,
+                    }),
+                    None => None,
                 },
             },
         })
@@ -898,6 +937,9 @@ pub fn describe(o: &Options) -> String {
     let mut out = format!("{format}, {space}, {size}, {folder}");
     if let Some(sh) = o.sharpen {
         out += &format!(", {}", sh.describe());
+    }
+    if let Some(l) = &o.logo {
+        out += &format!(", {}", l.describe());
     }
     if let Some(w) = &o.watermark {
         out += &format!(", {}", w.describe());
@@ -1233,6 +1275,11 @@ mod tests {
                     position: Position::TopLeft,
                     dark: true,
                     ..Watermark::new("© Maxime Lestage")
+                }),
+                logo: Some(Logo {
+                    position: Position::Center,
+                    size: 25.0,
+                    ..Logo::new("/logos/signature.png")
                 }),
                 ..Options::default()
             },

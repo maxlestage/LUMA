@@ -59,6 +59,10 @@ La fototeca profesional, paso a paso.
 - **Marca de agua de texto**: «© su nombre» dibujado con la tipografía de LÜMA,
   suavizado al píxel, en una de nueve posiciones, con tamaño, opacidad, blanco o
   negro; en la ventana Exportar, los ajustes preestablecidos y `luma develop --watermark`.
+- **Marca de agua con logotipo**: su logotipo en PNG, con su transparencia y sus
+  colores reales, en una de nueve posiciones, con tamaño y opacidad; solo o con el
+  texto; en la ventana Exportar, los ajustes preestablecidos y
+  `luma develop --logo firma.png`.
 
 ## 0.2.0 — octubre de 2026
 

@@ -485,6 +485,30 @@ fr = En bas à droite
 en = Bottom right
 es = Abajo a la derecha
 
+fr = Logo
+en = Logo
+es = Logotipo
+
+fr = Choisir un logo
+en = Choose a logo
+es = Elegir un logotipo
+
+fr = Retirer
+en = Remove
+es = Quitar
+
+fr = Emplacement du logo
+en = Logo position
+es = Posición del logotipo
+
+fr = Taille du logo
+en = Logo size
+es = Tamaño del logotipo
+
+fr = Opacité du logo
+en = Logo opacity
+es = Opacidad del logotipo
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos

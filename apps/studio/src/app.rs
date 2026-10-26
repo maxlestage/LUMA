@@ -1871,6 +1871,11 @@ impl Studio {
                         ui.label(tr("Filigrane"));
                         ui.vertical(|ui| watermark_editor(ui, &mut o.watermark));
                         ui.end_row();
+                        if crate::dialogs::FOLDER_PICKER || o.logo.is_some() {
+                            ui.label(tr("Logo"));
+                            ui.vertical(|ui| logo_editor(ui, &mut o.logo));
+                            ui.end_row();
+                        }
                         ui.label(tr("Nom des fichiers"));
                         ui.vertical(|ui| {
                             let mut text = o.name.clone().unwrap_or_default();
@@ -5061,6 +5066,70 @@ fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
     }
     let s = (area.width() / w as f32).min(area.height() / h as f32);
     egui::Rect::from_center_size(area.center(), vec2(w as f32 * s, h as f32 * s))
+}
+
+/// Le logo en filigrane d'un export : le fichier PNG, puis son emplacement, sa taille
+/// et son opacité.
+fn logo_editor(ui: &mut Ui, logo: &mut Option<luma_render::export::Logo>) {
+    use luma_render::export::{Logo, Position};
+    ui.horizontal(|ui| {
+        let name = logo.as_ref().map_or_else(
+            || tr("Aucun").to_owned(),
+            |l| {
+                l.path
+                    .file_name()
+                    .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+            },
+        );
+        ui.label(RichText::new(name).color(theme::DIM));
+        if crate::dialogs::FOLDER_PICKER
+            && ui.button(tr("Choisir un logo")).clicked()
+            && let Some(path) = crate::dialogs::pick_logo()
+        {
+            *logo = Some(match logo.take() {
+                Some(l) => Logo { path, ..l },
+                None => Logo::new(path),
+            });
+        }
+        if logo.is_some() && ui.button(tr("Retirer")).clicked() {
+            *logo = None;
+        }
+    });
+    let Some(l) = logo else {
+        return;
+    };
+    ui.horizontal(|ui| {
+        egui::ComboBox::from_id_salt("logo-position")
+            .selected_text(tr(l.position.label()))
+            .show_ui(ui, |ui| {
+                for p in Position::ALL {
+                    ui.selectable_value(&mut l.position, p, tr(p.label()));
+                }
+            })
+            .response
+            .accessible_name(tr("Emplacement du logo"));
+        ui.add(
+            egui::DragValue::new(&mut l.size)
+                .range(1.0..=50.0)
+                .speed(0.2)
+                .suffix(" %"),
+        )
+        .on_hover_text(tr("Taille, en pour cent du petit côté"))
+        .accessible_name(tr("Taille du logo"));
+        let mut opacity = (l.opacity * 100.0).round();
+        if ui
+            .add(
+                egui::DragValue::new(&mut opacity)
+                    .range(0.0..=100.0)
+                    .suffix(" %"),
+            )
+            .on_hover_text(tr("Opacité"))
+            .accessible_name(tr("Opacité du logo"))
+            .changed()
+        {
+            l.opacity = opacity / 100.0;
+        }
+    });
 }
 
 /// Le filigrane texte d'un export : le texte (vide : aucun), puis son emplacement, sa

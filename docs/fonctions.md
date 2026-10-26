@@ -91,7 +91,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Modèles de nom des fichiers : `{nom}`, `{date}`, `{heure}`, `{séquence}`, `{boîtier}`, `{objectif}`, `{iso}`, `{note}`, `{libellé}`…, sous‑dossiers par « / » ; dans la fenêtre Exporter, les préréglages et `luma develop --name` | ✅ |
 | Accentuation de sortie : écran, papier mat, papier brillant ; faible, normale, forte ; à la taille finale (`--output-sharpen`) | ✅ |
 | Filigrane texte (police de LÜMA, lissé) : neuf emplacements, taille, opacité, blanc ou noir (`--watermark`) | ✅ |
-| Filigrane logo (PNG), copie des métadonnées EXIF | ⏳ |
+| Filigrane logo : un PNG avec sa transparence, couleurs fidèles, neuf emplacements, taille, opacité (`--logo`) | ✅ |
+| Copie des métadonnées EXIF | ⏳ |
 
 ## Bibliothèque et interopérabilité
 

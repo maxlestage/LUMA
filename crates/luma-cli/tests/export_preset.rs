@@ -123,6 +123,35 @@ fn presets_listed_created_and_deleted() {
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--no-watermark"]);
     assert!(ok && !out.contains("filigrane"), "{out}");
 
+    // Le logo : un fichier qui existe, gardé avec son chemin complet.
+    let logo = dir.join("logo.png");
+    let mut png = image::RgbaImage::new(40, 20);
+    for (x, _, p) in png.enumerate_pixels_mut() {
+        *p = image::Rgba(if x < 20 { [255, 255, 255, 255] } else { [0, 0, 0, 0] });
+    }
+    png.save(&logo).unwrap();
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export-preset",
+            "Galerie",
+            "--logo",
+            logo.to_str().unwrap(),
+            "--logo-position",
+            "top-right",
+            "--logo-opacity",
+            "50",
+        ],
+    );
+    assert!(
+        ok && out.contains("logo logo.png, en haut à droite, 12 %, 50 %"),
+        "{out}"
+    );
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--logo", "absent.png"]);
+    assert!(!ok && out.contains("pas de fichier"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--no-logo"]);
+    assert!(ok && !out.contains("logo"), "{out}");
+
     // Le modèle de nom, vérifié.
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--name", "{date}_{séquence:3}"]);
     assert!(ok, "{out}");
@@ -255,6 +284,36 @@ fn develop_with_a_preset() {
     };
     assert!(changed(w / 2, h / 2), "coin en bas à droite");
     assert!(!changed(0, 0) && !changed(w / 2, 0) && !changed(0, h / 2));
+
+    // Le logo marque le coin en haut à gauche, et lui seul.
+    let logo = dir.join("logo.png");
+    image::RgbaImage::from_pixel(40, 20, image::Rgba([255, 0, 0, 255]))
+        .save(&logo)
+        .unwrap();
+    let with_logo = dir.join("logo-pose.png");
+    let (ok, out) = luma(
+        &file,
+        &[
+            "develop",
+            raw.to_str().unwrap(),
+            "--no-sidecar",
+            "--resize",
+            "300",
+            "--logo",
+            logo.to_str().unwrap(),
+            "--logo-position",
+            "top-left",
+            "-o",
+            with_logo.to_str().unwrap(),
+        ],
+    );
+    assert!(ok, "{out}");
+    let c = png_rgb(&with_logo);
+    let changed_logo = |x0: usize, y0: usize| {
+        (y0..y0 + h / 2).any(|y| (x0..x0 + w / 2).any(|x| a.2[(y * w + x) * 3..][..3] != c.2[(y * w + x) * 3..][..3]))
+    };
+    assert!(changed_logo(0, 0));
+    assert!(!changed_logo(w / 2, 0) && !changed_logo(0, h / 2) && !changed_logo(w / 2, h / 2));
 
     // Petit côté, puis un cadre, puis des mégapixels : la taille exacte du JPEG.
     for (resize, check) in [

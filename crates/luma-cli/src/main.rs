@@ -37,6 +37,7 @@ USAGE
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
+                     [--logo f.png] [--logo-position p] [--logo-size 1-50] [--logo-opacity 0-100]
       Avec --preset, les options du préréglage d'export (format, qualité, espace, taille,
       dossier, nom) ; les options données les remplacent, --size est alors le grand côté
       de l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par
@@ -51,10 +52,13 @@ USAGE
       à l'un des neuf emplacements (top-left, top, top-right, left, center, right,
       bottom-left, bottom, bottom-right ; ou haut-gauche… bas-droite), taille en % du
       petit côté (3 par défaut), opacité en % (70 par défaut).
+      --logo : un logo en filigrane (PNG, avec sa transparence), mêmes emplacements ;
+      grand côté en % du petit côté de l'image (12 par défaut, jamais agrandi au‑delà
+      de son fichier), opacité en % (80 par défaut).
   luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
                      [--space srgb|p3|rec2020|prophoto] [--size taille|0] [--folder d]
                      [--next-to-original] [--name modèle] [--output-sharpen s|none]
-                     [--watermark texte …|--no-watermark]
+                     [--watermark texte …|--no-watermark] [--logo f.png …|--no-logo]
                      [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
@@ -123,6 +127,7 @@ struct Args {
     resize: Option<export::Resize>,
     output_sharpen: Option<export::OutputSharpen>,
     watermark: WatermarkArgs,
+    logo: LogoArgs,
     xmp: Option<PathBuf>,
     settings: Option<PathBuf>,
     sidecar: bool,
@@ -144,6 +149,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         resize: None,
         output_sharpen: None,
         watermark: WatermarkArgs::default(),
+        logo: LogoArgs::default(),
         xmp: None,
         settings: None,
         sidecar: true,
@@ -171,6 +177,10 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
                     value(&arg)?
                 };
                 a.watermark.read(s, v)?;
+            }
+            s if s.starts_with("--logo") => {
+                let v = value(&arg)?;
+                a.logo.read(s, v)?;
             }
             "--output-sharpen" => {
                 let v = value(&arg)?;
@@ -429,6 +439,7 @@ fn develop(a: &Args) -> Result<(), String> {
         || a.resize.is_some()
         || a.output_sharpen.is_some()
         || !a.watermark.is_empty()
+        || !a.logo.is_empty()
     {
         // Un préréglage d'export (à défaut, les options par défaut) : ses options, que les
         // options données remplacent.
@@ -449,6 +460,7 @@ fn develop(a: &Args) -> Result<(), String> {
         o.space = a.space.unwrap_or(o.space);
         o.sharpen = a.output_sharpen.or(o.sharpen);
         a.watermark.apply(&mut o.watermark);
+        a.logo.apply(&mut o.logo);
         o.quality = a.quality.unwrap_or(o.quality);
         o.bits = a.bits.unwrap_or(o.bits);
         o.resize = a
@@ -569,6 +581,66 @@ impl WatermarkArgs {
     }
 }
 
+/// Les options `--logo…` : le fichier, puis ce qui le règle.
+#[derive(Default)]
+struct LogoArgs {
+    path: Option<PathBuf>,
+    position: Option<export::Position>,
+    size: Option<f32>,
+    opacity: Option<f32>,
+}
+
+impl LogoArgs {
+    fn read(&mut self, option: &str, v: String) -> Result<(), String> {
+        let number = |v: &str, min: f32, max: f32| {
+            v.trim()
+                .replace(',', ".")
+                .parse::<f32>()
+                .ok()
+                .filter(|n| (min..=max).contains(n))
+                .ok_or_else(|| format!("{option} : un nombre de {min} à {max}"))
+        };
+        match option {
+            "--logo" => {
+                let p = PathBuf::from(&v);
+                if !p.is_file() {
+                    return Err(format!("--logo : pas de fichier {}", p.display()));
+                }
+                // Un chemin complet : un préréglage enregistré le retrouve d'ailleurs.
+                self.path = Some(std::fs::canonicalize(&p).unwrap_or(p));
+            }
+            "--logo-position" => {
+                self.position = Some(export::Position::parse(&v).ok_or_else(|| {
+                    let all: Vec<&str> = export::Position::ALL.iter().map(|p| p.id()).collect();
+                    format!("emplacement inconnu « {v} » ({})", all.join(", "))
+                })?);
+            }
+            "--logo-size" => self.size = Some(number(&v, 1.0, 50.0)?),
+            "--logo-opacity" => self.opacity = Some(number(&v, 0.0, 100.0)? / 100.0),
+            other => return Err(format!("option inconnue « {other} »")),
+        }
+        Ok(())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.path.is_none() && self.position.is_none() && self.size.is_none() && self.opacity.is_none()
+    }
+
+    fn apply(&self, l: &mut Option<export::Logo>) {
+        if let Some(p) = &self.path {
+            *l = Some(match l.take() {
+                Some(old) => export::Logo { path: p.clone(), ..old },
+                None => export::Logo::new(p),
+            });
+        }
+        if let Some(l) = l {
+            l.position = self.position.unwrap_or(l.position);
+            l.size = self.size.unwrap_or(l.size);
+            l.opacity = self.opacity.unwrap_or(l.opacity);
+        }
+    }
+}
+
 fn sharpen_error(v: &str) -> String {
     format!("accentuation inconnue « {v} » (screen, matte, glossy, suivis de :low, :standard ou :high)")
 }
@@ -624,6 +696,12 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
                 };
             }
             "--no-watermark" => o.watermark = None,
+            "--no-logo" => o.logo = None,
+            s if s.starts_with("--logo") => {
+                let mut l = LogoArgs::default();
+                l.read(s, value()?)?;
+                l.apply(&mut o.logo);
+            }
             s if s.starts_with("--watermark") => {
                 let v = if s == "--watermark-dark" {
                     String::new()
