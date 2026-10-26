@@ -740,7 +740,7 @@ fn pricing(lang: Lang) -> Element {
             "LÜMA Premium",
             heading(h2, t(lang, "Quatorze jours pour *essayer*, puis à vous de choisir.")),
             Some(p().class("lede").text(t(lang,
-                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, sur Mac, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad, l'abonnement s'achète uniquement dans l'App Store.",
+                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store.",
             ))),
         ))
         .children(downloads_open().then(|| {

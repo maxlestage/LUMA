@@ -297,9 +297,9 @@ fr = Phase 6
 en = Phase 6
 es = Fase 6
 
-fr = Apple Silicon, Metal, EDR, Mac App Store.
-en = Apple Silicon, Metal, EDR, Mac App Store.
-es = Apple Silicon, Metal, EDR, Mac App Store.
+fr = Apple Silicon, Metal, EDR, téléchargement direct.
+en = Apple Silicon, Metal, EDR, direct download.
+es = Apple Silicon, Metal, EDR, descarga directa.
 
 fr = ProRAW, PhotoKit, Fichiers, TestFlight.
 en = ProRAW, PhotoKit, Files, TestFlight.
@@ -440,9 +440,9 @@ fr = Outils avancés validés en qualité et en vitesse.
 en = Advanced tools validated for quality and speed.
 es = Herramientas avanzadas validadas en calidad y en velocidad.
 
-fr = Mac App Store et App Store
-en = Mac App Store and App Store
-es = Mac App Store y App Store
+fr = App Store (iPhone et iPad), téléchargement direct (Mac)
+en = App Store (iPhone and iPad), direct download (Mac)
+es = App Store (iPhone y iPad), descarga directa (Mac)
 
 fr = Accessibilité, migration
 en = Accessibility, migration
@@ -552,9 +552,9 @@ fr = Quatorze jours pour *essayer*, puis à vous de choisir.
 en = Fourteen days to *try it*, then the choice is yours.
 es = Catorce días para *probarlo*, y luego tú eliges.
 
-fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, sur Mac, un abonnement au mois ou à l'an, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad, l'abonnement s'achète uniquement dans l'App Store.
-en = Download LÜMA: everything is unlocked during the trial. After that, on Mac, a monthly or yearly subscription, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad, the subscription is sold only on the App Store.
-es = Descarga LÜMA: todo está disponible durante la prueba. Después, en Mac, una suscripción mensual o anual, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app. En iPhone y iPad, la suscripción se compra únicamente en el App Store.
+fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store.
+en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription. On Mac, it is sold only here, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad (iOS and iPadOS), it is sold only on the App Store.
+es = Descarga LÜMA: todo está disponible durante la prueba. Después, una suscripción mensual o anual. En Mac, se compra únicamente aquí, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app. En iPhone y iPad (iOS y iPadOS), se compra únicamente en el App Store.
 
 fr = Télécharger pour Mac
 en = Download for Mac
@@ -1015,9 +1015,9 @@ fr = La clé est valable jusqu'à la fin de la période payée, plus 14 jours. E
 en = The key is valid until the end of the paid period, plus 14 days. When online, the app renews it by itself every day as long as the subscription runs.
 es = La clave es válida hasta el final del período pagado, más 14 días. Con conexión, la app la renueva por sí sola cada día mientras la suscripción siga activa.
 
-fr = Sur iPhone et iPad, LÜMA Premium s'achète uniquement dans l'App Store, par un abonnement intégré distinct de l'abonnement Mac. Il est facturé par Apple, aux prix affichés dans l'App Store, et se gère ou se résilie dans les réglages de votre compte Apple ; les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac.
-en = On iPhone and iPad, LÜMA Premium is sold only on the App Store, as an in‑app subscription separate from the Mac subscription. It is billed by Apple, at the prices shown on the App Store, and is managed or cancelled in your Apple account settings; the Payment and Cancellation sections below apply to the Mac subscription.
-es = En iPhone y iPad, LÜMA Premium se compra únicamente en el App Store, como una suscripción integrada distinta de la de Mac. La factura Apple, a los precios indicados en el App Store, y se gestiona o se cancela en los ajustes de tu cuenta de Apple; los apartados Pago y Cancelación siguientes se refieren a la suscripción de Mac.
+fr = Sur Mac, LÜMA Premium s'achète uniquement sur ce site, payé par Stripe ; il n'est pas vendu sur le Mac App Store. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store, par un abonnement intégré distinct de l'abonnement Mac : il est facturé par Apple, aux prix affichés dans l'App Store, et se gère ou se résilie dans les réglages de votre compte Apple. Les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac.
+en = On Mac, LÜMA Premium is sold only on this site, paid through Stripe; it is not sold on the Mac App Store. On iPhone and iPad (iOS and iPadOS), it is sold only on the App Store, as an in‑app subscription separate from the Mac subscription: it is billed by Apple, at the prices shown on the App Store, and is managed or cancelled in your Apple account settings. The Payment and Cancellation sections below apply to the Mac subscription.
+es = En Mac, LÜMA Premium se compra únicamente en este sitio, pagado a través de Stripe; no se vende en el Mac App Store. En iPhone y iPad (iOS y iPadOS), se compra únicamente en el App Store, como una suscripción integrada distinta de la de Mac: la factura Apple, a los precios indicados en el App Store, y se gestiona o se cancela en los ajustes de tu cuenta de Apple. Los apartados Pago y Cancelación siguientes se refieren a la suscripción de Mac.
 
 fr = Paiement
 en = Payment
