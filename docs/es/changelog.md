@@ -70,7 +70,8 @@ La fototeca profesional, paso a paso.
 - **Metadatos de exportación**: el EXIF de la toma (cámara, objetivo, ajustes, fecha)
   copiado en los JPEG y PNG, su nombre y su copyright, palabras clave, valoración y
   etiqueta; la ubicación GPS se quita por defecto, para que una foto compartida no diga
-  dónde vive (`--keep-gps` la conserva).
+  dónde vive (`--keep-gps` la conserva). Los TIFF también los reciben (EXIF, XMP), con
+  exactamente los mismos píxeles que antes.
 
 ## 0.2.0 — octubre de 2026
 

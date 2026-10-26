@@ -92,7 +92,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Text watermark (LÜMA font, anti-aliased): nine positions, size, opacity, white or black (`--watermark`) | ✅ |
 | Logo watermark: a PNG with its transparency, faithful colours, nine positions, size, opacity (`--logo`) | ✅ |
 | Export metadata: capture EXIF copied (camera, lens, settings, date), author and copyright, keywords, rating and label as XMP, GPS location removed by default (`--author`, `--keep-gps`) | ✅ |
-| Metadata in TIFF files; full IPTC (title, caption, location) | ⏳ |
+| Metadata in TIFF files too: EXIF, ICC profile and XMP, TIFF written by LÜMA (same pixels, same size) | ✅ |
 
 ## Library and interoperability
 

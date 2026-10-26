@@ -74,6 +74,8 @@ pub struct Embedded {
     pub exif: Vec<u8>,
     /// Le paquet XMP ; `None` : aucun.
     pub xmp: Option<String>,
+    /// Les mêmes balises EXIF, pour les écrire dans un TIFF.
+    pub tags: Option<ExifTags>,
 }
 
 impl Embedded {
@@ -87,7 +89,8 @@ impl Embedded {
             .copyright
             .clone()
             .or_else(|| photo.exif.copyright.clone().filter(|_| o.copy_exif));
-        let exif = exif_tiff(photo, o, author.as_deref(), copyright.as_deref(), width, height);
+        let tags = exif_tags(photo, o, author.as_deref(), copyright.as_deref(), width, height);
+        let exif = tags.as_ref().map(|t| serialize(t, Vec::new())).unwrap_or_default();
         let m = &photo.meta;
         let keywords: &[String] = if o.keywords { &m.keywords } else { &[] };
         let (rating, label) = if o.keywords {
@@ -97,12 +100,21 @@ impl Embedded {
         };
         let xmp = (author.is_some() || copyright.is_some() || !keywords.is_empty() || rating > 0 || !label.is_empty())
             .then(|| xmp_packet(author.as_deref(), copyright.as_deref(), keywords, rating, label));
-        Embedded { exif, xmp }
+        Embedded { exif, xmp, tags }
     }
 }
 
 /// Une balise TIFF : numéro, type, nombre de valeurs, octets.
+#[derive(Clone, Debug, PartialEq)]
 struct Tag(u16, u16, u32, Vec<u8>);
+
+/// Les balises EXIF d'un export : l'IFD racine, l'IFD EXIF et l'IFD GPS.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ExifTags {
+    ifd0: Vec<Tag>,
+    sub: Vec<Tag>,
+    gps: Vec<Tag>,
+}
 
 const ASCII: u16 = 2;
 const SHORT: u16 = 3;
@@ -199,15 +211,15 @@ fn write_ifd(out: &mut Vec<u8>, mut tags: Vec<Tag>, offset: u32) {
     out.extend_from_slice(&data);
 }
 
-/// L'EXIF de l'export, en TIFF : vide si rien n'est à écrire.
-fn exif_tiff(
+/// Les balises EXIF de l'export ; `None` si rien n'est à écrire.
+fn exif_tags(
     p: &PhotoMetadata,
     o: &MetadataOptions,
     author: Option<&str>,
     copyright: Option<&str>,
     width: usize,
     height: usize,
-) -> Vec<u8> {
+) -> Option<ExifTags> {
     let e = &p.exif;
     let mut ifd0 = vec![short(0x0112, 1), ascii(0x0131, "LÜMA")];
     if let Some(a) = author {
@@ -264,34 +276,93 @@ fn exif_tiff(
         }
     }
     if !o.copy_exif && author.is_none() && copyright.is_none() {
-        return Vec::new();
+        return None;
     }
+    Some(ExifTags { ifd0, sub, gps })
+}
+
+/// Un TIFF : l'IFD racine (les balises EXIF et `extra`), puis l'IFD EXIF et l'IFD GPS ;
+/// la balise `StripOffsets` d'`extra`, s'il y en a une, pointe juste après (les pixels
+/// à écrire à la suite).
+fn serialize(t: &ExifTags, extra: Vec<Tag>) -> Vec<u8> {
+    let mut ifd0: Vec<Tag> = t.ifd0.iter().cloned().chain(extra).collect();
     // Les pointeurs vers les sous‑IFD, puis les décalages de chacun.
-    if !sub.is_empty() {
+    if !t.sub.is_empty() {
         ifd0.push(long(0x8769, 0));
     }
-    if !gps.is_empty() {
+    if !t.gps.is_empty() {
         ifd0.push(long(0x8825, 0));
     }
     let sub_at = 8 + ifd_size(&ifd0);
-    let gps_at = sub_at + if sub.is_empty() { 0 } else { ifd_size(&sub) };
-    for t in &mut ifd0 {
-        match t.0 {
-            0x8769 => t.3 = sub_at.to_le_bytes().to_vec(),
-            0x8825 => t.3 = gps_at.to_le_bytes().to_vec(),
+    let gps_at = sub_at + if t.sub.is_empty() { 0 } else { ifd_size(&t.sub) };
+    let tail_at = gps_at + if t.gps.is_empty() { 0 } else { ifd_size(&t.gps) };
+    for tag in &mut ifd0 {
+        match tag.0 {
+            0x0111 => tag.3 = tail_at.to_le_bytes().to_vec(),
+            0x8769 => tag.3 = sub_at.to_le_bytes().to_vec(),
+            0x8825 => tag.3 = gps_at.to_le_bytes().to_vec(),
             _ => {}
         }
     }
     let mut out = b"II*\0".to_vec();
     out.extend_from_slice(&8u32.to_le_bytes());
     write_ifd(&mut out, ifd0, 8);
-    if !sub.is_empty() {
-        write_ifd(&mut out, sub, sub_at);
+    if !t.sub.is_empty() {
+        write_ifd(&mut out, t.sub.clone(), sub_at);
     }
-    if !gps.is_empty() {
-        write_ifd(&mut out, gps, gps_at);
+    if !t.gps.is_empty() {
+        write_ifd(&mut out, t.gps.clone(), gps_at);
     }
+    debug_assert_eq!(out.len(), tail_at as usize);
     out
+}
+
+/// Un TIFF complet : une seule bande non compressée de pixels RVB (8 ou 16 bits par
+/// canal, petit‑boutistes), le profil ICC, l'EXIF et le paquet XMP de l'export.
+pub fn tiff_file(width: usize, height: usize, sixteen: bool, pixels: &[u8], icc: &[u8], meta: &Embedded) -> Vec<u8> {
+    let mut file = tiff_header(width, height, sixteen, pixels.len(), icc, meta);
+    file.extend_from_slice(pixels);
+    file
+}
+
+/// L'en‑tête et les IFD d'un TIFF dont `pixel_bytes` octets de pixels suivent.
+pub fn tiff_header(
+    width: usize,
+    height: usize,
+    sixteen: bool,
+    pixel_bytes: usize,
+    icc: &[u8],
+    meta: &Embedded,
+) -> Vec<u8> {
+    let bits = if sixteen { 16u16 } else { 8 };
+    let mut extra = vec![
+        long(0x0100, width as u32),
+        long(0x0101, height as u32),
+        Tag(
+            0x0102,
+            SHORT,
+            3,
+            [bits; 3].iter().flat_map(|b| b.to_le_bytes()).collect(),
+        ),
+        short(0x0103, 1),
+        short(0x0106, 2),
+        long(0x0111, 0),
+        short(0x0115, 3),
+        long(0x0116, height as u32),
+        long(0x0117, pixel_bytes as u32),
+        rationals(0x011A, &[(72, 1)]),
+        rationals(0x011B, &[(72, 1)]),
+        short(0x011C, 1),
+        short(0x0128, 2),
+    ];
+    if !icc.is_empty() {
+        extra.push(Tag(0x8773, UNDEFINED, icc.len() as u32, icc.to_vec()));
+    }
+    if let Some(x) = &meta.xmp {
+        extra.push(Tag(0x02BC, BYTE, x.len() as u32, x.as_bytes().to_vec()));
+    }
+    let base = ExifTags::default();
+    serialize(meta.tags.as_ref().unwrap_or(&base), extra)
 }
 
 fn escape(s: &str) -> String {
@@ -529,6 +600,61 @@ pub(crate) mod tests {
         let mut other = vec![1, 2, 3, 4];
         insert_jpeg_xmp(&mut other, "<x/>");
         assert_eq!(other, [1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn tiff_files_carry_pixels_profile_and_metadata() {
+        use image::ImageDecoder;
+        let (w, h) = (5, 3);
+        let icc = luma_color::icc::profile(luma_color::OutputSpace::DisplayP3);
+        let meta = Embedded::new(
+            &photo(),
+            &MetadataOptions {
+                author: Some("Maxime".into()),
+                keep_gps: true,
+                ..MetadataOptions::default()
+            },
+            w,
+            h,
+        );
+        for sixteen in [false, true] {
+            let pixels: Vec<u8> = if sixteen {
+                (0..w * h * 3)
+                    .flat_map(|i| (i as u16).wrapping_mul(4001).to_le_bytes())
+                    .collect()
+            } else {
+                (0..w * h * 3).map(|i| (i * 17 % 256) as u8).collect()
+            };
+            let file = tiff_file(w, h, sixteen, &pixels, &icc, &meta);
+            // Relu par un décodeur ordinaire : mêmes pixels, même profil.
+            let mut dec = image::codecs::tiff::TiffDecoder::new(std::io::Cursor::new(&file)).unwrap();
+            assert_eq!(dec.dimensions(), (w as u32, h as u32));
+            assert_eq!(dec.icc_profile().unwrap().unwrap(), icc);
+            let img = image::DynamicImage::from_decoder(dec).unwrap();
+            if sixteen {
+                let back: Vec<u8> = img.to_rgb16().into_raw().iter().flat_map(|v| v.to_le_bytes()).collect();
+                assert_eq!(back, pixels);
+            } else {
+                assert_eq!(img.to_rgb8().into_raw(), pixels);
+            }
+            // L'EXIF et le XMP dans l'IFD de l'image.
+            let ifd0 = read_ifd(&file, u32::from_le_bytes(file[4..8].try_into().unwrap()) as usize);
+            let get = |tag| ifd0.iter().find(|t| t.0 == tag).map(|t| t.3.clone());
+            assert_eq!(text(&get(0x013B).unwrap()), "Maxime");
+            assert_eq!(text(&get(0x0110).unwrap()), "ILCE-7M3");
+            assert!(
+                String::from_utf8(get(0x02BC).unwrap())
+                    .unwrap()
+                    .contains("<rdf:li>Maxime</rdf:li>")
+            );
+            let sub_at = u32::from_le_bytes(get(0x8769).unwrap()[..4].try_into().unwrap()) as usize;
+            assert!(read_ifd(&file, sub_at).iter().any(|t| t.0 == 0x8827));
+            assert!(get(0x8825).is_some());
+        }
+        // Sans métadonnées : un TIFF valide quand même.
+        let bare = tiff_file(w, h, false, &[7; 45], &[], &Embedded::default());
+        let img = image::load_from_memory(&bare).unwrap();
+        assert_eq!(img.to_rgb8().into_raw(), vec![7; 45]);
     }
 
     #[test]
