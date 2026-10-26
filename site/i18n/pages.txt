@@ -690,17 +690,25 @@ fr = Aucun cookie
 en = No cookies
 es = Sin cookies
 
-fr = © 2026 Maxime Lestage · LÜMA. Tous droits réservés.
-en = © 2026 Maxime Lestage · LÜMA. All rights reserved.
-es = © 2026 Maxime Lestage · LÜMA. Todos los derechos reservados.
+fr = © 2026 Maxime Nathan Lestage. Tous droits réservés.
+en = © 2026 Maxime Nathan Lestage. All rights reserved.
+es = © 2026 Maxime Nathan Lestage. Todos los derechos reservados.
 
 fr = Conçu et développé par
 en = Designed and built by
 es = Diseñado y desarrollado por
 
-fr = Fait en France · 100 % Rust · Aucun traceur
-en = Made in France · 100% Rust · No trackers
-es = Hecho en Francia · 100 % Rust · Sin rastreadores
+fr = Fabriqué en Rust, en France
+en = Made in Rust, in France
+es = Hecho en Rust, en Francia
+
+fr = Logiciel propriétaire
+en = Proprietary software
+es = Software propietario
+
+fr = Site fait avec Paquets ↗
+en = Site built with Paquets ↗
+es = Sitio hecho con Paquets ↗
 
 fr = Haut de page ↑
 en = Back to top ↑

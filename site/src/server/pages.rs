@@ -768,22 +768,37 @@ fn site_footer(here: Here) -> Element {
                 )
                 .child(div().class("footer-cols").children(FOOTER.iter().map(|c| column(*c)))),
         )
+        // La signature, au centre : l'auteur, l'origine, puis le nom de l'app en grand.
         .child(
             div()
                 .class("footer-signature")
-                .child(span().class("footer-signature-label").text(t(lang, "Conçu et développé par")))
-                .child(strong().class("footer-signature-name").text("Maxime Lestage")),
+                .child(p().class("footer-signature-label").text(t(lang, "Conçu et développé par")))
+                .child(
+                    p().class("footer-signature-name")
+                        .child(span().class("sig-1").text("Maxime"))
+                        .text(" ")
+                        .child(span().class("sig-2").text("Nathan"))
+                        .text(" ")
+                        .child(span().class("sig-3").text("Lestage")),
+                )
+                .child(p().class("footer-signature-made").text(t(lang, "Fabriqué en Rust, en France")))
+                .child(p().class("footer-wordmark").attr("aria-hidden", "true").text("LÜMA")),
         )
         .child(
             div()
                 .class("footer-bottom")
-                .child(span().text(t(lang, "© 2026 Maxime Lestage · LÜMA. Tous droits réservés.")))
-                .child(span().text(t(lang, "Fait en France · 100 % Rust · Aucun traceur")))
+                .child(span().text(t(lang, "© 2026 Maxime Nathan Lestage. Tous droits réservés.")))
+                .child(span().text(t(lang, "Logiciel propriétaire")))
                 .child(lang_switch(here, true))
+                .child(
+                    a().class("footer-made-with")
+                        .href("https://github.com/maxlestage/Paquets")
+                        .attr("target", "_blank")
+                        .attr("rel", "noopener")
+                        .text(t(lang, "Site fait avec Paquets ↗")),
+                )
                 .child(a().href(target(lang, "#top")).text(t(lang, "Haut de page ↑"))),
         )
-        // Le nom, en grand, comme une signature au bas de chaque page.
-        .child(p().class("footer-wordmark").attr("aria-hidden", "true").text("LÜMA"))
 }
 
 /// La page de la clé de licence, après le paiement Stripe.

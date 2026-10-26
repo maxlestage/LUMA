@@ -586,7 +586,11 @@ mod tests {
             "le dépôt est privé"
         );
         assert!(home.contains("footer-cols") && home.contains("Mentions légales"));
-        assert!(home.contains("Maxime Lestage") && home.contains("footer-wordmark"));
+        assert!(
+            home.contains("Maxime Nathan Lestage")
+                && home.contains("footer-wordmark")
+                && home.contains("github.com/maxlestage/Paquets")
+        );
         for path in [
             "/mentions-legales/",
             "/confidentialite/",
