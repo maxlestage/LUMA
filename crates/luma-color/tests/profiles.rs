@@ -429,3 +429,65 @@ fn proofing_follows_the_intent() {
     let ratio = chroma(per) / chroma(red);
     assert!((ratio - 0.5).abs() < 0.06, "perceptuelle : {per:?}, rapport {ratio}");
 }
+
+#[test]
+fn paper_and_black_ink() {
+    use luma_color::proof::{Media, Proof};
+    // Un papier mat : son noir ne descend qu'à L* 15, son blanc est crème.
+    let (black, span) = (15.0, 85.0);
+    let a2b = lut16(17, 3, |rgb| {
+        let lab = xyz_to_lab(srgb_to_pcs(rgb));
+        let xyz = lab_to_xyz([black + lab[0] * span / 100.0, lab[1], lab[2]]);
+        lab16(xyz)
+    });
+    let b2a = lut16(33, 3, |v| {
+        let lab = xyz_to_lab(unlab16(v));
+        let l = ((lab[0] - black) / span * 100.0).clamp(0.0, 100.0);
+        pcs_to_srgb(lab_to_xyz([l, lab[1], lab[2]])).to_vec()
+    });
+    let paper = [0.90, 0.93, 0.70];
+    let bytes = assemble(
+        b"prtr",
+        b"RGB ",
+        b"Lab ",
+        2,
+        vec![(b"wtpt", xyz_tag(paper)), (b"A2B0", a2b), (b"B2A0", b2a)],
+    );
+    let p = Profile::parse(&bytes).unwrap();
+    let proof = |media| Proof::with_media(&p, Intent::Relative, media).unwrap();
+
+    // Par défaut : le noir et le blanc de l'écran, le gris moyen à peine déplacé.
+    let plain = proof(Media::default());
+    for (c, want) in [(0.0, 0.0), (1.0, 1.0), (0.5, 0.5)] {
+        let v = plain.apply([c; 3]);
+        for x in v {
+            assert!((x - want).abs() < 0.04, "{c} → {v:?}");
+        }
+    }
+    // L'encre noire : le noir imprimé est un gris foncé (L* 15), le blanc reste blanc.
+    let ink = proof(Media {
+        paper: false,
+        ink: true,
+    });
+    let k = ink.apply([0.0; 3]);
+    let l = xyz_to_lab(srgb_to_pcs(k))[0];
+    assert!((l - black).abs() < 1.5, "noir de l'encre : L* {l}");
+    assert!(ink.apply([1.0; 3]).iter().all(|v| *v > 0.99));
+    // Le papier : son blanc est crème (moins de bleu), plus sombre que l'écran, et le
+    // noir de l'encre suit.
+    let on_paper = proof(Media {
+        paper: true,
+        ink: false,
+    });
+    let w = on_paper.apply([1.0; 3]);
+    assert!(w[2] < w[0] - 0.04 && w[1] < 0.99, "blanc du papier : {w:?}");
+    assert!(on_paper.apply([0.0; 3])[0] > 0.1);
+    // L'alerte de gamut ne dépend pas de ce que l'écran montre du papier.
+    for c in [[0.9, 0.1, 0.1], [0.5, 0.5, 0.5], [0.0, 0.0, 0.0]] {
+        assert_eq!(plain.out_of_gamut(c), on_paper.out_of_gamut(c), "{c:?}");
+    }
+    assert!(
+        plain.out_of_gamut([0.0, 0.0, 0.0]),
+        "le noir de l'écran est hors de portée du papier mat"
+    );
+}

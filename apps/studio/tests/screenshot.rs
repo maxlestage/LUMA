@@ -399,6 +399,18 @@ fn saturation(image: &image::RgbaImage) -> f64 {
     sum as f64 / f64::from(w * h)
 }
 
+/// La couleur moyenne du centre de la photo.
+fn mean_rgb(image: &image::RgbaImage) -> [f64; 3] {
+    let crop = image::imageops::crop_imm(image, 300, 200, 600, 450).to_image();
+    let mut sum = [0.0; 3];
+    for p in crop.pixels() {
+        for c in 0..3 {
+            sum[c] += f64::from(p[c]);
+        }
+    }
+    sum.map(|v| v / f64::from(600 * 450))
+}
+
 /// La part du centre de la photo peinte de la couleur de l'alerte de gamut.
 fn alert_share(image: &image::RgbaImage) -> f64 {
     let crop = image::imageops::crop_imm(image, 300, 200, 600, 450).to_image();
@@ -424,6 +436,12 @@ fn dull_profile() -> Vec<u8> {
     let white: Vec<f32> = (0..3)
         .map(|i| cols.iter().map(|&c| read(&bytes, c + 4 * i)).sum())
         .collect();
+    // Un papier crème : le blanc du support, en XYZ.
+    let wtpt = tag(&bytes, b"wtpt");
+    for (i, v) in [0.88f32, 0.90, 0.66].into_iter().enumerate() {
+        bytes[wtpt + 4 * i..wtpt + 4 * i + 4]
+            .copy_from_slice(&((v * 65536.0).round() as i32).to_be_bytes());
+    }
     for &c in &cols {
         for i in 0..3 {
             let v = 0.15 * read(&bytes, c + 4 * i) + 0.85 * white[i] / 3.0;
@@ -461,6 +479,17 @@ fn soft_proofing_shows_the_print() {
         proofed < before * 0.9,
         "l'épreuvage ternit la photo : {before:.2} → {proofed:.2}"
     );
+    // Le papier crème du profil : la photo s'assombrit et se réchauffe.
+    let plain = mean_rgb(&s.harness.render().unwrap());
+    s.studio().set_proof_media(true, false);
+    s.wait();
+    s.capture("epreuvage-papier");
+    let paper = mean_rgb(&s.harness.render().unwrap());
+    assert!(
+        paper[2] < plain[2] - 5.0 && paper[0] - paper[2] > plain[0] - plain[2] + 3.0,
+        "{plain:?} → {paper:?}"
+    );
+    s.studio().set_proof_media(false, false);
     // Coupé, la photo revient telle quelle.
     s.studio().set_proofing(false, false);
     s.wait();

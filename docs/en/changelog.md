@@ -113,6 +113,10 @@ The professional photo library, step by step.
   adjustment: nothing is written to the photo.
 - **Gamut warning** (in soft proofing): the colors the printer will not be able to
   reproduce turn blue on the preview, with or without the print simulation.
+- **Paper and black ink** (in soft proofing): “Paper color” shows the paper's tone
+  and brightness, “Black ink” the ink's real black, lighter than the screen's;
+  without them, the paper white and the ink black are mapped to the screen's white
+  and black.
 
 ## 0.2.0 — October 2026
 

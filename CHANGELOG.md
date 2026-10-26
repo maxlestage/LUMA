@@ -121,6 +121,10 @@ La photothèque professionnelle, étape par étape.
 - **Alerte de gamut** (dans l'épreuvage) : les couleurs que l'imprimante ne saura
   pas rendre passent en bleu sur l'aperçu, avec ou sans la simulation de
   l'impression.
+- **Papier et encre noire** (dans l'épreuvage) : « Couleur du papier » montre le ton
+  et la luminosité du papier, « Encre noire » le vrai noir de l'encre, plus clair
+  que celui de l'écran ; sans elles, le blanc du papier et le noir de l'encre sont
+  ramenés au blanc et au noir de l'écran.
 
 ## 0.2.0 — octobre 2026
 

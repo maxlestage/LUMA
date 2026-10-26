@@ -2706,3 +2706,19 @@ es = Pegar ({n})
 fr = Coller une partie des réglages ({n})
 en = Paste some adjustments ({n})
 es = Pegar parte de los ajustes ({n})
+
+fr = Couleur du papier
+en = Paper color
+es = Color del papel
+
+fr = Le ton et la luminosité du papier ; le noir de l'encre suit
+en = The tone and brightness of the paper; the ink black follows
+es = El tono y la luminosidad del papel; el negro de la tinta lo sigue
+
+fr = Encre noire
+en = Black ink
+es = Tinta negra
+
+fr = Le vrai noir de l'encre, plus clair que celui de l'écran
+en = The ink's real black, lighter than the screen's
+es = El negro real de la tinta, más claro que el de la pantalla
