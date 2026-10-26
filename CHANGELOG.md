@@ -26,6 +26,9 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Case « Corrections du boîtier »** (Géométrie) : cochée par défaut ; décochée, la
+  photo revient telle que l'objectif l'a donnée, et les curseurs de distorsion et de
+  vignetage prennent le relais. Enregistrée dans le XMP.
 - **Corrections d'objectif des OM System, Olympus et Panasonic** : la distorsion (et,
   pour Olympus et OM System, l'aberration chromatique latérale) que le boîtier
   enregistre dans chaque ORF ou RW2 est appliquée automatiquement. Le corpus de test

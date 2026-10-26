@@ -26,6 +26,9 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Casilla «Correcciones de la cámara»** (Geometría): marcada por defecto; desmarcada,
+  la foto vuelve a ser la que dio el objetivo, y los controles de distorsión y viñeteo
+  toman el relevo. Guardada en el XMP.
 - **Correcciones de objetivo de las OM System, Olympus y Panasonic**: la distorsión (y,
   en Olympus y OM System, la aberración cromática lateral) que la cámara registra en
   cada ORF o RW2 se aplica automáticamente. El corpus de prueba cuenta ahora con 7 RAW
