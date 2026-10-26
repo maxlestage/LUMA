@@ -5,8 +5,13 @@ un abonnement **LÜMA Premium** :
 
 | Formule | Prix TTC | |
 |---|---|---|
-| Mensuel | 9,99 € par mois | sans engagement |
-| Annuel | 79,99 € par an | deux mois offerts (6,67 € par mois) |
+| Mensuel | 19,99 € par mois | sans engagement |
+| Annuel | 239,88 € par an | soit 19,99 € par mois, en un seul paiement |
+
+Ces abonnements sont ceux du Mac : **sur Mac, LÜMA Premium s'achète uniquement par
+Stripe** (sur le site ; LÜMA n'est pas vendu sur le Mac App Store). **Sur iPhone et iPad
+(iOS et iPadOS), il s'achète uniquement dans l'App Store** (abonnement intégré, distinct,
+facturé par Apple), comme l'exigent les règles de l'App Store pour du contenu numérique.
 
 Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
 `site/src/content.rs` (le site) ; les prix facturés sont ceux de Stripe.
@@ -34,9 +39,9 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
   bibliothèque TLS compilée dans LÜMA).
 - **Limite** : sans base de données, le nombre d'appareils par clé n'est pas limité ; la
   clé porte le courriel de l'abonné, ce qui décourage le partage.
-- **iPhone et iPad** : l'App Store impose ses achats intégrés pour un abonnement vendu
-  dans une app ; ce sera fait à la publication sur l'App Store (compte Apple Developer).
-  D'ici là, une clé y est vérifiée hors ligne et vaut jusqu'à son terme.
+- **iPhone et iPad** : vendus uniquement par l'App Store, avec ses achats intégrés ; ils
+  seront faits à la publication sur l'App Store (compte Apple Developer). D'ici là, l'app
+  iOS accepte encore une clé, vérifiée hors ligne, jusqu'à son terme.
 - La ligne de commande `luma` reste libre.
 
 ## Ouvrir la boutique (une fois)
@@ -45,7 +50,7 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
    `LUMA_LICENCE_SECRET=…` (privée : seulement sur Heroku, jamais dans le dépôt) et
    `LUMA_LICENCE_PUBLIC=…` (publique : compilée dans l'app).
 2. **Stripe** (<https://dashboard.stripe.com>) : créer un produit **LÜMA Premium** avec
-   deux prix récurrents, **9,99 € par mois** et **79,99 € par an** (TTC : « taxe
+   deux prix récurrents, **19,99 € par mois** et **239,88 € par an** (TTC : « taxe
    incluse »). Pour chacun, créer un **lien de paiement** ; dans « Après le paiement »,
    choisir « Ne pas afficher la page de confirmation, rediriger vers votre site » :
    `https://SITE/licence/?session_id={CHECKOUT_SESSION_ID}`.
