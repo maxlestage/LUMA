@@ -245,11 +245,11 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 .lab-note { margin: auto 0 0; color: var(--dim); font-size: .8rem; }
 
 /* ── Apple (3D) ────────────────────────────────────────── */
-.apple { height: 400vh; padding: 0; background: radial-gradient(ellipse at 50% 40%, #12121c, var(--bg) 70%); }
+.apple { height: 520vh; padding: 0; background: radial-gradient(ellipse at 50% 40%, #12121c, var(--bg) 70%); }
 .apple-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
-/* Le MacBook Pro et l'iPhone (devices.js) : proportions des vrais appareils. */
+/* Le MacBook Pro, l'iPhone et l'iPad (devices.js) : proportions des vrais appareils. */
 .devices { position: absolute; inset: 0; perspective: 2400px; perspective-origin: 60% 30%; pointer-events: none;
-  --mac-w: min(54vw, 920px); }
+  --mac-w: min(54vw, 920px); --pad-w: calc(var(--mac-w) * .66); }
 .mbp { position: absolute; left: 66%; top: 47%; width: var(--mac-w); transform-style: preserve-3d;
   translate: -50% -50%; }
 .mbp-lid { position: relative; width: 100%; aspect-ratio: 1.5; transform-origin: 50% 100%; transform-style: preserve-3d;
@@ -287,6 +287,42 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
 .iph-up { left: -.8%; top: 25%; height: 7%; }
 .iph-down { left: -.8%; top: 33.5%; height: 7%; }
 .iph-power { right: -.8%; top: 27%; height: 11%; }
+/* L'iPad Pro 13 pouces, à l'horizontale : bords en aluminium, écran 4:3, caméra au
+   milieu du grand côté. */
+.ipad { position: absolute; left: 61%; top: 64%; width: var(--pad-w); aspect-ratio: 281.6 / 215.5; translate: -50% -50%;
+  border-radius: 5.2% / 6.8%; opacity: 0; transform-style: preserve-3d;
+  background: linear-gradient(150deg, #8d8e93 0%, #3b3c40 14%, #1d1e21 50%, #2f3034 86%, #7b7c80 100%);
+  box-shadow: 0 40px 90px rgba(0,0,0,.65), 0 14px 30px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.25); }
+.ipad-glass { position: absolute; inset: .5%; border-radius: 4.8% / 6.3%; background: #030304; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.ipad-cam { position: absolute; left: 50%; top: 1.7%; width: .9%; aspect-ratio: 1; translate: -50% 0; border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #2a3350, #07080c 70%); }
+.ipad-box { position: absolute; inset: 3.94% 3%; }
+.ipad-screen { display: block; width: 100%; height: 100%; border-radius: 2.6% / 3.4%; background: #0b0b10; }
+.ipad-glare { position: absolute; inset: 0; border-radius: 2.6% / 3.4%; background: linear-gradient(120deg, rgba(255,255,255,.08), transparent 30%); pointer-events: none; }
+.ipad-btn { position: absolute; background: linear-gradient(180deg, #55565a, #2a2b2e); border-radius: 2px; }
+.ipad-power { top: -.5%; left: 7%; width: 5%; height: .7%; }
+.ipad-up { right: -.4%; top: 8%; width: .5%; height: 6%; }
+.ipad-down { right: -.4%; top: 15.5%; width: .5%; height: 6%; }
+.ipad-shadow { position: absolute; left: 6%; right: 6%; bottom: -9%; height: 10%; background: radial-gradient(ellipse at 50% 0, rgba(0,0,0,.6), transparent 70%);
+  filter: blur(8px); z-index: -1; }
+/* L'Apple Pencil Pro : sa pointe est à l'endroit peint (left, top), le corps monte vers
+   la droite ; --lift (0 à 1) le soulève de l'écran. */
+.pencil { position: absolute; width: 0; height: 0; opacity: 0; --lift: 1; }
+.pencil-body { position: absolute; left: 0; top: 0; width: calc(var(--pad-w) * .59); height: calc(var(--pad-w) * .032);
+  transform-origin: 0 50%; translate: 0 -50%;
+  transform: translate(calc(var(--pad-w) * .012 * var(--lift)), calc(var(--pad-w) * -.03 * var(--lift))) rotate(-38deg) scale(calc(1 + var(--lift) * .04));
+  border-radius: 0 999px 999px 0 / 0 50% 50% 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f4f6 30%, #dcdce1 70%, #b9b9c0 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+  clip-path: polygon(0 50%, 9% 8%, 100% 0, 100% 100%, 9% 92%); }
+.pencil-body::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 9%;
+  background: linear-gradient(180deg, #e9e9ec, #a9a9b0); clip-path: polygon(0 50%, 100% 8%, 100% 92%); }
+.pencil-body::after { content: ""; position: absolute; left: 0; top: 46%; width: 2.2%; height: 8%; border-radius: 50%; background: #6a6a72; }
+.pencil-shadow { position: absolute; width: 0; height: 0; opacity: 0; --lift: 1; }
+.pencil-shadow::before { content: ""; position: absolute; left: 0; top: 0; width: calc(var(--pad-w) * .55); height: calc(var(--pad-w) * .026);
+  transform-origin: 0 50%; translate: 0 -50%; border-radius: 999px; background: rgba(0,0,0,.85);
+  transform: translate(calc(var(--pad-w) * (-.004 - .02 * var(--lift))), calc(var(--pad-w) * (.004 + .03 * var(--lift)))) rotate(-34deg);
+  filter: blur(calc(var(--pad-w) * (.004 + .012 * var(--lift)))); }
 .apple-copy { position: absolute; left: var(--gutter); top: 50%; transform: translateY(-50%); width: min(420px, 38vw); }
 .apple-logo { width: 16px; height: 16px; }
 .apple-panels { position: relative; min-height: 300px; }
@@ -486,6 +522,8 @@ html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(11
   .devices { --mac-w: 86vw; perspective-origin: 50% 20%; }
   .mbp { left: 50%; top: 30%; }
   .iph { left: 79%; top: 35%; width: calc(var(--mac-w) * .27); }
+  .devices { --pad-w: 76vw; }
+  .ipad { left: 50%; top: 34%; }
   .apple-copy { left: var(--gutter); right: var(--gutter); top: auto; bottom: max(36px, env(safe-area-inset-bottom)); transform: none; width: auto; }
   .apple-panels { min-height: 230px; }
   .apple-copy::before { content: ""; position: absolute; inset: -80px calc(-1 * var(--gutter)) -60px; background: linear-gradient(180deg, transparent, rgba(5,5,7,.92) 35%); z-index: -1; }
