@@ -16,6 +16,9 @@ La fototeca profesional, paso a paso.
   tener en cuenta los acentos) y filtros (valoración, bandera, etiqueta, fechas, ISO,
   focal, cámara, objetivo, palabra clave). 100 000 fotos exploradas en 4 a 25 ms.
   `--keywords` cuenta palabras clave, cámaras y objetivos.
+- **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
+  regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
+  catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
 - **Ajustes preestablecidos de exportación**: formato, calidad, profundidad, espacio,
   tamaño y carpeta guardados con un nombre; cuatro de serie (web, resolución completa,
   pantalla P3, impresión) y los suyos, compartidos por la app y la línea de comandos

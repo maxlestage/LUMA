@@ -10,6 +10,7 @@
 //! la date de modification sont celles de l'index, avec un XMP inchangé, n'est pas
 //! rouvert. Les en‑têtes sont lus en parallèle, sans décoder les pixels.
 
+pub mod collections;
 pub mod query;
 
 use std::collections::BTreeMap;
@@ -20,6 +21,7 @@ use luma_project::xmp::{self, Flag, Meta};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
+pub use collections::{Collection, Content};
 pub use query::Query;
 
 /// La version du format de l'index ; un index d'une autre version est reconstruit.
@@ -100,12 +102,16 @@ pub struct Update {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Catalog {
     entries: BTreeMap<PathBuf, Entry>,
+    collections: Vec<Collection>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct Stored {
     version: u32,
     entries: Vec<Entry>,
+    /// Absentes des catalogues d'avant les collections.
+    #[serde(default)]
+    collections: Vec<Collection>,
 }
 
 /// Le fichier du catalogue, dans le dossier de LÜMA : sur Mac
@@ -132,12 +138,12 @@ impl Catalog {
     /// Lit un catalogue ; vide s'il n'existe pas, est illisible ou d'une autre version.
     pub fn load(path: &Path) -> Catalog {
         let stored: Option<Stored> = std::fs::read(path).ok().and_then(|b| serde_json::from_slice(&b).ok());
-        let entries = stored
-            .filter(|s| s.version == VERSION)
-            .map(|s| s.entries)
-            .unwrap_or_default();
+        let Some(stored) = stored.filter(|s| s.version == VERSION) else {
+            return Catalog::default();
+        };
         Catalog {
-            entries: entries.into_iter().map(|e| (e.path.clone(), e)).collect(),
+            entries: stored.entries.into_iter().map(|e| (e.path.clone(), e)).collect(),
+            collections: stored.collections,
         }
     }
 
@@ -150,6 +156,7 @@ impl Catalog {
         let stored = Stored {
             version: VERSION,
             entries: self.entries.values().cloned().collect(),
+            collections: self.collections.clone(),
         };
         let bytes = serde_json::to_vec(&stored).map_err(std::io::Error::other)?;
         let tmp = path.with_extension("tmp");
@@ -167,6 +174,11 @@ impl Catalog {
 
     pub fn get(&self, path: &Path) -> Option<&Entry> {
         self.entries.get(path)
+    }
+
+    /// Ajoute une photo déjà lue, ou remplace celle du même chemin.
+    pub fn insert(&mut self, e: Entry) {
+        self.entries.insert(e.path.clone(), e);
     }
 
     /// Toutes les photos, par chemin.
@@ -486,7 +498,16 @@ mod tests {
         // Enregistré puis relu : le même catalogue.
         let file = dir.join("index/catalogue.json");
         cat.save(&file).unwrap();
+        cat.add_to_collection("Tirages", &[dir.join("a.png")]).unwrap();
+        cat.set_collection(Collection::smart("Retenues", "drapeau:retenue").unwrap())
+            .unwrap();
+        cat.save(&file).unwrap();
         assert_eq!(Catalog::load(&file), cat);
+        assert_eq!(Catalog::load(&file).collection_photos("Retenues").unwrap().len(), 2);
+        // Un index d'avant les collections se relit tel quel.
+        std::fs::write(&file, "{\"version\":1,\"entries\":[{\"path\":\"x.arw\",\"rating\":3}]}").unwrap();
+        let old = Catalog::load(&file);
+        assert_eq!((old.len(), old.collections().len()), (1, 0));
         assert!(Catalog::load(&dir.join("absent.json")).is_empty());
         std::fs::write(&file, "{\"version\":999,\"entries\":[]}").unwrap();
         assert!(Catalog::load(&file).is_empty(), "autre version : reconstruit");
@@ -506,7 +527,7 @@ mod tests {
                 date: date.into(),
                 ..Entry::default()
             };
-            cat.entries.insert(e.path.clone(), e);
+            cat.insert(e);
         }
         let order: Vec<_> = cat
             .by_date()
@@ -538,7 +559,7 @@ mod tests {
                 keywords: keywords.into_iter().map(String::from).collect(),
                 ..Entry::default()
             };
-            cat.entries.insert(e.path.clone(), e);
+            cat.insert(e);
         }
         let found = |q: &str| -> Vec<String> {
             cat.search(&Query::parse(q).unwrap())

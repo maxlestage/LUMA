@@ -101,7 +101,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Copia de trabajo a resolución completa: idéntica al original, más rápida de abrir, dos veces y media menos memoria; «Vaciar la caché» en un clic | ✅ |
 | Palabras clave en el XMP (`dc:subject`), leídas y escritas | ✅ |
 | Búsqueda y filtros (`luma catalog --search`): palabras sin tener en cuenta los acentos; valoración, bandera, etiqueta, fechas, ISO, focal, cámara, objetivo, palabra clave; recuento de palabras clave, cámaras y objetivos | ✅ |
-| Catálogo en la app, colecciones, copias virtuales | ⏳ |
+| Colecciones manuales e inteligentes (regla: valoración, fecha, cámara, objetivo, ISO, palabras clave…), guardadas en el catálogo | ✅ |
+| Catálogo en la app, copias virtuales | ⏳ |
 | Importación de catálogos existentes | ⏳ |
 
 ## Lo que distingue a LÜMA
