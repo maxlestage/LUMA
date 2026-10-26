@@ -2844,3 +2844,11 @@ es = En la biblioteca, mantenga pulsadas las fotos que desea fusionar, o tome to
 fr = Une photo choisie : touchez longuement les autres dans la bibliothèque.
 en = One photo selected: touch and hold the others in the library.
 es = Una foto seleccionada: mantenga pulsadas las demás en la biblioteca.
+
+fr = Photos ne s'ouvre pas : réessayez dans un instant.
+en = Photos won't open: try again in a moment.
+es = Fotos no se abre: vuelva a intentarlo en un momento.
+
+fr = {n} photo(s) importée(s).
+en = {n} photo(s) imported.
+es = {n} foto(s) importada(s).
