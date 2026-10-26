@@ -24,6 +24,10 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **La photothèque dans l'app** (Bibliothèque) : chaque dossier ouvert y entre, en
+  arrière‑plan ; toutes les photos, les collections et les dossiers, chacun avec son
+  nombre de photos, et une recherche (« mer note:3 date:2024 ») ; ces vues sont triées
+  par date de prise de vue, et le film, la grille et les flèches les suivent.
 - **Mots‑clés dans l'app** (Bibliothèque) : on les tape (plusieurs à la fois, séparés
   par une virgule), ils vont à toutes les photos choisies (⌘‑clic, Maj‑clic) ; une
   croix en retire un. La liste des mots‑clés du dossier, avec leur nombre, filtre la
