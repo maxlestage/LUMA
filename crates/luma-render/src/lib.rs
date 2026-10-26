@@ -10,6 +10,7 @@
 pub mod chart;
 pub mod duplicate;
 pub mod export;
+pub mod jpeg;
 pub mod metadata;
 pub mod thumbnail;
 pub mod watermark;

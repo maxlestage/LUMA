@@ -9,7 +9,9 @@ La fototeca profesional, paso a paso.
   entre un 25 y un 30 % menos, y la vista previa con ajustes intensos responde un 25 %
   más rápido. Después los desenfoques: dos búferes en lugar de seis imágenes nuevas, y
   el enfoque a resolución completa casi el doble de rápido (NEF 0,64 → 0,36 s), sin
-  cambiar un píxel.
+  cambiar un píxel. Después la escritura de los JPEG, en todos los núcleos: de 2,3 a
+  2,6 veces más rápida, archivos idénticos byte a byte; una exportación a resolución
+  completa de 24 Mpx en 1,8 s en lugar de 2,4.
 
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
