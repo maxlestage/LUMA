@@ -46,7 +46,7 @@ fn main() {
     let gpu = luma_gpu::Gpu::any().expect("un GPU");
     println!("GPU : {}", gpu.name());
     let dir = std::env::temp_dir().join(format!("luma-measure-{}", std::process::id()));
-    let mut rows: Vec<[f64; 7]> = Vec::new();
+    let mut rows: Vec<[f64; 8]> = Vec::new();
     for path in &paths {
         let t = Instant::now();
         let quick = luma_raw::RawPhoto::embedded_preview(std::path::Path::new(path), 320);
@@ -114,16 +114,18 @@ fn main() {
             "{path} : vignette {thumbnail:.0} ms (rendu {rendered:.0} ms) · ouverture {open_raw:.0} ms (RAW), {open_dup:.0} ms (doublon) · \
              réglage P50 {adjust:.1} ms · mémoire {mem_raw:.0} Mo (RAW), {mem_dup:.0} Mo (doublon)"
         );
-        rows.push([thumbnail, open_raw, open_dup, adjust, mem_raw, mem_dup, rendered]);
+        rows.push([
+            thumbnail, open_raw, open_dup, adjust, mem_raw, mem_dup, rendered, retina,
+        ]);
     }
     let _ = std::fs::remove_dir_all(&dir);
-    let m: [f64; 7] = std::array::from_fn(|k| median(rows.iter().map(|r| r[k]).collect()));
+    let m: [f64; 8] = std::array::from_fn(|k| median(rows.iter().map(|r| r[k]).collect()));
     println!(
         "médianes : vignette {:.0} ms (rendu {:.0} ms) · ouverture {:.0} ms (RAW), {:.0} ms (doublon) · réglage {:.1} ms · mémoire {:.0} Mo (RAW), {:.0} Mo (doublon)",
         m[0], m[6], m[1], m[2], m[3], m[4], m[5]
     );
     println!(
-        "site: vignette={:.0} vignette_rendu={:.0} ouverture_raw={:.0} ouverture={:.0} reglage={:.1} memoire_raw={:.0} memoire={:.0}",
-        m[0], m[6], m[1], m[2], m[3], m[4], m[5]
+        "site: vignette={:.0} vignette_rendu={:.0} ouverture_raw={:.0} ouverture={:.0} reglage={:.1} retina={:.1} memoire_raw={:.0} memoire={:.0}",
+        m[0], m[6], m[1], m[2], m[3], m[7], m[4], m[5]
     );
 }

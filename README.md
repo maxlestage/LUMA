@@ -1,7 +1,7 @@
 # LÜMA
 
 **La lumière, développée en Rust.** Un éditeur photo professionnel écrit en Rust : RAW,
-couleur 32 bits flottants, masques, IA locale, photothèque. **macOS et iOS/iPadOS d'abord**,
+couleur 32 bits flottants, masques, photothèque, sans IA. **macOS et iOS/iPadOS d'abord**,
 puis Windows, Linux et Android sur le même moteur.
 
 - [Architecture](docs/architecture.md) : couches, workspace Cargo, pipeline non destructif, règles « 100 % Rust »

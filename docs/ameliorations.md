@@ -56,7 +56,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 - [x] 3.1 DNG : opcodes `WarpRectilinear` et `FixVignetteRadial` (OpcodeList1‑3) lus et
   appliqués.
 - [x] 3.2 Sony : distorsion, vignetage et aberration chromatique des makernotes ARW.
-- [ ] 3.3 Fujifilm : données de correction du RAF.
+- [x] 3.3 Fujifilm : données de correction du RAF.
 - [ ] 3.4 Olympus/OM et Panasonic : distorsion et vignetage des makernotes.
 - [ ] 3.5 Application automatique à l'ouverture, case « Corrections du boîtier »,
   réglage manuel en secours ; XMP.
@@ -166,8 +166,6 @@ et blanc, vignetage après recadrage et grain existent).
 - Le trait d'union insécable (U+2011) n'est pas dans la police de l'app : un texte
   affiché qui en contient (descriptions de films : « sous‑exposé », « vert‑cyan »)
   fait échouer le rendu de test ; à remplacer par un trait d'union simple à l'écran.
-- Les textes de présentation parlent encore d'« IA locale » (README, architecture,
-  feuille de route) : à retirer, LÜMA n'utilise aucune IA.
 - Les images développées (JPEG, HEIC…) : lire leur EXIF pour la date de prise de vue,
   le boîtier et l'objectif (aujourd'hui, date du fichier).
 - Doublons dans le catalogue (même date, même boîtier, même taille).
@@ -217,3 +215,5 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 3.1 Opcodes DNG (`luma_raw::opcodes`) : `WarpRectilinear` (distorsion radiale et tangentielle, par plan : aberration chromatique latérale) et `FixVignetteRadial` lus dans `OpcodeList2` et `OpcodeList3`, appliqués sur la mosaïque ou après le dématriçage, à toutes les tailles, au centre optique du capteur même recadré ; autres opcodes ignorés | Tests : lecture (et liste tronquée sans débordement), vignetage ×2 aux coins et inchangé au centre, distorsion nulle sans effet, barillet, trois plans, image recadrée ; même gain dans l'aperçu et en pleine taille. Le ProRAW du corpus n'a pas d'opcodes : rendu inchangé |
 | 2026-10-26 | 2.7 Export vers plusieurs préréglages à la fois : `luma export <photos…> --preset A --preset B` (chaque RAW ouvert une fois, noms en double numérotés, une photo illisible n'arrête pas les autres) ; fenêtre Exporter : « Exporter vers » (les réglages de la fenêtre et des préréglages cochés), « Reprendre » un préréglage, « Enregistrer ces réglages » ; la fenêtre défile sur petit écran | Trois RAW (NEF, ARW, RAF) vers deux préréglages (2048 px JPEG, 1080 px PNG) : 1,94 à 1,98 s avec `luma export`, contre 2,90 à 2,96 s pour six `luma develop` séparés (−33 %, chaque RAW lu et dématricé une seule fois) |
 | 2026-10-26 | 3.2 Corrections Sony (`opcodes::sony`, `Opcode::Spline`) : distorsion (0x7037), aberration chromatique rouge et bleue (0x7035) et vignetage (0x7032) lus dans le sous‑IFD de l'ARW, en courbes sur 16 nœuds ; une passe tabulée (rapport de rayon par couleur, gain de lumière) ; agrandissement minimal sans bord vide | Sony A7 III du corpus (FE 16‑35 GM à 32 mm) : coins +10 % de lumière au moins, zoom < 5 % ; aperçu 3000×2000 : 46 → 201 ms à la première ouverture (première version : 376 ms ; ensuite le doublon est déjà corrigé), pleine taille 24 Mpx : +0,6 s (jusqu'à 1,5 s à froid) ; les 246 tests du dépôt inchangés |
+| 2026-10-26 | Plus aucune mention d'IA dans ce qui est visible : README, architecture et feuille de route (FR, EN, ES), site (crates prévues, priorités, feuille de route) ; « sans IA » dit à la place | Recherche d'« IA », « AI », « Neural », « luma-ai » dans le README, les docs et le site : plus rien hors des mentions « sans IA » |
+| 2026-10-26 | 3.3 Corrections Fujifilm (`opcodes::fuji`) : 0xF00B (distorsion), 0xF00F (aberration chromatique), 0xF010 (vignetage) du FujiIFD, dans le TIFF des données brutes du RAF (quelques Ko lus) ; X‑Trans IV et V (9 nœuds) et avant (11 nœuds) ; mode recadré (CropMode 2 ou 4 : nœuds × 1,25) ; même passe que pour Sony | X‑T3 du corpus (XF 35 mm F2) : barillet corrigé (−8,9 % de rayon au bord), rouge et bleu décalés de ±0,15 %, pas de vignetage enregistré, aucun agrandissement nécessaire ; coût identique à celui des Sony |
