@@ -27,7 +27,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   ISO), enregistrées dans le catalogue ; `luma catalog --collection`.
 - [x] 1.4 Mots‑clés dans l'app : saisie, ajout à plusieurs photos, liste des mots‑clés
   du catalogue avec leur nombre.
-- [ ] 1.5 L'app ouvre le catalogue : panneau Photothèque (dossiers, collections),
+- [x] 1.5 L'app ouvre le catalogue : panneau Photothèque (dossiers, collections),
   grille triée par date, recherche et filtres.
 - [ ] 1.6 Copies virtuelles : plusieurs jeux de réglages pour un même fichier, dans le
   XMP, visibles dans la grille et le film.
@@ -189,3 +189,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 2.3 Dimensions d'export (`luma_render::export::Resize`) : grand côté, petit côté, cadre largeur × hauteur, mégapixels, jamais d'agrandissement, calculées sur l'image recadrée ; fenêtre Exporter (choix du mode), préréglages (anciens fichiers `long_edge` relus), `luma develop --resize`, `luma export-preset --size` | Rendu à la taille utile puis réduction exacte : un export « 1920 × 1080 » ou « 12 Mpx » ne rend jamais la pleine définition quand l'image est plus grande |
 | 2026-10-26 | 1.4 Mots‑clés dans l'app : saisie (virgules), ajout et retrait sur toutes les photos choisies (XMP de métadonnées seules pour une photo jamais développée), mots‑clés du dossier avec leur nombre, filtre de la grille ; correction : un XMP qui ne porte que des mots‑clés n'est plus pris pour des réglages | Test de l'interface avec le corpus : deux photos et la photo affichée étiquetées, XMP relus, filtre, retrait ; capture `studio-bibliotheque-mots-cles.png` |
 | 2026-10-26 | 2.4 Accentuation de sortie (`luma_render::export::OutputSharpen`) : écran (rayon 0,5 px), papier brillant et mat (rayon plus large, qui grandit avec l'image), trois intensités, masque des aplats ; appliquée après le redimensionnement ; fenêtre Exporter, préréglages, `--output-sharpen` | Coût sur un export 2048 px : environ +40 ms (NEF, 4 cœurs) ; en pleine définition 24 Mpx : 0,1 à 0,3 s |
+| 2026-10-26 | 1.5 La photothèque dans l'app : chaque dossier ouvert entre au catalogue dans un fil à part (enregistré ensuite), panneau Photothèque (recherche, toutes les photos, collections, dossiers avec leur nombre), vues par date de prise de vue ; correction : changer de film enregistre d'abord les réglages en attente de la photo qui les porte | Test de l'interface sur le corpus : 5 photos indexées sans bloquer l'interface, vue « toutes » par date, recherche, collection dynamique ; capture `studio-bibliotheque-phototheque.png` |

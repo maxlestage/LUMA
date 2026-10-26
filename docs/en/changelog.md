@@ -23,6 +23,10 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **The catalog in the app** (Library): every folder you open is added in the
+  background; all photos, collections and folders, each with its number of photos,
+  and a search (“sea rating:3 date:2024”); these views are sorted by capture date, and
+  the filmstrip, the grid and the arrow keys follow them.
 - **Keywords in the app** (Library): type them (several at once, separated by
   commas) and they go to every selected photo (⌘‑click, Shift‑click); a cross removes
   one. The folder's keywords, with their count, filter the grid in one click (case and

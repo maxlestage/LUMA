@@ -106,7 +106,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Búsqueda y filtros (`luma catalog --search`): palabras sin tener en cuenta los acentos; valoración, bandera, etiqueta, fechas, ISO, focal, cámara, objetivo, palabra clave; recuento de palabras clave, cámaras y objetivos | ✅ |
 | Colecciones manuales e inteligentes (regla: valoración, fecha, cámara, objetivo, ISO, palabras clave…), guardadas en el catálogo | ✅ |
 | Palabras clave en la app: escritura (varias a la vez, separadas por comas), añadidas y quitadas en todas las fotos seleccionadas, lista de palabras clave de la carpeta con su número, filtro de la cuadrícula | ✅ |
-| Catálogo en la app, copias virtuales | ⏳ |
+| Fototeca en la app: cada carpeta abierta entra en ella (en segundo plano); todas las fotos, las colecciones y las carpetas, cada una con su número de fotos; búsqueda y filtros; vistas ordenadas por fecha de captura | ✅ |
+| Copias virtuales | ⏳ |
 | Importación de catálogos existentes | ⏳ |
 
 ## Lo que distingue a LÜMA

@@ -1305,6 +1305,46 @@ fr = Ajouter un mot-clé (virgule entre deux)
 en = Add a keyword (comma between two)
 es = Añadir una palabra clave (coma entre dos)
 
+fr = Photothèque
+en = Catalog
+es = Fototeca
+
+fr = Rechercher : mer note:3 date:2024 iso:..800
+en = Search: sea rating:3 date:2024 iso:..800
+es = Buscar: mar rating:3 date:2024 iso:..800
+
+fr = Toutes les photos ({n})
+en = All photos ({n})
+es = Todas las fotos ({n})
+
+fr = Toutes les photos
+en = All photos
+es = Todas las fotos
+
+fr = Collections
+en = Collections
+es = Colecciones
+
+fr = Dossiers
+en = Folders
+es = Carpetas
+
+fr = Mise à jour de la photothèque…
+en = Updating the catalog…
+es = Actualizando la fototeca…
+
+fr = Recherche : {text}
+en = Search: {text}
+es = Búsqueda: {text}
+
+fr = Recherche mal écrite : {text}
+en = Search not understood: {text}
+es = Búsqueda mal escrita: {text}
+
+fr = Aucune photo ne répond à cette recherche.
+en = No photo matches this search.
+es = Ninguna foto coincide con esta búsqueda.
+
 fr = Appareil
 en = Camera
 es = Cámara

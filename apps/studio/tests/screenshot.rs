@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use egui::{Key, Modifiers};
 use egui_kittest::Harness;
 use luma_studio::Studio;
-use luma_studio::app::Module;
+use luma_studio::app::{Module, View};
 
 /// Une copie du corpus dans un dossier à part : les XMP écrits par l'app ne touchent
 /// pas le corpus. `None` si le corpus n'est pas téléchargé.
@@ -55,6 +55,8 @@ impl Session {
         prepare(raw.parent().unwrap());
         // Un essai tout neuf : l'écran Premium ne cache pas les captures.
         let licence_dir = raw.parent().unwrap().join("licence");
+        // La photothèque de l'essai, dans sa copie du corpus.
+        let catalog = raw.parent().unwrap().join("catalogue.lumacat");
         let harness = Harness::builder()
             .with_size(size)
             .with_pixels_per_point(scale)
@@ -64,6 +66,7 @@ impl Session {
                     let s = studio.get_or_insert_with(|| {
                         let mut s = Studio::new(ui.ctx());
                         s.use_licence_dir(licence_dir.clone());
+                        s.use_catalog(catalog.clone());
                         s.open_path(&raw);
                         s
                     });
@@ -238,6 +241,59 @@ fn library_keywords() {
         luma_studio::worker::read_meta(&files[others[0]]).keywords,
         ["Été"]
     );
+}
+
+#[test]
+fn library_catalog_views() {
+    let _gpu = one_at_a_time();
+    // Une collection dynamique, déjà dans le catalogue de l'essai.
+    let prepare = |dir: &Path| {
+        let mut cat = luma_library::Catalog::default();
+        cat.set_collection(luma_library::Collection::smart("Bas ISO", "iso:..160").unwrap())
+            .unwrap();
+        cat.save(&dir.join("catalogue.lumacat")).unwrap();
+    };
+    let Some(mut s) = Session::open_prepared("phototheque", [1440.0, 900.0], 1.0, prepare) else {
+        return;
+    };
+    s.keys(&[(NONE, Key::G)]);
+    // Le dossier ouvert est entré dans la photothèque, en arrière‑plan.
+    assert_eq!(s.studio().catalog().len(), 5);
+    let dir = std::env::temp_dir().join("luma-studio-phototheque");
+    assert_eq!(
+        luma_library::Catalog::load(&dir.join("catalogue.lumacat")).len(),
+        5,
+        "enregistrée"
+    );
+    // Toutes les photos, par date de prise de vue : la Sony de 2018 d'abord.
+    s.studio().show_view(View::All);
+    s.wait();
+    let names = |s: &mut Session| -> Vec<String> {
+        let st = s.studio();
+        (0..5)
+            .filter_map(|i| st.photo_at(i))
+            .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect()
+    };
+    assert_eq!(names(&mut s)[0], "_DSC0009.ARW");
+    assert_eq!(
+        names(&mut s)[4],
+        "Canon_EOS_R5_CRAW_ISO_100_nocrop_dual.CR3"
+    );
+    // Une recherche, puis la collection dynamique.
+    s.studio().show_view(View::Search("boîtier:nikon".into()));
+    s.wait();
+    assert_eq!(names(&mut s), ["DSC_0750.NEF"]);
+    s.studio().show_view(View::Search("couleur:rouge".into()));
+    assert_eq!(
+        s.studio().view,
+        View::Search("boîtier:nikon".into()),
+        "une erreur ne change rien"
+    );
+    s.studio().show_view(View::Collection("Bas ISO".into()));
+    s.wait();
+    assert_eq!(names(&mut s).len(), 4, "{:?}", names(&mut s));
+    s.capture("bibliotheque-phototheque");
 }
 
 #[test]

@@ -350,6 +350,18 @@ impl Tool {
     }
 }
 
+/// Ce que montrent la grille et le film : un dossier, ou une vue de la photothèque.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub enum View {
+    #[default]
+    Folder,
+    /// Toutes les photos du catalogue, par date de prise de vue.
+    All,
+    Collection(String),
+    /// Une recherche, telle qu'elle a été tapée.
+    Search(String),
+}
+
 /// Le filtre de la Bibliothèque, appliqué aussi au film et à ← →.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum FlagFilter {
@@ -414,6 +426,18 @@ pub struct Studio {
     pub keyword_filter: Option<String>,
     /// Le mot‑clé en cours de saisie.
     keyword_input: String,
+    /// La photothèque : le catalogue de toutes les photos vues, son fichier, et la mise
+    /// à jour en cours (un dossier relu dans un fil à part, sans bloquer l'interface).
+    catalog: luma_library::Catalog,
+    catalog_path: Option<PathBuf>,
+    indexing: Option<std::sync::mpsc::Receiver<luma_library::Catalog>>,
+    pending_index: Vec<PathBuf>,
+    /// Les dossiers et les collections du catalogue, avec leur nombre de photos
+    /// (recalculés quand le catalogue change, pas à chaque image).
+    catalog_folders: Vec<(PathBuf, usize)>,
+    catalog_collections: Vec<(String, usize)>,
+    pub view: View,
+    catalog_search: String,
     export_options: ExportOptions,
     export_open: bool,
     export_all: bool,
@@ -479,7 +503,7 @@ impl Studio {
     pub fn new(ctx: &egui::Context) -> Self {
         crate::style::apply(ctx);
         let repaint_ctx = ctx.clone();
-        Self {
+        let mut studio = Self {
             worker: Worker::new(move || repaint_ctx.request_repaint()),
             folder: Vec::new(),
             current: None,
@@ -515,6 +539,14 @@ impl Studio {
             flag_filter: FlagFilter::All,
             keyword_filter: None,
             keyword_input: String::new(),
+            catalog: luma_library::Catalog::default(),
+            catalog_path: None,
+            indexing: None,
+            pending_index: Vec::new(),
+            catalog_folders: Vec::new(),
+            catalog_collections: Vec::new(),
+            view: View::Folder,
+            catalog_search: String::new(),
             export_options: ExportOptions::default(),
             export_open: false,
             export_all: false,
@@ -553,10 +585,15 @@ impl Studio {
             previews_for: None,
             eyedropper: false,
             wb_label: "Personnalisée",
+        };
+        if let Some(path) = luma_library::default_path() {
+            studio.use_catalog(path);
         }
+        studio
     }
 
-    /// Ouvre un fichier (et son dossier dans le film) ou un dossier.
+    /// Ouvre un fichier (et son dossier dans le film) ou un dossier ; le dossier entre
+    /// dans la photothèque (ou y est remis à jour), en arrière‑plan.
     pub fn open_path(&mut self, path: &Path) {
         let (dir, file) = if path.is_dir() {
             (path.to_path_buf(), None)
@@ -566,12 +603,26 @@ impl Studio {
                 Some(path.to_path_buf()),
             )
         };
-        self.folder = scan(&dir);
+        let mut photos = scan(&dir);
         if let Some(f) = &file
-            && !self.folder.contains(f)
+            && !photos.contains(f)
         {
-            self.folder.push(f.clone());
+            photos.push(f.clone());
         }
+        self.view = View::Folder;
+        let empty = trf("Aucune photo dans {dir}", &[("dir", &dir.display())]);
+        self.show_photos(photos, file, empty);
+        self.index_folder(dir);
+    }
+
+    /// Remplit le film et la grille avec ces photos, et ouvre `file` (sinon la
+    /// première).
+    fn show_photos(&mut self, photos: Vec<PathBuf>, file: Option<PathBuf>, empty: String) {
+        // Les réglages en attente vont à la photo qui les porte, avant que le film change.
+        self.flush_xmp();
+        self.current = None;
+        self.selected.clear();
+        self.folder = photos;
         for p in &self.folder {
             if !self.thumbs.contains_key(p) {
                 self.worker.thumbnail(p.clone());
@@ -591,7 +642,134 @@ impl Studio {
             });
         match index {
             Some(i) => self.select(i),
-            None => self.status = trf("Aucune photo dans {dir}", &[("dir", &dir.display())]),
+            None => {
+                self.photo = None;
+                self.status = empty;
+            }
+        }
+    }
+
+    /// La photothèque de ce fichier (les tests en prennent une à eux).
+    pub fn use_catalog(&mut self, path: PathBuf) {
+        self.catalog = luma_library::Catalog::load(&path);
+        self.catalog_path = Some(path);
+        self.refresh_catalog_lists();
+    }
+
+    /// Le catalogue, en lecture.
+    pub fn catalog(&self) -> &luma_library::Catalog {
+        &self.catalog
+    }
+
+    /// Une mise à jour du catalogue est‑elle en cours ?
+    pub fn is_indexing(&self) -> bool {
+        self.indexing.is_some() || !self.pending_index.is_empty()
+    }
+
+    /// Ajoute un dossier au catalogue, ou le remet à jour, dans un fil à part ; puis
+    /// l'enregistre. Une seule mise à jour à la fois, les suivantes attendent leur tour.
+    fn index_folder(&mut self, dir: PathBuf) {
+        let Some(file) = self.catalog_path.clone() else {
+            return;
+        };
+        if self.indexing.is_some() {
+            if !self.pending_index.contains(&dir) {
+                self.pending_index.push(dir);
+            }
+            return;
+        }
+        let mut catalog = self.catalog.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            catalog.add_folder(&dir, false);
+            let _ = catalog.save(&file);
+            let _ = tx.send(catalog);
+        });
+        self.indexing = Some(rx);
+    }
+
+    /// Reprend le catalogue mis à jour, s'il est prêt.
+    fn poll_catalog(&mut self) {
+        let Some(rx) = &self.indexing else { return };
+        match rx.try_recv() {
+            Ok(catalog) => {
+                self.catalog = catalog;
+                self.indexing = None;
+                self.refresh_catalog_lists();
+                if !self.pending_index.is_empty() {
+                    let dir = self.pending_index.remove(0);
+                    self.index_folder(dir);
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.indexing = None,
+        }
+    }
+
+    fn refresh_catalog_lists(&mut self) {
+        let mut folders: BTreeMap<PathBuf, usize> = BTreeMap::new();
+        for e in self.catalog.entries() {
+            if let Some(d) = e.path.parent() {
+                *folders.entry(d.to_path_buf()).or_default() += 1;
+            }
+        }
+        self.catalog_folders = folders.into_iter().collect();
+        self.catalog_collections = self
+            .catalog
+            .collections()
+            .iter()
+            .map(|c| {
+                let n = self
+                    .catalog
+                    .collection_photos(&c.name)
+                    .map_or(0, |v| v.len());
+                (c.name.clone(), n)
+            })
+            .collect();
+    }
+
+    /// Montre une vue de la photothèque : toutes les photos, une collection ou une
+    /// recherche, par date de prise de vue. Une recherche mal écrite le dit et ne
+    /// change rien.
+    pub fn show_view(&mut self, view: View) {
+        let found: Result<Vec<PathBuf>, String> = match &view {
+            View::Folder => return,
+            View::All => Ok(self
+                .catalog
+                .by_date()
+                .iter()
+                .map(|e| e.path.clone())
+                .collect()),
+            View::Collection(name) => self
+                .catalog
+                .collection_photos(name)
+                .map(|v| v.iter().map(|e| e.path.clone()).collect()),
+            View::Search(text) => luma_library::Query::parse(text).map(|q| {
+                self.catalog
+                    .search(&q)
+                    .iter()
+                    .map(|e| e.path.clone())
+                    .collect()
+            }),
+        };
+        match found {
+            Ok(photos) => {
+                // Les photos d'un disque débranché ne s'affichent pas.
+                let photos = photos.into_iter().filter(|p| p.is_file()).collect();
+                self.view = view;
+                self.show_photos(
+                    photos,
+                    None,
+                    tr("Aucune photo ne répond à cette recherche.").to_owned(),
+                );
+            }
+            Err(_) => {
+                let text = match &view {
+                    View::Search(t) => t.as_str(),
+                    _ => "",
+                };
+                self.status = trf("Recherche mal écrite : {text}", &[("text", &text)]);
+            }
         }
     }
 
@@ -602,6 +780,11 @@ impl Studio {
         } else {
             self.status.clone()
         }
+    }
+
+    /// La photo de rang `i` dans le film.
+    pub fn photo_at(&self, i: usize) -> Option<&Path> {
+        self.folder.get(i).map(PathBuf::as_path)
     }
 
     /// La photo actuellement développée.
@@ -746,6 +929,7 @@ impl Studio {
     /// Prête : photo chargée et dernier rendu affiché.
     pub fn is_idle(&self) -> bool {
         self.loading.is_none()
+            && !self.is_indexing()
             && self.photo.is_some()
             && self.folder.iter().all(|p| self.thumbs.contains_key(p))
             && self.shown == self.generation
@@ -1553,6 +1737,10 @@ impl Studio {
             if self.evicted.remove(&p) {
                 self.worker.thumbnail(p);
             }
+        }
+        self.poll_catalog();
+        if self.indexing.is_some() {
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
         if self.licence.poll() {
             // Une clé activée ferme l'écran Premium.
@@ -2831,13 +3019,20 @@ impl Studio {
 
     /// Bibliothèque, à gauche : le dossier et le filtre.
     fn library_left(&mut self, ui: &mut Ui) {
+        self.catalog_panel(ui);
+        ui.add_space(14.0);
         section_title(ui, tr("Dossier"));
-        let dir = self
-            .folder
-            .first()
-            .and_then(|p| p.parent())
-            .map(|d| d.display().to_string())
-            .unwrap_or_else(|| tr("Aucun (Cmd+O)").into());
+        let dir = match &self.view {
+            View::Folder => self
+                .folder
+                .first()
+                .and_then(|p| p.parent())
+                .map(|d| d.display().to_string())
+                .unwrap_or_else(|| tr("Aucun (Cmd+O)").into()),
+            View::All => tr("Toutes les photos").to_owned(),
+            View::Collection(name) => name.clone(),
+            View::Search(text) => trf("Recherche : {text}", &[("text", text)]),
+        };
         ui.label(RichText::new(dir).size(12.0));
         ui.label(
             RichText::new(trf(
@@ -2895,6 +3090,78 @@ impl Studio {
             tr("D ou double-clic : Développement"),
         ] {
             ui.label(RichText::new(line).size(11.5).color(theme::DIM));
+        }
+    }
+
+    /// La photothèque : la recherche, toutes les photos, les collections et les dossiers
+    /// du catalogue, chacun avec son nombre de photos.
+    fn catalog_panel(&mut self, ui: &mut Ui) {
+        section_title(ui, tr("Photothèque"));
+        let edit = ui.add(
+            egui::TextEdit::singleline(&mut self.catalog_search)
+                .hint_text(tr("Rechercher : mer note:3 date:2024 iso:..800"))
+                .desired_width(f32::INFINITY),
+        );
+        if edit.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {
+            let text = self.catalog_search.trim().to_owned();
+            self.show_view(if text.is_empty() {
+                View::All
+            } else {
+                View::Search(text)
+            });
+        }
+        let mut chosen = None;
+        let all = trf("Toutes les photos ({n})", &[("n", &self.catalog.len())]);
+        if ui.selectable_label(self.view == View::All, all).clicked() {
+            chosen = Some(View::All);
+        }
+        if !self.catalog_collections.is_empty() {
+            ui.label(
+                RichText::new(tr("Collections"))
+                    .color(theme::DIM)
+                    .size(11.5),
+            );
+            for (name, n) in &self.catalog_collections {
+                let on = self.view == View::Collection(name.clone());
+                if ui.selectable_label(on, format!("{name} ({n})")).clicked() {
+                    chosen = Some(View::Collection(name.clone()));
+                }
+            }
+        }
+        let mut open = None;
+        if !self.catalog_folders.is_empty() {
+            ui.label(RichText::new(tr("Dossiers")).color(theme::DIM).size(11.5));
+            let current = self
+                .folder
+                .first()
+                .and_then(|p| p.parent())
+                .map(Path::to_path_buf);
+            for (dir, n) in &self.catalog_folders {
+                let on = self.view == View::Folder && current.as_ref() == Some(dir);
+                let name = dir.file_name().map_or_else(
+                    || dir.display().to_string(),
+                    |n| n.to_string_lossy().into_owned(),
+                );
+                if ui
+                    .selectable_label(on, format!("{name} ({n})"))
+                    .on_hover_text(dir.display().to_string())
+                    .clicked()
+                {
+                    open = Some(dir.clone());
+                }
+            }
+        }
+        if self.is_indexing() {
+            ui.label(
+                RichText::new(tr("Mise à jour de la photothèque…"))
+                    .color(theme::DIM)
+                    .size(11.0),
+            );
+        }
+        if let Some(v) = chosen {
+            self.show_view(v);
+        } else if let Some(dir) = open {
+            self.open_path(&dir);
         }
     }
 

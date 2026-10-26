@@ -106,7 +106,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Recherche et filtres (`luma catalog --search`) : mots sans tenir compte des accents ; note, drapeau, libellé, dates, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers et objectifs | ✅ |
 | Collections manuelles et dynamiques (règle : note, date, boîtier, objectif, ISO, mots‑clés…), enregistrées dans le catalogue | ✅ |
 | Mots‑clés dans l'app : saisie (plusieurs à la fois, séparés par une virgule), ajout et retrait sur toutes les photos choisies, liste des mots‑clés du dossier avec leur nombre, filtre de la grille | ✅ |
-| Catalogue dans l'app, copies virtuelles | ⏳ |
+| Photothèque dans l'app : chaque dossier ouvert y entre (en arrière‑plan) ; toutes les photos, les collections et les dossiers, chacun avec son nombre de photos ; recherche et filtres ; vues triées par date de prise de vue | ✅ |
+| Copies virtuelles | ⏳ |
 | Import de catalogues existants | ⏳ |
 
 ## Ce qui distingue LÜMA
