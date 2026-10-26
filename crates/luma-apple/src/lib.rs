@@ -18,6 +18,24 @@ pub fn install() {
     luma_raw::raster::set_system_decoder(apple::decode);
 }
 
+/// La mémoire que le système laisse encore à l'app, en octets : sur iPhone et iPad,
+/// au‑delà, il la ferme sans prévenir. `None` ailleurs (pas de telle limite).
+pub fn available_memory() -> Option<u64> {
+    #[cfg(target_os = "ios")]
+    {
+        unsafe extern "C" {
+            // libsystem (iOS 13 et suivants) : sans argument, sans effet de bord.
+            fn os_proc_available_memory() -> usize;
+        }
+        // SAFETY: fonction du système sans argument ni état partagé, disponible depuis
+        // iOS 13 (l'app vise iOS 16) ; elle rend un simple nombre d'octets.
+        let bytes = unsafe { os_proc_available_memory() };
+        (bytes > 0).then_some(bytes as u64)
+    }
+    #[cfg(not(target_os = "ios"))]
+    None
+}
+
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod apple {
     use std::path::Path;
