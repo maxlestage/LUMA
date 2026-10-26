@@ -31,6 +31,9 @@ const MAGIC: &[u8; 8] = b"LUMADUP2";
 const BAND: usize = 64;
 /// Le plus petit niveau de la pyramide (grand côté), sous lequel on s'arrête.
 const SMALLEST: usize = 512;
+/// L'aperçu de l'app (grand côté) : un niveau de cette taille exacte quand la
+/// réduction par deux passerait dessous, pour ne pas relire la pleine définition.
+const PREVIEW: usize = 2048;
 
 /// La signature du fichier d'origine : taille et date de modification.
 pub(crate) fn signature(source: &Path) -> Option<(u64, u128)> {
@@ -200,11 +203,18 @@ fn decode_band(bytes: &[u8], out: &mut [[f32; 3]]) -> Result<()> {
 /// moitié écrit.
 pub fn write(raw: &RawPhoto, source: &Path, path: &Path) -> Result<()> {
     let sig = signature(source).ok_or_else(|| Error::Decode("original introuvable".into()))?;
-    // La pyramide : la pleine définition, puis des réductions par deux.
+    // La pyramide : la pleine définition, puis des réductions par deux (avec un arrêt à
+    // la taille de l'aperçu).
     let mut levels = vec![raw.demosaic()];
     while levels.last().is_some_and(|l| l.width.max(l.height) > SMALLEST * 2) {
         let l = levels.last().expect("niveau");
-        let next = l.resize_area(l.width.div_ceil(2), l.height.div_ceil(2));
+        let long = l.width.max(l.height);
+        let (w, h) = if long > PREVIEW && long.div_ceil(2) < PREVIEW {
+            RgbImage::fit(l.width, l.height, PREVIEW)
+        } else {
+            (l.width.div_ceil(2), l.height.div_ceil(2))
+        };
+        let next = l.resize_area(w, h);
         levels.push(next);
     }
     let header = serde_json::to_vec(&meta(raw, sig)).map_err(|e| Error::Decode(e.to_string()))?;

@@ -118,6 +118,20 @@ fn the_duplicate_needs_much_less_memory() {
     let _ = std::fs::remove_dir_all(dir.parent().unwrap());
 }
 
+/// Entre 2048 et 4096 px de grand côté, la pyramide garde un niveau à la taille exacte
+/// de l'aperçu : l'aperçu ne relit pas la pleine définition.
+#[test]
+fn the_preview_has_its_own_level() {
+    let (source, dir) = setup("apercu");
+    let path = Photo::new(bayer(3000, 2000)).write_duplicate(&source, &dir).unwrap();
+    let (dup, _) = Duplicate::open(&source, &path).unwrap();
+    let sizes = dup.sizes();
+    assert_eq!(sizes[1].0.max(sizes[1].1), 2048, "{sizes:?}");
+    assert_eq!(dup.level_for(2048), 1);
+    assert_eq!(sizes[2], (1024, 683), "{sizes:?}");
+    let _ = std::fs::remove_dir_all(dir.parent().unwrap());
+}
+
 #[test]
 fn a_changed_original_is_read_again() {
     let (source, dir) = setup("modifie");
