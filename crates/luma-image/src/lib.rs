@@ -202,7 +202,8 @@ pub fn finish_layers(
         };
         cancel.check()?;
         finish(&mut alt, scale, &look, cancel, t)?;
-        let weights = t.time("films des masques", || local::weights(mask, out.width, out.height));
+        // La zone se lit sur la base (même taille que la sortie), plage comprise.
+        let weights = t.time("films des masques", || local::weights_on(mask, base));
         out.data
             .par_iter_mut()
             .zip(alt.data.par_iter().zip(weights.data.par_iter()))
