@@ -90,6 +90,9 @@ La photothèque professionnelle, étape par étape.
 - **Export vers plusieurs préréglages à la fois** : cochez « Web » et « Impression »
   dans la fenêtre Exporter, chaque photo part vers les deux en une fois ; enregistrez
   vos réglages comme préréglage ; `luma export *.ARW --preset Web --preset Impression`.
+- **Plage de luminance des masques** : un masque n'agit que sur certains tons (le ciel
+  clair et pas les arbres, les ombres seulement), avec un adoucissement ; elle vaut aussi
+  pour les films posés par masque et se voit avec la touche O.
 
 ## 0.2.0 — octobre 2026
 

@@ -803,6 +803,12 @@ mod tests {
         let mut sky = crate::Mask::linear();
         sky.local.exposure = -0.8;
         sky.local.temperature = -20.0;
+        // Le ciel seulement, sans les arbres : une plage de luminance.
+        sky.range = Some(crate::LumaRange {
+            low: 55.0,
+            high: 100.0,
+            feather: 20.0,
+        });
         let mut brush = crate::Mask::brush();
         brush.local.clarity = 40.0;
         if let crate::Shape::Brush { dabs } = &mut brush.shape {

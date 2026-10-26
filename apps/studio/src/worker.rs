@@ -528,7 +528,12 @@ fn render_loop(
                         .filter(|b| (b.image.width, b.image.height) == (w, h))
                         .unwrap_or(&base);
                     let alt = g.finish(&b.image, b.id, b.scale, look, OutputSpace::Srgb);
-                    let weights = luma_image::local::weights(mask, w, h);
+                    // La même zone qu'au processeur : plage de luminance mesurée sur la base.
+                    let weights = if (base.image.width, base.image.height) == (w, h) {
+                        luma_image::local::weights_on(mask, &base.image)
+                    } else {
+                        luma_image::local::weights(mask, w, h)
+                    };
                     for ((o, a), wt) in rgba
                         .as_chunks_mut::<4>()
                         .0

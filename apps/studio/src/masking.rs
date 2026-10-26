@@ -289,9 +289,23 @@ pub fn edit(ui: &mut Ui, rect: Rect, mask: &mut Mask, brush: &Brush) -> Change {
     change
 }
 
-/// Le masque en rouge par‑dessus la photo (touche O) : une image de `w × h`.
-pub fn overlay(mask: &Mask, w: usize, h: usize) -> egui::ColorImage {
-    let weights = luma_image::local::weights(mask, w, h);
+/// Le masque en rouge par‑dessus la photo (touche O) : une image de `w × h`. Sa plage
+/// de luminance se lit sur `shown`, la copie réduite de l'image affichée (taille, RGBA).
+pub fn overlay(mask: &Mask, w: usize, h: usize, shown: &([usize; 2], Vec<u8>)) -> egui::ColorImage {
+    let mut weights = luma_image::local::weights(mask, w, h);
+    let ([sw, sh], rgba) = shown;
+    if let Some(r) = mask.range
+        && *sw > 0
+        && *sh > 0
+        && rgba.len() >= sw * sh * 4
+    {
+        for (i, v) in weights.data.iter_mut().enumerate() {
+            let (x, y) = (i % w * sw / w.max(1), i / w * sh / h.max(1));
+            let p = &rgba[(y.min(sh - 1) * sw + x.min(sw - 1)) * 4..][..3];
+            let lin = [0, 1, 2].map(|c| luma_color::srgb_decode(f32::from(p[c]) / 255.0));
+            *v *= r.factor(luma_image::local::lightness(lin));
+        }
+    }
     let pixels = weights
         .data
         .iter()

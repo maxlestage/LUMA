@@ -105,6 +105,54 @@ pub struct Mask {
     /// Un film dans la zone du masque.
     #[serde(default)]
     pub look: Option<Look>,
+    /// Une plage de luminance : le masque n'agit que sur ces tons.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub range: Option<LumaRange>,
+}
+
+/// Une plage de luminance, du noir (0) au blanc (100), en clarté perçue : le masque
+/// agit pleinement entre `low` et `high`, et s'éteint en douceur sur `feather` (0 à 100)
+/// de part et d'autre.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct LumaRange {
+    pub low: f32,
+    pub high: f32,
+    pub feather: f32,
+}
+
+impl Default for LumaRange {
+    /// Les hautes lumières : le ciel, les reflets.
+    fn default() -> Self {
+        LumaRange {
+            low: 60.0,
+            high: 100.0,
+            feather: 30.0,
+        }
+    }
+}
+
+impl LumaRange {
+    /// La part du masque (0 à 1) pour une clarté perçue `l` (0 à 1).
+    pub fn factor(&self, l: f32) -> f32 {
+        let (mut lo, mut hi) = (self.low.clamp(0.0, 100.0) / 100.0, self.high.clamp(0.0, 100.0) / 100.0);
+        if lo > hi {
+            std::mem::swap(&mut lo, &mut hi);
+        }
+        // Le fondu : jusqu'à un quart de l'échelle de chaque côté.
+        let f = self.feather.clamp(0.0, 100.0) / 100.0 * 0.25;
+        let rise = |a: f32, b: f32, x: f32| {
+            if b <= a {
+                if x < a { 0.0 } else { 1.0 }
+            } else {
+                let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
+                t * t * (3.0 - 2.0 * t)
+            }
+        };
+        // Les extrêmes de l'échelle sont pleins : « jusqu'au blanc » inclut le blanc.
+        let below = if lo <= 0.0 { 1.0 } else { rise(lo - f, lo, l) };
+        let above = if hi >= 1.0 { 1.0 } else { 1.0 - rise(hi, hi + f, l) };
+        below * above
+    }
 }
 
 fn full() -> f32 {
@@ -124,6 +172,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 
@@ -141,6 +190,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 
@@ -153,6 +203,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 
@@ -165,6 +216,7 @@ impl Mask {
             amount: 100.0,
             local: Local::default(),
             look: None,
+            range: None,
         }
     }
 
@@ -179,5 +231,52 @@ impl Mask {
         // L'intensité du masque (et son inversion) est déjà dans sa zone.
         let k = l.amount / 100.0;
         (k > 0.0).then_some((l.name.as_str(), k))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_luminance_range_keeps_its_tones() {
+        let r = LumaRange {
+            low: 40.0,
+            high: 70.0,
+            feather: 40.0,
+        };
+        // Plein dans la plage, rien loin dehors, un fondu entre les deux.
+        assert_eq!(r.factor(0.55), 1.0);
+        assert_eq!(r.factor(0.40), 1.0);
+        assert_eq!(r.factor(0.70), 1.0);
+        assert_eq!(r.factor(0.1), 0.0);
+        assert_eq!(r.factor(0.95), 0.0);
+        let soft = r.factor(0.35);
+        assert!(soft > 0.0 && soft < 1.0);
+        assert!(r.factor(0.36) > r.factor(0.33));
+        // Sans adoucissement : une coupure nette.
+        let sharp = LumaRange { feather: 0.0, ..r };
+        assert_eq!(sharp.factor(0.399), 0.0);
+        assert_eq!(sharp.factor(0.401), 1.0);
+        // Les extrêmes de l'échelle sont pleins, et des bornes à l'envers se remettent.
+        let whites = LumaRange::default();
+        assert_eq!(whites.factor(1.0), 1.0);
+        assert_eq!(whites.factor(0.0), 0.0);
+        let all = LumaRange {
+            low: 0.0,
+            high: 100.0,
+            feather: 50.0,
+        };
+        assert!([0.0, 0.3, 1.0].iter().all(|&l| all.factor(l) == 1.0));
+        let swapped = LumaRange {
+            low: 70.0,
+            high: 40.0,
+            feather: 40.0,
+        };
+        assert_eq!(swapped.factor(0.55), 1.0);
+        // Un masque d'avant les plages se relit sans plage.
+        let old: Mask =
+            serde_json::from_str(r#"{"name":"Ciel","shape":{"kind":"full"},"local":{"exposure":-1.0}}"#).unwrap();
+        assert_eq!(old.range, None);
     }
 }

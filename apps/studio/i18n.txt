@@ -569,6 +569,30 @@ fr = Impression
 en = Print
 es = Impresión
 
+fr = Plage de luminance
+en = Luminance range
+es = Rango de luminancia
+
+fr = Seulement certains tons
+en = Only some tones
+es = Solo algunos tonos
+
+fr = Masque {mask} : plage de luminance
+en = Mask {mask}: luminance range
+es = Máscara {mask}: rango de luminancia
+
+fr = Tons depuis
+en = Tones from
+es = Tonos desde
+
+fr = Tons jusqu'à
+en = Tones up to
+es = Tonos hasta
+
+fr = Adoucissement
+en = Smoothness
+es = Suavizado
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos
