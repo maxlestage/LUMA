@@ -459,6 +459,10 @@ pub struct Studio {
     history: Vec<(String, Settings)>,
     history_pos: usize,
     clipboard: Option<Settings>,
+    /// La fenêtre « Coller une partie des réglages » et les groupes cochés (gardés
+    /// d'une fois sur l'autre).
+    paste_open: bool,
+    paste_groups: Vec<luma_project::paste::Group>,
     texture: Option<TextureHandle>,
     image_size: [usize; 2],
     histogram: [[u32; 256]; 3],
@@ -645,6 +649,8 @@ impl Studio {
             history: Vec::new(),
             history_pos: 0,
             clipboard: None,
+            paste_open: false,
+            paste_groups: luma_project::paste::default_groups(),
             texture: None,
             image_size: [0, 0],
             histogram: [[0; 256]; 3],
@@ -1636,6 +1642,8 @@ impl Studio {
                 action = Some("undo");
             } else if i.consume_key(cmd_shift, Key::C) {
                 action = Some("copy");
+            } else if i.consume_key(cmd_shift | Modifiers::ALT, Key::V) {
+                action = Some("paste_some");
             } else if i.consume_key(cmd_shift, Key::V) {
                 action = Some("paste");
             } else if i.consume_key(cmd_shift, Key::R) {
@@ -1727,6 +1735,13 @@ impl Studio {
                     self.touch();
                 }
             }
+            "paste_some" => {
+                if self.clipboard.is_some() && self.photo.is_some() {
+                    self.paste_open = true;
+                } else {
+                    self.status = tr("Copiez d'abord les réglages d'une photo.").into();
+                }
+            }
             "reset" => {
                 self.settings = self.default_settings();
                 self.commit(tr("Réinitialiser").into());
@@ -1783,6 +1798,8 @@ impl Studio {
                     self.settings.crop = t.saved;
                 } else if self.export_open {
                     self.export_open = false;
+                } else if self.paste_open {
+                    self.paste_open = false;
                 } else {
                     self.selected_mask = None;
                 }
@@ -1971,6 +1988,57 @@ impl Studio {
     }
 
     /// La fenêtre Exporter.
+    /// « Coller une partie des réglages » : les groupes à coller, cochés (le recadrage
+    /// et les masques, propres à chaque photo, ne le sont pas d'abord).
+    fn paste_window(&mut self, ctx: &egui::Context) {
+        use luma_project::paste::{GROUPS, Group, paste};
+        let mut open = self.paste_open;
+        let mut go = false;
+        egui::Window::new(tr("Coller une partie des réglages"))
+            .id(egui::Id::unique("fenetre-coller"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .vscroll(true)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                // Le bouton en haut : toujours visible, même quand la liste défile.
+                ui.horizontal(|ui| {
+                    let label = trf("Coller ({n})", &[("n", &self.paste_groups.len())]);
+                    go = ui
+                        .add_enabled(!self.paste_groups.is_empty(), egui::Button::new(label))
+                        .clicked();
+                    if ui.button(tr("Tout")).clicked() {
+                        self.paste_groups = GROUPS.iter().map(|g| g.0).collect();
+                    }
+                    if ui.button(tr("Rien")).clicked() {
+                        self.paste_groups.clear();
+                    }
+                });
+                ui.add_space(6.0);
+                for (group, name) in GROUPS {
+                    let mut on = self.paste_groups.contains(&group);
+                    if ui.checkbox(&mut on, tr(name)).changed() {
+                        if on {
+                            self.paste_groups.push(group);
+                        } else {
+                            self.paste_groups.retain(|g| *g != group);
+                        }
+                    }
+                }
+            });
+        if go && let Some(source) = self.clipboard.clone() {
+            let groups: Vec<Group> = self.paste_groups.clone();
+            self.settings = paste(&self.settings, &source, &groups);
+            self.commit(trf(
+                "Coller une partie des réglages ({n})",
+                &[("n", &groups.len())],
+            ));
+            self.touch();
+        }
+        self.paste_open = open && !go;
+    }
+
     fn export_window(&mut self, ctx: &egui::Context) {
         let mut open = self.export_open;
         let mut go = false;
@@ -2233,6 +2301,9 @@ impl Studio {
         }
         if self.export_open && allowed {
             self.export_window(&ctx);
+        }
+        if self.paste_open && allowed {
+            self.paste_window(&ctx);
         }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
@@ -2633,6 +2704,11 @@ impl Studio {
                     ui.spacing_mut().item_spacing.x = 12.0;
                     for (label, action, tip) in [
                         (tr("Réinitialiser"), "reset", tr("Maj+Cmd+R")),
+                        (
+                            tr("Coller…"),
+                            "paste_some",
+                            tr("Alt+Maj+Cmd+V : choisir quoi coller"),
+                        ),
                         (tr("Coller"), "paste", tr("Maj+Cmd+V")),
                         (tr("Copier"), "copy", tr("Maj+Cmd+C")),
                         (tr("Rétablir"), "redo", tr("Maj+Cmd+Z")),
