@@ -517,6 +517,69 @@ fn soft_proofing_shows_the_print() {
 }
 
 #[test]
+fn library_watched_folder() {
+    let _gpu = one_at_a_time();
+    // Deux photos attendent sur la « carte », hors du dossier surveillé.
+    let Some(mut s) = Session::open_prepared("surveille", [1440.0, 900.0], 1.0, |dir| {
+        std::fs::create_dir_all(dir.join("carte")).unwrap();
+        for f in ["DSC_0750.NEF", "P1000951.RW2"] {
+            let _ = std::fs::rename(dir.join(f), dir.join("carte").join(f));
+        }
+    }) else {
+        return;
+    };
+    let dir = s
+        .studio()
+        .current_path()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    if !dir.join("carte/DSC_0750.NEF").exists() || !dir.join("carte/P1000951.RW2").exists() {
+        return;
+    }
+    s.studio().tool = luma_studio::app::Tool::Library;
+    s.studio().watch_folder(&dir);
+    s.wait();
+    let before = s.studio().photos().len();
+    assert_eq!(s.studio().watching().map(|(_, n)| n), Some(0));
+
+    // Une photo arrive : au relevé suivant (complète), elle entre dans le film et dans
+    // la photothèque, et s'ouvre.
+    let nef = dir.join("DSC_0750.NEF");
+    std::fs::copy(dir.join("carte/DSC_0750.NEF"), &nef).unwrap();
+    s.studio().poll_watch();
+    assert_eq!(
+        s.studio().photos().len(),
+        before,
+        "vue une fois, pas encore donnée"
+    );
+    s.studio().poll_watch();
+    assert!(s.studio().photos().contains(&nef));
+    assert_eq!(s.studio().current_path(), Some(nef.as_path()));
+    s.wait();
+    assert!(
+        s.studio().catalog().get(&nef).is_some(),
+        "dans la photothèque"
+    );
+    assert_eq!(s.studio().watching().map(|(_, n)| n), Some(1));
+    s.capture("dossier-surveille");
+
+    // Sans « Ouvrir chaque nouvelle photo », elle s'ajoute au film, la photo ouverte
+    // reste.
+    s.studio().set_watch_follow(false);
+    let rw2 = dir.join("P1000951.RW2");
+    std::fs::copy(dir.join("carte/P1000951.RW2"), &rw2).unwrap();
+    s.studio().poll_watch();
+    s.studio().poll_watch();
+    assert!(s.studio().photos().contains(&rw2));
+    assert_eq!(s.studio().current_path(), Some(nef.as_path()));
+    assert_eq!(s.studio().photos().len(), before + 2);
+    s.studio().stop_watching();
+    assert!(s.studio().watching().is_none());
+}
+
+#[test]
 fn crop_tool_and_export_window() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("recadrage") else {

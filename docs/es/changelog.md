@@ -132,6 +132,10 @@ La fototeca profesional, paso a paso.
   tono y la luminosidad del papel, «Tinta negra» el negro real de la tinta, más claro
   que el de la pantalla; sin ellas, el blanco del papel y el negro de la tinta se
   llevan al blanco y al negro de la pantalla.
+- **Carpeta vigilada** (Biblioteca): las fotos que llegan a una carpeta (cámara
+  conectada, tarjeta copiada) entran en la fototeca y en la tira en cuanto están
+  completas, y la última se abre (o solo se añade, a elegir); `luma watch carpeta`
+  hace lo mismo desde la línea de comandos.
 
 ## 0.2.0 — octubre de 2026
 

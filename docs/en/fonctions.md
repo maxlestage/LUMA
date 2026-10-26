@@ -123,6 +123,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Manual and smart collections (rule: rating, date, camera, lens, ISO, keywords…), saved in the catalogue | ✅ |
 | Keywords in the app: entry (several at once, separated by commas), added to and removed from every selected photo, the folder's keywords with their count, grid filter | ✅ |
 | Catalog in the app: every folder you open is added (in the background); all photos, collections and folders, each with its number of photos; search and filters; views sorted by capture date | ✅ |
+| Watched folder (tethered shooting, copied card): each complete photo enters the catalog and the filmstrip, and opens; `luma watch` | ✅ |
 | Virtual copies: several developments of a photo without duplicating the file (one XMP per copy), each with its own rating, keywords and thumbnail, next to its original; exported as `IMG_0001-2`; deleted without touching the original | ✅ |
 | Importing existing catalogues | ⏳ |
 
