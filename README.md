@@ -172,6 +172,7 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
 | R | Outil Recadrage : poignées, grille des tiers, proportions verrouillées ; Entrée valide, Échap annule |
 | W | Pipette de balance des blancs (cliquer un gris) ; le menu Balance propose aussi Auto et des préréglages (lumière du jour, nuageux, tungstène…) |
 | M, Maj+M, K | Masque : dégradé linéaire, dégradé radial, pinceau (Option gomme) ; O montre la zone ; chaque masque a ses curseurs |
+| Q | Correcteur : un clic sur une tache, la source se choisit d'elle-même ; on tire la zone ou sa source |
 | Cmd+O | Ouvrir un RAW (son dossier remplit le film) ; on peut aussi le déposer |
 | ← → | Photo précédente, suivante |
 | Z, J | Zoom 1:1, écrêtage |

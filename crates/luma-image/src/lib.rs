@@ -25,6 +25,7 @@ pub mod effects;
 pub mod geometry;
 pub mod lens;
 pub mod local;
+pub mod retouch;
 pub mod tone;
 
 use luma_color::{self as lc, EncodeLut, Mat3, OutputSpace, luminance};
@@ -75,6 +76,10 @@ pub fn develop_base(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel
     // L'étape d'entrée lit la source (en cache, partagée) et écrit l'image de travail.
     let mut img = t.time("entrée", || input_stage(cam, input, s));
     cancel.check()?;
+    if !s.spots.is_empty() {
+        t.time("retouche", || retouch::apply(&mut img, &s.spots));
+        cancel.check()?;
+    }
     t.time("défrangeage", || lens::defringe(&mut img, &s.lens, input.scale));
     t.time("bruit", || detail::noise_reduction(&mut img, &s.detail, input.scale));
     cancel.check()?;
@@ -114,6 +119,7 @@ pub fn base_key(s: &Settings) -> Settings {
         crop: s.crop,
         lens: s.lens.clone(),
         transform: s.transform.clone(),
+        spots: s.spots.clone(),
         // Les films des masques n'agissent qu'à la fin : ils ne changent pas la base.
         masks: s
             .masks
