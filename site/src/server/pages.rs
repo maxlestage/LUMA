@@ -532,7 +532,24 @@ fn capabilities(lang: Lang) -> Element {
                 "Chaque fonction cochée est faite et vérifiée par les tests à chaque version. La liste s'allonge chaque jour.",
             ))),
         ))
+        // Sur téléphone, la liste est repliée : « Voir tout » la déplie (sans script).
+        .child(
+            input()
+                .attr("type", "checkbox")
+                .id("cap-all")
+                .class("cap-toggle"),
+        )
         .child(div().class("cap-grid").children(groups))
+        .child(
+            label()
+                .attr("for", "cap-all")
+                .class("cap-expand")
+                .child(span().class("cap-open").text(fill(
+                    t(lang, "Voir les {n} fonctions"),
+                    &[("n", &f.done.to_string())],
+                )))
+                .child(span().class("cap-close").text(t(lang, "Réduire"))),
+        )
         .child(
             p().class("cap-more reveal").child(
                 a().href(page_link(lang, "/docs/fonctions/")).text(fill(
