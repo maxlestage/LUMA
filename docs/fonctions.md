@@ -84,7 +84,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 |---|---|
 | JPEG (qualité), PNG et TIFF 8 ou 16 bits | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
-| Redimensionnement (côté long) | ✅ |
+| Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels, sans jamais agrandir (`--resize`) | ✅ |
 | Fenêtre Exporter : format, qualité, profondeur, espace, taille, dossier ; export de toutes les photos du filtre | ✅ |
 | Préréglages d'export (format, qualité, profondeur, espace, taille, dossier) : Web, Pleine définition, Écran P3, Impression, et les vôtres ; `luma export-preset`, `luma develop --preset` | ✅ |
 | Modèles de nom des fichiers : `{nom}`, `{date}`, `{heure}`, `{séquence}`, `{boîtier}`, `{objectif}`, `{iso}`, `{note}`, `{libellé}`…, sous‑dossiers par « / » ; dans la fenêtre Exporter, les préréglages et `luma develop --name` | ✅ |

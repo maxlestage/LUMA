@@ -1292,17 +1292,7 @@ impl Studio {
                             .accessible_name(tr("Espace colorimétrique"));
                         ui.end_row();
                         ui.label(tr("Dimensions"));
-                        ui.horizontal(|ui| {
-                            let mut resize = o.long_edge.is_some();
-                            ui.checkbox(&mut resize, tr("Grand côté"));
-                            let mut n = o.long_edge.unwrap_or(2048);
-                            ui.add_enabled(
-                                resize,
-                                egui::DragValue::new(&mut n).range(64..=20000).suffix(" px"),
-                            )
-                            .accessible_name(tr("Grand côté en pixels"));
-                            o.long_edge = resize.then_some(n);
-                        });
+                        ui.horizontal(|ui| resize_editor(ui, &mut o.resize));
                         ui.end_row();
                         ui.label(tr("Nom des fichiers"));
                         ui.vertical(|ui| {
@@ -4282,6 +4272,86 @@ fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
     }
     let s = (area.width() / w as f32).min(area.height() / h as f32);
     egui::Rect::from_center_size(area.center(), vec2(w as f32 * s, h as f32 * s))
+}
+
+/// Un nombre de pixels d'export.
+fn pixels(v: &mut usize) -> egui::DragValue<'_> {
+    egui::DragValue::new(v).range(64..=20000).suffix(" px")
+}
+
+/// Les dimensions d'un export : pleine définition, grand ou petit côté, cadre,
+/// mégapixels ; le nombre garde sa valeur quand on change de mode.
+fn resize_editor(ui: &mut Ui, resize: &mut Option<luma_render::export::Resize>) {
+    use luma_render::export::Resize;
+    let modes = [
+        tr("Pleine définition"),
+        tr("Grand côté"),
+        tr("Petit côté"),
+        tr("Largeur × hauteur"),
+        tr("Mégapixels"),
+    ];
+    let mode = match resize {
+        None => 0,
+        Some(Resize::LongEdge(_)) => 1,
+        Some(Resize::ShortEdge(_)) => 2,
+        Some(Resize::Fit { .. }) => 3,
+        Some(Resize::Megapixels(_)) => 4,
+    };
+    let mut chosen = mode;
+    egui::ComboBox::from_id_salt("dimensions")
+        .selected_text(modes[mode])
+        .show_ui(ui, |ui| {
+            for (k, name) in modes.iter().enumerate() {
+                ui.selectable_value(&mut chosen, k, *name);
+            }
+        })
+        .response
+        .accessible_name(tr("Dimensions"));
+    // Le nombre affiché, d'un mode à l'autre.
+    let edge = match *resize {
+        Some(Resize::LongEdge(n) | Resize::ShortEdge(n)) => n,
+        Some(Resize::Fit { width, .. }) => width,
+        _ => 2048,
+    };
+    if chosen != mode {
+        *resize = match chosen {
+            0 => None,
+            1 => Some(Resize::LongEdge(edge)),
+            2 => Some(Resize::ShortEdge(edge.min(8000))),
+            3 => Some(Resize::Fit {
+                width: edge,
+                height: edge,
+            }),
+            _ => Some(Resize::Megapixels(12.0)),
+        };
+    }
+    match resize {
+        None => {}
+        Some(Resize::LongEdge(n)) => {
+            ui.add(pixels(n))
+                .accessible_name(tr("Grand côté en pixels"));
+        }
+        Some(Resize::ShortEdge(n)) => {
+            ui.add(pixels(n))
+                .accessible_name(tr("Petit côté en pixels"));
+        }
+        Some(Resize::Fit { width, height }) => {
+            ui.add(pixels(width))
+                .accessible_name(tr("Largeur en pixels"));
+            ui.label("×");
+            ui.add(pixels(height))
+                .accessible_name(tr("Hauteur en pixels"));
+        }
+        Some(Resize::Megapixels(m)) => {
+            ui.add(
+                egui::DragValue::new(m)
+                    .range(0.1..=200.0)
+                    .speed(0.1)
+                    .suffix(" Mpx"),
+            )
+            .accessible_name(tr("Mégapixels"));
+        }
+    }
 }
 
 /// Le modèle du nom des fichiers exportés est‑il valable ?

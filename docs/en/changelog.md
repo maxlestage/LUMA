@@ -36,6 +36,9 @@ The professional photo library, step by step.
   label and position in the export; in the Export dialog, export presets and
   `luma develop --name`. Two photos with the same name never overwrite each other
   (`-2`, `-3`…).
+- **Export dimensions**: long edge, short edge, width × height (the image fits inside
+  the frame) or megapixels, never enlarging; in the Export dialog, presets and
+  `luma develop --resize short:1080`.
 
 ## 0.2.0 — October 2026
 

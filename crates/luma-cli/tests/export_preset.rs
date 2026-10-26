@@ -65,6 +65,20 @@ fn presets_listed_created_and_deleted() {
     let (_, list) = luma(&file, &["export-preset"]);
     assert!(list.contains("PNG 16 bits, Display P3, pleine définition"), "{list}");
 
+    // Les tailles : petit côté, cadre, mégapixels ; une taille inconnue est refusée.
+    for (size, shown) in [
+        ("short:1080", "petit côté 1080 px"),
+        ("1920x1080", "1920 × 1080 px"),
+        ("12mp", "12 Mpx"),
+    ] {
+        let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", size]);
+        assert!(ok && out.contains(shown), "{out}");
+    }
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", "grand"]);
+    assert!(!ok && out.contains("taille inconnue"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", "0"]);
+    assert!(ok && out.contains("pleine définition"), "{out}");
+
     // Le modèle de nom, vérifié.
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--name", "{date}_{séquence:3}"]);
     assert!(ok, "{out}");
@@ -147,6 +161,39 @@ fn develop_with_a_preset() {
         .map(|e| e.file_name().to_string_lossy().into_owned())
         .collect();
     assert!(files.len() == 1 && files[0].ends_with("_0001.jpg"), "{files:?}");
+
+    // Petit côté, puis un cadre, puis des mégapixels : la taille exacte du JPEG.
+    for (resize, check) in [
+        (
+            "short:200",
+            Box::new(|w: usize, h: usize| w.min(h) == 200) as Box<dyn Fn(usize, usize) -> bool>,
+        ),
+        (
+            "400x100",
+            Box::new(|w: usize, h: usize| w <= 400 && h <= 100 && (w == 400 || h == 100)),
+        ),
+        (
+            "0.1mp",
+            Box::new(|w: usize, h: usize| (w * h).abs_diff(100_000) < 1_500),
+        ),
+    ] {
+        let out_file = dir.join("taille.jpg");
+        let (ok, out) = luma(
+            &file,
+            &[
+                "develop",
+                raw.to_str().unwrap(),
+                "--no-sidecar",
+                "--resize",
+                resize,
+                "-o",
+                out_file.to_str().unwrap(),
+            ],
+        );
+        assert!(ok, "{out}");
+        let (w, h) = image_size(&out_file);
+        assert!(check(w, h), "{resize} : {w} × {h}");
+    }
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

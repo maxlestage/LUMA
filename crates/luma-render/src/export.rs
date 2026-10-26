@@ -94,8 +94,8 @@ pub struct Options {
     /// 8 ou 16 bits (PNG, TIFF).
     pub bits: u8,
     pub space: OutputSpace,
-    /// Le grand côté de l'image recadrée, en pixels ; `None` : pleine définition.
-    pub long_edge: Option<usize>,
+    /// La taille de l'image recadrée ; `None` : pleine définition.
+    pub resize: Option<Resize>,
     /// `None` : un dossier `LÜMA/` à côté de chaque RAW.
     pub folder: Option<PathBuf>,
     /// Le modèle du nom des fichiers (voir [`file_name`]) ; `None` : le nom de l'original.
@@ -109,9 +109,93 @@ impl Default for Options {
             quality: 92,
             bits: 8,
             space: OutputSpace::Srgb,
-            long_edge: None,
+            resize: None,
             folder: None,
             name: None,
+        }
+    }
+}
+
+/// La taille d'un export, toujours sans agrandir l'image ni changer ses proportions.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Resize {
+    /// Le grand côté, en pixels.
+    LongEdge(usize),
+    /// Le petit côté, en pixels.
+    ShortEdge(usize),
+    /// L'image tient dans ce cadre (largeur × hauteur, en pixels).
+    Fit { width: usize, height: usize },
+    /// Le nombre de pixels, en millions.
+    Megapixels(f32),
+}
+
+impl Resize {
+    /// Les dimensions d'une image `width × height` après redimensionnement : jamais plus
+    /// grandes, proportions gardées.
+    pub fn apply(self, width: usize, height: usize) -> (usize, usize) {
+        let (w, h) = (width.max(1) as f64, height.max(1) as f64);
+        let scale = match self {
+            Resize::LongEdge(n) => n as f64 / w.max(h),
+            Resize::ShortEdge(n) => n as f64 / w.min(h),
+            Resize::Fit { width: fw, height: fh } => (fw as f64 / w).min(fh as f64 / h),
+            Resize::Megapixels(m) => (f64::from(m) * 1e6 / (w * h)).sqrt(),
+        };
+        if scale.is_nan() || scale >= 1.0 {
+            return (width, height);
+        }
+        let out = |v: f64| ((v * scale).round() as usize).max(1);
+        // Le côté visé est tenu exactement (l'arrondi de l'autre suit).
+        match self {
+            Resize::LongEdge(n) if width >= height => (n.max(1), out(h)),
+            Resize::LongEdge(n) => (out(w), n.max(1)),
+            Resize::ShortEdge(n) if width <= height => (n.max(1), out(h)),
+            Resize::ShortEdge(n) => (out(w), n.max(1)),
+            _ => (out(w), out(h)),
+        }
+    }
+
+    /// Lit une taille : `2048` ou `long:2048` (grand côté), `short:1080` (petit côté),
+    /// `1920x1080` (cadre), `12mp` (mégapixels). `None` si la valeur est vide ou nulle.
+    pub fn parse(s: &str) -> Option<Resize> {
+        let s = s.trim().to_lowercase();
+        let num = |v: &str| v.trim().parse::<usize>().ok().filter(|&n| n > 0);
+        if let Some(v) = s.strip_suffix("mpx").or_else(|| s.strip_suffix("mp")) {
+            let m: f32 = v.trim().replace(',', ".").parse().ok()?;
+            return (m > 0.0 && m.is_finite()).then_some(Resize::Megapixels(m));
+        }
+        if let Some((a, b)) = s.split_once(['x', '×']) {
+            return Some(Resize::Fit {
+                width: num(a)?,
+                height: num(b)?,
+            });
+        }
+        if let Some(v) = s.strip_prefix("short:").or_else(|| s.strip_prefix("petit:")) {
+            return num(v).map(Resize::ShortEdge);
+        }
+        num(s
+            .strip_prefix("long:")
+            .or_else(|| s.strip_prefix("grand:"))
+            .unwrap_or(&s))
+        .map(Resize::LongEdge)
+    }
+
+    /// L'écriture que `parse` relit.
+    pub fn id(self) -> String {
+        match self {
+            Resize::LongEdge(n) => format!("long:{n}"),
+            Resize::ShortEdge(n) => format!("short:{n}"),
+            Resize::Fit { width, height } => format!("{width}x{height}"),
+            Resize::Megapixels(m) => format!("{m}mp"),
+        }
+    }
+
+    /// En clair : « 2048 px », « petit côté 1080 px », « 1920 × 1080 px », « 12 Mpx ».
+    pub fn describe(self) -> String {
+        match self {
+            Resize::LongEdge(n) => format!("{n} px"),
+            Resize::ShortEdge(n) => format!("petit côté {n} px"),
+            Resize::Fit { width, height } => format!("{width} × {height} px"),
+            Resize::Megapixels(m) => format!("{m} Mpx"),
         }
     }
 }
@@ -376,15 +460,18 @@ pub fn develop(photo: &Photo, settings: &Settings, out: &Path, options: &Options
     if let Some(dir) = out.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(dir).map_err(|e| format!("{} : {e}", dir.display()))?;
     }
-    let size = match options.long_edge {
+    let size = match options.resize {
         None => Size::Full,
-        Some(n) => {
-            // La taille demandée est celle de l'image recadrée : on rend un peu plus
-            // grand, puis on réduit exactement.
+        Some(r) => {
+            // La taille demandée est celle de l'image recadrée : son grand côté, estimé
+            // sur le recadrage, puis on rend un peu plus grand et on réduit exactement.
             let c = &settings.crop;
-            let frac = (c.right - c.left).min(c.bottom - c.top).max(0.05);
+            let (fx, fy) = ((c.right - c.left).max(0.05), (c.bottom - c.top).max(0.05));
+            let frac = fx.min(fy);
             let (w, h) = photo.full_size();
-            let pre = (n as f32 / frac).ceil() as usize;
+            let (cw, ch) = ((w as f32 * fx).round() as usize, (h as f32 * fy).round() as usize);
+            let (tw, th) = r.apply(cw.max(1), ch.max(1));
+            let pre = (tw.max(th) as f32 / frac).ceil() as usize;
             if pre >= w.max(h) { Size::Full } else { Size::Fit(pre) }
         }
     };
@@ -392,8 +479,8 @@ pub fn develop(photo: &Photo, settings: &Settings, out: &Path, options: &Options
         .render(settings, size, &Cancel::new())
         .map_err(|e| e.to_string())?;
     let mut image = rendered.image;
-    if let Some(n) = options.long_edge {
-        let (w, h) = RgbImage::fit(image.width, image.height, n);
+    if let Some(r) = options.resize {
+        let (w, h) = r.apply(image.width, image.height);
         if (w, h) != (image.width, image.height) {
             image = image.resize_area(w, h);
         }
@@ -424,7 +511,7 @@ pub fn builtin() -> Vec<Preset> {
             "Web",
             Options {
                 quality: 85,
-                long_edge: Some(2048),
+                resize: Some(Resize::LongEdge(2048)),
                 ..Options::default()
             },
         ),
@@ -439,7 +526,7 @@ pub fn builtin() -> Vec<Preset> {
             "Écran P3",
             Options {
                 space: OutputSpace::DisplayP3,
-                long_edge: Some(3840),
+                resize: Some(Resize::LongEdge(3840)),
                 ..Options::default()
             },
         ),
@@ -475,8 +562,11 @@ struct StoredPreset {
     quality: u8,
     bits: u8,
     space: String,
-    #[serde(default)]
+    /// Les fichiers d'avant `resize` : le grand côté seul.
+    #[serde(default, skip_serializing)]
     long_edge: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    resize: Option<String>,
     #[serde(default)]
     folder: Option<PathBuf>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -498,7 +588,8 @@ impl StoredPreset {
             quality: o.quality,
             bits: o.bits,
             space: space_id(o.space).into(),
-            long_edge: o.long_edge,
+            long_edge: None,
+            resize: o.resize.map(Resize::id),
             folder: o.folder.clone(),
             name_template: o.name.clone(),
         }
@@ -513,7 +604,10 @@ impl StoredPreset {
                 quality: self.quality.clamp(1, 100),
                 bits: if self.bits == 16 { 16 } else { 8 },
                 space: OutputSpace::parse(&self.space)?,
-                long_edge: self.long_edge.filter(|&n| n > 0),
+                resize: match self.resize {
+                    Some(r) => Some(Resize::parse(&r)?),
+                    None => self.long_edge.filter(|&n| n > 0).map(Resize::LongEdge),
+                },
                 folder: self.folder,
                 name: self.name_template.filter(|t| !t.trim().is_empty()),
             },
@@ -625,8 +719,8 @@ pub fn describe(o: &Options) -> String {
         OutputSpace::ProPhoto => "ProPhoto RGB",
     };
     let size = o
-        .long_edge
-        .map_or_else(|| "pleine définition".to_owned(), |n| format!("{n} px"));
+        .resize
+        .map_or_else(|| "pleine définition".to_owned(), Resize::describe);
     let folder = o
         .folder
         .as_ref()
@@ -660,6 +754,100 @@ mod tests {
         // Un modèle vide garde le nom de l'original.
         o.name = Some("  ".into());
         assert_eq!(output_path(src, &o, &f), PathBuf::from("/sortie/IMG_1.tif"));
+    }
+
+    #[test]
+    fn resize_modes() {
+        let (w, h) = (6000, 4000);
+        assert_eq!(Resize::LongEdge(2048).apply(w, h), (2048, 1365));
+        assert_eq!(Resize::LongEdge(2048).apply(h, w), (1365, 2048));
+        assert_eq!(Resize::ShortEdge(1080).apply(w, h), (1620, 1080));
+        assert_eq!(Resize::ShortEdge(1080).apply(h, w), (1080, 1620));
+        // Le cadre : le côté le plus contraint décide.
+        assert_eq!(
+            Resize::Fit {
+                width: 1920,
+                height: 1080
+            }
+            .apply(w, h),
+            (1620, 1080)
+        );
+        assert_eq!(
+            Resize::Fit {
+                width: 1000,
+                height: 1000
+            }
+            .apply(w, h),
+            (1000, 667)
+        );
+        let (mw, mh) = Resize::Megapixels(6.0).apply(w, h);
+        assert_eq!((mw, mh), (3000, 2000));
+        // Jamais d'agrandissement.
+        assert_eq!(Resize::LongEdge(9000).apply(w, h), (w, h));
+        assert_eq!(Resize::Megapixels(50.0).apply(w, h), (w, h));
+        assert_eq!(
+            Resize::Fit {
+                width: 8000,
+                height: 8000
+            }
+            .apply(w, h),
+            (w, h)
+        );
+    }
+
+    #[test]
+    fn resize_parsed_and_written() {
+        for r in [
+            Resize::LongEdge(2048),
+            Resize::ShortEdge(1080),
+            Resize::Fit {
+                width: 1920,
+                height: 1080,
+            },
+            Resize::Megapixels(12.5),
+        ] {
+            assert_eq!(Resize::parse(&r.id()), Some(r));
+        }
+        assert_eq!(Resize::parse("2048"), Some(Resize::LongEdge(2048)));
+        assert_eq!(Resize::parse("grand:300"), Some(Resize::LongEdge(300)));
+        assert_eq!(Resize::parse("petit:300"), Some(Resize::ShortEdge(300)));
+        assert_eq!(
+            Resize::parse("1920×1080"),
+            Some(Resize::Fit {
+                width: 1920,
+                height: 1080
+            })
+        );
+        assert_eq!(Resize::parse("12 MP"), Some(Resize::Megapixels(12.0)));
+        assert_eq!(Resize::parse("2,5mpx"), Some(Resize::Megapixels(2.5)));
+        for bad in ["", "0", "abc", "0x100", "long:", "-3mp", "short:0"] {
+            assert_eq!(Resize::parse(bad), None, "{bad}");
+        }
+        assert_eq!(Resize::Megapixels(12.0).describe(), "12 Mpx");
+        assert_eq!(Resize::ShortEdge(1080).describe(), "petit côté 1080 px");
+    }
+
+    #[test]
+    fn old_preset_files_keep_their_long_edge() {
+        let dir = std::env::temp_dir().join(format!("luma-exports-old-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("Exports.json");
+        std::fs::write(
+            &path,
+            r#"{"version":1,"presets":[{"name":"A","format":"jpg","quality":90,"bits":8,"space":"srgb","long_edge":1600}]}"#,
+        )
+        .unwrap();
+        let p = Presets::load(&path);
+        assert_eq!(p.user[0].options.resize, Some(Resize::LongEdge(1600)));
+        // Réécrit au nouveau format, relu pareil.
+        p.save(&path).unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            text.contains("\"resize\": \"long:1600\"") && !text.contains("long_edge"),
+            "{text}"
+        );
+        assert_eq!(Presets::load(&path), p);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
@@ -773,7 +961,7 @@ mod tests {
             name: "Instagram".into(),
             options: Options {
                 quality: 80,
-                long_edge: Some(1080),
+                resize: Some(Resize::ShortEdge(1080)),
                 space: OutputSpace::DisplayP3,
                 folder: Some("/tmp/insta".into()),
                 name: Some("{date}_{séquence}".into()),
@@ -829,7 +1017,7 @@ mod tests {
         let p = Presets::load(&path);
         assert_eq!(p.user.len(), 1);
         let b = &p.user[0].options;
-        assert_eq!((b.quality, b.bits, b.long_edge), (100, 8, None));
+        assert_eq!((b.quality, b.bits, b.resize), (100, 8, None));
         std::fs::write(&path, r#"{"version":99,"presets":[]}"#).unwrap();
         assert!(Presets::load(&path).user.is_empty());
         std::fs::remove_dir_all(&dir).unwrap();

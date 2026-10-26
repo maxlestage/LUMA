@@ -33,15 +33,17 @@ USAGE
   luma develop <raw> [-o sortie.jpg|.png|.tif] [--size N] [--space srgb|p3|rec2020|prophoto]
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
-                     [--preset nom] [--name modèle]
+                     [--preset nom] [--name modèle] [--resize taille]
       Avec --preset, les options du préréglage d'export (format, qualité, espace, taille,
       dossier, nom) ; les options données les remplacent, --size est alors le grand côté
       de l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par
       défaut). --name donne le nom du fichier par un modèle : {nom} {date} {heure}
       {année} {mois} {jour} {séquence} (ou {séquence:2}…) {boîtier} {marque} {objectif}
       {iso} {note} {libellé} ; un « / » crée un sous‑dossier ({année}/{mois}/{nom}).
+      --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
+      (l'image tient dans le cadre), 12mp (mégapixels) ; jamais d'agrandissement.
   luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
-                     [--space srgb|p3|rec2020|prophoto] [--size N|0] [--folder d]
+                     [--space srgb|p3|rec2020|prophoto] [--size taille|0] [--folder d]
                      [--next-to-original] [--name modèle] [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
@@ -107,6 +109,7 @@ struct Args {
     bits: Option<u8>,
     preset: Option<String>,
     name: Option<String>,
+    resize: Option<export::Resize>,
     xmp: Option<PathBuf>,
     settings: Option<PathBuf>,
     sidecar: bool,
@@ -125,6 +128,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         bits: None,
         preset: None,
         name: None,
+        resize: None,
         xmp: None,
         settings: None,
         sidecar: true,
@@ -145,6 +149,10 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--bits" => a.bits = Some(value(&arg)?.parse().map_err(|_| "--bits : 8 ou 16")?),
             "--preset" => a.preset = Some(value(&arg)?),
             "--name" => a.name = Some(value(&arg)?),
+            "--resize" => {
+                let v = value(&arg)?;
+                a.resize = Some(export::Resize::parse(&v).ok_or_else(|| resize_error(&v))?);
+            }
             "--xmp" => a.xmp = Some(value(&arg)?.into()),
             "--settings" => a.settings = Some(value(&arg)?.into()),
             "--no-sidecar" => a.sidecar = false,
@@ -389,7 +397,7 @@ fn develop(a: &Args) -> Result<(), String> {
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
-    if a.preset.is_some() || a.name.is_some() {
+    if a.preset.is_some() || a.name.is_some() || a.resize.is_some() {
         // Un préréglage d'export (à défaut, les options par défaut) : ses options, que les
         // options données remplacent.
         let mut o = match &a.preset {
@@ -409,7 +417,10 @@ fn develop(a: &Args) -> Result<(), String> {
         o.space = a.space.unwrap_or(o.space);
         o.quality = a.quality.unwrap_or(o.quality);
         o.bits = a.bits.unwrap_or(o.bits);
-        o.long_edge = a.size.or(o.long_edge);
+        o.resize = a
+            .resize
+            .or(a.size.filter(|&n| n > 0).map(export::Resize::LongEdge))
+            .or(o.resize);
         if let Some(f) = a
             .output
             .as_deref()
@@ -463,6 +474,10 @@ fn develop(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+fn resize_error(v: &str) -> String {
+    format!("taille inconnue « {v} » (2048, short:1080, 1920x1080, 12mp)")
+}
+
 /// Le fichier des préréglages d'export et son contenu.
 fn load_presets() -> Result<(PathBuf, export::Presets), String> {
     let file = export::presets_path().ok_or("pas de dossier personnel (HOME) pour les préréglages d'export")?;
@@ -501,11 +516,13 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
                 let v = value()?;
                 o.space = OutputSpace::parse(&v).ok_or_else(|| format!("espace inconnu « {v} »"))?;
             }
-            "--size" => {
-                let n: usize = value()?
-                    .parse()
-                    .map_err(|_| "--size : un nombre de pixels (0 : pleine définition)")?;
-                o.long_edge = (n > 0).then_some(n);
+            "--size" | "--resize" => {
+                let v = value()?;
+                o.resize = if v.trim() == "0" {
+                    None
+                } else {
+                    Some(export::Resize::parse(&v).ok_or_else(|| resize_error(&v))?)
+                };
             }
             "--folder" => o.folder = Some(value()?.into()),
             "--next-to-original" => o.folder = None,

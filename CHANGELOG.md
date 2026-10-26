@@ -37,6 +37,9 @@ La photothèque professionnelle, étape par étape.
   l'objectif, l'ISO, la note, le libellé et le rang dans l'export ; dans la fenêtre
   Exporter, les préréglages d'export et `luma develop --name`. Deux photos du même nom
   ne s'écrasent pas (`-2`, `-3`…).
+- **Dimensions d'export** : grand côté, petit côté, largeur × hauteur (l'image tient
+  dans le cadre) ou mégapixels, sans jamais agrandir ; dans la fenêtre Exporter, les
+  préréglages et `luma develop --resize short:1080`.
 
 ## 0.2.0 — octobre 2026
 
