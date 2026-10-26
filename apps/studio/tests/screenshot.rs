@@ -510,3 +510,57 @@ fn premium_screen_after_the_trial() {
         .save(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/studio-premium.png"))
         .unwrap();
 }
+
+/// Le ciblage direct : T, puis un glissé vers le haut sur la photo règle la teinte des
+/// couleurs sous le doigt dans le mélangeur, et rien d'autre.
+#[test]
+fn targeted_adjustment_moves_the_color_under_the_pointer() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("ciblage") else {
+        return;
+    };
+    s.keys(&[(NONE, Key::T)]);
+    // Sur le vert du pin, un glissé de 80 points vers le haut.
+    let at = egui::pos2(720.0, 300.0);
+    let press = |pressed| egui::Event::PointerButton {
+        pos: at,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: Modifiers::NONE,
+    };
+    s.harness.event(egui::Event::PointerMoved(at));
+    s.harness.step();
+    s.harness.event(press(true));
+    s.harness.step();
+    for k in 1..=8 {
+        s.harness.event(egui::Event::PointerMoved(
+            at - egui::vec2(0.0, 10.0 * k as f32),
+        ));
+        s.harness.step();
+    }
+    s.harness.event(egui::Event::PointerButton {
+        pos: at - egui::vec2(0.0, 80.0),
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: Modifiers::NONE,
+    });
+    s.harness.step();
+    s.wait();
+    let st = s.studio();
+    let moved: Vec<f32> = st
+        .settings
+        .hsl
+        .hue
+        .iter()
+        .copied()
+        .filter(|v| *v != 0.0)
+        .collect();
+    assert!(
+        !moved.is_empty() && moved.len() <= 2 && moved.iter().all(|v| *v > 0.0),
+        "teintes : {:?}",
+        st.settings.hsl.hue
+    );
+    assert!((moved.iter().sum::<f32>() - 40.0).abs() < 1.0, "{moved:?}");
+    assert!(st.settings.hsl.saturation.iter().all(|v| *v == 0.0));
+    s.capture("ciblage");
+}
