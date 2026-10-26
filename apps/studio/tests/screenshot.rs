@@ -257,29 +257,39 @@ fn library_catalog_views() {
         return;
     };
     s.keys(&[(NONE, Key::G)]);
-    // Le dossier ouvert est entré dans la photothèque, en arrière‑plan.
-    assert_eq!(s.studio().catalog().len(), 5);
+    // Le dossier ouvert est entré dans la photothèque, en arrière‑plan : toutes ses
+    // photos (le corpus peut grandir).
     let dir = std::env::temp_dir().join("luma-studio-phototheque");
+    let count = luma_studio::app::scan(&dir).len();
+    assert!(count >= 5);
+    assert_eq!(s.studio().catalog().len(), count);
     assert_eq!(
         luma_library::Catalog::load(&dir.join("catalogue.lumacat")).len(),
-        5,
+        count,
         "enregistrée"
     );
-    // Toutes les photos, par date de prise de vue : la Sony de 2018 d'abord.
-    s.studio().show_view(View::All);
-    s.wait();
+    let file = |p: &Path| p.file_name().unwrap().to_string_lossy().into_owned();
     let names = |s: &mut Session| -> Vec<String> {
         let st = s.studio();
-        (0..5)
+        (0..count)
             .filter_map(|i| st.photo_at(i))
-            .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+            .map(file)
             .collect()
     };
-    assert_eq!(names(&mut s)[0], "_DSC0009.ARW");
-    assert_eq!(
-        names(&mut s)[4],
-        "Canon_EOS_R5_CRAW_ISO_100_nocrop_dual.CR3"
-    );
+    // Toutes les photos, par date de prise de vue (et non par nom de fichier).
+    s.studio().show_view(View::All);
+    s.wait();
+    let by_date: Vec<String> = s
+        .studio()
+        .catalog()
+        .by_date()
+        .iter()
+        .map(|e| file(&e.path))
+        .collect();
+    assert_eq!(names(&mut s), by_date);
+    let mut by_name = by_date.clone();
+    by_name.sort();
+    assert_ne!(by_date, by_name, "le corpus n'est pas rangé par nom");
     // Une recherche, puis la collection dynamique.
     s.studio().show_view(View::Search("boîtier:nikon".into()));
     s.wait();
@@ -292,7 +302,14 @@ fn library_catalog_views() {
     );
     s.studio().show_view(View::Collection("Bas ISO".into()));
     s.wait();
-    assert_eq!(names(&mut s).len(), 4, "{:?}", names(&mut s));
+    let low = s
+        .studio()
+        .catalog()
+        .collection_photos("Bas ISO")
+        .unwrap()
+        .len();
+    assert!(low >= 4, "les ISO 32 à 160 du corpus");
+    assert_eq!(names(&mut s).len(), low, "{:?}", names(&mut s));
     s.capture("bibliotheque-phototheque");
 }
 
