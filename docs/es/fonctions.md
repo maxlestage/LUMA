@@ -85,6 +85,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Pipeline en coma flotante de 32 bits, espacio de trabajo Rec. 2020 lineal | ✅ |
 | Altas luces saturadas en el sensor reproducidas neutras (sin cielos rosados) | ✅ |
 | Orientación EXIF | ✅ |
+| Perfiles ICC leídos (versiones 2 y 4): matriz y curvas, tablas lut8, lut16, A→B y B→A de impresoras y papeles, cuatro intenciones de reproducción (`luma icc`) | ✅ |
 
 ## Exportación
 

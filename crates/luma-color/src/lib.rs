@@ -14,6 +14,7 @@
 //! primaires réelles, sans les couleurs imaginaires du ProPhoto.
 
 pub mod icc;
+pub mod profile;
 
 pub type Mat3 = [[f32; 3]; 3];
 pub type Vec3 = [f32; 3];
