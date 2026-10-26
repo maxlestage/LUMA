@@ -1177,6 +1177,21 @@ impl Studio {
                         }
                     }
                 }
+                Event::Glimpse { path, size, rgba } => {
+                    // Seulement pour la photo qu'on attend, et tant que son rendu n'est
+                    // pas là.
+                    if self.loading.as_ref() == Some(&path) {
+                        self.image_size = size;
+                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        match &mut self.texture {
+                            Some(t) => t.set(image, TextureOptions::LINEAR),
+                            None => {
+                                self.texture =
+                                    Some(ctx.load_texture("photo", image, TextureOptions::LINEAR))
+                            }
+                        }
+                    }
+                }
                 Event::Thumbnail { path, size, rgba } => {
                     let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
                     let name = format!("vignette {}", path.display());

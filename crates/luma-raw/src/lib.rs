@@ -495,7 +495,7 @@ impl RawPhoto {
 
     /// L'aperçu JPEG que le boîtier a enregistré dans le RAW, dans le bon sens, réduit
     /// à `max_side` pixels sur son grand côté : le plus petit des JPEG intégrés qui soit
-    /// assez grand. Quelques millisecondes, sans décoder ni dématricer le capteur : de
+    /// assez grand (sinon le plus grand, sans l'agrandir). Quelques millisecondes, sans décoder ni dématricer le capteur : de
     /// quoi montrer une vignette tout de suite, avant le vrai rendu. `None` si le fichier
     /// n'en a pas (ou n'est pas un RAW).
     pub fn embedded_preview(path: impl AsRef<Path>, max_side: u32) -> Option<image::RgbImage> {
@@ -507,9 +507,17 @@ impl RawPhoto {
         // d'abord, le fichier entier seulement s'il le faut.
         let pick = |bytes: &[u8]| -> Option<image::DynamicImage> {
             let mut found = embedded_jpegs(bytes);
-            found.retain(|j| j.width.max(j.height) >= max_side);
             found.sort_by_key(|j| u64::from(j.width) * u64::from(j.height));
-            found.iter().find_map(|j| decode_scaled(&bytes[j.offset..], max_side))
+            // Le plus petit assez grand ; à défaut, le plus grand qu'il y ait (un aperçu
+            // de 1616 px pour un coup d'œil de 2048).
+            let big_enough = found.iter().position(|j| j.width.max(j.height) >= max_side);
+            let order: Vec<&EmbeddedJpeg> = match big_enough {
+                Some(i) => found[i..].iter().collect(),
+                None => found.iter().rev().collect(),
+            };
+            order
+                .into_iter()
+                .find_map(|j| decode_scaled(&bytes[j.offset..], max_side))
         };
         let head = read_head(path, 8 << 20)?;
         let (img, bytes) = match pick(&head) {
@@ -519,7 +527,11 @@ impl RawPhoto {
                 (pick(&all)?, all)
             }
         };
-        let mut img = img.thumbnail(max_side, max_side);
+        let mut img = if img.width().max(img.height()) > max_side {
+            img.thumbnail(max_side, max_side)
+        } else {
+            img
+        };
         // Les aperçus sont enregistrés dans le sens du capteur : l'orientation de la photo
         // s'y applique. Lue dans l'en‑tête TIFF quand il y en a un (la plupart des RAW),
         // sinon par le décodeur.
