@@ -25,6 +25,10 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Faster catalog on external drives**: to file a photo, LÜMA now reads only the
+  beginning of the file (0.5 to 2 MB instead of 25 to 56 MB). Five RAW files from the
+  corpus: 34 MB read instead of 189; a NEF is filed in 1.5 ms instead of 17 to 23, a
+  RAF in 0.6 ms instead of 22 to 25 (cold reads).
 - **Virtual copies**: several developments of the same photo without duplicating the
   file; each copy has its own settings, rating, keywords and thumbnail, sits next to
   its original and exports as `IMG_0001-2`. Deleting it never touches the original.
