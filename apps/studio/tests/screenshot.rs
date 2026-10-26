@@ -354,6 +354,37 @@ fn library_virtual_copies() {
 }
 
 #[test]
+fn camera_lens_corrections_can_be_turned_off() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("corrections") else {
+        return;
+    };
+    // Le Sony du corpus porte ses corrections : la case est dans l'outil Géométrie.
+    s.studio().tool = luma_studio::app::Tool::Geometry;
+    assert!(s.studio().settings.lens.camera, "cochée par défaut");
+    s.wait();
+    s.capture("geometrie-corrections");
+    s.studio().settings.lens.camera = false;
+    s.wait();
+    s.studio().flush_xmp();
+    s.studio().settings.lens.camera = false;
+    // Le réglage est enregistré dans le XMP (coupé), et relu.
+    let path = s.studio().current_path().unwrap().to_path_buf();
+    luma_studio::worker::write_sidecar(
+        &path,
+        &s.studio().settings,
+        &luma_studio::worker::read_meta(&path),
+    )
+    .unwrap();
+    assert!(
+        !luma_studio::worker::read_sidecar(&path)
+            .unwrap()
+            .lens
+            .camera
+    );
+}
+
+#[test]
 fn crop_tool_and_export_window() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("recadrage") else {

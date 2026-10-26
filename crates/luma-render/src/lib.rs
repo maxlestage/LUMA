@@ -24,6 +24,9 @@ use luma_image::{Input, geometry};
 use luma_project::{Settings, WhiteBalance};
 use luma_raw::RawPhoto;
 
+/// Une source en cache : sa taille, et si les corrections d'objectif du fichier y sont.
+type SourceKey = (Size, bool);
+
 /// La taille d'un rendu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Size {
@@ -60,7 +63,8 @@ pub struct Photo {
     bases: Mutex<Vec<(Size, Settings, Base)>>,
     raw: RawPhoto,
     /// Images caméra orientées, par taille. Bornées : au plus [`CACHE`] tailles.
-    sources: Mutex<Vec<(Size, Arc<RgbImage>)>>,
+    /// Les sources par taille, avec ou sans les corrections d'objectif du fichier.
+    sources: Mutex<Vec<(SourceKey, Arc<RgbImage>)>>,
     /// L'aberration chromatique latérale estimée (rouge, bleu), une fois par photo.
     ca: Mutex<Option<(f32, f32)>>,
     /// Les matrices caméra → travail déjà calculées, par balance des blancs.
@@ -170,9 +174,29 @@ impl Photo {
         self.raw.as_shot()
     }
 
-    /// L'image caméra orientée à la taille demandée (calculée une fois).
+    /// L'image caméra orientée à la taille demandée (calculée une fois), corrections
+    /// d'objectif du fichier comprises.
     pub fn source(&self, size: Size, t: &mut Timings) -> Arc<RgbImage> {
-        if let Some((_, img)) = self.sources.lock().expect("cache").iter().find(|(s, _)| *s == size) {
+        self.source_with(size, true, t)
+    }
+
+    /// Le fichier porte‑t‑il des corrections d'objectif (DNG ou boîtier) ?
+    pub fn has_camera_corrections(&self) -> bool {
+        self.raw.opcodes.is_some() || self.dup.as_ref().is_some_and(|d| d.lens_corrected)
+    }
+
+    /// Sans les corrections du boîtier, une photo ouverte depuis son doublon doit être
+    /// relue depuis le RAW : le doublon les porte déjà dans ses pixels.
+    pub fn needs_original(&self, camera_corrections: bool) -> bool {
+        !camera_corrections && self.dup.as_ref().is_some_and(|d| d.lens_corrected)
+    }
+
+    /// [`source`](Self::source), avec ou sans les corrections d'objectif du fichier.
+    pub fn source_with(&self, size: Size, camera: bool, t: &mut Timings) -> Arc<RgbImage> {
+        // Sans corrections dans le fichier, les deux sources sont la même.
+        let camera = camera || !self.has_camera_corrections();
+        let key = (size, camera);
+        if let Some((_, img)) = self.sources.lock().expect("cache").iter().find(|(k, _)| *k == key) {
             return img.clone();
         }
         let (fw, fh) = self.full_size();
@@ -205,24 +229,31 @@ impl Photo {
             };
             t.time("orientation", || geometry::orient(img, o))
         } else {
-            self.source_from_raw(size, fw, fh, t)
+            self.source_from_raw(size, camera, fw, fh, t)
         };
         let img = Arc::new(img);
         let mut cache = self.sources.lock().expect("cache");
         if cache.len() >= CACHE {
             cache.remove(0);
         }
-        cache.push((size, img.clone()));
+        cache.push((key, img.clone()));
         drop(cache);
         self.trim(Some(&img));
         img
     }
 
     /// L'image caméra orientée à la taille demandée, depuis le RAW.
-    fn source_from_raw(&self, size: Size, fw: usize, fh: usize, t: &mut Timings) -> RgbImage {
+    fn source_from_raw(&self, size: Size, camera: bool, fw: usize, fh: usize, t: &mut Timings) -> RgbImage {
+        let demosaic = || {
+            if camera {
+                self.raw.demosaic()
+            } else {
+                self.raw.demosaic_uncorrected()
+            }
+        };
         match size {
             Size::Full => {
-                let full = t.time("dématriçage", || self.raw.demosaic());
+                let full = t.time("dématriçage", demosaic);
                 t.time("orientation", || geometry::orient(full, self.raw.orientation))
             }
             Size::Fit(max) => {
@@ -231,9 +262,15 @@ impl Photo {
                 // La réduction sans dématriçage suffit tant qu'elle reste plus grande que
                 // la cible ; au‑delà, on dématrice.
                 let base = if bw.max(bh) >= tw.max(th) {
-                    t.time("réduction capteur", || self.raw.binned())
+                    t.time("réduction capteur", || {
+                        if camera {
+                            self.raw.binned()
+                        } else {
+                            self.raw.binned_uncorrected()
+                        }
+                    })
                 } else {
-                    t.time("dématriçage", || self.raw.demosaic())
+                    t.time("dématriçage", demosaic)
                 };
                 // On réduit avant de tourner : la rotation porte alors sur l'image finale,
                 // quatre à six fois plus petite (la taille cible, dans le sens du capteur).
@@ -361,7 +398,7 @@ impl Photo {
                 return Ok(b);
             }
         }
-        let source = self.source(size, timings);
+        let source = self.source_with(size, settings.lens.camera, timings);
         cancel.check()?;
         let ca = if settings.lens.remove_ca {
             self.chromatic_aberration(timings)

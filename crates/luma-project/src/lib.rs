@@ -241,6 +241,10 @@ pub struct Calibration {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Lens {
+    /// Les corrections enregistrées par le boîtier (ou écrites dans le DNG) : distorsion,
+    /// aberration chromatique et vignetage, appliquées automatiquement. Les curseurs
+    /// ci‑dessous s'y ajoutent, ou les remplacent quand elles sont coupées.
+    pub camera: bool,
     /// Supprimer l'aberration chromatique (latérale, estimée sur la photo).
     pub remove_ca: bool,
     /// Distorsion : −100 à +100 (positif corrige le barillet).
@@ -256,6 +260,7 @@ pub struct Lens {
 impl Default for Lens {
     fn default() -> Self {
         Self {
+            camera: true,
             remove_ca: false,
             distortion: 0.0,
             vignetting: 0.0,

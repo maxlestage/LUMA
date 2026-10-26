@@ -46,6 +46,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Lens corrections of Sony ARW files (distortion, lateral chromatic aberration, vignetting, recorded by the camera), applied automatically with no empty border | ✅ |
 | | Lens corrections of Fujifilm RAF files (distortion, lateral chromatic aberration, vignetting, recorded by the camera, crop mode included), applied automatically | ✅ |
 | | Lens corrections of Olympus and OM System ORF files (distortion, lateral chromatic aberration) and Panasonic RW2 files (distortion), recorded by the camera, applied automatically | ✅ |
+| | “Camera corrections” checkbox: on by default, saved in the XMP (`crs:LensProfileEnable`); turned off, the photo goes back to what the lens gave, and the distortion and vignetting sliders take over | ✅ |
 | | Longitudinal chromatic aberration, corrections of other brands (Canon, Nikon, Pentax…) | ⏳ |
 | Transform | Vertical and horizontal perspective, rotate, aspect, scale (homography, fixed centre) | ✅ |
 | | Automatic and guided straightening | ⏳ |

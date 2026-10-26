@@ -47,6 +47,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Correcciones de objetivo de los ARW de Sony (distorsión, aberración cromática lateral, viñeteo, registradas por la cámara), aplicadas automáticamente sin borde vacío | ✅ |
 | | Correcciones de objetivo de los RAF de Fujifilm (distorsión, aberración cromática lateral, viñeteo, registradas por la cámara, modo recortado incluido), aplicadas automáticamente | ✅ |
 | | Correcciones de objetivo de los ORF de Olympus y OM System (distorsión, aberración cromática lateral) y de los RW2 de Panasonic (distorsión), registradas por la cámara, aplicadas automáticamente | ✅ |
+| | Casilla «Correcciones de la cámara»: marcada por defecto, guardada en el XMP (`crs:LensProfileEnable`); desmarcada, la foto vuelve a ser la que dio el objetivo, y los controles de distorsión y viñeteo toman el relevo | ✅ |
 | | Aberración cromática longitudinal, correcciones de otras marcas (Canon, Nikon, Pentax…) | ⏳ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
 | | Enderezamiento automático y guiado | ⏳ |
