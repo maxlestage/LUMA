@@ -483,8 +483,64 @@ pub struct Studio {
     previews_for: Option<PathBuf>,
     /// La pipette de balance des blancs (W) attend un clic sur la photo.
     eyedropper: bool,
+    /// L'outil de ciblage direct du mélangeur : glisser sur une couleur de la photo.
+    targeting: bool,
+    /// Le geste de ciblage en cours : les bandes du mélangeur saisies au point de départ
+    /// et leurs poids (`Some(None)` : une couleur grise, rien à régler).
+    target_bands: Option<Option<[(usize, f32); 2]>>,
+    /// Une petite copie de l'image affichée (au plus 256 px), pour lire la couleur sous
+    /// le doigt : taille et RGBA.
+    pick_map: ([usize; 2], Vec<u8>),
     /// Le nom de la dernière balance personnalisée (« Auto » ou « Personnalisée »).
     wb_label: &'static str,
+}
+
+/// Une copie réduite (au plus 256 px de côté) d'une image RGBA, pour la lecture des
+/// couleurs sous le doigt.
+fn pick_map(size: [usize; 2], rgba: &[u8]) -> ([usize; 2], Vec<u8>) {
+    let [w, h] = size;
+    if w == 0 || h == 0 || rgba.len() < w * h * 4 {
+        return ([0, 0], Vec::new());
+    }
+    let k = (w.max(h) as f32 / 256.0).max(1.0);
+    let (sw, sh) = (
+        ((w as f32 / k) as usize).max(1),
+        ((h as f32 / k) as usize).max(1),
+    );
+    let mut out = Vec::with_capacity(sw * sh * 4);
+    for y in 0..sh {
+        for x in 0..sw {
+            let (px, py) = (
+                ((x as f32 + 0.5) * k) as usize,
+                ((y as f32 + 0.5) * k) as usize,
+            );
+            let i = (py.min(h - 1) * w + px.min(w - 1)) * 4;
+            out.extend_from_slice(&rgba[i..i + 4]);
+        }
+    }
+    ([sw, sh], out)
+}
+
+/// La couleur moyenne autour d'un point (coordonnées 0 à 1) de la copie réduite.
+fn pick_color((size, rgba): &([usize; 2], Vec<u8>), nx: f32, ny: f32) -> Option<[u8; 3]> {
+    let [w, h] = *size;
+    if w == 0 || !(0.0..=1.0).contains(&nx) || !(0.0..=1.0).contains(&ny) {
+        return None;
+    }
+    let (cx, cy) = ((nx * w as f32) as isize, (ny * h as f32) as isize);
+    let (mut sum, mut n) = ([0u32; 3], 0u32);
+    for y in cy - 1..=cy + 1 {
+        for x in cx - 1..=cx + 1 {
+            if (0..w as isize).contains(&x) && (0..h as isize).contains(&y) {
+                let i = (y as usize * w + x as usize) * 4;
+                for c in 0..3 {
+                    sum[c] += u32::from(rgba[i + c]);
+                }
+                n += 1;
+            }
+        }
+    }
+    (n > 0).then(|| sum.map(|v| (v / n) as u8))
 }
 
 /// L'aperçu pendant un geste : au plus 1024 px sur iPhone et iPad, 1536 ailleurs (et
@@ -584,6 +640,9 @@ impl Studio {
             previews_tag: 0,
             previews_for: None,
             eyedropper: false,
+            targeting: false,
+            target_bands: None,
+            pick_map: ([0, 0], Vec::new()),
             wb_label: "Personnalisée",
         };
         if let Some(path) = luma_library::default_path() {
@@ -1020,6 +1079,7 @@ impl Studio {
                     self.render_gpu = frame.gpu;
                     self.histogram = frame.histogram;
                     self.image_size = frame.size;
+                    self.pick_map = pick_map(frame.size, &frame.rgba);
                     let image = ColorImage::from_rgba_unmultiplied(frame.size, &frame.rgba);
                     match &mut self.texture {
                         Some(t) => t.set(image, TextureOptions::LINEAR),
@@ -1122,6 +1182,61 @@ impl Studio {
     }
 
     /// Une étape d'historique (curseur relâché, choix fait).
+    /// Le geste de ciblage direct : au début, les bandes du mélangeur de la couleur
+    /// sous le doigt ; en glissant, vers le haut pour plus, dans l'onglet ouvert (teinte,
+    /// saturation ou luminance), chaque bande selon son poids.
+    fn target_drag(&mut self, ui: &Ui, r: &egui::Response, target: Rect) {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
+        if r.dragged() && self.target_bands.is_none() {
+            // Au premier instant du geste : la couleur là où le doigt s'est posé.
+            let start = ui
+                .input(|i| i.pointer.press_origin())
+                .or(r.interact_pointer_pos());
+            self.target_bands = Some(start.and_then(|p| {
+                let (nx, ny) = (
+                    (p.x - target.min.x) / target.width(),
+                    (p.y - target.min.y) / target.height(),
+                );
+                pick_color(&self.pick_map, nx, ny).and_then(luma_image::color::mixer_bands_at)
+            }));
+        }
+        if let Some(Some(bands)) = self.target_bands
+            && r.dragged()
+        {
+            // Une demi‑unité par point : 200 points d'écran couvrent toute la plage.
+            let dy = -r.drag_delta().y * 0.5;
+            if dy != 0.0 {
+                for (band, w) in bands {
+                    let v = match self.hsl_tab {
+                        0 => &mut self.settings.hsl.hue[band],
+                        1 => &mut self.settings.hsl.saturation[band],
+                        _ => &mut self.settings.hsl.luminance[band],
+                    };
+                    *v = (*v + dy * w).clamp(-100.0, 100.0);
+                }
+                self.touch();
+            }
+        }
+        if r.drag_stopped()
+            && let Some(grab) = self.target_bands.take()
+            && let Some(bands) = grab
+        {
+            let main = if bands[0].1 >= bands[1].1 {
+                bands[0].0
+            } else {
+                bands[1].0
+            };
+            let kind = [tr("Teinte|mélangeur"), tr("Saturation"), tr("Luminance")][self.hsl_tab];
+            self.commit(trf(
+                "Ciblage direct : {kind} {color}",
+                &[
+                    ("kind", &kind),
+                    ("color", &tr(HSL_NAMES[main]).to_lowercase()),
+                ],
+            ));
+        }
+    }
+
     fn commit(&mut self, label: String) {
         self.history.truncate(self.history_pos + 1);
         if self
@@ -1382,6 +1497,8 @@ impl Studio {
                     action = Some("mask_brush");
                 } else if i.consume_key(Modifiers::NONE, Key::W) {
                     action = Some("eyedropper");
+                } else if i.consume_key(Modifiers::NONE, Key::T) {
+                    action = Some("targeting");
                 } else if i.consume_key(Modifiers::NONE, Key::O) {
                     action = Some("mask_overlay");
                 } else if i.consume_key(Modifiers::NONE, Key::Delete)
@@ -1518,6 +1635,14 @@ impl Studio {
             }
             "mask_overlay" => self.show_mask = !self.show_mask,
             "eyedropper" => self.eyedropper = !self.eyedropper && self.photo.is_some(),
+            "targeting" => {
+                self.targeting = !self.targeting && self.photo.is_some();
+                if self.targeting {
+                    // L'outil règle le mélangeur : son panneau s'ouvre.
+                    self.tool = Tool::Color;
+                    self.eyedropper = false;
+                }
+            }
             "mask_delete" => {
                 if let Some(i) = self.selected_mask.take()
                     && i < self.settings.masks.len()
@@ -3589,8 +3714,15 @@ impl Studio {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
             self.edit_label(&painter, target);
-            let r = ui.interact(target, ui.scope_id().with("photo"), egui::Sense::click());
-            if self.eyedropper {
+            let sense = if self.targeting {
+                egui::Sense::click_and_drag()
+            } else {
+                egui::Sense::click()
+            };
+            let r = ui.interact(target, ui.scope_id().with("photo"), sense);
+            if self.targeting && !self.eyedropper {
+                self.target_drag(ui, &r, target);
+            } else if self.eyedropper {
                 ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
                 if r.clicked()
                     && let (Some(p), Some(photo)) = (r.interact_pointer_pos(), &self.photo)
@@ -3632,6 +3764,10 @@ impl Studio {
         }
         if self.eyedropper {
             badges.push(tr("Pipette : cliquez un gris ou un blanc de la photo"));
+        } else if self.targeting {
+            badges.push(tr(
+                "Ciblage direct : glissez sur une couleur, vers le haut pour plus",
+            ));
         }
         if self.crop_tool.is_some() {
             badges.push(tr("Recadrage : Entrée pour valider, Échap pour annuler"));
@@ -4155,6 +4291,17 @@ impl Studio {
                             .enumerate()
                         {
                             ui.selectable_value(&mut self.hsl_tab, i, name);
+                        }
+                        let on = self.targeting;
+                        if ui
+                            .selectable_label(on, tr("Ciblage"))
+                            .on_hover_text(tr(
+                                "Ciblage direct (T) : glissez sur une couleur de la photo, vers le haut ou le bas, pour régler cette couleur dans l'onglet choisi.",
+                            ))
+                            .clicked()
+                        {
+                            self.targeting = !on;
+                            self.eyedropper = false;
                         }
                     });
                     let kind =

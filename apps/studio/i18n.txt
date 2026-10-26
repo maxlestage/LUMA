@@ -2298,3 +2298,19 @@ es = GB
 fr = Mo
 en = MB
 es = MB
+
+fr = Ciblage
+en = Target
+es = Selección
+
+fr = Ciblage direct (T) : glissez sur une couleur de la photo, vers le haut ou le bas, pour régler cette couleur dans l'onglet choisi.
+en = Targeted adjustment (T): drag up or down on a colour in the photo to adjust that colour in the selected tab.
+es = Ajuste selectivo (T): arrastra hacia arriba o hacia abajo sobre un color de la foto para ajustar ese color en la pestaña elegida.
+
+fr = Ciblage direct : glissez sur une couleur, vers le haut pour plus
+en = Targeted adjustment: drag on a colour, up for more
+es = Ajuste selectivo: arrastra sobre un color, hacia arriba para más
+
+fr = Ciblage direct : {kind} {color}
+en = Targeted adjustment: {kind} {color}
+es = Ajuste selectivo: {kind} {color}
