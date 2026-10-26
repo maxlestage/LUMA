@@ -41,6 +41,13 @@ pub enum Event {
         photo: Arc<Photo>,
     },
     Rendered(Box<Frame>),
+    /// Un premier coup d'œil sur la photo qui s'ouvre, avant son rendu : l'aperçu
+    /// intégré au RAW, ou la vignette enregistrée d'une photo retouchée.
+    Glimpse {
+        path: PathBuf,
+        size: [usize; 2],
+        rgba: Vec<u8>,
+    },
     Thumbnail {
         path: PathBuf,
         size: [usize; 2],
@@ -228,6 +235,15 @@ impl Worker {
     pub fn open(&self, path: PathBuf) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
+            // Aussitôt, un coup d'œil, pendant que le RAW se décode.
+            if let Some((size, rgba)) = glimpse(&path) {
+                let _ = sender.send(Event::Glimpse {
+                    path: path.clone(),
+                    size,
+                    rgba,
+                });
+                repaint();
+            }
             let result = crate::dialogs::open_photo(&path)
                 .map(|p| (Arc::new(p), read_sidecar(&path).map(Box::new)))
                 .map_err(|e| e.to_string());
@@ -655,6 +671,21 @@ fn thumbnail_loop(
             render_thumbnail(&path, &sender, &repaint);
         }
     }
+}
+
+/// Le coup d'œil sur une photo qui s'ouvre : l'aperçu intégré au RAW (2048 px) si elle
+/// n'est pas retouchée ; sinon sa vignette enregistrée, qui montre ses retouches.
+fn glimpse(path: &Path) -> Option<([usize; 2], Vec<u8>)> {
+    let edited = read_sidecar(path).is_some_and(|s| luma_project::presets::summary(&s).is_edited());
+    let img = if edited {
+        thumbnail_file(path).and_then(|f| luma_render::thumbnail::load(&f))
+    } else {
+        luma_raw::RawPhoto::embedded_preview(path, 2048)
+    }?;
+    Some((
+        [img.width() as usize, img.height() as usize],
+        to_rgba(img.as_raw(), false),
+    ))
 }
 
 /// La vignette instantanée : l'aperçu intégré au RAW. `false` s'il n'y en a pas.
