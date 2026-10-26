@@ -31,7 +31,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   grille triée par date, recherche et filtres.
 - [ ] 1.6 Copies virtuelles : plusieurs jeux de réglages pour un même fichier, dans le
   XMP, visibles dans la grille et le film.
-- [ ] 1.7 Index plus léger : format binaire compact, chargement de 100 000 photos mesuré.
+- [x] 1.7 Index plus léger : format binaire compact, chargement de 100 000 photos mesuré.
 
 ### 2. Export professionnel
 
@@ -179,3 +179,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 1.3 Collections manuelles et dynamiques dans le catalogue (`luma_library::Collection`, `luma catalog --smart`, `--add`, `--collections`, `--collection`) ; anciens index relus tels quels | Une collection dynamique coûte une recherche (4 à 25 ms pour 100 000 photos) ; index du corpus avec une collection de deux photos : 1,6 → 1,8 Ko |
 | 2026-10-26 | 2.2 Modèles de nom des fichiers exportés (`luma_render::export::file_name`, `NameFields`) : 13 repères (date et heure de prise de vue, séquence, boîtier, objectif, ISO, note, libellé…), alias anglais et espagnols, sous‑dossiers par « / », caractères interdits remplacés, noms en double numérotés ; fenêtre Exporter (modèle vérifié en direct), préréglages, `luma develop --name` | Nom calculé à partir de l'EXIF déjà lu : rien de plus à lire ni à décoder |
 | 2026-10-26 | Vitesse : réduction du bruit fusionnée (couleur calculée directement à demi‑résolution, agrandie ligne par ligne, plus de copie encodée ni de plans pleine taille) ; positions d'agrandissement calculées une fois ; `Plane::downscale` écrit sa première ligne sans la lire (une mémoire neuve lue avant d'être écrite coûte deux fautes de page) | Étape bruit, pleine définition (4 cœurs, médiane de 5) : NEF 674 → 234 ms, CR3 1205 → 383 ms, RAF 722 → 256 ms, ARW 639 → 202 ms, DNG 351 → 113 ms ; rendu complet −25 à −30 % (NEF 1659 → 1129 ms) ; aperçu 2048 px, réglages lourds P50 : NEF 350 → 263 ms, CR3 398 → 312 ms ; JPEG identiques octet pour octet, test au bit près contre l'ancienne version |
+| 2026-10-26 | 1.7 (gain de légèreté) Catalogue en binaire compact (`luma-library/src/store.rs`) : table des textes (dossiers, boîtiers, objectifs, mots‑clés écrits une fois), nombres en longueur variable, arbre construit d'un bloc ; ancien JSON relu et converti ; fichier abîmé refusé sans rien allouer | `cargo run --release -p luma-library --example bench`, 100 000 photos : fichier 33,6 → 7,4 Mo ; relecture 166 → 68 ms ; enregistrement 332 → 121 ms ; recherche inchangée |

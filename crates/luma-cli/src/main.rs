@@ -52,7 +52,7 @@ USAGE
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
-  luma catalog [dossier]… [--flat] [--catalog f.json] [--list] [--search \"…\"] [--keywords]
+  luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords]
                [--smart nom \"règle\"] [--add nom photo]… [--remove-collection nom]
                [--collections] [--collection nom]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
@@ -238,7 +238,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             _ => folders.push(PathBuf::from(arg)),
         }
     }
-    let file = file.ok_or("pas de dossier personnel pour le catalogue : --catalog f.json")?;
+    let file = file.ok_or("pas de dossier personnel pour le catalogue : --catalog f.lumacat")?;
     let t = Instant::now();
     let mut cat = luma_library::Catalog::load(&file);
     let loaded = t.elapsed();
