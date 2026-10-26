@@ -248,13 +248,34 @@ fn metadata(source: &rawler::rawsource::RawSource, params: &rawler::decoders::Ra
 /// Les données de prise de vue d'un RAW, lues dans son en‑tête (quelques millisecondes,
 /// au lieu d'un décodage complet). Une image développée (JPEG, PNG…) ou un fichier
 /// illisible donne `None`.
+///
+/// Seul le début du fichier est lu : 256 Ko suffisent à presque tous les RAW, 1 ou 4 Mo à
+/// ceux qui rangent leur aperçu avant leurs métadonnées ; le fichier entier n'est lu
+/// qu'en dernier recours, et pour le CR3. Sur un disque externe ou réseau, c'est ce qui coûte : un RAW
+/// fait 25 à 60 Mo.
 pub fn info(path: impl AsRef<Path>) -> Option<Info> {
     let path = path.as_ref();
     if raster::is_raster(path) {
         return None;
     }
+    let params = rawler::decoders::RawDecodeParams::default();
+    let size = std::fs::metadata(path).ok()?.len();
+    // Le CR3 range une partie de ses métadonnées dans ses pistes, à la fin du fichier.
+    let whole = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("cr3"));
+    for n in [256 << 10, 1 << 20, 4 << 20] {
+        if whole || size <= n as u64 {
+            break;
+        }
+        let head = read_head(path, n)?;
+        let source = rawler::rawsource::RawSource::new_from_shared_vec(std::sync::Arc::new(head)).with_path(path);
+        // Un en‑tête coupé peut faire échouer le décodeur, jamais le tromper : ce qui
+        // n'est pas dans le début du fichier ne se lit pas.
+        if let Ok(Some(info)) = std::panic::catch_unwind(|| metadata(&source, &params)) {
+            return Some(info);
+        }
+    }
     let source = rawler::rawsource::RawSource::new(path).ok()?;
-    metadata(&source, &rawler::decoders::RawDecodeParams::default())
+    metadata(&source, &params)
 }
 
 impl RawPhoto {
