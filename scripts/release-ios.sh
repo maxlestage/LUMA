@@ -34,9 +34,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "→ Identifiant et fiche App Store"
+echo "→ Identifiant de l'app"
 bundle_res=$(asc bundle-id "$BUNDLE" LUMA)
-asc app "$BUNDLE" >/dev/null
 
 echo "→ Certificat de distribution et profil"
 # LibreSSL du système : son PKCS#12 est celui que le trousseau de macOS sait lire.
@@ -115,6 +114,9 @@ cp -R "$app" "$out/Payload/"
 (cd "$out" && ditto -c -k --sequesterRsrc --keepParent Payload LUMA.ipa)
 
 if [ "${LUMA_UPLOAD:-1}" = 1 ]; then
+  # La fiche de l'app (créée à la main dans App Store Connect) n'est vérifiée qu'ici :
+  # tout le reste est déjà construit et signé.
+  asc app "$BUNDLE" >/dev/null
   echo "→ Envoi à App Store Connect (build $BUILD_NUMBER)"
   mkdir -p ~/.appstoreconnect/private_keys
   printf '%s\n' "$ASC_KEY" > ~/.appstoreconnect/private_keys/"AuthKey_$ASC_KEY_ID.p8"
