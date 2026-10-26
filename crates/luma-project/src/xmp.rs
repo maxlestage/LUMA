@@ -321,8 +321,9 @@ fn leak(name: String) -> &'static str {
 /// Les réglages d'un document XMP. Ce qui manque garde sa valeur par défaut.
 pub fn read(text: &str) -> luma_core::Result<Settings> {
     let values = parse_values(text)?;
+    // Les mots‑clés seuls ne sont pas des réglages.
     if values.scalars.is_empty()
-        && values.lists.is_empty()
+        && values.lists.keys().all(|k| k == SUBJECT)
         && !values.meta.contains_key("luma:Masks")
         && !values.meta.contains_key("luma:Lut")
         && !values.meta.contains_key("luma:Film")
@@ -597,27 +598,7 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
             attrs.push((format!("GrayMixer{name}"), fmt_value("GrayMixer", s.hsl.luminance[i])));
         }
     }
-    let mut out = String::from(
-        "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"LÜMA\">\n <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"\"\n",
-    );
-    out.push_str(&format!("    xmlns:crs=\"{CRS}\"\n"));
-    out.push_str("    xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n");
-    if !meta.keywords.is_empty() {
-        out.push_str("    xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n");
-    }
-    out.push_str(&format!("    xmlns:luma=\"{LUMA_NS}\"\n"));
-    let rating = if meta.flag == Flag::Reject {
-        -1
-    } else {
-        i32::from(meta.rating.min(5))
-    };
-    out.push_str(&format!("    xmp:Rating=\"{rating}\"\n"));
-    if !meta.label.is_empty() {
-        out.push_str(&format!("    xmp:Label=\"{}\"\n", escape(&meta.label)));
-    }
-    if meta.flag == Flag::Pick {
-        out.push_str("    luma:Pick=\"True\"\n");
-    }
+    let mut out = open_document(meta, true);
     if !s.masks.is_empty() {
         let json = serde_json::to_string(&s.masks).unwrap_or_default();
         out.push_str(&format!("    luma:Masks=\"{}\"\n", escape(&json)));
@@ -645,6 +626,50 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
         }
         out.push_str(&format!("    </rdf:Seq>\n   </crs:{name}>\n"));
     }
+    close_document(&mut out, meta);
+    out
+}
+
+/// Un XMP qui ne porte que la note, le drapeau, le libellé et les mots‑clés : celui
+/// d'une photo jamais développée, dont on change les métadonnées depuis la
+/// Bibliothèque. Sans réglages, la photo garde son rendu par défaut.
+pub fn write_meta(meta: &Meta) -> String {
+    let mut out = open_document(meta, false);
+    out.push_str("   >\n");
+    close_document(&mut out, meta);
+    out
+}
+
+/// Le début d'un document : espaces de noms et métadonnées en attributs.
+fn open_document(meta: &Meta, settings: bool) -> String {
+    let mut out = String::from(
+        "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"LÜMA\">\n <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"\"\n",
+    );
+    if settings {
+        out.push_str(&format!("    xmlns:crs=\"{CRS}\"\n"));
+    }
+    out.push_str("    xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n");
+    if !meta.keywords.is_empty() {
+        out.push_str("    xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n");
+    }
+    out.push_str(&format!("    xmlns:luma=\"{LUMA_NS}\"\n"));
+    let rating = if meta.flag == Flag::Reject {
+        -1
+    } else {
+        i32::from(meta.rating.min(5))
+    };
+    out.push_str(&format!("    xmp:Rating=\"{rating}\"\n"));
+    if !meta.label.is_empty() {
+        out.push_str(&format!("    xmp:Label=\"{}\"\n", escape(&meta.label)));
+    }
+    if meta.flag == Flag::Pick {
+        out.push_str("    luma:Pick=\"True\"\n");
+    }
+    out
+}
+
+/// La fin d'un document : la liste des mots‑clés, puis les balises fermantes.
+fn close_document(out: &mut String, meta: &Meta) {
     if !meta.keywords.is_empty() {
         out.push_str("   <dc:subject>\n    <rdf:Bag>\n");
         for k in &meta.keywords {
@@ -653,7 +678,6 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
         out.push_str("    </rdf:Bag>\n   </dc:subject>\n");
     }
     out.push_str("  </rdf:Description>\n </rdf:RDF>\n</x:xmpmeta>\n");
-    out
 }
 
 /// L'index d'une couleur du mélangeur à partir de son nom XMP.
@@ -895,6 +919,17 @@ mod tests {
         // Les mots‑clés écrits par un autre logiciel : la liste `dc:subject`.
         let tagged = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:subject><rdf:Bag><rdf:li>Portrait</rdf:li><rdf:li>Studio</rdf:li></rdf:Bag></dc:subject></rdf:Description></rdf:RDF></x:xmpmeta>"#;
         assert_eq!(read_meta(tagged).keywords, ["Portrait", "Studio"]);
+        assert!(read(tagged).is_err(), "des mots‑clés seuls ne sont pas des réglages");
+        // Sans réglages : les métadonnées seules, et la photo garde son rendu par défaut.
+        let only = Meta {
+            rating: 2,
+            flag: Flag::Pick,
+            label: String::new(),
+            keywords: vec!["Mer".into()],
+        };
+        let text = write_meta(&only);
+        assert_eq!(read_meta(&text), only);
+        assert!(read(&text).is_err(), "aucun réglage : {text}");
     }
 
     #[test]

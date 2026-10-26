@@ -103,6 +103,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
 | Recherche et filtres (`luma catalog --search`) : mots sans tenir compte des accents ; note, drapeau, libellé, dates, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers et objectifs | ✅ |
 | Collections manuelles et dynamiques (règle : note, date, boîtier, objectif, ISO, mots‑clés…), enregistrées dans le catalogue | ✅ |
+| Mots‑clés dans l'app : saisie (plusieurs à la fois, séparés par une virgule), ajout et retrait sur toutes les photos choisies, liste des mots‑clés du dossier avec leur nombre, filtre de la grille | ✅ |
 | Catalogue dans l'app, copies virtuelles | ⏳ |
 | Import de catalogues existants | ⏳ |
 

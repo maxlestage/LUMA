@@ -1253,6 +1253,26 @@ fr = Rejetée
 en = Rejected
 es = Rechazada
 
+fr = Mots-clés
+en = Keywords
+es = Palabras clave
+
+fr = Tous les mots-clés
+en = All keywords
+es = Todas las palabras clave
+
+fr = Retirer ce mot-clé
+en = Remove this keyword
+es = Quitar esta palabra clave
+
+fr = Ajouter aux {n} photos choisies
+en = Add to the {n} selected photos
+es = Añadir a las {n} fotos seleccionadas
+
+fr = Ajouter un mot-clé (virgule entre deux)
+en = Add a keyword (comma between two)
+es = Añadir una palabra clave (coma entre dos)
+
 fr = Appareil
 en = Camera
 es = Cámara
