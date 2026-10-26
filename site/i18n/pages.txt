@@ -698,9 +698,9 @@ fr = Conçu et développé par
 en = Designed and built by
 es = Diseñado y desarrollado por
 
-fr = Fabriqué en Rust, en France
-en = Made in Rust, in France
-es = Hecho en Rust, en Francia
+fr = *Fabriqué en Rust*, en France
+en = *Made in Rust*, in France
+es = *Hecho en Rust*, en Francia
 
 fr = Logiciel propriétaire
 en = Proprietary software
