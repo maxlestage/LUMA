@@ -187,8 +187,8 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
     for _ in 0..photos {
         let dir = r.varint()?;
         let name = r.text()?;
-        if !dirs.contains_key(&dir) {
-            dirs.insert(dir, PathBuf::from(get(dir)?));
+        if let std::collections::hash_map::Entry::Vacant(v) = dirs.entry(dir) {
+            v.insert(PathBuf::from(get(dir)?));
         }
         let path = dirs[&dir].join(name);
         let (size, modified, sidecar) = (r.varint()?, r.varint()?, r.varint()?);
