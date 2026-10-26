@@ -20,6 +20,9 @@
 @group(0) @binding(4) var<storage, read_write> mid: array<vec4<f32>>;
 @group(0) @binding(5) var<storage, read_write> pin: array<f32>;
 @group(0) @binding(6) var<storage, read_write> pout: array<f32>;
+// Le Masquage : le flou de l'accentuation, gardé pendant qu'on floute encore pour
+// trouver les bords.
+@group(0) @binding(7) var<storage, read_write> keep: array<f32>;
 
 const TAU: f32 = 6.283185307179586;
 const PI: f32 = 3.141592653589793;
@@ -445,10 +448,9 @@ fn pre(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) g
 
 // Accentuation, 2 : un flou boîte de rayon P_SHARPEN_R, bords répétés (comme
 // Plane::box_rows_into et box_cols_into).
-fn box_at(index: u32, horizontal: bool) -> f32 {
+fn box_at(index: u32, horizontal: bool, r: i32) -> f32 {
     let width = i32(P[P_WIDTH]);
     let height = i32(P[P_HEIGHT]);
-    let r = i32(P[P_SHARPEN_R]);
     let x = i32(index) % width;
     let y = i32(index) / width;
     var sum = 0.0;
@@ -468,7 +470,7 @@ fn box_h(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups)
     if index >= pixel_count() {
         return;
     }
-    pout[index] = box_at(index, true);
+    pout[index] = box_at(index, true, i32(P[P_SHARPEN_R]));
 }
 
 @compute @workgroup_size(256)
@@ -477,7 +479,49 @@ fn box_v(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups)
     if index >= pixel_count() {
         return;
     }
-    pout[index] = box_at(index, false);
+    pout[index] = box_at(index, false, i32(P[P_SHARPEN_R]));
+}
+
+// Masquage : le flou de l'accentuation est gardé, puis flouté encore (rayon
+// P_MASK_R) pour trouver les bords.
+@compute @workgroup_size(256)
+fn keep_blur(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    keep[index] = pin[index];
+}
+
+@compute @workgroup_size(256)
+fn mask_h(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    pout[index] = box_at(index, true, i32(P[P_MASK_R]));
+}
+
+@compute @workgroup_size(256)
+fn mask_v(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let index = pixel_index(gid, groups);
+    if index >= pixel_count() {
+        return;
+    }
+    pout[index] = box_at(index, false, i32(P[P_MASK_R]));
+}
+
+// Le masque des bords en un point : la pente du flou des bords (dans `pin`), comme
+// detail::sharpen.
+fn edge_mask(index: u32) -> f32 {
+    let width = i32(P[P_WIDTH]);
+    let height = i32(P[P_HEIGHT]);
+    let x = i32(index) % width;
+    let y = i32(index) / width;
+    let gx = pin[u32(y * width + min(x + 1, width - 1))] - pin[u32(y * width + max(x - 1, 0))];
+    let gy = pin[u32(min(y + 1, height - 1) * width + x)] - pin[u32(max(y - 1, 0) * width + x)];
+    let th = P[P_MASK_TH];
+    return ss(th * 0.5, th, sqrt(gx * gx + gy * gy));
 }
 
 // Accentuation, 3 : l'écart au flou, borné par le Détail, ramené en gain sur les trois
@@ -488,14 +532,20 @@ fn post(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     if index >= pixel_count() {
         return;
     }
-    let m = mid[index];
-    let v = m.w;
+    let px = mid[index];
+    let v = px.w;
     let limit = P[P_SHARPEN_LIMIT];
-    let diff = clamp(v - pin[index], -limit, limit);
-    let sharp = max(v + P[P_SHARPEN_AMOUNT] * diff, 0.0);
+    var blurred = pin[index];
+    var m = 1.0;
+    if P[P_MASK_TH] > 0.0 {
+        blurred = keep[index];
+        m = edge_mask(index);
+    }
+    let diff = clamp(v - blurred, -limit, limit);
+    let sharp = max(v + P[P_SHARPEN_AMOUNT] * diff * m, 0.0);
     var gain = 1.0;
     if v > 1e-4 {
         gain = pow(sharp / v, 2.2);
     }
-    write(index, m.xyz * gain);
+    write(index, px.xyz * gain);
 }
