@@ -111,6 +111,10 @@ The professional photo library, step by step.
   printer and paper, and the preview shows the photo as it will come out, with the
   perceptual or relative colorimetric intent; the histogram follows. A view, not an
   adjustment: nothing is written to the photo.
+- **LÜMA Premium on the App Store** (iPhone and iPad): both subscriptions at their App
+  Store price, “Subscribe” and “Restore Purchases”; every purchase and renewal unlocks
+  Premium. On iPhone and iPad, only the App Store sells the subscription; on Mac, only
+  the website (Stripe).
 - **Gamut warning** (in soft proofing): the colors the printer will not be able to
   reproduce turn blue on the preview, with or without the print simulation.
 - **Paper and black ink** (in soft proofing): “Paper color” shows the paper's tone
