@@ -396,6 +396,12 @@ pub struct Studio {
     clipping: bool,
     zoom: bool,
     thumbs: HashMap<PathBuf, TextureHandle>,
+    /// La dernière vérification de la mémoire laissée par le système (iPhone, iPad).
+    memory_check: f64,
+    /// Les vignettes libérées faute de mémoire : redemandées quand elles réapparaissent.
+    evicted: std::collections::HashSet<PathBuf>,
+    /// Les vignettes affichées sans image pendant cette image de l'interface.
+    shown_missing: std::cell::RefCell<Vec<PathBuf>>,
     status: String,
     xmp_due: Option<f64>,
     grading_tab: usize,
@@ -457,6 +463,18 @@ pub struct Studio {
     wb_label: &'static str,
 }
 
+/// L'aperçu pendant un geste : au plus 1024 px sur iPhone et iPad, 1536 ailleurs (et
+/// jamais plus que l'écran). Quatre fois moins de pixels qu'un aperçu d'iPad Pro.
+fn interactive_size(viewport_px: f32) -> Size {
+    let cap = if cfg!(target_os = "ios") {
+        1024.0
+    } else {
+        1536.0
+    };
+    let side = ((viewport_px / 512.0).ceil().max(1.0) * 512.0).min(cap);
+    Size::Fit(side as usize)
+}
+
 impl Studio {
     pub fn new(ctx: &egui::Context) -> Self {
         crate::style::apply(ctx);
@@ -483,6 +501,9 @@ impl Studio {
             clipping: false,
             zoom: false,
             thumbs: HashMap::new(),
+            memory_check: 0.0,
+            evicted: Default::default(),
+            shown_missing: Default::default(),
             // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
             status: String::new(),
             xmp_due: None,
@@ -980,6 +1001,48 @@ impl Studio {
         }
     }
 
+    /// Sur iPhone et iPad, le système ferme une app qui dépasse sa mémoire. Une fois par
+    /// seconde : s'il reste moins de 300 Mo, LÜMA libère ses caches d'aperçus et les
+    /// vignettes loin de la photo en cours (elles se relisent en moins d'une
+    /// milliseconde depuis le disque).
+    fn watch_memory(&mut self, ctx: &egui::Context) {
+        let now = ctx.input(|i| i.time);
+        if now - self.memory_check < 1.0 {
+            return;
+        }
+        self.memory_check = now;
+        let Some(free) = luma_apple::available_memory() else {
+            return;
+        };
+        if free >= 300 * 1024 * 1024 {
+            return;
+        }
+        if let Some(photo) = &self.photo {
+            photo.release_caches();
+        }
+        let near: std::collections::HashSet<PathBuf> = match self.current {
+            Some(c) => self
+                .folder
+                .iter()
+                .skip(c.saturating_sub(20))
+                .take(41)
+                .cloned()
+                .collect(),
+            None => Default::default(),
+        };
+        let far: Vec<PathBuf> = self
+            .thumbs
+            .keys()
+            .filter(|p| !near.contains(*p))
+            .cloned()
+            .collect();
+        for p in far {
+            self.thumbs.remove(&p);
+            self.evicted.insert(p);
+        }
+        self.last_request = None;
+    }
+
     /// Vide tout le cache : les doublons de travail sur le disque, les aperçus de la
     /// photo en mémoire, les vignettes. La photo ouverte depuis son doublon est relue
     /// depuis l'original, sans toucher aux réglages.
@@ -996,6 +1059,7 @@ impl Studio {
             }
         }
         self.thumbs.clear();
+        self.evicted.clear();
         for p in &self.folder {
             self.worker.thumbnail(p.clone());
         }
@@ -1038,20 +1102,29 @@ impl Studio {
             .map_or_else(Settings::default, |p| p.default_settings())
     }
 
-    fn request_render(&mut self, viewport_px: f32) {
+    fn request_render(&mut self, viewport_px: f32, pressed: bool) {
         let (Some(photo), Some(path)) = (&self.photo, self.current_path()) else {
             return;
-        };
-        // Tailles par paliers de 512 px : le cache de sources sert d'un rendu à l'autre.
-        let size = if self.zoom {
-            Size::Full
-        } else {
-            Size::Fit(((viewport_px / 512.0).ceil().max(1.0) * 512.0) as usize)
         };
         let mut settings = if self.before {
             photo.default_settings()
         } else {
             self.settings.clone()
+        };
+        // Un réglage bouge sous le doigt (ou la souris) : un aperçu plus petit, qui suit
+        // le geste ; la pleine netteté revient dès qu'on lâche.
+        let moving = pressed
+            && self.last_request.as_ref().is_some_and(|r| {
+                r.path == path
+                    && (r.settings != settings || r.size == interactive_size(viewport_px))
+            });
+        // Tailles par paliers de 512 px : le cache de sources sert d'un rendu à l'autre.
+        let size = if self.zoom {
+            Size::Full
+        } else if moving {
+            interactive_size(viewport_px)
+        } else {
+            Size::Fit(((viewport_px / 512.0).ceil().max(1.0) * 512.0) as usize)
         };
         if self.crop_tool.is_some() {
             // Pendant le recadrage, toute la photo est visible (redressée).
@@ -1470,6 +1543,13 @@ impl Studio {
     pub fn ui(&mut self, ui: &mut Ui) {
         let ctx = ui.ctx().clone();
         self.handle_events(&ctx);
+        self.watch_memory(&ctx);
+        // Les vignettes libérées qui se sont affichées vides : on les relit.
+        for p in self.shown_missing.take() {
+            if self.evicted.remove(&p) {
+                self.worker.thumbnail(p);
+            }
+        }
         if self.licence.poll() {
             // Une clé activée ferme l'écran Premium.
             if matches!(self.licence.access(), luma_licence::Access::Premium { .. })
@@ -2980,6 +3060,10 @@ impl Studio {
                                 }
                                 None => {
                                     painter.rect_filled(area, 2.0, Color32::from_gray(0x22));
+                                    if self.evicted.contains(path) {
+                                        self.shown_missing.borrow_mut().push(path.clone());
+                                        ui.ctx().request_repaint();
+                                    }
                                 }
                             }
                             let meta = self.meta.get(path).cloned().unwrap_or_default();
@@ -3044,7 +3128,13 @@ impl Studio {
                                 let s = t.size();
                                 (h * s[0] as f32 / s[1].max(1) as f32, Some(t))
                             }
-                            None => (h * 1.5, None),
+                            None => {
+                                if self.evicted.contains(path) {
+                                    self.shown_missing.borrow_mut().push(path.clone());
+                                    ui.ctx().request_repaint();
+                                }
+                                (h * 1.5, None)
+                            }
                         };
                         let (rect, r) = ui.allocate_exact_size(vec2(w, h), egui::Sense::click());
                         let painter = ui.painter();
@@ -3139,7 +3229,8 @@ impl Studio {
                 self.zoom = false;
             }
         }
-        self.request_render(rect.width().max(rect.height()) * ppp);
+        let pressed = ui.input(|i| i.pointer.any_down());
+        self.request_render(rect.width().max(rect.height()) * ppp, pressed);
         let painter = ui.painter_at(rect);
         let Some(t) = &self.texture else {
             // L'accueil : le logo, et ce qu'on peut faire.
@@ -4634,6 +4725,15 @@ mod tests {
 
     /// Les mots identiques dans les trois langues (et les touches seules).
     const NOT_TRANSLATED: [&str; 3] = ["G", "D", "R"];
+
+    #[test]
+    fn a_gesture_renders_a_smaller_preview() {
+        // Un écran d'iPad Pro (2732 px) : pendant le geste, au plus 1536 px ici (1024
+        // sur iPhone et iPad) ; un petit écran garde sa taille.
+        let cap = if cfg!(target_os = "ios") { 1024 } else { 1536 };
+        assert_eq!(interactive_size(2732.0), Size::Fit(cap));
+        assert_eq!(interactive_size(700.0), Size::Fit(1024));
+    }
 
     #[test]
     fn fit_keeps_the_aspect_ratio() {
