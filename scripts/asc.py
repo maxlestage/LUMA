@@ -27,14 +27,19 @@ import jwt
 API = "https://api.appstoreconnect.apple.com/v1"
 
 
+def secret(name):
+    """Un secret tel qu'on l'a collé : sans espaces ni retours à la ligne autour."""
+    return os.environ[name].replace("\r", "").strip()
+
+
 def token():
     """Un jeton signé ES256, valable 20 minutes."""
     now = int(time.time())
     return jwt.encode(
-        {"iss": os.environ["ASC_ISSUER_ID"], "iat": now, "exp": now + 1200, "aud": "appstoreconnect-v1"},
-        os.environ["ASC_KEY"],
+        {"iss": secret("ASC_ISSUER_ID"), "iat": now, "exp": now + 1200, "aud": "appstoreconnect-v1"},
+        secret("ASC_KEY") + "\n",
         algorithm="ES256",
-        headers={"kid": os.environ["ASC_KEY_ID"], "typ": "JWT"},
+        headers={"kid": secret("ASC_KEY_ID"), "typ": "JWT"},
     )
 
 
