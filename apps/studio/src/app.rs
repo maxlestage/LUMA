@@ -4155,6 +4155,15 @@ impl Studio {
                     if ui.checkbox(&mut m.invert, tr("Inverser")).changed() {
                         commits.push(tr("Masque inversé").into());
                     }
+                    // Le pinceau qui suit les bords de la photo.
+                    if matches!(m.shape, luma_project::Shape::Brush { .. })
+                        && ui
+                            .checkbox(&mut m.edges, tr("Suivre les bords"))
+                            .on_hover_text(tr("La zone peinte s'arrête aux contours de la photo"))
+                            .changed()
+                    {
+                        commits.push(tr("Pinceau qui suit les bords").into());
+                    }
                     if ui
                         .selectable_label(self.show_mask, tr("Voir (O)"))
                         .clicked()

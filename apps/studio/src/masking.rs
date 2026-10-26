@@ -297,10 +297,10 @@ pub fn overlay(
     h: usize,
     scene: Option<&luma_core::RgbImage>,
 ) -> egui::ColorImage {
-    let mut weights = luma_image::local::weights(mask, w, h);
-    if let (Some(r), Some(scene)) = (&mask.range, scene) {
-        luma_image::local::restrict(&mut weights, r, scene);
-    }
+    let weights = match scene {
+        Some(scene) => luma_image::local::weights_for(mask, w, h, scene),
+        None => luma_image::local::weights(mask, w, h),
+    };
     let pixels = weights
         .data
         .iter()

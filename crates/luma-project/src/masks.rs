@@ -166,6 +166,9 @@ pub struct Mask {
     /// La plage qui restreint la zone (tons ou couleurs), s'il y en a une.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
+    /// Pinceau : la zone suit les bords de la photo (filtre guidé par sa clarté).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub edges: bool,
 }
 
 fn full() -> f32 {
@@ -186,6 +189,7 @@ impl Mask {
             local: Local::default(),
             look: None,
             range: None,
+            edges: false,
         }
     }
 
@@ -204,6 +208,7 @@ impl Mask {
             local: Local::default(),
             look: None,
             range: None,
+            edges: false,
         }
     }
 
@@ -217,6 +222,7 @@ impl Mask {
             local: Local::default(),
             look: None,
             range: None,
+            edges: false,
         }
     }
 
@@ -230,6 +236,7 @@ impl Mask {
             local: Local::default(),
             look: None,
             range: None,
+            edges: false,
         }
     }
 

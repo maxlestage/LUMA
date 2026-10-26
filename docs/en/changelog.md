@@ -93,6 +93,9 @@ The professional photo library, step by step.
   tones (luminance range: minimum, maximum, smoothness) or some colours (colour range:
   hue, width, smoothness; greys are left out). Measured in OKLab on the photo, before
   the masks' adjustments; the area is shown in red (O).
+- **Edge-aware brush**: tick “Follow edges” and the brush paints only tones close to
+  the centre of each dab; the area stops at the edge of a sky, a wall, a face,
+  without spilling over.
 
 ## 0.2.0 — October 2026
 
