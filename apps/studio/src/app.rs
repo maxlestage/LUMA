@@ -536,6 +536,8 @@ pub struct Studio {
     brush: masking::Brush,
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
+    /// La couleur et l'opacité de la zone affichée (O).
+    pub mask_style: masking::Overlay,
     mask_overlay: Option<(Mask, TextureHandle)>,
     /// La copie réduite de la base envoyée avec la dernière image, quand un masque a
     /// une plage.
@@ -711,6 +713,7 @@ impl Studio {
             selected_part: None,
             brush: masking::Brush::default(),
             show_mask: false,
+            mask_style: masking::Overlay::default(),
             mask_overlay: None,
             scene_map: None,
             tool: Tool::Light,
@@ -4088,7 +4091,10 @@ impl Studio {
                     }
                 }
                 if let Some((_, tex)) = &self.mask_overlay {
-                    painter.image(tex.id(), target, uv, Color32::WHITE);
+                    if let Some(black) = self.mask_style.backdrop() {
+                        painter.rect_filled(target, 0.0, black);
+                    }
+                    painter.image(tex.id(), target, uv, self.mask_style.tint());
                 }
             }
             let brush = self.brush;
@@ -4237,6 +4243,34 @@ impl Studio {
             label
         })
         .inner
+    }
+
+    /// La couleur et l'opacité de la zone affichée (O).
+    fn mask_style_row(&mut self, ui: &mut Ui) {
+        let style = &mut self.mask_style;
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(tr("Zone")).size(11.5).color(theme::DIM));
+            let current = masking::COLORS[style.color.min(masking::COLORS.len() - 1)].0;
+            egui::ComboBox::from_id_salt("couleur-zone")
+                .selected_text(tr(current))
+                .show_ui(ui, |ui| {
+                    for (k, (name, color)) in masking::COLORS.iter().enumerate() {
+                        let text = RichText::new(tr(name)).color(*color);
+                        ui.selectable_value(&mut style.color, k, text);
+                    }
+                })
+                .response
+                .on_hover_text(tr("Couleur de la zone affichée"));
+            ui.add(
+                egui::DragValue::new(&mut style.opacity)
+                    .range(10.0..=100.0)
+                    .speed(0.5)
+                    .max_decimals(0)
+                    .suffix(" %"),
+            )
+            .on_hover_text(tr("Opacité"))
+            .accessible_name(tr("Opacité de la zone affichée"));
+        });
     }
 
     /// Les combinaisons du masque `i` : d'autres formes ajoutées, retirées ou en
@@ -4410,6 +4444,9 @@ impl Studio {
                         self.act("mask_delete");
                     }
                 });
+                if self.show_mask {
+                    self.mask_style_row(ui);
+                }
                 self.parts_panel(ui, i, commits);
                 let luts = self.luts.clone();
                 let Some(m) = self.settings.masks.get_mut(i) else {
