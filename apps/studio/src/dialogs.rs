@@ -111,6 +111,20 @@ pub fn pick_lut() -> Option<PathBuf> {
     None
 }
 
+/// Le profil ICC d'une imprimante (ou d'un écran), pour l'épreuvage.
+#[cfg(not(target_os = "ios"))]
+pub fn pick_icc() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title(tr("Choisir un profil d'imprimante"))
+        .add_filter(tr("Profil ICC"), &["icc", "icm", "ICC", "ICM"])
+        .pick_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_icc() -> Option<PathBuf> {
+    None
+}
+
 /// Un logo à poser en filigrane sur les exports.
 #[cfg(not(target_os = "ios"))]
 pub fn pick_logo() -> Option<PathBuf> {

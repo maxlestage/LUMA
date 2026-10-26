@@ -127,6 +127,8 @@ struct RenderJob {
     size: Size,
     generation: u64,
     clipping: bool,
+    /// L'épreuvage à l'écran, s'il est actif.
+    proof: Option<Arc<luma_color::proof::Proof>>,
 }
 
 /// Le sidecar XMP d'un RAW (`IMG_0001.xmp` ou `IMG_0001.CR3.xmp`).
@@ -299,6 +301,7 @@ impl Worker {
         size: Size,
         generation: u64,
         clipping: bool,
+        proof: Option<Arc<luma_color::proof::Proof>>,
     ) {
         self.running.lock().expect("annulation").cancel();
         let _ = self.render.send(RenderJob {
@@ -307,6 +310,7 @@ impl Worker {
             size,
             generation,
             clipping,
+            proof,
         });
     }
 
@@ -584,6 +588,10 @@ fn render_loop(
                 )
             }
         };
+        // L'épreuvage : l'aperçu tel qu'il sera imprimé (l'histogramme le suit).
+        if let Some(proof) = &job.proof {
+            proof.apply_rgba(&mut rgba);
+        }
         let histogram = histogram_rgba(&rgba);
         if job.clipping {
             clip_overlay(&mut rgba);

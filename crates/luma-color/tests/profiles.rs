@@ -387,3 +387,45 @@ fn not_a_profile() {
     let bytes = assemble(b"prtr", b"RGB ", b"Lab ", 2, vec![(b"A2B0", huge)]);
     assert!(Profile::parse(&bytes).is_err());
 }
+
+#[test]
+fn proofing_follows_the_intent() {
+    use luma_color::proof::Proof;
+    // Une imprimante dont la table perceptuelle réduit la saturation de moitié, et dont
+    // la relative la garde : l'épreuvage montre l'une ou l'autre.
+    let a2b = lut16(17, 3, |rgb| lab16(srgb_to_pcs(rgb)));
+    let relative = lut16(33, 3, |lab| pcs_to_srgb(unlab16(lab)).to_vec());
+    let perceptual = lut16(33, 3, |lab| {
+        let k = 65535.0 / 65280.0;
+        let mid = 128.0 / 255.0 / k;
+        pcs_to_srgb(unlab16([
+            lab[0],
+            mid + (lab[1] - mid) * 0.5,
+            mid + (lab[2] - mid) * 0.5,
+        ]))
+        .to_vec()
+    });
+    let bytes = assemble(
+        b"prtr",
+        b"RGB ",
+        b"Lab ",
+        2,
+        vec![
+            (b"A2B0", a2b.clone()),
+            (b"A2B1", a2b),
+            (b"B2A0", perceptual),
+            (b"B2A1", relative),
+        ],
+    );
+    let p = Profile::parse(&bytes).unwrap();
+    let chroma = |rgb: [f32; 3]| {
+        let lab = xyz_to_lab(srgb_to_pcs(rgb));
+        lab[1].hypot(lab[2])
+    };
+    let red = [0.85, 0.2, 0.15];
+    let rel = Proof::new(&p, Intent::Relative).unwrap().apply(red);
+    let per = Proof::new(&p, Intent::Perceptual).unwrap().apply(red);
+    assert!((chroma(rel) - chroma(red)).abs() < 2.0, "{rel:?}");
+    let ratio = chroma(per) / chroma(red);
+    assert!((ratio - 0.5).abs() < 0.06, "perceptuelle : {per:?}, rapport {ratio}");
+}

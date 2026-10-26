@@ -106,6 +106,10 @@ La fototeca profesional, paso a paso.
   reproducción, en Rust puro; un perfil truncado o dañado se rechaza sin daños.
   `luma icc` describe un perfil: clase, espacio, intenciones, blanco del soporte, y
   el blanco, el negro y los primarios del dispositivo.
+- **Prueba en pantalla** (bajo el histograma): elija el perfil ICC de una impresora y
+  un papel, y la vista previa muestra la foto tal como saldrá, con la intención
+  perceptual o colorimétrica relativa; el histograma la sigue. Una vista, no un
+  ajuste: no se escribe nada en la foto.
 
 ## 0.2.0 — octubre de 2026
 
