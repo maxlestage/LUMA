@@ -479,7 +479,8 @@ mod tests {
             folder: Some(dir.join("sortie")),
             ..export::Options::default()
         };
-        let out = export::output_path(Path::new("/x/IMG_1.CR3"), &options);
+        let src = Path::new("/x/IMG_1.CR3");
+        let out = export::output_path(src, &options, &export::NameFields::of_file(src));
         assert_eq!(out, dir.join("sortie/IMG_1.png"));
         export::develop(&p, &settings, &out, &options).unwrap();
         let img = image::open(&out).unwrap();

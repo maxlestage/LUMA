@@ -24,6 +24,11 @@ La photothèque professionnelle, étape par étape.
   enregistrés sous un nom ; quatre de base (Web, Pleine définition, Écran P3,
   Impression) et les vôtres, partagés par l'app et la ligne de commande
   (`luma export-preset`, `luma develop --preset Web`).
+- **Noms des fichiers exportés** : un modèle, `{date}_{séquence}` ou
+  `{année}/{mois}/{boîtier}_{nom}`, avec la date de prise de vue, le boîtier,
+  l'objectif, l'ISO, la note, le libellé et le rang dans l'export ; dans la fenêtre
+  Exporter, les préréglages d'export et `luma develop --name`. Deux photos du même nom
+  ne s'écrasent pas (`-2`, `-3`…).
 
 ## 0.2.0 — octobre 2026
 

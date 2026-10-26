@@ -23,6 +23,11 @@ The professional photo library, step by step.
   under a name; four built in (web, full resolution, P3 display, print) plus your own,
   shared by the app and the command line (`luma export-preset`,
   `luma develop --preset Web`).
+- **Exported file names**: a template such as `{date}_{sequence}` or
+  `{year}/{month}/{camera}_{name}`, with the capture date, camera, lens, ISO, rating,
+  label and position in the export; in the Export dialog, export presets and
+  `luma develop --name`. Two photos with the same name never overwrite each other
+  (`-2`, `-3`…).
 
 ## 0.2.0 — October 2026
 

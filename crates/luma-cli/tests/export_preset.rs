@@ -65,6 +65,14 @@ fn presets_listed_created_and_deleted() {
     let (_, list) = luma(&file, &["export-preset"]);
     assert!(list.contains("PNG 16 bits, Display P3, pleine définition"), "{list}");
 
+    // Le modèle de nom, vérifié.
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--name", "{date}_{séquence:3}"]);
+    assert!(ok, "{out}");
+    let (_, list) = luma(&file, &["export-preset"]);
+    assert!(list.contains("pleine définition, LÜMA/, {date}_{séquence:3}"), "{list}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--name", "{taille}"]);
+    assert!(!ok && out.contains("repère inconnu"), "{out}");
+
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--quality", "abc"]);
     assert!(!ok && out.contains("--quality"), "{out}");
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--delete"]);
@@ -109,6 +117,36 @@ fn develop_with_a_preset() {
     let name = raw.with_extension("jpg");
     let img = image_size(&folder.join(name.file_name().unwrap()));
     assert_eq!(img.0.max(img.1), 300, "{out}");
+
+    // Un modèle de nom : l'année de prise de vue en sous‑dossier, le boîtier, le rang.
+    let (ok, out) = luma(
+        &file,
+        &[
+            "develop",
+            raw.to_str().unwrap(),
+            "--no-sidecar",
+            "--preset",
+            "petit",
+            "--name",
+            "{année}/{boîtier}_{séquence}",
+        ],
+    );
+    assert!(ok, "{out}");
+    let years: Vec<PathBuf> = std::fs::read_dir(&folder)
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    assert_eq!(years.len(), 1, "{out}");
+    let year = years[0].file_name().unwrap().to_string_lossy().into_owned();
+    assert!(year.len() == 4 && year.parse::<u32>().is_ok_and(|y| y > 1990), "{year}");
+    let files: Vec<String> = std::fs::read_dir(&years[0])
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    assert!(files.len() == 1 && files[0].ends_with("_0001.jpg"), "{files:?}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

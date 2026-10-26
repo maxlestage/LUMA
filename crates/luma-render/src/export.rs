@@ -98,6 +98,8 @@ pub struct Options {
     pub long_edge: Option<usize>,
     /// `None` : un dossier `LÜMA/` à côté de chaque RAW.
     pub folder: Option<PathBuf>,
+    /// Le modèle du nom des fichiers (voir [`file_name`]) ; `None` : le nom de l'original.
+    pub name: Option<String>,
 }
 
 impl Default for Options {
@@ -109,22 +111,264 @@ impl Default for Options {
             space: OutputSpace::Srgb,
             long_edge: None,
             folder: None,
+            name: None,
         }
     }
 }
 
-/// Le fichier de sortie d'un RAW.
-pub fn output_path(source: &Path, options: &Options) -> PathBuf {
+/// Le fichier de sortie d'une photo : son dossier, le nom donné par le modèle (ou celui
+/// de l'original), l'extension du format.
+pub fn output_path(source: &Path, options: &Options, fields: &NameFields) -> PathBuf {
     let dir = match &options.folder {
         Some(d) => d.clone(),
         None => source.parent().unwrap_or(Path::new(".")).join("LÜMA"),
     };
-    dir.join(
-        source
-            .with_extension(options.format.extension())
-            .file_name()
-            .unwrap_or_default(),
-    )
+    let name = match &options.name {
+        Some(t) if !t.trim().is_empty() => file_name(t, fields),
+        _ => fields.name.clone(),
+    };
+    let name = if name.is_empty() { "photo".to_owned() } else { name };
+    dir.join(format!("{name}.{}", options.format.extension()))
+}
+
+/// Un fichier de sortie pas encore pris dans cet export : `IMG-2.jpg`, `IMG-3.jpg`… si
+/// le modèle donne le même nom à plusieurs photos.
+pub fn unique(path: PathBuf, taken: &mut std::collections::HashSet<PathBuf>) -> PathBuf {
+    let mut out = path.clone();
+    let mut n = 2;
+    while taken.contains(&out) {
+        let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+        let ext = path.extension().unwrap_or_default().to_string_lossy();
+        out = path.with_file_name(format!("{stem}-{n}.{ext}"));
+        n += 1;
+    }
+    taken.insert(out.clone());
+    out
+}
+
+/// Ce qu'un modèle de nom peut citer, pour une photo.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct NameFields {
+    /// Le nom de l'original, sans extension.
+    pub name: String,
+    /// Année, mois, jour, heure, minute, seconde de la prise de vue (à défaut, la date
+    /// du fichier) ; `None` si aucune n'est connue.
+    pub date: Option<[u32; 6]>,
+    pub make: String,
+    pub model: String,
+    pub lens: String,
+    pub iso: Option<u32>,
+    pub rating: u8,
+    pub label: String,
+    /// Le rang de la photo dans l'export, à partir de 1.
+    pub sequence: usize,
+}
+
+impl NameFields {
+    /// Le nom de l'original et la date du fichier, sans rien lire d'autre.
+    pub fn of_file(source: &Path) -> NameFields {
+        let date = std::fs::metadata(source)
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| civil(d.as_secs()));
+        NameFields {
+            name: source
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            date,
+            sequence: 1,
+            ..NameFields::default()
+        }
+    }
+
+    /// Tout ce que l'on sait d'une photo ouverte : son EXIF, sa note et son libellé.
+    pub fn of_photo(source: &Path, photo: &Photo, meta: &luma_project::xmp::Meta, sequence: usize) -> NameFields {
+        let raw = photo.raw();
+        let mut f = NameFields::of_file(source);
+        if let Some(d) = raw.exif.date.as_deref().and_then(exif_date) {
+            f.date = Some(d);
+        }
+        f.make = raw.make.trim().to_owned();
+        f.model = raw.model.trim().to_owned();
+        f.lens = raw.exif.lens.as_deref().unwrap_or("").trim().to_owned();
+        f.iso = raw.exif.iso;
+        f.rating = meta.rating;
+        f.label = meta.label.clone();
+        f.sequence = sequence;
+        f
+    }
+}
+
+/// Une date EXIF (`2026:10:26 14:03:00`, ou avec des tirets) en ses six nombres.
+fn exif_date(s: &str) -> Option<[u32; 6]> {
+    let mut n = [0u32; 6];
+    let mut parts = s.split(|c: char| !c.is_ascii_digit()).filter(|p| !p.is_empty());
+    for (i, v) in n.iter_mut().enumerate() {
+        match parts.next().and_then(|p| p.parse().ok()) {
+            Some(x) => *v = x,
+            None if i >= 3 => break,
+            None => return None,
+        }
+    }
+    (n[0] > 0 && (1..=12).contains(&n[1]) && (1..=31).contains(&n[2])).then_some(n)
+}
+
+/// Des secondes depuis 1970 (UTC) en date du calendrier (algorithme des jours civils).
+fn civil(secs: u64) -> [u32; 6] {
+    let days = (secs / 86_400) as i64;
+    let rem = (secs % 86_400) as u32;
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    let year = (yoe + era * 400 + i64::from(month <= 2)) as u32;
+    [year, month, day, rem / 3600, rem % 3600 / 60, rem % 60]
+}
+
+/// Les repères d'un modèle de nom, en français (les noms affichés), avec leurs
+/// équivalents anglais et espagnols, et sans accents.
+const TOKENS: &[(&str, &[&str])] = &[
+    ("nom", &["name", "nombre"]),
+    ("date", &["fecha"]),
+    ("heure", &["time", "hora"]),
+    ("année", &["annee", "year", "año", "ano"]),
+    ("mois", &["month", "mes"]),
+    ("jour", &["day", "día", "dia"]),
+    ("séquence", &["sequence", "secuencia"]),
+    ("boîtier", &["boitier", "camera", "cámara", "camara"]),
+    ("marque", &["make", "marca"]),
+    ("objectif", &["lens", "objetivo"]),
+    ("iso", &[]),
+    ("note", &["rating", "valoración", "valoracion"]),
+    ("libellé", &["libelle", "label", "etiqueta"]),
+];
+
+/// Les repères d'un modèle, dans l'ordre : `{nom}`, `{date}`…
+pub fn tokens() -> impl Iterator<Item = &'static str> {
+    TOKENS.iter().map(|t| t.0)
+}
+
+/// Le repère français d'un nom de repère (`séquence` pour `sequence`), et le nombre de
+/// chiffres demandé après `:` (`{séquence:3}`).
+fn token(raw: &str) -> Option<(&'static str, Option<usize>)> {
+    let (name, digits) = match raw.split_once(':') {
+        Some((n, d)) => (
+            n,
+            Some(d.trim().parse::<usize>().ok().filter(|&d| (1..=9).contains(&d))?),
+        ),
+        None => (raw, None),
+    };
+    let name = name.trim().to_lowercase();
+    TOKENS
+        .iter()
+        .find(|(fr, others)| *fr == name || others.contains(&name.as_str()))
+        .map(|t| (t.0, digits))
+}
+
+/// Vérifie un modèle : chaque `{…}` est un repère connu, les accolades sont fermées.
+pub fn check_template(template: &str) -> Result<(), String> {
+    let mut rest = template;
+    loop {
+        match (rest.find('{'), rest.find('}')) {
+            (None, None) => return Ok(()),
+            (_, Some(c)) if rest.find('{').is_none_or(|o| c < o) => {
+                return Err(format!("accolade non ouverte dans « {template} »"));
+            }
+            (Some(o), Some(c)) if !rest[o + 1..c].contains('{') => {
+                let inner = &rest[o + 1..c];
+                if token(inner).is_none() {
+                    let known: Vec<String> = tokens().map(|t| format!("{{{t}}}")).collect();
+                    return Err(format!("repère inconnu « {{{inner}}} » ({})", known.join(" ")));
+                }
+                rest = &rest[c + 1..];
+            }
+            _ => return Err(format!("accolade non fermée dans « {template} »")),
+        }
+    }
+}
+
+/// Un texte sans les caractères interdits dans un nom de fichier.
+fn clean(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_control() || "/\\:*?\"<>|".contains(c) {
+                '-'
+            } else {
+                c
+            }
+        })
+        .collect::<String>()
+        .trim()
+        .to_owned()
+}
+
+/// Le nom de fichier (sans extension) qu'un modèle donne pour une photo :
+/// `{date}_{séquence}` → `2026-10-26_0001`. Un `/` du modèle crée un sous‑dossier
+/// (`{année}/{mois}/{nom}`) ; un repère inconnu reste tel quel ; un repère sans valeur
+/// (pas d'objectif connu…) disparaît.
+pub fn file_name(template: &str, f: &NameFields) -> String {
+    let two = |v: u32| format!("{v:02}");
+    let mut out = String::new();
+    let mut rest = template;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let Some(close) = after.find('}') else {
+            out.push_str(&rest[open..]);
+            rest = "";
+            break;
+        };
+        let inner = &after[..close];
+        let value = match token(inner) {
+            None => format!("{{{inner}}}"),
+            Some((t, digits)) => {
+                let d = f.date;
+                let v = match t {
+                    "nom" => f.name.clone(),
+                    "date" => d.map_or_else(String::new, |d| format!("{:04}-{}-{}", d[0], two(d[1]), two(d[2]))),
+                    "heure" => d.map_or_else(String::new, |d| format!("{}{}{}", two(d[3]), two(d[4]), two(d[5]))),
+                    "année" => d.map_or_else(String::new, |d| format!("{:04}", d[0])),
+                    "mois" => d.map_or_else(String::new, |d| two(d[1])),
+                    "jour" => d.map_or_else(String::new, |d| two(d[2])),
+                    "séquence" => format!("{:0w$}", f.sequence, w = digits.unwrap_or(4)),
+                    "boîtier" => camera(&f.make, &f.model),
+                    "marque" => f.make.clone(),
+                    "objectif" => f.lens.clone(),
+                    "iso" => f.iso.map_or_else(String::new, |i| i.to_string()),
+                    "note" => f.rating.to_string(),
+                    _ => f.label.clone(),
+                };
+                clean(&v)
+            }
+        };
+        out.push_str(&value);
+        rest = &after[close + 1..];
+    }
+    out.push_str(rest);
+    // Les sous‑dossiers : chaque partie nettoyée, ni vide, ni « . », ni « .. ».
+    out.split(['/', '\\'])
+        .map(clean)
+        .filter(|p| !p.is_empty() && p != "." && p != "..")
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// « Sony ILCE-7M3 », sans répéter la marque quand le modèle la contient déjà.
+fn camera(make: &str, model: &str) -> String {
+    let first = make.split_whitespace().next().unwrap_or("");
+    if make.is_empty() || (!first.is_empty() && model.to_lowercase().starts_with(&first.to_lowercase())) {
+        model.to_owned()
+    } else if model.is_empty() {
+        make.to_owned()
+    } else {
+        format!("{first} {model}")
+    }
 }
 
 /// Développe et écrit une photo selon les options (le dossier est créé au besoin).
@@ -235,6 +479,8 @@ struct StoredPreset {
     long_edge: Option<usize>,
     #[serde(default)]
     folder: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name_template: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -254,6 +500,7 @@ impl StoredPreset {
             space: space_id(o.space).into(),
             long_edge: o.long_edge,
             folder: o.folder.clone(),
+            name_template: o.name.clone(),
         }
     }
 
@@ -268,6 +515,7 @@ impl StoredPreset {
                 space: OutputSpace::parse(&self.space)?,
                 long_edge: self.long_edge.filter(|&n| n > 0),
                 folder: self.folder,
+                name: self.name_template.filter(|t| !t.trim().is_empty()),
             },
         })
     }
@@ -362,7 +610,8 @@ fn same_name(a: &str, b: &str) -> bool {
     a.trim().to_lowercase() == b.trim().to_lowercase()
 }
 
-/// Une ligne de description : « JPEG 85, sRGB, 2048 px, LÜMA/ ».
+/// Une ligne de description : « JPEG 85, sRGB, 2048 px, LÜMA/ », puis le modèle de nom
+/// s'il y en a un.
 pub fn describe(o: &Options) -> String {
     let format = match o.format {
         Format::Jpeg => format!("JPEG {}", o.quality),
@@ -382,7 +631,10 @@ pub fn describe(o: &Options) -> String {
         .folder
         .as_ref()
         .map_or_else(|| "LÜMA/".to_owned(), |d| d.display().to_string());
-    format!("{format}, {space}, {size}, {folder}")
+    match &o.name {
+        Some(n) => format!("{format}, {space}, {size}, {folder}, {n}"),
+        None => format!("{format}, {space}, {size}, {folder}"),
+    }
 }
 
 #[cfg(test)]
@@ -392,16 +644,105 @@ mod tests {
     #[test]
     fn output_paths() {
         let mut o = Options::default();
-        assert_eq!(
-            output_path(Path::new("/x/IMG_1.CR3"), &o),
-            PathBuf::from("/x/LÜMA/IMG_1.jpg")
-        );
+        let src = Path::new("/x/IMG_1.CR3");
+        let f = NameFields::of_file(src);
+        assert_eq!(output_path(src, &o, &f), PathBuf::from("/x/LÜMA/IMG_1.jpg"));
         o.format = Format::Tiff;
         o.folder = Some("/sortie".into());
+        assert_eq!(output_path(src, &o, &f), PathBuf::from("/sortie/IMG_1.tif"));
+        o.name = Some("{année}/{nom}_{séquence:2}".into());
+        let f = NameFields {
+            date: Some([2026, 10, 26, 14, 3, 0]),
+            sequence: 7,
+            ..f
+        };
+        assert_eq!(output_path(src, &o, &f), PathBuf::from("/sortie/2026/IMG_1_07.tif"));
+        // Un modèle vide garde le nom de l'original.
+        o.name = Some("  ".into());
+        assert_eq!(output_path(src, &o, &f), PathBuf::from("/sortie/IMG_1.tif"));
+    }
+
+    #[test]
+    fn names_taken_get_a_number() {
+        let mut taken = std::collections::HashSet::new();
+        let p = PathBuf::from("/s/2026-03-09.jpg");
+        assert_eq!(unique(p.clone(), &mut taken), p);
+        assert_eq!(unique(p.clone(), &mut taken), PathBuf::from("/s/2026-03-09-2.jpg"));
+        assert_eq!(unique(p, &mut taken), PathBuf::from("/s/2026-03-09-3.jpg"));
+    }
+
+    fn fields() -> NameFields {
+        NameFields {
+            name: "DSC_0750".into(),
+            date: Some([2026, 3, 9, 8, 5, 1]),
+            make: "NIKON CORPORATION".into(),
+            model: "NIKON Z 6".into(),
+            lens: "NIKKOR Z 24-70mm f/4 S".into(),
+            iso: Some(400),
+            rating: 4,
+            label: "Rouge".into(),
+            sequence: 12,
+        }
+    }
+
+    #[test]
+    fn templates_give_file_names() {
+        let f = fields();
+        let name = |t: &str| file_name(t, &f);
+        assert_eq!(name("{date}_{séquence}"), "2026-03-09_0012");
+        assert_eq!(name("{nom}"), "DSC_0750");
         assert_eq!(
-            output_path(Path::new("/x/IMG_1.CR3"), &o),
-            PathBuf::from("/sortie/IMG_1.tif")
+            name("{année}{mois}{jour}-{heure} {boîtier}"),
+            "20260309-080501 NIKON Z 6"
         );
+        assert_eq!(
+            name("{marque} ISO {iso} {note}★ {libellé}"),
+            "NIKON CORPORATION ISO 400 4★ Rouge"
+        );
+        // Le « / » d'une valeur ne crée pas de dossier ; celui du modèle, si.
+        assert_eq!(name("{objectif}"), "NIKKOR Z 24-70mm f-4 S");
+        assert_eq!(name("{année}/{mois}/{nom}"), "2026/03/DSC_0750");
+        assert_eq!(name("../{nom}"), "DSC_0750");
+        // Les repères anglais et espagnols, et sans accents.
+        assert_eq!(name("{name}-{sequence:3}-{camera}"), "DSC_0750-012-NIKON Z 6");
+        assert_eq!(name("{nombre}-{secuencia:1}-{fecha}"), "DSC_0750-12-2026-03-09");
+        assert_eq!(name("{boitier}"), name("{Boîtier}"));
+        // Un repère inconnu reste, un repère sans valeur disparaît.
+        assert_eq!(name("{inconnu}_{nom}"), "{inconnu}_DSC_0750");
+        let bare = NameFields {
+            name: "x".into(),
+            sequence: 1,
+            ..NameFields::default()
+        };
+        assert_eq!(file_name("{nom}_{date}_{objectif}", &bare), "x__");
+        assert_eq!(file_name("a:b*c?", &bare), "a-b-c-");
+    }
+
+    #[test]
+    fn templates_are_checked() {
+        assert!(check_template("{date}_{séquence:3}/{nom}").is_ok());
+        assert!(check_template("sans repère").is_ok());
+        assert!(check_template("{nom").unwrap_err().contains("non fermée"));
+        assert!(check_template("nom}").unwrap_err().contains("non ouverte"));
+        let e = check_template("{nom}_{taille}").unwrap_err();
+        assert!(e.contains("{taille}") && e.contains("{séquence}"), "{e}");
+        assert!(check_template("{séquence:0}").is_err());
+        assert!(check_template("{nom:3}").is_ok());
+    }
+
+    #[test]
+    fn camera_names_and_dates() {
+        assert_eq!(camera("SONY", "ILCE-7M3"), "SONY ILCE-7M3");
+        assert_eq!(camera("Canon", "Canon EOS R5"), "Canon EOS R5");
+        assert_eq!(camera("FUJIFILM", "X-T3"), "FUJIFILM X-T3");
+        assert_eq!(camera("", "X"), "X");
+        assert_eq!(camera("Apple", ""), "Apple");
+        assert_eq!(exif_date("2026:10:26 14:03:00"), Some([2026, 10, 26, 14, 3, 0]));
+        assert_eq!(exif_date("2026-10-26"), Some([2026, 10, 26, 0, 0, 0]));
+        assert_eq!(exif_date("0000:00:00 00:00:00"), None);
+        assert_eq!(exif_date(""), None);
+        assert_eq!(civil(0), [1970, 1, 1, 0, 0, 0]);
+        assert_eq!(civil(1_772_910_000), [2026, 3, 7, 19, 0, 0]);
     }
 
     #[test]
@@ -435,6 +776,7 @@ mod tests {
                 long_edge: Some(1080),
                 space: OutputSpace::DisplayP3,
                 folder: Some("/tmp/insta".into()),
+                name: Some("{date}_{séquence}".into()),
                 ..Options::default()
             },
         };

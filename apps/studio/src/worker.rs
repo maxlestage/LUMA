@@ -89,7 +89,9 @@ pub struct MergeJob {
 
 // Les réglages de la fenêtre Exporter : ceux du moteur, partagés avec la ligne de
 // commande et ses préréglages.
-pub use luma_render::export::{Format, Options as ExportOptions, output_path as export_path};
+pub use luma_render::export::{
+    Format, NameFields, Options as ExportOptions, output_path as export_path,
+};
 
 /// Une photo à exporter : déjà ouverte (la photo affichée) ou à ouvrir.
 pub struct ExportJob {
@@ -404,16 +406,24 @@ impl Worker {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
             let total = jobs.len();
+            let mut taken = std::collections::HashSet::new();
             for (k, job) in jobs.into_iter().enumerate() {
-                let out = export_path(&job.source, &options);
                 let result = match job.photo {
                     Some(p) => Ok(p),
                     None => crate::dialogs::open_photo(&job.source)
                         .map(Arc::new)
                         .map_err(|e| e.to_string()),
                 }
-                .and_then(|photo| export_one(&photo, &job.settings, &out, &options))
-                .map(|()| out)
+                .and_then(|photo| {
+                    // Le nom vient du modèle : date, boîtier, note… et le rang dans l'export.
+                    let fields =
+                        NameFields::of_photo(&job.source, &photo, &read_meta(&job.source), k + 1);
+                    let out = luma_render::export::unique(
+                        export_path(&job.source, &options, &fields),
+                        &mut taken,
+                    );
+                    export_one(&photo, &job.settings, &out, &options).map(|()| out)
+                })
                 .map_err(|e| format!("{} : {e}", job.source.display()));
                 let _ = sender.send(Event::Exported {
                     done: k + 1,
@@ -686,16 +696,12 @@ mod tests {
     #[test]
     fn export_paths() {
         let mut o = ExportOptions::default();
-        assert_eq!(
-            export_path(Path::new("/x/IMG_1.CR3"), &o),
-            PathBuf::from("/x/LÜMA/IMG_1.jpg")
-        );
+        let src = Path::new("/x/IMG_1.CR3");
+        let f = NameFields::of_file(src);
+        assert_eq!(export_path(src, &o, &f), PathBuf::from("/x/LÜMA/IMG_1.jpg"));
         o.format = Format::Tiff;
         o.folder = Some("/sortie".into());
-        assert_eq!(
-            export_path(Path::new("/x/IMG_1.CR3"), &o),
-            PathBuf::from("/sortie/IMG_1.tif")
-        );
+        assert_eq!(export_path(src, &o, &f), PathBuf::from("/sortie/IMG_1.tif"));
     }
 
     #[test]
