@@ -6,7 +6,7 @@ fichier est à jour. **Couleur** : matrice D65 connue (couleur étalonnée).
 (`scripts/fetch-corpus.sh`). Les formats DNG (dont iPhone ProRAW) sont lus pour tous
 les appareils, même absents de la liste.
 
-**735 boîtiers** de 20 marques ; 714 avec couleur étalonnée ; 4 vérifiés sur le corpus.
+**735 boîtiers** de 20 marques ; 714 avec couleur étalonnée ; 6 vérifiés sur le corpus.
 
 | Marque | Boîtiers | Couleur étalonnée |
 |---|---|---|
@@ -571,7 +571,7 @@ les appareils, même absents de la liste.
 | OM-1 Mark II | ✓ |  |
 | OM-3 | ✓ |  |
 | OM-5 | ✓ |  |
-| OM-5 Mark II | ✓ |  |
+| OM-5 Mark II | ✓ | ✓ |
 | TG-7 | ✓ |  |
 
 ## Panasonic
@@ -581,7 +581,7 @@ les appareils, même absents de la liste.
 | DC-FZ1000M2 | ✓ |  |
 | DC-FZ80 (DC-FZ80D, DC-FZ82, DC-FZ82D, DC-FZ85, DC-FZ85D) | ✓ |  |
 | DC-G100 (DC-G100D, DC-G110) | ✓ |  |
-| DC-G9 | ✓ |  |
+| DC-G9 | ✓ | ✓ |
 | DC-G9 II | ✓ |  |
 | DC-G90 (DC-G95, DC-G91, DC-G95D, DC-G97) | ✓ |  |
 | DC-GF10 | ✓ |  |

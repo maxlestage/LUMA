@@ -26,6 +26,10 @@ La photothèque professionnelle, étape par étape.
   dynamiques (une règle écrite comme une recherche, « note:4 date:2024 boîtier:sony »,
   qui suit le catalogue) : `luma catalog --smart`, `--add`, `--collections`,
   `--collection`.
+- **Corrections d'objectif des OM System, Olympus et Panasonic** : la distorsion (et,
+  pour Olympus et OM System, l'aberration chromatique latérale) que le boîtier
+  enregistre dans chaque ORF ou RW2 est appliquée automatiquement. Le corpus de test
+  compte désormais 7 vrais RAW, dont un OM‑5 Mark II et un Panasonic G9.
 - **Corrections d'objectif des Fujifilm** : celles que le boîtier enregistre dans chaque
   RAF (distorsion, aberration chromatique latérale, vignetage), mode recadré compris,
   sont appliquées automatiquement ; par exemple le barillet du XF 35 mm F2.

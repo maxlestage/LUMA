@@ -79,6 +79,91 @@ fn zoom_for(knots: &[f64], distortion: &[Vec<f64>; 3]) -> f64 {
     hi
 }
 
+/// Seize nœuds réguliers, du centre (0) au coin (1).
+fn regular_knots() -> Vec<f64> {
+    (0..16).map(|i| f64::from(i) / 15.0).collect()
+}
+
+/// Les corrections enregistrées par un boîtier Olympus ou OM System dans son ORF
+/// (ImageProcessing 0x150A : distorsion, 0x150C : aberration chromatique) : la distorsion
+/// est `[k2, k4, k6, s]`, le rapport entre le rayon où l'objectif a posé un point et
+/// celui où il devrait être valant `s·(1 + k2·ρ² + k4·ρ⁴ + k6·ρ⁶)` avec `ρ = s·r` ;
+/// l'aberration chromatique, `[r0, r2, r4, b0, b2, b4]`, multiplie ce rapport par
+/// `1 + r0 + r2·d² + r4·d⁴` pour le rouge (et de même pour le bleu), `d` étant le rayon
+/// où tombe le vert. Pas de vignetage enregistré.
+pub fn olympus(distortion: &[f64], ca: &[f64]) -> Option<Opcode> {
+    let ([k2, k4, k6, s], ca) = (<[f64; 4]>::try_from(distortion).ok()?, ca);
+    if (k2 == 0.0 && k4 == 0.0 && k6 == 0.0) || s <= 0.0 || !s.is_finite() {
+        return None;
+    }
+    let ca: [f64; 6] = ca.try_into().unwrap_or([0.0; 6]);
+    let knots = regular_knots();
+    let green: Vec<f64> = knots
+        .iter()
+        .map(|r| {
+            let rho2 = (r * s).powi(2);
+            s * (1.0 + rho2 * (k2 + rho2 * (k4 + rho2 * k6)))
+        })
+        .collect();
+    let tint = |c0: f64, c2: f64, c4: f64| -> Vec<f64> {
+        knots
+            .iter()
+            .zip(&green)
+            .map(|(r, g)| {
+                let d2 = (g * r).powi(2);
+                g * (1.0 + c0 + d2 * (c2 + d2 * c4))
+            })
+            .collect()
+    };
+    let distortion = [tint(ca[0], ca[1], ca[2]), green.clone(), tint(ca[3], ca[4], ca[5])];
+    let zoom = zoom_for(&knots, &distortion);
+    Some(Opcode::Spline {
+        vignetting: vec![1.0; knots.len()],
+        knots,
+        distortion,
+        zoom,
+    })
+}
+
+/// La distorsion enregistrée par un boîtier Panasonic dans son RW2 (étiquette 0x0119 :
+/// seize entiers de 16 bits). Active quand `v[7] & 0xF == 1` ; le modèle va du rayon
+/// déformé `d` au rayon juste `u` : `u = d + e·(a·d³ + b·d⁵ + c·d⁷)`, avec `a = v[8]`,
+/// `b = v[4]`, `c = v[11]` (en 32768ᵉ) et `e = 1/(1 + v[5]/32768)`. LÜMA a besoin de
+/// l'inverse (d'où vient le point d'un rayon juste), trouvé par itérations.
+pub fn panasonic(v: &[i16]) -> Option<Opcode> {
+    let v: [i16; 16] = v.try_into().ok()?;
+    if v[7] & 0x0F != 1 {
+        return None;
+    }
+    let q = |i: usize| f64::from(v[i]) / 32768.0;
+    let scale = 1.0 / (1.0 + q(5));
+    let (a, b, c) = (q(8), q(4), q(11));
+    if !scale.is_finite() || scale <= 0.0 {
+        return None;
+    }
+    let knots = regular_knots();
+    let ratio: Vec<f64> = knots
+        .iter()
+        .map(|&r| {
+            let mut d = r;
+            for _ in 0..4 {
+                let d2 = d * d;
+                let f = 1.0 + scale * d2 * (a + d2 * (b + d2 * c));
+                d = if f > 1e-6 { r / f } else { r };
+            }
+            if r > 0.0 { d / r } else { 1.0 }
+        })
+        .collect();
+    let distortion = [ratio.clone(), ratio.clone(), ratio];
+    let zoom = zoom_for(&knots, &distortion);
+    Some(Opcode::Spline {
+        vignetting: vec![1.0; knots.len()],
+        knots,
+        distortion,
+        zoom,
+    })
+}
+
 /// Les corrections enregistrées par un boîtier Fujifilm dans son RAF (étiquettes 0xF00B :
 /// distorsion, 0xF00F : aberration chromatique, 0xF010 : vignetage, du FujiIFD), telles
 /// que lues : une valeur d'en‑tête, puis les nœuds (9 sur les capteurs X‑Trans IV et V,
@@ -577,6 +662,26 @@ mod tests {
         bad[3] += 0.01;
         assert!(fuji(&d, &ca, &bad, 1.0).is_none());
         assert!(fuji(&d[..10], &ca, &v, 1.0).is_none());
+    }
+
+    #[test]
+    fn olympus_and_panasonic_without_correction() {
+        assert!(olympus(&[0.0, 0.0, 0.0, 1.0], &[0.0; 6]).is_none(), "coefficients nuls");
+        assert!(olympus(&[0.1, 0.0], &[]).is_none(), "liste incomplète");
+        let Some(Opcode::Spline { distortion, .. }) = olympus(&[-0.1, 0.0, 0.0, 1.0], &[]) else {
+            panic!()
+        };
+        assert!((distortion[1][15] - 0.9).abs() < 1e-9 && distortion[0] == distortion[1]);
+        let mut v = [0i16; 16];
+        v[8] = 3277; // a ≈ 0,1
+        assert!(panasonic(&v).is_none(), "correction désactivée");
+        v[7] = 1;
+        let Some(Opcode::Spline { distortion, .. }) = panasonic(&v) else {
+            panic!()
+        };
+        // u = d + 0,1·d³ ; au coin (u = 1), d ≈ 0,9217.
+        assert!((distortion[1][15] - 0.9217).abs() < 1e-3, "{}", distortion[1][15]);
+        assert!(panasonic(&v[..8]).is_none());
     }
 
     #[test]

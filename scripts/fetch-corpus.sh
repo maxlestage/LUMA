@@ -3,7 +3,7 @@
 # Les fichiers viennent de raw.pixls.us, la base d'échantillons RAW de la communauté
 # (licence indiquée pour chaque fichier sur le site, CC0 pour la plupart).
 # Un boîtier par famille de capteur et de format : Sony ARW, Canon CR3, Nikon NEF,
-# Fujifilm RAF (X-Trans), Apple ProRAW (DNG linéaire).
+# Fujifilm RAF (X-Trans), Apple ProRAW (DNG linéaire), OM System ORF, Panasonic RW2.
 set -euo pipefail
 dir="$(cd "$(dirname "$0")/.." && pwd)/tests/raw-corpus"
 mkdir -p "$dir"
@@ -13,6 +13,8 @@ files=(
   "Nikon/Z 6/DSC_0750.NEF"
   "Fujifilm/X-T3/AFXT2720.RAF"
   "Apple/iPhone 12 Pro/IMG_1361.DNG"
+  "OM Digital Solutions/OM-5MarkII/OM_System_OM-5_2_regular.ORF"
+  "Panasonic/DC-G9/P1000951.RW2"
 )
 for f in "${files[@]}"; do
   name=$(basename "$f")

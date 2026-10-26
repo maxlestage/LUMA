@@ -46,7 +46,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Correcciones de objetivo escritas en los DNG (opcodes `WarpRectilinear` y `FixVignetteRadial`): distorsión, aberración cromática lateral y viñeteo, aplicadas automáticamente en todos los tamaños | ✅ |
 | | Correcciones de objetivo de los ARW de Sony (distorsión, aberración cromática lateral, viñeteo, registradas por la cámara), aplicadas automáticamente sin borde vacío | ✅ |
 | | Correcciones de objetivo de los RAF de Fujifilm (distorsión, aberración cromática lateral, viñeteo, registradas por la cámara, modo recortado incluido), aplicadas automáticamente | ✅ |
-| | Correcciones de objetivo leídas en los RAW de Olympus/OM, Panasonic…, aberración longitudinal | ⏳ |
+| | Correcciones de objetivo de los ORF de Olympus y OM System (distorsión, aberración cromática lateral) y de los RW2 de Panasonic (distorsión), registradas por la cámara, aplicadas automáticamente | ✅ |
+| | Aberración cromática longitudinal, correcciones de otras marcas (Canon, Nikon, Pentax…) | ⏳ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
 | | Enderezamiento automático y guiado | ⏳ |
 | Efectos | Viñeta tras el recorte (cantidad, punto medio, redondez, desvanecimiento, altas luces) | ✅ |

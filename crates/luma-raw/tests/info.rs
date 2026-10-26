@@ -130,3 +130,58 @@ fn the_fujifilm_lens_corrections_are_read_from_the_raf() {
         .count();
     assert!(differs > corrected.data.len() / 10, "{differs} pixels changés");
 }
+
+/// Une correction en courbe (`Opcode::Spline`), lue dans un RAW du corpus ; et ce
+/// qu'elle change sur l'aperçu réduit.
+fn spline_of(name: &str) -> Option<(luma_raw::opcodes::Opcode, usize, usize)> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/raw-corpus")
+        .join(name);
+    let photo = luma_raw::RawPhoto::open(&path).ok()?;
+    let (ops, _) = photo
+        .opcodes
+        .clone()
+        .unwrap_or_else(|| panic!("{name} : aucune correction lue"));
+    let corrected = photo.binned();
+    let mut plain = photo.clone();
+    plain.opcodes = None;
+    let raw = plain.binned();
+    let changed = corrected
+        .data
+        .iter()
+        .zip(&raw.data)
+        .filter(|(a, b)| (a[1] - b[1]).abs() > 1e-3)
+        .count();
+    Some((ops[0].clone(), changed, corrected.data.len()))
+}
+
+/// L'OM‑5 Mark II du corpus range sa distorsion et son aberration chromatique dans la
+/// note du fabricant de son ORF.
+#[test]
+fn the_om_system_lens_corrections_are_read_from_the_orf() {
+    let Some((op, changed, total)) = spline_of("OM_System_OM-5_2_regular.ORF") else {
+        return;
+    };
+    let luma_raw::opcodes::Opcode::Spline { distortion, zoom, .. } = op else {
+        panic!("{op:?}")
+    };
+    assert!(distortion[1][15] < 0.97 && distortion[1][0] == 1.0, "{distortion:?}");
+    assert_ne!(distortion[0], distortion[1], "rouge");
+    assert_ne!(distortion[2], distortion[1], "bleu");
+    assert_eq!(zoom, 1.0);
+    assert!(changed > total / 10, "{changed} sur {total}");
+}
+
+/// Le Panasonic G9 du corpus range sa distorsion dans l'étiquette 0x0119 de son RW2.
+#[test]
+fn the_panasonic_lens_correction_is_read_from_the_rw2() {
+    let Some((op, changed, total)) = spline_of("P1000951.RW2") else {
+        return;
+    };
+    let luma_raw::opcodes::Opcode::Spline { distortion, .. } = op else {
+        panic!("{op:?}")
+    };
+    assert_eq!(distortion[0], distortion[1], "pas d'aberration chromatique enregistrée");
+    assert!((distortion[1][15] - 1.0).abs() > 0.005, "{distortion:?}");
+    assert!(changed > total / 10, "{changed} sur {total}");
+}

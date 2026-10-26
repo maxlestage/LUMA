@@ -26,6 +26,10 @@ La fototeca profesional, paso a paso.
 - **Colecciones** manuales (fotos elegidas, de cualquier carpeta) e inteligentes (una
   regla escrita como una búsqueda, «rating:4 date:2024 camera:sony», que sigue al
   catálogo): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Correcciones de objetivo de las OM System, Olympus y Panasonic**: la distorsión (y,
+  en Olympus y OM System, la aberración cromática lateral) que la cámara registra en
+  cada ORF o RW2 se aplica automáticamente. El corpus de prueba cuenta ahora con 7 RAW
+  reales, entre ellos una OM‑5 Mark II y una Panasonic G9.
 - **Correcciones de objetivo de las Fujifilm**: las que la cámara registra en cada RAF
   (distorsión, aberración cromática lateral, viñeteo), modo recortado incluido, se
   aplican automáticamente; por ejemplo el barrilete del XF 35 mm F2.

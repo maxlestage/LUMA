@@ -25,6 +25,10 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **OM System, Olympus and Panasonic lens corrections**: the distortion (and, for
+  Olympus and OM System, the lateral chromatic aberration) that the camera records in
+  every ORF or RW2 file is applied automatically. The test corpus now holds 7 real RAW
+  files, including an OM‑5 Mark II and a Panasonic G9.
 - **Fujifilm lens corrections**: those the camera records in every RAF file
   (distortion, lateral chromatic aberration, vignetting), crop mode included, are
   applied automatically; for example the barrel distortion of the XF 35mm F2.
