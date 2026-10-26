@@ -611,7 +611,11 @@ fn thumbnail_loop(
         if saved_thumbnail(&path, &sender, &repaint) {
             continue;
         }
-        if quick_thumbnail(&path, &sender, &repaint) {
+        // Une photo retouchée attend son vrai rendu : l'aperçu intégré au RAW la
+        // montrerait sans ses retouches.
+        let edited =
+            read_sidecar(&path).is_some_and(|s| luma_project::presets::summary(&s).is_edited());
+        if !edited && quick_thumbnail(&path, &sender, &repaint) {
             pending.push_back(path);
         } else {
             render_thumbnail(&path, &sender, &repaint);
