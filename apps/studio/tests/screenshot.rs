@@ -180,6 +180,67 @@ fn library_ratings_and_flags() {
 }
 
 #[test]
+fn library_keywords() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("mots-cles") else {
+        return;
+    };
+    s.keys(&[(NONE, Key::G)]);
+    let dir = std::env::temp_dir().join("luma-studio-mots-cles");
+    let files = luma_studio::app::scan(&dir);
+    // Deux photos choisies, autres que celle qui est affichée : leurs XMP sont écrits
+    // tout de suite, sans réglages (elles gardent leur rendu par défaut).
+    let current = s.studio().current_path().unwrap().to_path_buf();
+    let others: Vec<usize> = (0..files.len())
+        .filter(|i| files[*i] != current)
+        .take(2)
+        .collect();
+    s.studio().selected = others.iter().copied().collect();
+    assert_eq!(s.studio().add_keywords("Mer, Été ; mer"), 2);
+    for i in &others {
+        let meta = luma_studio::worker::read_meta(&files[*i]);
+        assert_eq!(meta.keywords, ["Mer", "Été"], "sans doublon");
+        assert!(
+            luma_studio::worker::read_sidecar(&files[*i]).is_none(),
+            "aucun réglage écrit"
+        );
+    }
+    // Puis la photo affichée seule.
+    s.studio().selected.clear();
+    assert_eq!(s.studio().add_keywords("Portrait"), 1);
+    s.studio().flush_xmp();
+    assert_eq!(
+        luma_studio::worker::read_meta(&current).keywords,
+        ["Portrait"]
+    );
+    assert_eq!(
+        s.studio().folder_keywords(),
+        [
+            ("Été".to_owned(), 2),
+            ("Mer".to_owned(), 2),
+            ("Portrait".to_owned(), 1)
+        ]
+    );
+    // Le filtre par mot‑clé, majuscules et accents mis à part.
+    s.studio().keyword_filter = Some("ete".into());
+    assert_eq!(s.studio().visible(), others);
+    s.studio().keyword_filter = Some("Été".into());
+    s.studio().selected = others.iter().copied().collect();
+    assert_eq!(
+        s.studio().target_keywords(),
+        ["Mer", "Été"],
+        "ceux de la sélection"
+    );
+    s.wait();
+    s.capture("bibliotheque-mots-cles");
+    s.studio().remove_keyword("MER");
+    assert_eq!(
+        luma_studio::worker::read_meta(&files[others[0]]).keywords,
+        ["Été"]
+    );
+}
+
+#[test]
 fn crop_tool_and_export_window() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("recadrage") else {
