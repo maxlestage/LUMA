@@ -87,71 +87,15 @@ pub struct MergeJob {
     pub full_size: bool,
 }
 
-/// Le format de fichier de l'export.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Format {
-    Jpeg,
-    Png,
-    Tiff,
-}
-
-impl Format {
-    pub fn extension(self) -> &'static str {
-        match self {
-            Format::Jpeg => "jpg",
-            Format::Png => "png",
-            Format::Tiff => "tif",
-        }
-    }
-}
-
-/// Les réglages de la fenêtre Exporter (l'essentiel, sans détour).
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExportOptions {
-    pub format: Format,
-    /// Qualité JPEG, 1 à 100.
-    pub quality: u8,
-    /// 8 ou 16 bits (PNG, TIFF).
-    pub bits: u8,
-    pub space: OutputSpace,
-    /// Le grand côté de l'image recadrée, en pixels ; `None` : pleine définition.
-    pub long_edge: Option<usize>,
-    /// `None` : un dossier `LÜMA/` à côté de chaque RAW.
-    pub folder: Option<PathBuf>,
-}
-
-impl Default for ExportOptions {
-    fn default() -> Self {
-        Self {
-            format: Format::Jpeg,
-            quality: 92,
-            bits: 8,
-            space: OutputSpace::Srgb,
-            long_edge: None,
-            folder: None,
-        }
-    }
-}
+// Les réglages de la fenêtre Exporter : ceux du moteur, partagés avec la ligne de
+// commande et ses préréglages.
+pub use luma_render::export::{Format, Options as ExportOptions, output_path as export_path};
 
 /// Une photo à exporter : déjà ouverte (la photo affichée) ou à ouvrir.
 pub struct ExportJob {
     pub source: PathBuf,
     pub photo: Option<Arc<Photo>>,
     pub settings: Settings,
-}
-
-/// Le fichier de sortie d'un RAW.
-pub fn export_path(source: &Path, options: &ExportOptions) -> PathBuf {
-    let dir = match &options.folder {
-        Some(d) => d.clone(),
-        None => source.parent().unwrap_or(Path::new(".")).join("LÜMA"),
-    };
-    dir.join(
-        source
-            .with_extension(options.format.extension())
-            .file_name()
-            .unwrap_or_default(),
-    )
 }
 
 /// Développe et écrit une photo selon les options.
@@ -161,41 +105,7 @@ pub fn export_one(
     out: &Path,
     options: &ExportOptions,
 ) -> Result<(), String> {
-    if let Some(dir) = out.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| format!("{} : {e}", dir.display()))?;
-    }
-    let size = match options.long_edge {
-        None => Size::Full,
-        Some(n) => {
-            // La taille demandée est celle de l'image recadrée : on rend un peu plus
-            // grand, puis on réduit exactement.
-            let c = &settings.crop;
-            let frac = (c.right - c.left).min(c.bottom - c.top).max(0.05);
-            let (w, h) = photo.full_size();
-            let pre = (n as f32 / frac).ceil() as usize;
-            if pre >= w.max(h) {
-                Size::Full
-            } else {
-                Size::Fit(pre)
-            }
-        }
-    };
-    let rendered = photo
-        .render(settings, size, &Cancel::new())
-        .map_err(|e| e.to_string())?;
-    let mut image = rendered.image;
-    if let Some(n) = options.long_edge {
-        let (w, h) = luma_core::RgbImage::fit(image.width, image.height, n);
-        if (w, h) != (image.width, image.height) {
-            image = image.resize_area(w, h);
-        }
-    }
-    let bits = if options.format == Format::Jpeg {
-        8
-    } else {
-        options.bits
-    };
-    luma_render::export::write(out, &image, options.space, options.quality, bits)
+    luma_render::export::develop(photo, settings, out, options)
 }
 
 struct RenderJob {

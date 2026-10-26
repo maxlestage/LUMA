@@ -3,6 +3,7 @@
 //! ```text
 //! luma info <raw>…                  ce que LÜMA lit dans chaque fichier
 //! luma develop <raw> [options]      développe et exporte (JPEG, PNG, TIFF)
+//! luma export-preset [nom] [opt]    les préréglages d'export : liste, crée, modifie
 //! luma xmp <raw|xmp|json> [options] écrit les réglages au format XMP
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
 //! luma merge <raw>… [options]       empilement ou panorama, en DNG
@@ -21,6 +22,7 @@ use std::time::{Duration, Instant};
 use luma_color::OutputSpace;
 use luma_core::Cancel;
 use luma_project::{Settings, xmp};
+use luma_render::export::{self, Format};
 use luma_render::{Photo, Size};
 
 const USAGE: &str = "\
@@ -31,6 +33,16 @@ USAGE
   luma develop <raw> [-o sortie.jpg|.png|.tif] [--size N] [--space srgb|p3|rec2020|prophoto]
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
+                     [--preset nom]
+      Avec --preset, les options du préréglage d'export (format, qualité, espace, taille,
+      dossier) ; les options données les remplacent, --size est alors le grand côté de
+      l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par défaut).
+  luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
+                     [--space srgb|p3|rec2020|prophoto] [--size N|0] [--folder d]
+                     [--next-to-original] [--delete]
+      Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
+      Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
+      (partagé avec l'app) ; --delete le retire.
   luma xmp <raw|f.xmp|f.json> [--set nom=valeur]… [-o f.xmp]
   luma bench <raw> [--size N] [--runs N]
   luma merge <raw>… [--stack mean|median|max|stars | --pano perspective|cylindrical|spherical]
@@ -81,9 +93,10 @@ struct Args {
     positional: Vec<String>,
     output: Option<PathBuf>,
     size: Option<usize>,
-    space: OutputSpace,
-    quality: u8,
-    bits: u8,
+    space: Option<OutputSpace>,
+    quality: Option<u8>,
+    bits: Option<u8>,
+    preset: Option<String>,
     xmp: Option<PathBuf>,
     settings: Option<PathBuf>,
     sidecar: bool,
@@ -97,9 +110,10 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         positional: Vec::new(),
         output: None,
         size: None,
-        space: OutputSpace::Srgb,
-        quality: 92,
-        bits: 8,
+        space: None,
+        quality: None,
+        bits: None,
+        preset: None,
         xmp: None,
         settings: None,
         sidecar: true,
@@ -114,10 +128,11 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--size" => a.size = Some(value(&arg)?.parse().map_err(|_| "--size : un nombre de pixels")?),
             "--space" => {
                 let v = value(&arg)?;
-                a.space = OutputSpace::parse(&v).ok_or_else(|| format!("espace inconnu « {v} »"))?;
+                a.space = Some(OutputSpace::parse(&v).ok_or_else(|| format!("espace inconnu « {v} »"))?);
             }
-            "--quality" => a.quality = value(&arg)?.parse().map_err(|_| "--quality : 1 à 100")?,
-            "--bits" => a.bits = value(&arg)?.parse().map_err(|_| "--bits : 8 ou 16")?,
+            "--quality" => a.quality = Some(value(&arg)?.parse().map_err(|_| "--quality : 1 à 100")?),
+            "--bits" => a.bits = Some(value(&arg)?.parse().map_err(|_| "--bits : 8 ou 16")?),
+            "--preset" => a.preset = Some(value(&arg)?),
             "--xmp" => a.xmp = Some(value(&arg)?.into()),
             "--settings" => a.settings = Some(value(&arg)?.into()),
             "--no-sidecar" => a.sidecar = false,
@@ -309,13 +324,46 @@ fn develop(a: &Args) -> Result<(), String> {
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
+    if let Some(name) = &a.preset {
+        // Un préréglage d'export : ses options, que les options données remplacent.
+        let mut o = load_presets()?
+            .1
+            .get(name)
+            .ok_or_else(|| format!("préréglage d'export inconnu « {name} » (luma export-preset les liste)"))?
+            .options;
+        o.space = a.space.unwrap_or(o.space);
+        o.quality = a.quality.unwrap_or(o.quality);
+        o.bits = a.bits.unwrap_or(o.bits);
+        o.long_edge = a.size.or(o.long_edge);
+        if let Some(f) = a
+            .output
+            .as_deref()
+            .and_then(|p| p.extension()?.to_str())
+            .and_then(Format::parse)
+        {
+            o.format = f;
+        }
+        let out = a.output.clone().unwrap_or_else(|| export::output_path(path, &o));
+        let t2 = Instant::now();
+        export::develop(&photo, &settings, &out, &o)?;
+        println!("{} → {} ({})", path.display(), out.display(), export::describe(&o));
+        println!("  {:<22} {:>8.1} ms", "lecture du RAW", ms(opened));
+        println!("  {:<22} {:>8.1} ms", "rendu et encodage", ms(t2.elapsed()));
+        return Ok(());
+    }
     let size = a.size.map_or(Size::Full, Size::Fit);
     let rendered = photo
         .render(&settings, size, &Cancel::new())
         .map_err(|e| e.to_string())?;
     let out = a.output.clone().unwrap_or_else(|| path.with_extension("jpg"));
     let t2 = Instant::now();
-    luma_render::export::write(&out, &rendered.image, a.space, a.quality, a.bits)?;
+    export::write(
+        &out,
+        &rendered.image,
+        a.space.unwrap_or_default(),
+        a.quality.unwrap_or(92),
+        a.bits.unwrap_or(8),
+    )?;
     println!(
         "{} → {} ({} × {})",
         path.display(),
@@ -326,6 +374,75 @@ fn develop(a: &Args) -> Result<(), String> {
     println!("  {:<22} {:>8.1} ms", "lecture du RAW", ms(opened));
     println!("{}", rendered.timings);
     println!("  {:<22} {:>8.1} ms", "encodage", ms(t2.elapsed()));
+    Ok(())
+}
+
+/// Le fichier des préréglages d'export et son contenu.
+fn load_presets() -> Result<(PathBuf, export::Presets), String> {
+    let file = export::presets_path().ok_or("pas de dossier personnel (HOME) pour les préréglages d'export")?;
+    let presets = export::Presets::load(&file);
+    Ok((file, presets))
+}
+
+/// `luma export-preset` : liste, crée, modifie ou retire les préréglages d'export.
+fn export_preset(args: Vec<String>) -> Result<(), String> {
+    let (file, mut presets) = load_presets()?;
+    let mut it = args.into_iter();
+    let Some(name) = it.next().filter(|n| !n.starts_with('-')) else {
+        for p in presets.all() {
+            println!("{:<20} {}", p.name, export::describe(&p.options));
+        }
+        return Ok(());
+    };
+    let mut o = presets.get(&name).map(|p| p.options).unwrap_or_default();
+    let mut delete = false;
+    while let Some(arg) = it.next() {
+        let mut value = || it.next().ok_or_else(|| format!("{arg} attend une valeur"));
+        match arg.as_str() {
+            "--format" => {
+                let v = value()?;
+                o.format = Format::parse(&v).ok_or_else(|| format!("format inconnu « {v} » (jpg, png, tif)"))?;
+            }
+            "--quality" => o.quality = value()?.parse().map_err(|_| "--quality : 1 à 100")?,
+            "--bits" => {
+                o.bits = match value()?.as_str() {
+                    "8" => 8,
+                    "16" => 16,
+                    _ => return Err("--bits : 8 ou 16".into()),
+                }
+            }
+            "--space" => {
+                let v = value()?;
+                o.space = OutputSpace::parse(&v).ok_or_else(|| format!("espace inconnu « {v} »"))?;
+            }
+            "--size" => {
+                let n: usize = value()?
+                    .parse()
+                    .map_err(|_| "--size : un nombre de pixels (0 : pleine définition)")?;
+                o.long_edge = (n > 0).then_some(n);
+            }
+            "--folder" => o.folder = Some(value()?.into()),
+            "--next-to-original" => o.folder = None,
+            "--delete" => delete = true,
+            other => return Err(format!("option inconnue « {other} »")),
+        }
+    }
+    if delete {
+        if !presets.remove(&name) {
+            return Err(format!("« {name} » n'est pas un de vos préréglages d'export"));
+        }
+        presets.save(&file)?;
+        println!("« {name} » retiré");
+        return Ok(());
+    }
+    o.quality = o.quality.clamp(1, 100);
+    println!("{:<20} {}", name.trim(), export::describe(&o));
+    presets.set(export::Preset {
+        name: name.trim().to_owned(),
+        options: o,
+    });
+    presets.save(&file)?;
+    println!("enregistré dans {}", file.display());
     Ok(())
 }
 
@@ -694,6 +811,15 @@ fn main() -> ExitCode {
     }
     if command == "catalog" {
         return match catalog(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "export-preset" {
+        return match export_preset(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");

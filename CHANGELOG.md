@@ -16,6 +16,10 @@ La photothèque professionnelle, étape par étape.
   compte des accents) et des filtres (note, drapeau, libellé, dates, ISO, focale,
   boîtier, objectif, mot‑clé). 100 000 photos fouillées en 4 à 25 ms.
   `--keywords` compte les mots‑clés, boîtiers et objectifs.
+- **Préréglages d'export** : format, qualité, profondeur, espace, taille et dossier
+  enregistrés sous un nom ; quatre de base (Web, Pleine définition, Écran P3,
+  Impression) et les vôtres, partagés par l'app et la ligne de commande
+  (`luma export-preset`, `luma develop --preset Web`).
 
 ## 0.2.0 — octobre 2026
 

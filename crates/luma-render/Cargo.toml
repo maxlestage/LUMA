@@ -14,6 +14,7 @@ luma-project.workspace = true
 luma-image.workspace = true
 image.workspace = true
 rayon.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 # Le doublon de travail : compression LZ4 (Rust pur, sans unsafe).
 lz4_flex = { version = "0.14", default-features = false, features = ["safe-encode", "safe-decode", "std"] }

@@ -2324,6 +2324,7 @@ dependencies = [
  "luma-raw",
  "lz4_flex",
  "rayon",
+ "serde",
  "serde_json",
 ]
 
