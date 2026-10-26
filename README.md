@@ -22,6 +22,7 @@ et enregistre les réglages dans un fichier XMP à côté de la photo.
 | `luma-raw` | Lecture des RAW (rawler), normalisation, couleur DNG, dématriçage Bayer et X‑Trans |
 | `luma-project` | Les réglages non destructifs, JSON et XMP `crs:` |
 | `luma-image` | Le développement : tonalité locale, rendu filmique, courbes, couleur, LUT 3D, détail, effets, géométrie |
+| `luma-library` | La photothèque : catalogue local (date de prise de vue, boîtier, objectif, ISO, note, mots‑clés), mis à jour sans relire ce qui n'a pas changé |
 | `luma-render` | Une photo ouverte : sources et « bases » (étapes de voisinage, celle de la photo et celles des films de masques) en cache, rendu annulable |
 | `luma-merge` | Empilements, panoramas (coins, RANSAC, projections, fondus), DNG ; mesure d'une vraie pellicule en LUT 3D |
 | `luma-gpu` | Les étapes par pixel (rendu, couleur, LUT 3D, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test, les 100 films compris |
@@ -40,6 +41,7 @@ target/release/luma merge ciel_*.ARW --stack stars                     # empilem
 target/release/luma merge pano_*.CR3 --pano cylindrical --no-crop      # panorama sans rognage
 target/release/luma film-lut photo.ARW scan.tif -o MaPortra.cube       # mesure une vraie pellicule
 target/release/luma develop photo.ARW --lut MaPortra.cube:80 -o p.jpg   # ce film, à 80 %
+target/release/luma catalog ~/Photos --list                             # la photothèque, par date de prise de vue
 target/release/luma presets ~/Desktop                                   # les 100 films en préréglages XMP
 ```
 

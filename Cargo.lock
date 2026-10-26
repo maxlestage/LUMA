@@ -2199,6 +2199,7 @@ dependencies = [
  "luma-color",
  "luma-core",
  "luma-image",
+ "luma-library",
  "luma-licence",
  "luma-merge",
  "luma-project",
@@ -2248,6 +2249,17 @@ dependencies = [
  "luma-project",
  "luma-raw",
  "rayon",
+]
+
+[[package]]
+name = "luma-library"
+version = "0.2.0"
+dependencies = [
+ "luma-project",
+ "luma-raw",
+ "rayon",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

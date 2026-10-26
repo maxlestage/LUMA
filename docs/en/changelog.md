@@ -1,5 +1,17 @@
 # What's new
 
+## 0.3.0 — upcoming
+
+The professional photo library, step by step.
+
+- **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
+  library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
+  are read from the RAW header without decoding the image (5 RAW files in 94 ms), and
+  afterwards only modified files are read again (under a millisecond). Photos are
+  sorted by capture date.
+- **Keywords**: read and written in the XMP (`dc:subject`), as every photo application
+  does.
+
 ## 0.2.0 — October 2026
 
 Every image format, three languages, and the store.

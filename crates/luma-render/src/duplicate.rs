@@ -241,7 +241,6 @@ pub fn write(raw: &RawPhoto, source: &Path, path: &Path) -> Result<()> {
             put(b)?;
         }
     }
-    drop(put);
     f.flush().map_err(Error::Io)?;
     drop(f);
     std::fs::rename(&tmp, path).map_err(Error::Io)
