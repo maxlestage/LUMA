@@ -25,6 +25,9 @@ The professional photo library, step by step.
 - **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
   written like a search, “rating:4 date:2024 camera:sony”, that follows the
   catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
+- **Fujifilm lens corrections**: those the camera records in every RAF file
+  (distortion, lateral chromatic aberration, vignetting), crop mode included, are
+  applied automatically; for example the barrel distortion of the XF 35mm F2.
 - **Sony lens corrections**: the distortion, lateral chromatic aberration and
   vignetting that the camera records in every ARW file are applied automatically, with
   just enough enlargement to leave no empty border.
