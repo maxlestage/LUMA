@@ -7,6 +7,9 @@
 // - le Mac et l'iPhone ne sont chargés qu'à l'approche de leur section.
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// La version de ce fichier (`?v=…`, posée par la page) suit les modules qu'il charge :
+// à chaque mise à jour, le navigateur et le service worker prennent les nouveaux.
+const V = new URL(import.meta.url).search;
 const opts = { reduced };
 const root = document.documentElement;
 
@@ -23,7 +26,7 @@ setTimeout(() => { if (!introduced) { root.classList.add('loaded'); intro(); } }
 function start() {
   const heroCanvas = document.getElementById('hero-gl');
   if (heroCanvas) {
-    import('./hero.js')
+    import(`./hero.js${V}`)
       .then(({ initHero }) => {
         hero = initHero(heroCanvas, opts);
         if (introduced || root.classList.contains('loaded')) hero.intro();
@@ -37,7 +40,7 @@ function start() {
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
       io.disconnect();
-      import('./devices.js')
+      import(`./devices.js${V}`)
         .then(({ initDevices }) => initDevices(devices, apple, opts))
         .catch((e) => console.warn('LÜMA : appareils indisponibles', e));
     }, { rootMargin: '600px 0px' });

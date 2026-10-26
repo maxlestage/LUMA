@@ -197,12 +197,13 @@ fn service_worker(site: &Site) -> String {
         "/".to_owned(),
         format!("/site.css?v={}", site.versions.css),
         format!("/js/scenes.js?v={}", site.versions.scenes),
+        // Les modules chargés par scenes.js portent la même version.
+        format!("/js/hero.js?v={}", site.versions.scenes),
+        format!("/js/devices.js?v={}", site.versions.scenes),
+        format!("/js/screen.js?v={}", site.versions.scenes),
     ];
     precache.extend(
         [
-            "/js/hero.js",
-            "/js/devices.js",
-            "/js/screen.js",
             "/vendor/three.module.min.js",
             "/vendor/RoomEnvironment.js",
             "/vendor/RoundedBoxGeometry.js",

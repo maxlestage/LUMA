@@ -5,7 +5,6 @@
 // bords fins et encoche, iPhone à Dynamic Island) ; leurs écrans sont des canvas
 // peints par `screen.js`. Une perspective CSS suffit au mouvement : pas de 3D à charger.
 
-import { drawDesktopUI, drawPhoneUI } from './screen.js';
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -27,7 +26,7 @@ function screen(parent, cls, w, h, draw) {
 }
 
 /** Le MacBook Pro : l'écran (bord noir fin, encoche) sur sa charnière, et la base. */
-function buildMac(stage) {
+function macOf(stage, drawDesktopUI) {
   const mac = el('div', 'mbp', stage);
   const lid = el('div', 'mbp-lid', mac);
   const back = el('div', 'mbp-back', lid);
@@ -43,7 +42,7 @@ function buildMac(stage) {
 }
 
 /** L'iPhone, de face : cadre en titane, Dynamic Island, boutons. */
-function buildPhone(stage) {
+function phoneOf(stage, drawPhoneUI) {
   const phone = el('div', 'iph', stage);
   el('i', 'iph-btn iph-action', phone);
   el('i', 'iph-btn iph-up', phone);
@@ -56,8 +55,12 @@ function buildPhone(stage) {
   return phone;
 }
 
-export function initDevices(stage, section, { reduced = false } = {}) {
+export async function initDevices(stage, section, { reduced = false } = {}) {
+  // Les écrans, dans la même version que ce fichier.
+  const { drawDesktopUI, drawPhoneUI } = await import(`./screen.js${new URL(import.meta.url).search}`);
   stage.classList.add('devices-ready');
+  const buildMac = (s) => macOf(s, drawDesktopUI);
+  const buildPhone = (s) => phoneOf(s, drawPhoneUI);
   const { mac, lid, display } = buildMac(stage);
   const phone = buildPhone(stage);
   // Sur téléphone, les appareils finissent bien de face : un plan incliné y serait
