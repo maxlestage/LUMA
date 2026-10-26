@@ -411,8 +411,10 @@ fn panasonic_corrections(path: &Path) -> Option<opcodes::Opcode> {
     let at = u32::from_le_bytes(head.get(pos..pos + 4)?.try_into().ok()?) as usize;
     let block = head.get(at..at + 32)?;
     let v: Vec<i16> = block
-        .chunks_exact(2)
-        .map(|b| i16::from_le_bytes([b[0], b[1]]))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|b| i16::from_le_bytes(*b))
         .collect();
     opcodes::panasonic(&v)
 }
