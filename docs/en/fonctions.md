@@ -60,7 +60,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
 | | Mask area shown (O) in red, green, blue, white or white on black, opacity from 10 to 100% | ✅ |
 | | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
-| | Healing, clone, red eye, remove | ⏳ |
+| | Healing and clone (Q): one click, the source found on its own, area and source movable; size, feather, opacity | ✅ |
+| | Red eye, remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
 | | Snapshots, sync across multiple photos | ⏳ |

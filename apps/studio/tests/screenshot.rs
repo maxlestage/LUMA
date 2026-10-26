@@ -640,6 +640,41 @@ fn masks_linear_and_radial() {
 }
 
 #[test]
+fn retouch_spots() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("retouche") else {
+        return;
+    };
+    // Q : le correcteur ; la copie réduite de la photo arrive pour chercher les sources.
+    s.keys(&[(NONE, Key::Q)]);
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.retouch, Some(luma_project::SpotKind::Heal));
+    let heal = luma_studio::retouching::place(
+        luma_project::SpotKind::Heal,
+        (0.3, 0.6),
+        0.03,
+        st.scene_map(),
+    );
+    assert!(
+        st.scene_map().is_some(),
+        "la copie réduite pour les sources"
+    );
+    assert!(heal.source != heal.center);
+    st.settings.spots = vec![
+        heal,
+        luma_project::Spot {
+            source: (0.75, 0.3),
+            ..luma_project::Spot::new(luma_project::SpotKind::Clone, (0.55, 0.3), 0.05)
+        },
+    ];
+    st.selected_spot = Some(1);
+    s.wait();
+    s.capture("retouche");
+    assert_eq!(s.studio().settings.spots.len(), 2);
+}
+
+#[test]
 fn masks_combined() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("masques-combines") else {
