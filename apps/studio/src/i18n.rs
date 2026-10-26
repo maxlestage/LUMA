@@ -122,6 +122,10 @@ pub fn detect(
 /// Les langues préférées du Mac (`defaults read -g AppleLanguages`), en liste :
 /// `fr-FR,en-US`.
 fn apple_languages() -> Option<String> {
+    // Sur iPhone et iPad, pas de `defaults` : le système le dit directement.
+    if cfg!(target_os = "ios") {
+        return luma_apple::preferred_languages();
+    }
     if !cfg!(target_os = "macos") {
         return None;
     }
