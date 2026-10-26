@@ -100,7 +100,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
 | Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates, ISO, focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
-| Catalogue in the app, collections, virtual copies | ⏳ |
+| Manual and smart collections (rule: rating, date, camera, lens, ISO, keywords…), saved in the catalogue | ✅ |
+| Catalogue in the app, virtual copies | ⏳ |
 | Importing existing catalogues | ⏳ |
 
 ## What sets LÜMA apart

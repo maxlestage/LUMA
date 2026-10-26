@@ -23,7 +23,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   incrémentale ; tri par date de prise de vue ; `luma catalog`.
 - [x] 1.2 Requêtes : recherche texte (nom, boîtier, objectif, mots‑clés) et filtres
   (note, drapeau, libellé, plages de date, d'ISO, de focale) dans `luma-library`, testés.
-- [ ] 1.3 Collections manuelles et dynamiques (règles : note, date, boîtier, objectif,
+- [x] 1.3 Collections manuelles et dynamiques (règles : note, date, boîtier, objectif,
   ISO), enregistrées dans le catalogue ; `luma catalog --collection`.
 - [ ] 1.4 Mots‑clés dans l'app : saisie, ajout à plusieurs photos, liste des mots‑clés
   du catalogue avec leur nombre.
@@ -172,3 +172,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | Doublon de travail : un niveau à la taille exacte de l'aperçu (2048 px) quand la réduction par deux passerait dessous (photos de 2048 à 4096 px, comme celles de l'iPhone) | iPhone ProRAW 3024 × 4032 : ouverture depuis le doublon 487 → 337 ms (Linux, mesure) ; sur Mac elle prenait 1171 ms, plus que depuis le RAW (346 ms) |
 | 2026-10-26 | 1.2 Recherche et filtres du catalogue (`luma_library::Query`, `luma catalog --search`, `--keywords`) : mots sans accents, note, drapeau, libellé, dates partielles, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers, objectifs | Catalogue synthétique de 100 000 photos : filtres combinés 65 ms → 4 ms ; mot libre 82 ms → 14–25 ms (comparaison sans allocation, filtrage sur 4 cœurs) ; chargement de l'index JSON (34 Mo) : 314 ms, à alléger (étape 1.7) |
 | 2026-10-26 | 2.1 Préréglages d'export dans le moteur (`luma_render::export` : `Options`, `Preset`, `Presets`, `develop`), partagés par l'app et la ligne de commande : quatre de base (Web, Pleine définition, Écran P3, Impression) et ceux de l'utilisateur (`Exports.json`) ; `luma export-preset`, `luma develop --preset` | Export « Web » (2048 px) d'un RAW, rendu et encodage : 307 à 626 ms selon le boîtier ; « Pleine définition » : 1,8 à 5,3 s (4 cœurs) |
+| 2026-10-26 | 1.3 Collections manuelles et dynamiques dans le catalogue (`luma_library::Collection`, `luma catalog --smart`, `--add`, `--collections`, `--collection`) ; anciens index relus tels quels | Une collection dynamique coûte une recherche (4 à 25 ms pour 100 000 photos) ; index du corpus avec une collection de deux photos : 1,6 → 1,8 Ko |

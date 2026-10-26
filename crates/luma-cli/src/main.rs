@@ -50,6 +50,8 @@ USAGE
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
   luma catalog [dossier]… [--flat] [--catalog f.json] [--list] [--search \"…\"] [--keywords]
+               [--smart nom \"règle\"] [--add nom photo]… [--remove-collection nom]
+               [--collections] [--collection nom]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
       au catalogue de LÜMA, ou le remet à jour ; seuls les fichiers modifiés sont relus.
       --list affiche les photos par date de prise de vue ; --search ne garde que celles
@@ -58,6 +60,10 @@ USAGE
         \"mer note:3 drapeau:retenue date:2024-06..2024-08 iso:..800 focale:24..70
          boîtier:sony objectif:gm libellé:rouge mot:été\"
       --keywords compte les mots‑clés, les boîtiers et les objectifs du catalogue.
+      Collections : --smart crée une collection dynamique (sa règle s'écrit comme une
+      recherche : \"note:4 date:2024\"), --add range une photo dans une collection
+      manuelle (créée au besoin), --collections les liste, --collection montre les
+      photos de l'une d'elles.
   luma cameras [--markdown] [--corpus dossier]
       Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
       --corpus marque ceux dont un vrai RAW est dans le dossier.
@@ -192,6 +198,9 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     let mut file = luma_library::default_path();
     let (mut folders, mut recursive, mut show, mut facets) = (Vec::new(), true, false, false);
     let mut query = None;
+    // Les changements de collections, appliqués dans l'ordre ; la collection à montrer.
+    let mut edits: Vec<(String, String, String)> = Vec::new();
+    let (mut list_collections, mut shown) = (false, None);
     let mut it = args.into_iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -203,6 +212,22 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
                 query = Some(luma_library::Query::parse(&text)?);
             }
             "--keywords" => facets = true,
+            "--smart" | "--add" => {
+                let name = it.next().ok_or_else(|| format!("{arg} attend un nom de collection"))?;
+                let value = it.next().ok_or_else(|| {
+                    format!(
+                        "{arg} {name} attend {}",
+                        if arg == "--smart" { "une règle" } else { "une photo" }
+                    )
+                })?;
+                edits.push((arg, name, value));
+            }
+            "--remove-collection" => {
+                let name = it.next().ok_or("--remove-collection attend un nom")?;
+                edits.push((arg, name, String::new()));
+            }
+            "--collections" => list_collections = true,
+            "--collection" => shown = Some(it.next().ok_or("--collection attend un nom")?),
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => folders.push(PathBuf::from(arg)),
         }
@@ -225,7 +250,27 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             ms(t.elapsed())
         );
     }
-    if !folders.is_empty() {
+    for (action, name, value) in &edits {
+        match action.as_str() {
+            "--smart" => {
+                cat.set_collection(luma_library::Collection::smart(name, value)?)?;
+                println!("collection dynamique « {name} » : {value}");
+            }
+            "--add" => {
+                let photo = Path::new(value).canonicalize().map_err(|e| format!("{value} : {e}"))?;
+                if cat.get(&photo).is_none() {
+                    return Err(format!(
+                        "{} n'est pas dans le catalogue (ajouter son dossier d'abord)",
+                        photo.display()
+                    ));
+                }
+                cat.add_to_collection(name, &[photo])?;
+            }
+            _ if cat.remove_collection(name) => println!("collection « {name} » retirée"),
+            _ => return Err(format!("pas de collection « {name} »")),
+        }
+    }
+    if !folders.is_empty() || !edits.is_empty() {
         cat.save(&file).map_err(|e| format!("{} : {e}", file.display()))?;
     }
     println!("{} : {} photos (lu en {:.1} ms)", file.display(), cat.len(), ms(loaded));
@@ -241,25 +286,39 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             }
         }
     }
-    if show || query.is_some() {
+    if list_collections {
+        for c in cat.collections() {
+            let n = cat.collection_photos(&c.name).map_or(0, |v| v.len());
+            match &c.content {
+                luma_library::Content::Smart(rule) => println!("{} ({n}) — dynamique : {rule}", c.name),
+                luma_library::Content::Manual(_) => println!("{} ({n})", c.name),
+            }
+        }
+    }
+    let found = if let Some(name) = &shown {
+        Some(cat.collection_photos(name)?)
+    } else if show || query.is_some() {
         let query = query.unwrap_or_default();
         let t = Instant::now();
         let found = cat.search(&query);
         if query != luma_library::Query::default() {
             println!("{} photos trouvées ({:.1} ms)", found.len(), ms(t.elapsed()));
         }
-        for e in found {
-            let iso = e.iso.map(|i| format!("ISO {i}")).unwrap_or_default();
-            println!(
-                "{}  {}  {}  {}  {}  {}",
-                e.date.replace('T', " "),
-                "★".repeat(e.rating.into()),
-                e.camera(),
-                e.lens,
-                iso,
-                e.path.display()
-            );
-        }
+        Some(found)
+    } else {
+        None
+    };
+    for e in found.unwrap_or_default() {
+        let iso = e.iso.map(|i| format!("ISO {i}")).unwrap_or_default();
+        println!(
+            "{}  {}  {}  {}  {}  {}",
+            e.date.replace('T', " "),
+            "★".repeat(e.rating.into()),
+            e.camera(),
+            e.lens,
+            iso,
+            e.path.display()
+        );
     }
     Ok(())
 }

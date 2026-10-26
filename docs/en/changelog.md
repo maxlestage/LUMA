@@ -16,6 +16,9 @@ The professional photo library, step by step.
   filters (rating, flag, label, dates, ISO, focal length, camera, lens, keyword).
   100,000 photos searched in 4 to 25 ms. `--keywords` counts keywords, cameras and
   lenses.
+- **Collections**, manual (hand‑picked photos from any folder) and smart (a rule
+  written like a search, “rating:4 date:2024 camera:sony”, that follows the
+  catalogue): `luma catalog --smart`, `--add`, `--collections`, `--collection`.
 - **Export presets**: format, quality, bit depth, colour space, size and folder saved
   under a name; four built in (web, full resolution, P3 display, print) plus your own,
   shared by the app and the command line (`luma export-preset`,

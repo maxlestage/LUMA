@@ -101,7 +101,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Doublon de travail en pleine définition : identique à l'original, ouverture plus rapide, mémoire divisée par deux et demi ; « Vider le cache » en un clic | ✅ |
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
 | Recherche et filtres (`luma catalog --search`) : mots sans tenir compte des accents ; note, drapeau, libellé, dates, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers et objectifs | ✅ |
-| Catalogue dans l'app, collections, copies virtuelles | ⏳ |
+| Collections manuelles et dynamiques (règle : note, date, boîtier, objectif, ISO, mots‑clés…), enregistrées dans le catalogue | ✅ |
+| Catalogue dans l'app, copies virtuelles | ⏳ |
 | Import de catalogues existants | ⏳ |
 
 ## Ce qui distingue LÜMA
