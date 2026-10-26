@@ -15,10 +15,17 @@
 //! Ce module ne fait pas de réseau : il signe et vérifie les clés, décide (essai,
 //! abonné, expiré) et dit quoi demander. L'app fournit le transport ([`Transport`]).
 //!
+//! Sur iPhone et iPad, l'abonnement s'achète uniquement dans l'App Store (achats
+//! intégrés, `luma_apple::store`) : l'app enregistre chaque achat ([`record_store`]) et
+//! seul cet abonnement y ouvre LÜMA Premium ; les clés y sont ignorées. Sur Mac, c'est
+//! l'inverse : seulement la clé (Stripe).
+//!
 //! Configuration à la compilation, sans toucher au code : `LUMA_CHECKOUT_MONTHLY`,
 //! `LUMA_CHECKOUT_ANNUAL` (liens de paiement Stripe), `LUMA_BILLING_PORTAL` (portail
 //! client Stripe), `LUMA_LICENCE_PUBLIC` (clé publique, 64 chiffres hexadécimaux) et
-//! `LUMA_LICENCE_SERVER` (le site, ex. `https://luma.app`).
+//! `LUMA_LICENCE_SERVER` (le site, ex. `https://luma.app`), et les produits de l'App
+//! Store `LUMA_APPSTORE_MONTHLY`, `LUMA_APPSTORE_ANNUAL` (par défaut
+//! `app.luma.studio.premium.monthly` et `….annual`).
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
@@ -80,6 +87,28 @@ impl Plan {
             Plan::Annual => option_env!("LUMA_CHECKOUT_ANNUAL"),
         };
         url.filter(|u| u.starts_with("https://"))
+    }
+
+    /// L'identifiant du produit dans l'App Store (App Store Connect).
+    pub fn app_store_id(self) -> &'static str {
+        match self {
+            Plan::Monthly => option_env!("LUMA_APPSTORE_MONTHLY").unwrap_or("app.luma.studio.premium.monthly"),
+            Plan::Annual => option_env!("LUMA_APPSTORE_ANNUAL").unwrap_or("app.luma.studio.premium.annual"),
+        }
+    }
+
+    /// La formule d'un produit de l'App Store.
+    pub fn from_app_store_id(id: &str) -> Option<Plan> {
+        Plan::ALL.into_iter().find(|p| p.app_store_id() == id)
+    }
+
+    /// La durée d'une période payée, en secondes (un mois de 31 jours, une année de
+    /// 366 : jamais plus court que la vraie).
+    pub fn period_secs(self) -> u64 {
+        match self {
+            Plan::Monthly => 31 * DAY,
+            Plan::Annual => 366 * DAY,
+        }
     }
 
     /// La formule d'un intervalle de facturation Stripe (`month`, `year`).
@@ -216,6 +245,37 @@ pub struct State {
     pub key: Option<String>,
     /// Dernière demande d'une clé fraîche (secondes Unix).
     pub checked_at: u64,
+    /// L'abonnement acheté dans l'App Store (iPhone et iPad).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub store: Option<StoreSubscription>,
+}
+
+/// Un abonnement de l'App Store : la formule, et la fin de validité (dernier achat ou
+/// renouvellement, plus une période, plus [`GRACE_DAYS`] jours). Chaque renouvellement
+/// arrive à l'app comme un nouvel achat et repousse la fin.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StoreSubscription {
+    pub plan: Plan,
+    pub until: u64,
+}
+
+/// Les clés de licence ouvrent‑elles LÜMA ici ? Sur Mac (et ailleurs), oui ; sur iPhone
+/// et iPad, non : seul l'App Store y vend l'abonnement.
+pub const KEYS_ALLOWED: bool = !cfg!(target_os = "ios");
+
+/// Enregistre un achat (ou un renouvellement, une restauration) de l'App Store : le
+/// produit `product`, payé à `date` (secondes Unix). Un produit inconnu ne change rien.
+/// Rend `true` si l'abonnement s'allonge.
+pub fn record_store(state: &mut State, product: &str, date: u64) -> bool {
+    let Some(plan) = Plan::from_app_store_id(product) else {
+        return false;
+    };
+    let until = date + plan.period_secs() + GRACE_DAYS * DAY;
+    if state.store.as_ref().is_some_and(|s| s.until >= until) {
+        return false;
+    }
+    state.store = Some(StoreSubscription { plan, until });
+    true
 }
 
 /// Le droit d'utiliser LÜMA, maintenant.
@@ -261,9 +321,26 @@ impl State {
         verify(self.key.as_deref()?, public?).ok()
     }
 
-    /// Le droit d'utiliser LÜMA à `now`, avec la clé publique `public`.
+    /// Le droit d'utiliser LÜMA à `now`, avec la clé publique `public` (les clés ne
+    /// comptent que là où elles sont vendues : [`KEYS_ALLOWED`]).
     pub fn access(&self, now: u64, public: Option<&[u8; 32]>) -> Access {
-        if let Some(c) = self.claims(public)
+        self.access_with(now, public, KEYS_ALLOWED)
+    }
+
+    /// [`State::access`], en disant si les clés comptent (`keys`) ; l'abonnement de
+    /// l'App Store compte toujours.
+    pub fn access_with(&self, now: u64, public: Option<&[u8; 32]>, keys: bool) -> Access {
+        if let Some(s) = &self.store
+            && now < s.until
+        {
+            return Access::Premium {
+                plan: Some(s.plan),
+                email: None,
+                until: s.until,
+            };
+        }
+        if keys
+            && let Some(c) = self.claims(public)
             && now < c.exp
             && c.iat <= now + DAY
         {
@@ -281,13 +358,13 @@ impl State {
             };
         }
         Access::Expired {
-            had_key: self.key.is_some(),
+            had_key: (keys && self.key.is_some()) || self.store.is_some(),
         }
     }
 
     /// Faut‑il demander une clé fraîche ?
     pub fn needs_check(&self, now: u64) -> bool {
-        self.key.is_some() && now.saturating_sub(self.checked_at) >= RECHECK_HOURS * 3600
+        KEYS_ALLOWED && self.key.is_some() && now.saturating_sub(self.checked_at) >= RECHECK_HOURS * 3600
     }
 }
 
@@ -495,6 +572,65 @@ mod tests {
         ));
         assert!(matches!(activate(&mut s, &old, None, 0), Err(Refused::Invalid(_))));
         assert_eq!(s.key, None);
+    }
+
+    #[test]
+    fn app_store_purchases_open_premium_and_renewals_extend_it() {
+        let now = 1_800_000_000;
+        let mut s = State::new(now - 30 * DAY);
+        assert!(matches!(
+            s.access_with(now, None, false),
+            Access::Expired { had_key: false }
+        ));
+        assert!(!record_store(&mut s, "autre.produit", now), "produit inconnu");
+        let monthly = Plan::Monthly.app_store_id();
+        assert!(record_store(&mut s, monthly, now));
+        let until = now + 31 * DAY + GRACE_DAYS * DAY;
+        assert_eq!(
+            s.access_with(now, None, false),
+            Access::Premium {
+                plan: Some(Plan::Monthly),
+                email: None,
+                until
+            }
+        );
+        // Un achat plus ancien (une restauration) ne raccourcit rien ; un renouvellement
+        // allonge.
+        assert!(!record_store(&mut s, monthly, now - 40 * DAY));
+        assert!(record_store(&mut s, monthly, now + 31 * DAY));
+        assert!(s.access_with(until + DAY, None, false).is_allowed());
+        // Passé la fin, l'essai ne revient pas.
+        assert!(matches!(
+            s.access_with(now + 200 * DAY, None, false),
+            Access::Expired { had_key: true }
+        ));
+        // L'état garde l'abonnement.
+        assert_eq!(State::from_json(&s.to_json()), Some(s.clone()));
+    }
+
+    #[test]
+    fn keys_count_only_where_they_are_sold() {
+        let (secret, public) = keypair([7; 32]);
+        let (seed, public) = (from_hex(&secret).unwrap(), from_hex(&public).unwrap());
+        let now = 1_800_000_000;
+        let claims = Claims {
+            sub: "sub_1".into(),
+            email: "a@b.c".into(),
+            plan: Plan::Annual,
+            iat: now,
+            exp: now + 400 * DAY,
+        };
+        let mut s = State::new(now - 30 * DAY);
+        s.key = Some(sign(&claims, &seed));
+        assert!(matches!(
+            s.access_with(now, Some(&public), true),
+            Access::Premium { .. }
+        ));
+        // Sur iPhone et iPad, une clé n'ouvre rien.
+        assert!(matches!(
+            s.access_with(now, Some(&public), false),
+            Access::Expired { .. }
+        ));
     }
 
     #[test]
