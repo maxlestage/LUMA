@@ -328,7 +328,10 @@ pub const PERF: [Perf; 4] = [
         decimals: 0,
         mac_target: 150,
         phone_target: 250,
-        note: Some(("L'aperçu intégré au RAW, aussitôt ; puis le vrai rendu : {v} ms.", 450.0)),
+        note: Some((
+            "L'aperçu intégré au RAW, aussitôt ; puis le vrai rendu : {v} ms.",
+            450.0,
+        )),
     },
     Perf {
         name: "Mémoire pendant la retouche",
