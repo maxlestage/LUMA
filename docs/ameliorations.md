@@ -39,7 +39,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   dans le moteur (`luma-render::export`) et la ligne de commande.
 - [x] 2.2 Modèles de nom : `{date}`, `{nom}`, `{séquence}`, `{boîtier}`, `{note}`…
 - [x] 2.3 Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels.
-- [ ] 2.4 Accentuation de sortie : écran, papier mat, papier brillant ; faible, normale,
+- [x] 2.4 Accentuation de sortie : écran, papier mat, papier brillant ; faible, normale,
   forte.
 - [ ] 2.5 Filigrane texte (police embarquée en Rust) puis logo (PNG), position, taille,
   opacité.
@@ -186,3 +186,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 1.7 (gain de légèreté) Catalogue en binaire compact (`luma-library/src/store.rs`) : table des textes (dossiers, boîtiers, objectifs, mots‑clés écrits une fois), nombres en longueur variable, arbre construit d'un bloc ; ancien JSON relu et converti ; fichier abîmé refusé sans rien allouer | `cargo run --release -p luma-library --example catalog`, 100 000 photos : fichier 33,6 → 7,4 Mo ; relecture 166 → 68 ms ; enregistrement 332 → 121 ms ; recherche inchangée |
 | 2026-10-26 | 2.3 Dimensions d'export (`luma_render::export::Resize`) : grand côté, petit côté, cadre largeur × hauteur, mégapixels, jamais d'agrandissement, calculées sur l'image recadrée ; fenêtre Exporter (choix du mode), préréglages (anciens fichiers `long_edge` relus), `luma develop --resize`, `luma export-preset --size` | Rendu à la taille utile puis réduction exacte : un export « 1920 × 1080 » ou « 12 Mpx » ne rend jamais la pleine définition quand l'image est plus grande |
 | 2026-10-26 | 1.4 Mots‑clés dans l'app : saisie (virgules), ajout et retrait sur toutes les photos choisies (XMP de métadonnées seules pour une photo jamais développée), mots‑clés du dossier avec leur nombre, filtre de la grille ; correction : un XMP qui ne porte que des mots‑clés n'est plus pris pour des réglages | Test de l'interface avec le corpus : deux photos et la photo affichée étiquetées, XMP relus, filtre, retrait ; capture `studio-bibliotheque-mots-cles.png` |
+| 2026-10-26 | 2.4 Accentuation de sortie (`luma_render::export::OutputSharpen`) : écran (rayon 0,5 px), papier brillant et mat (rayon plus large, qui grandit avec l'image), trois intensités, masque des aplats ; appliquée après le redimensionnement ; fenêtre Exporter, préréglages, `--output-sharpen` | Coût sur un export 2048 px : environ +40 ms (NEF, 4 cœurs) ; en pleine définition 24 Mpx : 0,1 à 0,3 s |

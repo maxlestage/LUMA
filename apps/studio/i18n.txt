@@ -385,6 +385,38 @@ fr = Mégapixels
 en = Megapixels
 es = Megapíxeles
 
+fr = Accentuation de sortie
+en = Output sharpening
+es = Enfoque de salida
+
+fr = Aucune
+en = None
+es = Ninguno
+
+fr = Écran
+en = Screen
+es = Pantalla
+
+fr = Papier mat
+en = Matte paper
+es = Papel mate
+
+fr = Papier brillant
+en = Glossy paper
+es = Papel brillante
+
+fr = Faible
+en = Low
+es = Bajo
+
+fr = Normale
+en = Standard
+es = Estándar
+
+fr = Forte
+en = High
+es = Alto
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos

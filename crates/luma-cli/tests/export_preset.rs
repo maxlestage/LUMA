@@ -79,6 +79,14 @@ fn presets_listed_created_and_deleted() {
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", "0"]);
     assert!(ok && out.contains("pleine définition"), "{out}");
 
+    // L'accentuation de sortie.
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--output-sharpen", "matte:high"]);
+    assert!(ok && out.contains("accentuation papier mat, forte"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--output-sharpen", "toile"]);
+    assert!(!ok && out.contains("accentuation inconnue"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--output-sharpen", "none"]);
+    assert!(ok && !out.contains("accentuation"), "{out}");
+
     // Le modèle de nom, vérifié.
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--name", "{date}_{séquence:3}"]);
     assert!(ok, "{out}");
@@ -161,6 +169,28 @@ fn develop_with_a_preset() {
         .map(|e| e.file_name().to_string_lossy().into_owned())
         .collect();
     assert!(files.len() == 1 && files[0].ends_with("_0001.jpg"), "{files:?}");
+
+    // L'accentuation de sortie change l'image, pas sa taille.
+    let plain = dir.join("sans.png");
+    let sharp = dir.join("avec.png");
+    for (out_file, extra) in [(&plain, None), (&sharp, Some("screen:high"))] {
+        let mut args = vec![
+            "develop",
+            raw.to_str().unwrap(),
+            "--no-sidecar",
+            "--resize",
+            "300",
+            "-o",
+            out_file.to_str().unwrap(),
+        ];
+        if let Some(e) = extra {
+            args.extend(["--output-sharpen", e]);
+        }
+        let (ok, out) = luma(&file, &args);
+        assert!(ok, "{out}");
+    }
+    let (a, b) = (std::fs::read(&plain).unwrap(), std::fs::read(&sharp).unwrap());
+    assert!(a != b && a.len().abs_diff(b.len()) < a.len());
 
     // Petit côté, puis un cadre, puis des mégapixels : la taille exacte du JPEG.
     for (resize, check) in [

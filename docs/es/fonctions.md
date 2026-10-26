@@ -88,7 +88,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Ventana Exportar: formato, calidad, profundidad de bits, espacio de color, tamaño, carpeta; exportación de todas las fotos del filtro | ✅ |
 | Ajustes preestablecidos de exportación (formato, calidad, profundidad, espacio, tamaño, carpeta): web, resolución completa, pantalla P3, impresión, y los suyos; `luma export-preset`, `luma develop --preset` | ✅ |
 | Plantillas de nombre de archivo: `{nom}` (o `{nombre}`), `{date}` (`{fecha}`), `{séquence}` (`{secuencia}`), `{boîtier}` (`{cámara}`), `{objectif}` (`{objetivo}`), `{iso}`, `{note}` (`{valoración}`), `{libellé}` (`{etiqueta}`)…, subcarpetas con «/»; en la ventana Exportar, los ajustes preestablecidos y `luma develop --name` | ✅ |
-| Enfoque de salida, marca de agua, copia de los metadatos EXIF | ⏳ |
+| Enfoque de salida: pantalla, papel mate, papel brillante; bajo, estándar, alto; al tamaño final (`--output-sharpen`) | ✅ |
+| Marca de agua, copia de los metadatos EXIF | ⏳ |
 
 ## Biblioteca e interoperabilidad
 

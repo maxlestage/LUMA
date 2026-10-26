@@ -44,6 +44,9 @@ La fototeca profesional, paso a paso.
 - **Dimensiones de exportación**: lado largo, lado corto, ancho × alto (la imagen cabe
   en el marco) o megapíxeles, sin ampliar nunca; en la ventana Exportar, los ajustes
   preestablecidos y `luma develop --resize short:1080`.
+- **Enfoque de salida**: para pantalla, papel mate o papel brillante, bajo, estándar o
+  alto, aplicado a la imagen en su tamaño final (en papel, el radio sigue el tamaño de
+  la copia); las zonas lisas siguen lisas.
 
 ## 0.2.0 — octubre de 2026
 
