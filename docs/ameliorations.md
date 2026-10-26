@@ -21,7 +21,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   LÜMA), en‑têtes lus sans décoder (date EXIF, boîtier, objectif, ISO, ouverture,
   vitesse, focale), note, drapeau, libellé, mots‑clés du XMP ; mise à jour
   incrémentale ; tri par date de prise de vue ; `luma catalog`.
-- [ ] 1.2 Requêtes : recherche texte (nom, boîtier, objectif, mots‑clés) et filtres
+- [x] 1.2 Requêtes : recherche texte (nom, boîtier, objectif, mots‑clés) et filtres
   (note, drapeau, libellé, plages de date, d'ISO, de focale) dans `luma-library`, testés.
 - [ ] 1.3 Collections manuelles et dynamiques (règles : note, date, boîtier, objectif,
   ISO), enregistrées dans le catalogue ; `luma catalog --collection`.
@@ -167,3 +167,4 @@ et blanc, vignetage après recadrage et grain existent).
 |---|---|---|
 | 2026-10-26 | 1.1 Catalogue local (`luma-library`, `luma catalog`) ; mots‑clés XMP `dc:subject` lus et écrits ; entités XML (`&amp;`…) bien relues dans les listes XMP | Corpus de 5 RAW : indexé en 94 ms (en‑têtes seuls, 4 cœurs) contre environ 300 ms pour décoder un seul RAW ; mise à jour sans changement : moins de 1 ms ; index de 1,6 Ko |
 | 2026-10-26 | Vignettes instantanées : l'aperçu intégré au RAW (lecture du début du fichier, JPEG décodé réduit, orientation TIFF), puis le vrai rendu ; vignettes rendues enregistrées sans perte (QOI) dans le dossier des doublons, refaites seulement si la photo, ses réglages ou le moteur changent | Mac (CI, Metal, 5 RAW) : vignette affichée en 15 ms (médiane) au lieu de 154 ms ; vignette déjà rendue relue en 0,6 ms au lieu d'environ 460 ms (Linux), identique au pixel près |
+| 2026-10-26 | 1.2 Recherche et filtres du catalogue (`luma_library::Query`, `luma catalog --search`, `--keywords`) : mots sans accents, note, drapeau, libellé, dates partielles, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers, objectifs | Catalogue synthétique de 100 000 photos : filtres combinés 65 ms → 4 ms ; mot libre 82 ms → 14–25 ms (comparaison sans allocation, filtrage sur 4 cœurs) ; chargement de l'index JSON (34 Mo) : 314 ms, à alléger (étape 1.7) |

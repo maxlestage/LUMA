@@ -97,7 +97,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
 | Catalogue local (`luma catalog`) : dossiers et sous‑dossiers, date de prise de vue, boîtier, objectif, ISO lus dans l'en‑tête sans décoder l'image, mise à jour incrémentale, tri par date | ✅ |
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
-| Catalogue dans l'app, collections, recherche et filtres, copies virtuelles | ⏳ |
+| Recherche et filtres (`luma catalog --search`) : mots sans tenir compte des accents ; note, drapeau, libellé, dates, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers et objectifs | ✅ |
+| Catalogue dans l'app, collections, copies virtuelles | ⏳ |
 | Import de catalogues existants | ⏳ |
 
 ## Ce qui distingue LÜMA

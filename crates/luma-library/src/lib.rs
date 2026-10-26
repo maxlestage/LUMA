@@ -10,6 +10,8 @@
 //! la date de modification sont celles de l'index, avec un XMP inchangé, n'est pas
 //! rouvert. Les en‑têtes sont lus en parallèle, sans décoder les pixels.
 
+pub mod query;
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
@@ -17,6 +19,8 @@ use std::time::UNIX_EPOCH;
 use luma_project::xmp::{self, Flag, Meta};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+
+pub use query::Query;
 
 /// La version du format de l'index ; un index d'une autre version est reconstruit.
 const VERSION: u32 = 1;
@@ -173,9 +177,32 @@ impl Catalog {
     /// Les photos de la plus ancienne à la plus récente (date de prise de vue, puis
     /// chemin).
     pub fn by_date(&self) -> Vec<&Entry> {
-        let mut v: Vec<&Entry> = self.entries.values().collect();
-        v.sort_by(|a, b| a.date.cmp(&b.date).then_with(|| a.path.cmp(&b.path)));
+        self.search(&Query::default())
+    }
+
+    /// Les photos qui répondent à la recherche, par date de prise de vue.
+    pub fn search(&self, query: &Query) -> Vec<&Entry> {
+        let all: Vec<&Entry> = self.entries.values().collect();
+        let mut v: Vec<&Entry> = all.into_par_iter().filter(|e| query.matches(e)).collect();
+        v.par_sort_unstable_by(|a, b| a.date.cmp(&b.date).then_with(|| a.path.cmp(&b.path)));
         v
+    }
+
+    /// Les mots‑clés du catalogue et leur nombre de photos, par ordre alphabétique
+    /// sans tenir compte des majuscules ni des accents (« été » et « Été » ne font
+    /// qu'un, rangé à « e »).
+    pub fn keywords(&self) -> Vec<(String, usize)> {
+        facet(self.entries.values().flat_map(|e| e.keywords.iter().cloned()))
+    }
+
+    /// Les boîtiers du catalogue et leur nombre de photos.
+    pub fn cameras(&self) -> Vec<(String, usize)> {
+        facet(self.entries.values().map(Entry::camera).filter(|c| !c.is_empty()))
+    }
+
+    /// Les objectifs du catalogue et leur nombre de photos.
+    pub fn lenses(&self) -> Vec<(String, usize)> {
+        facet(self.entries.values().map(|e| e.lens.clone()).filter(|l| !l.is_empty()))
     }
 
     /// Les dossiers du catalogue, sans doublon.
@@ -256,6 +283,16 @@ impl Catalog {
             e.set_meta(read_meta(&side));
         }
     }
+}
+
+/// Compte des valeurs, regroupées sans tenir compte des majuscules ni des accents ;
+/// chaque groupe garde la première graphie rencontrée.
+fn facet(values: impl Iterator<Item = String>) -> Vec<(String, usize)> {
+    let mut groups: BTreeMap<String, (String, usize)> = BTreeMap::new();
+    for v in values {
+        groups.entry(query::fold(&v)).or_insert_with(|| (v, 0)).1 += 1;
+    }
+    groups.into_values().collect()
 }
 
 /// Les photos d'un dossier.
@@ -483,5 +520,43 @@ mod tests {
             ..Entry::default()
         };
         assert_eq!(e.camera(), "Sony ILCE-7M3");
+    }
+
+    #[test]
+    fn search_and_facets() {
+        let mut cat = Catalog::default();
+        for (name, date, model, keywords) in [
+            ("a.arw", "2024-06-02T10:00:00", "ILCE-7M3", vec!["Mer", "Été"]),
+            ("b.arw", "2024-06-01T10:00:00", "ILCE-7M3", vec!["mer"]),
+            ("c.arw", "2025-01-01T10:00:00", "ILCE-1", vec!["Montagne", "été"]),
+        ] {
+            let e = Entry {
+                path: name.into(),
+                date: date.into(),
+                make: "Sony".into(),
+                model: model.into(),
+                keywords: keywords.into_iter().map(String::from).collect(),
+                ..Entry::default()
+            };
+            cat.entries.insert(e.path.clone(), e);
+        }
+        let found = |q: &str| -> Vec<String> {
+            cat.search(&Query::parse(q).unwrap())
+                .iter()
+                .map(|e| e.path.display().to_string())
+                .collect()
+        };
+        assert_eq!(found("mer"), ["b.arw", "a.arw"], "par date de prise de vue");
+        assert_eq!(found("ete date:2025"), ["c.arw"]);
+        assert_eq!(found(""), ["b.arw", "a.arw", "c.arw"]);
+        assert_eq!(
+            cat.keywords(),
+            [("Été".to_owned(), 2), ("Mer".to_owned(), 2), ("Montagne".to_owned(), 1)]
+        );
+        assert_eq!(
+            cat.cameras(),
+            [("Sony ILCE-1".to_owned(), 1), ("Sony ILCE-7M3".to_owned(), 2)]
+        );
+        assert!(cat.lenses().is_empty());
     }
 }
