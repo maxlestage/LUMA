@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 use egui::{Key, Modifiers};
 use egui_kittest::Harness;
+use egui_kittest::kittest::Queryable;
 use luma_studio::Studio;
 use luma_studio::app::{Module, View};
 
@@ -398,6 +399,14 @@ fn saturation(image: &image::RgbaImage) -> f64 {
     sum as f64 / f64::from(w * h)
 }
 
+/// La part du centre de la photo peinte de la couleur de l'alerte de gamut.
+fn alert_share(image: &image::RgbaImage) -> f64 {
+    let crop = image::imageops::crop_imm(image, 300, 200, 600, 450).to_image();
+    let alert = luma_color::proof::ALERT;
+    let n = crop.pixels().filter(|p| p.0[..3] == alert).count();
+    n as f64 / f64::from(600 * 450)
+}
+
 /// Le profil sRGB aux primaires rapprochées du blanc : une « imprimante » plus terne.
 fn dull_profile() -> Vec<u8> {
     let mut bytes = luma_color::icc::profile(luma_color::OutputSpace::Srgb);
@@ -460,6 +469,17 @@ fn soft_proofing_shows_the_print() {
         (back - before).abs() < before * 0.02,
         "{before:.2} → {back:.2}"
     );
+    // L'alerte de gamut : les couleurs trop vives pour le profil étroit passent au bleu
+    // de l'alerte, sans simulation.
+    s.studio().set_gamut_alert(true);
+    assert!(s.studio().gamut_alert() && !s.studio().proofing_active());
+    s.wait();
+    s.capture("alerte-gamut");
+    let alerted = alert_share(&s.harness.render().unwrap());
+    assert!(alerted > 0.05, "{alerted:.3} de la photo en alerte");
+    s.studio().set_gamut_alert(false);
+    s.wait();
+    assert!(alert_share(&s.harness.render().unwrap()) < 0.001);
     // Un fichier qui n'est pas un profil est refusé sans rien casser.
     let junk = dir.join("faux.icc");
     std::fs::write(&junk, b"pas un profil").unwrap();
@@ -511,6 +531,35 @@ fn masks_linear_and_radial() {
     s.capture("masques-zone");
     assert_eq!(s.studio().settings.masks.len(), 2);
     assert_eq!(s.studio().selected_mask, Some(1));
+}
+
+#[test]
+fn masks_combined() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("masques-combines") else {
+        return;
+    };
+    // Un radial éclairci dont on retire un autre radial : un anneau, vu en rouge.
+    s.keys(&[(Modifiers::SHIFT, Key::M)]);
+    let st = s.studio();
+    st.settings.masks[0].local.exposure = 1.0;
+    st.settings.masks[0].parts.push(luma_project::Part {
+        combine: luma_project::Combine::Subtract,
+        shape: luma_project::Shape::Radial {
+            center: (0.5, 0.5),
+            radius: (0.12, 0.12),
+            angle: 0.0,
+            feather: 30.0,
+        },
+        invert: false,
+    });
+    st.selected_part = Some((0, 0));
+    s.wait();
+    s.keys(&[(NONE, Key::O)]);
+    s.capture("masques-combines");
+    let st = s.studio();
+    assert_eq!(st.settings.masks[0].parts.len(), 1);
+    assert_eq!(st.selected_part, Some((0, 0)));
 }
 
 #[test]
@@ -734,4 +783,45 @@ fn targeted_adjustment_moves_the_color_under_the_pointer() {
     assert!((moved.iter().sum::<f32>() - 40.0).abs() < 1.0, "{moved:?}");
     assert!(st.settings.hsl.saturation.iter().all(|v| *v == 0.0));
     s.capture("ciblage");
+}
+
+/// Le copier‑coller sélectif : les réglages d'une photo copiés, la photo suivante
+/// ouverte, « Coller… » : par défaut, tout sauf le recadrage et les masques.
+#[test]
+fn selective_paste_keeps_the_framing_of_each_photo() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("coller") else {
+        return;
+    };
+    let first = s.studio().current_path().unwrap().to_path_buf();
+    {
+        let st = s.studio();
+        st.settings.exposure = 0.8;
+        st.settings.vibrance = 25.0;
+        st.settings.crop = luma_project::Crop {
+            left: 0.2,
+            ..luma_project::Crop::default()
+        };
+    }
+    s.keys(&[
+        (Modifiers::COMMAND | Modifiers::SHIFT, Key::C),
+        (NONE, Key::ArrowLeft),
+    ]);
+    s.wait();
+    assert_ne!(s.studio().current_path().unwrap(), first, "une autre photo");
+    s.keys(&[(
+        Modifiers::COMMAND | Modifiers::SHIFT | Modifiers::ALT,
+        Key::V,
+    )]);
+    s.capture("coller");
+    s.harness.get_by_label("Coller (12)").click();
+    s.harness.step();
+    s.wait();
+    let st = s.studio();
+    assert_eq!((st.settings.exposure, st.settings.vibrance), (0.8, 25.0));
+    assert_eq!(
+        st.settings.crop,
+        luma_project::Crop::default(),
+        "le recadrage reste le sien"
+    );
 }

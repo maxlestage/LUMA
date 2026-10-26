@@ -169,6 +169,30 @@ pub struct Mask {
     /// Pinceau : la zone suit les bords de la photo (filtre guidé par sa clarté).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub edges: bool,
+    /// D'autres formes combinées à la première : ajoutées, retirées ou en intersection.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parts: Vec<Part>,
+}
+
+/// Comment une partie se combine à la zone du masque.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Combine {
+    /// La zone s'étend à la partie.
+    Add,
+    /// La partie est retirée de la zone.
+    Subtract,
+    /// Seul ce qui est dans les deux reste.
+    Intersect,
+}
+
+/// Une partie d'un masque combiné : une forme, éventuellement inversée.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Part {
+    pub combine: Combine,
+    pub shape: Shape,
+    #[serde(default)]
+    pub invert: bool,
 }
 
 fn full() -> f32 {
@@ -190,6 +214,7 @@ impl Mask {
             look: None,
             range: None,
             edges: false,
+            parts: Vec::new(),
         }
     }
 
@@ -209,6 +234,7 @@ impl Mask {
             look: None,
             range: None,
             edges: false,
+            parts: Vec::new(),
         }
     }
 
@@ -223,6 +249,7 @@ impl Mask {
             look: None,
             range: None,
             edges: false,
+            parts: Vec::new(),
         }
     }
 
@@ -237,6 +264,7 @@ impl Mask {
             look: None,
             range: None,
             edges: false,
+            parts: Vec::new(),
         }
     }
 
