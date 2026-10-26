@@ -104,6 +104,10 @@ La photothèque professionnelle, étape par étape.
 - **Pinceau qui suit les bords** : cochez « Suivre les bords » et le pinceau ne peint
   que les tons proches du centre de chaque touche ; la zone s'arrête au contour d'un
   ciel, d'un mur, d'un visage, sans déborder.
+- **Combinaisons de masques** : « Combiner » ajoute, soustrait ou garde l'intersection
+  d'une autre forme (dégradé linéaire, radial, pinceau, chacune inversable) ; un
+  radial dont on retire un autre devient un anneau, un pinceau soustrait épargne un
+  visage sous un dégradé.
 - **Profils ICC lus** (étape vers l'épreuvage à l'écran) : profils des écrans
   (matrice et courbes) et des imprimantes et papiers (tables lut8, lut16, A→B et
   B→A, versions 2 et 4), dans les deux sens et pour les quatre intentions de rendu,
