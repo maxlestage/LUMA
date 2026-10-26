@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 use egui::{Key, Modifiers};
 use egui_kittest::Harness;
+use egui_kittest::kittest::Queryable;
 use luma_studio::Studio;
 use luma_studio::app::{Module, View};
 
@@ -782,4 +783,45 @@ fn targeted_adjustment_moves_the_color_under_the_pointer() {
     assert!((moved.iter().sum::<f32>() - 40.0).abs() < 1.0, "{moved:?}");
     assert!(st.settings.hsl.saturation.iter().all(|v| *v == 0.0));
     s.capture("ciblage");
+}
+
+/// Le copier‑coller sélectif : les réglages d'une photo copiés, la photo suivante
+/// ouverte, « Coller… » : par défaut, tout sauf le recadrage et les masques.
+#[test]
+fn selective_paste_keeps_the_framing_of_each_photo() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("coller") else {
+        return;
+    };
+    let first = s.studio().current_path().unwrap().to_path_buf();
+    {
+        let st = s.studio();
+        st.settings.exposure = 0.8;
+        st.settings.vibrance = 25.0;
+        st.settings.crop = luma_project::Crop {
+            left: 0.2,
+            ..luma_project::Crop::default()
+        };
+    }
+    s.keys(&[
+        (Modifiers::COMMAND | Modifiers::SHIFT, Key::C),
+        (NONE, Key::ArrowLeft),
+    ]);
+    s.wait();
+    assert_ne!(s.studio().current_path().unwrap(), first, "une autre photo");
+    s.keys(&[(
+        Modifiers::COMMAND | Modifiers::SHIFT | Modifiers::ALT,
+        Key::V,
+    )]);
+    s.capture("coller");
+    s.harness.get_by_label("Coller (12)").click();
+    s.harness.step();
+    s.wait();
+    let st = s.studio();
+    assert_eq!((st.settings.exposure, st.settings.vibrance), (0.8, 25.0));
+    assert_eq!(
+        st.settings.crop,
+        luma_project::Crop::default(),
+        "le recadrage reste le sien"
+    );
 }
