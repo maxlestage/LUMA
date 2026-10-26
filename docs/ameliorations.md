@@ -155,6 +155,11 @@ et blanc, vignetage après recadrage et grain existent).
 
 ## Idées
 
+- Corriger l'objectif sur l'aperçu déjà réduit (idée de la session principale) : mesuré
+  70 à 100 ms plus rapide au premier aperçu (ARW 278–341 → 201–225 ms, ORF, RW2), mais
+  le détail fin s'adoucit (écart de 5,9 % sur la texture du Sony à 1600 px, 0,04 % sur
+  une image lisse : la géométrie est juste, c'est l'interpolation bilinéaire à basse
+  résolution). Pas livré ; à reprendre avec un échantillonnage bicubique, ou sur le GPU.
 - Corrections d'objectif sur le GPU : la correction des Sony coûte environ 150 ms sur
   l'aperçu de 6 Mpx et 0,6 s en pleine taille à la première ouverture (ensuite, le
   doublon de travail est déjà corrigé).
