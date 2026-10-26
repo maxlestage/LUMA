@@ -54,7 +54,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
 | Outils | Recadrage et redressement (angle libre), outil à l'écran avec proportions verrouillées (R) | ✅ |
 | | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté | ✅ |
-| | Masques restreints à une plage de luminance (minimum, maximum, fondu) ou de couleur (teinte, largeur, fondu ; gris laissés), lue en OKLab sur la photo ; zone affichée (O) | ✅ |
+| | Masques restreints à une plage de luminance (minimum, maximum, fondu) ou de couleur (teinte, largeur, fondu ; gris laissés), lue sur la photo ; zone affichée (O) | ✅ |
 | | Pinceau qui suit les bords, combinaisons ; lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Correcteur, tampon, yeux rouges, suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
@@ -74,10 +74,10 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 
 | Fonction | État |
 |---|---|
-| RAW Bayer : Sony ARW, Canon CR3, Nikon NEF (et les autres formats lus par rawler) | ✅ 3 boîtiers vérifiés en continu |
+| RAW Bayer : Sony ARW, Canon CR3, Nikon NEF (et les autres formats RAW courants) | ✅ 3 boîtiers vérifiés en continu |
 | RAW X‑Trans (Fujifilm) | ✅ dématriçage dédié |
 | DNG linéaire, Apple ProRAW (avec `BaselineExposure`) | ✅ |
-| Images développées : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG (Rust pur) ; HEIC, HEIF, AVIF (ImageIO d'Apple) ; extension inconnue lue d'après le contenu | ✅ profil « Original » : identique à l'ouverture |
+| Images développées : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG ; HEIC, HEIF, AVIF (ImageIO d'Apple) ; extension inconnue lue d'après le contenu | ✅ profil « Original » : identique à l'ouverture |
 | Couleur DNG : deux matrices interpolées selon la température | ✅ |
 | Pipeline en virgule flottante 32 bits, espace de travail Rec. 2020 linéaire | ✅ |
 | Hautes lumières saturées au capteur rendues neutres (pas de ciel rose) | ✅ |
