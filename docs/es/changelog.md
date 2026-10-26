@@ -119,6 +119,10 @@ La fototeca profesional, paso a paso.
 - **Aviso de gama** (en la prueba en pantalla): los colores que la impresora no podrá
   reproducir se vuelven azules en la vista previa, con o sin la simulación de la
   impresión.
+- **Papel y tinta negra** (en la prueba en pantalla): «Color del papel» muestra el
+  tono y la luminosidad del papel, «Tinta negra» el negro real de la tinta, más claro
+  que el de la pantalla; sin ellas, el blanco del papel y el negro de la tinta se
+  llevan al blanco y al negro de la pantalla.
 
 ## 0.2.0 — octubre de 2026
 

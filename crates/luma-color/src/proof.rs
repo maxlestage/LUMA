@@ -7,11 +7,16 @@
 //! rapprochées comme le fera l'impression. Le tout est calculé une fois, dans une
 //! table 3D, puis appliqué à l'aperçu par interpolation.
 //!
+//! Le papier et l'encre : par défaut, le blanc du papier et le noir le plus profond de
+//! l'encre sont ramenés au blanc et au noir de l'écran ; avec [`Media::ink`], le noir
+//! imprimé garde sa vraie densité, avec [`Media::paper`] le papier garde son ton et sa
+//! luminosité (colorimétrie absolue).
+//!
 //! L'alerte de gamut : une couleur que l'imprimante ne sait pas rendre ne revient pas
 //! d'un aller et retour en colorimétrique relative ; au‑delà d'un écart de
 //! [`GAMUT_DELTA_E`], elle est signalée.
 
-use crate::profile::{Error, Intent, Profile, xyz_to_lab};
+use crate::profile::{Error, Intent, PCS_WHITE, Profile, xyz_to_lab};
 use crate::{D50, SRGB, Vec3, apply, bradford, inverse, mul, rgb_to_xyz, srgb_decode, srgb_encode};
 
 /// Les nœuds de la table sur chaque axe.
@@ -34,18 +39,40 @@ pub struct Proof {
     table: Vec<[f32; 4]>,
 }
 
+/// Ce que l'écran montre du papier et de l'encre.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Media {
+    /// Le ton et la luminosité du papier (colorimétrie absolue) ; l'encre noire suit.
+    pub paper: bool,
+    /// Le noir réel de l'encre, plus clair que celui de l'écran. Sans cela, le noir
+    /// imprimé est ramené au noir de l'écran (compensation du point noir).
+    pub ink: bool,
+}
+
 impl Proof {
     pub fn new(profile: &Profile, intent: Intent) -> Result<Self, Error> {
+        Self::with_media(profile, intent, Media::default())
+    }
+
+    pub fn with_media(profile: &Profile, intent: Intent, media: Media) -> Result<Self, Error> {
         if !profile.writes() || !profile.reads() {
             return Err(NOT_BOTH_WAYS);
         }
         let to_pcs = mul(&bradford(SRGB.white, D50), &rgb_to_xyz(&SRGB));
         let from_pcs = inverse(&to_pcs).expect("matrice du sRGB");
-        let round_trip = |xyz: Vec3, intent: Intent| {
-            profile
-                .from_pcs(xyz, intent)
-                .and_then(|device| profile.to_pcs(&device, Intent::Relative))
-                .ok_or(NOT_BOTH_WAYS)
+        let device = |xyz: Vec3, intent: Intent| profile.from_pcs(xyz, intent).ok_or(NOT_BOTH_WAYS);
+        let read = |device: &[f32], intent: Intent| profile.to_pcs(device, intent).ok_or(NOT_BOTH_WAYS);
+        // Le noir le plus profond de l'imprimante, relu en colorimétrie relative.
+        let black = read(&device([0.0; 3], Intent::Relative)?, Intent::Relative)?;
+        let compensate = |v: Vec3| {
+            [0, 1, 2].map(|i| {
+                let range = PCS_WHITE[i] - black[i];
+                if range > 1e-3 {
+                    (v[i] - black[i]) / range * PCS_WHITE[i]
+                } else {
+                    v[i]
+                }
+            })
         };
         let g = (GRID - 1) as f32;
         let mut table = Vec::with_capacity(GRID * GRID * GRID);
@@ -54,15 +81,25 @@ impl Proof {
                 for b in 0..GRID {
                     let rgb = [r, gr, b].map(|v| srgb_decode(v as f32 / g));
                     let xyz = apply(&to_pcs, rgb);
-                    let printed = round_trip(xyz, intent)?;
-                    let exact = if intent == Intent::Relative {
-                        printed
+                    let ink = device(xyz, intent)?;
+                    let relative = read(&ink, Intent::Relative)?;
+                    let shown = if media.paper {
+                        read(&ink, Intent::Absolute)?
+                    } else if media.ink {
+                        relative
                     } else {
-                        round_trip(xyz, Intent::Relative)?
+                        compensate(relative)
+                    };
+                    // L'alerte de gamut compare la couleur à son aller et retour en
+                    // colorimétrie relative, quelle que soit l'intention affichée.
+                    let exact = if intent == Intent::Relative {
+                        relative
+                    } else {
+                        read(&device(xyz, Intent::Relative)?, Intent::Relative)?
                     };
                     let (a, e) = (xyz_to_lab(xyz), xyz_to_lab(exact));
                     let delta = ((a[0] - e[0]).powi(2) + (a[1] - e[1]).powi(2) + (a[2] - e[2]).powi(2)).sqrt();
-                    let [pr, pg, pb] = apply(&from_pcs, printed).map(|v| srgb_encode(v.clamp(0.0, 1.0)));
+                    let [pr, pg, pb] = apply(&from_pcs, shown).map(|v| srgb_encode(v.clamp(0.0, 1.0)));
                     table.push([pr, pg, pb, if delta > GAMUT_DELTA_E { 1.0 } else { 0.0 }]);
                 }
             }

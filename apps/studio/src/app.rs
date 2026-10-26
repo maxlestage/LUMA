@@ -414,6 +414,8 @@ struct Proofing {
     description: String,
     profile: Option<luma_color::profile::Profile>,
     relative: bool,
+    /// Ce que l'écran montre du papier et de l'encre noire.
+    media: luma_color::proof::Media,
     table: Option<Arc<luma_color::proof::Proof>>,
     error: Option<&'static str>,
     version: u64,
@@ -442,7 +444,7 @@ impl Proofing {
         self.version += 1;
         self.table = None;
         if let Some(p) = &self.profile {
-            match luma_color::proof::Proof::new(p, self.intent()) {
+            match luma_color::proof::Proof::with_media(p, self.intent(), self.media) {
                 Ok(t) => {
                     self.table = Some(Arc::new(t));
                     self.error = None;
@@ -4715,6 +4717,18 @@ impl Studio {
         }
     }
 
+    /// Montre le ton du papier (l'encre noire suit) ou seulement le noir de l'encre.
+    pub fn set_proof_media(&mut self, paper: bool, ink: bool) {
+        let media = luma_color::proof::Media {
+            paper,
+            ink: ink || paper,
+        };
+        if media != self.proofing.media {
+            self.proofing.media = media;
+            self.proofing.build();
+        }
+    }
+
     pub fn proofing_active(&self) -> bool {
         self.proofing.active().is_some_and(|p| p.simulate)
     }
@@ -4743,6 +4757,25 @@ impl Studio {
                         ));
                     });
                 });
+                let mut media = self.proofing.media;
+                ui.add_enabled_ui(self.proofing.table.is_some() && on, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut media.paper, tr("Couleur du papier"))
+                            .on_hover_text(tr(
+                                "Le ton et la luminosité du papier ; le noir de l'encre suit",
+                            ));
+                        ui.add_enabled_ui(!media.paper, |ui| {
+                            let mut ink = media.ink || media.paper;
+                            ui.checkbox(&mut ink, tr("Encre noire")).on_hover_text(tr(
+                                "Le vrai noir de l'encre, plus clair que celui de l'écran",
+                            ));
+                            media.ink = ink;
+                        });
+                    });
+                });
+                if media != self.proofing.media {
+                    self.set_proof_media(media.paper, media.ink);
+                }
                 ui.horizontal(|ui| {
                     if ui.button(tr("Choisir un profil ICC…")).clicked()
                         && let Some(path) = crate::dialogs::pick_icc()

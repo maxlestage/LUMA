@@ -89,6 +89,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | ICC profiles read (versions 2 and 4): matrix and curves, lut8, lut16, A→B and B→A tables of printers and papers, four rendering intents (`luma icc`) | ✅ |
 | On-screen soft proofing: the preview as it will print with a printer profile, perceptual or relative colorimetric intent (histogram included) | ✅ |
 | Gamut warning: the colors the printer will not be able to reproduce, shown in blue on the preview (relative colorimetric round trip, beyond ΔE 3) | ✅ |
+| Paper simulation (tone and brightness, absolute colorimetric) and black ink simulation (its real black); without them, black point compensation | ✅ |
 
 ## Export
 
