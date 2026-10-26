@@ -399,6 +399,54 @@ struct Request {
     settings: Settings,
     size: Size,
     clipping: bool,
+    /// La version de la table d'épreuvage, s'il est actif.
+    proof: Option<u64>,
+}
+
+/// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
+/// table qui en découle. Une vue, pas un réglage : rien n'est écrit dans le XMP.
+#[derive(Default)]
+struct Proofing {
+    on: bool,
+    path: Option<PathBuf>,
+    description: String,
+    profile: Option<luma_color::profile::Profile>,
+    relative: bool,
+    table: Option<Arc<luma_color::proof::Proof>>,
+    error: Option<&'static str>,
+    version: u64,
+}
+
+impl Proofing {
+    fn active(&self) -> Option<Arc<luma_color::proof::Proof>> {
+        self.table.clone().filter(|_| self.on)
+    }
+
+    fn intent(&self) -> luma_color::profile::Intent {
+        if self.relative {
+            luma_color::profile::Intent::Relative
+        } else {
+            luma_color::profile::Intent::Perceptual
+        }
+    }
+
+    /// Calcule la table (quelques dizaines de millisecondes).
+    fn build(&mut self) {
+        self.version += 1;
+        self.table = None;
+        if let Some(p) = &self.profile {
+            match luma_color::proof::Proof::new(p, self.intent()) {
+                Ok(t) => {
+                    self.table = Some(Arc::new(t));
+                    self.error = None;
+                }
+                Err(_) => {
+                    self.error = Some("Ce profil ne sait pas convertir vers l'imprimante");
+                    self.on = false;
+                }
+            }
+        }
+    }
 }
 
 pub struct Studio {
@@ -421,6 +469,7 @@ pub struct Studio {
     render_gpu: bool,
     before: bool,
     clipping: bool,
+    proofing: Proofing,
     zoom: bool,
     thumbs: HashMap<PathBuf, TextureHandle>,
     /// La dernière vérification de la mémoire laissée par le système (iPhone, iPad).
@@ -606,6 +655,7 @@ impl Studio {
             render_gpu: false,
             before: false,
             clipping: false,
+            proofing: Proofing::default(),
             zoom: false,
             thumbs: HashMap::new(),
             memory_check: 0.0,
@@ -1558,6 +1608,7 @@ impl Studio {
             settings,
             size,
             clipping: self.clipping,
+            proof: self.proofing.active().map(|_| self.proofing.version),
         };
         if self.last_request.as_ref() == Some(&request) {
             return;
@@ -1569,6 +1620,7 @@ impl Studio {
             size,
             self.generation,
             self.clipping,
+            self.proofing.active(),
         );
         self.last_request = Some(request);
     }
@@ -4007,6 +4059,9 @@ impl Studio {
         if self.clipping {
             badges.push(tr("Écrêtage (J)"));
         }
+        if self.proofing.active().is_some() {
+            badges.push(tr("Épreuvage à l'écran"));
+        }
         if self.eyedropper {
             badges.push(tr("Pipette : cliquez un gris ou un blanc de la photo"));
         } else if self.targeting {
@@ -4450,6 +4505,83 @@ impl Studio {
             });
     }
 
+    /// Choisit le profil d'imprimante de l'épreuvage et l'active.
+    pub fn load_proof_profile(&mut self, path: &Path) {
+        let parsed = std::fs::read(path)
+            .ok()
+            .and_then(|b| luma_color::profile::Profile::parse(&b).ok());
+        let Some(profile) = parsed else {
+            self.proofing.error = Some("Profil ICC illisible");
+            return;
+        };
+        self.proofing.description = if profile.description.is_empty() {
+            file_name(path)
+        } else {
+            profile.description.clone()
+        };
+        self.proofing.path = Some(path.to_path_buf());
+        self.proofing.profile = Some(profile);
+        self.proofing.on = true;
+        self.proofing.build();
+    }
+
+    /// Active ou coupe l'épreuvage, et choisit l'intention de rendu.
+    pub fn set_proofing(&mut self, on: bool, relative: bool) {
+        let rebuild = relative != self.proofing.relative;
+        self.proofing.relative = relative;
+        self.proofing.on = on && self.proofing.profile.is_some();
+        if rebuild {
+            self.proofing.build();
+        }
+    }
+
+    pub fn proofing_active(&self) -> bool {
+        self.proofing.active().is_some()
+    }
+
+    fn proofing_panel(&mut self, ui: &mut Ui) {
+        egui::CollapsingHeader::new(RichText::new(tr("Épreuvage à l'écran")).strong())
+            .id_salt("Épreuvage à l'écran")
+            .default_open(self.proofing.profile.is_some())
+            .show(ui, |ui| {
+                let (mut on, mut relative) = (self.proofing.on, self.proofing.relative);
+                ui.add_enabled_ui(self.proofing.table.is_some(), |ui| {
+                    ui.checkbox(&mut on, tr("Simuler l'impression"));
+                });
+                ui.horizontal(|ui| {
+                    if ui.button(tr("Choisir un profil ICC…")).clicked()
+                        && let Some(path) = crate::dialogs::pick_icc()
+                    {
+                        self.load_proof_profile(&path);
+                        on = self.proofing.on;
+                    }
+                    let name = if self.proofing.profile.is_some() {
+                        self.proofing.description.clone()
+                    } else {
+                        tr("Aucun profil choisi").to_owned()
+                    };
+                    ui.label(RichText::new(name).color(theme::DIM));
+                });
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(tr("Intention")).color(theme::DIM));
+                    ui.selectable_value(&mut relative, false, tr("Perceptuelle"))
+                        .on_hover_text(tr(
+                            "Toutes les couleurs sont rapprochées pour que celles hors de portée de l'encre gardent leurs nuances",
+                        ));
+                    ui.selectable_value(&mut relative, true, tr("Colorimétrique relative"))
+                        .on_hover_text(tr(
+                            "Les couleurs imprimables restent exactes, les autres sont ramenées au plus près",
+                        ));
+                });
+                if let Some(e) = self.proofing.error {
+                    ui.label(RichText::new(tr(e)).color(theme::DIM));
+                }
+                if (on, relative) != (self.proofing.on, self.proofing.relative) {
+                    self.set_proofing(on, relative);
+                }
+            });
+    }
+
     fn develop_panels(&mut self, ui: &mut Ui) {
         let mut commits: Vec<String> = Vec::new();
         let keep = |l: Option<String>, commits: &mut Vec<String>| {
@@ -4462,6 +4594,7 @@ impl Studio {
         widgets::histogram(ui, &self.histogram, &mut self.clipping)
             .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
         ui.add_space(6.0);
+        self.proofing_panel(ui);
 
         if self.tool == Tool::Masks {
             self.masks_panel(ui, &mut commits);

@@ -2544,3 +2544,57 @@ es = Máscara {mask}: rango {kind}
 fr = Masque {mask} : plage
 en = Mask {mask}: range
 es = Máscara {mask}: rango
+
+# ----- Épreuvage à l'écran -----
+
+fr = Épreuvage à l'écran
+en = Soft proofing
+es = Prueba en pantalla
+
+fr = Simuler l'impression
+en = Simulate print
+es = Simular la impresión
+
+fr = Choisir un profil ICC…
+en = Choose an ICC profile…
+es = Elegir un perfil ICC…
+
+fr = Aucun profil choisi
+en = No profile chosen
+es = Ningún perfil elegido
+
+fr = Intention
+en = Intent
+es = Intención
+
+fr = Perceptuelle
+en = Perceptual
+es = Perceptual
+
+fr = Colorimétrique relative
+en = Relative colorimetric
+es = Colorimétrico relativo
+
+fr = Toutes les couleurs sont rapprochées pour que celles hors de portée de l'encre gardent leurs nuances
+en = All colors are compressed together so that those beyond the ink's reach keep their gradations
+es = Todos los colores se acercan para que los que están fuera del alcance de la tinta conserven sus matices
+
+fr = Les couleurs imprimables restent exactes, les autres sont ramenées au plus près
+en = Printable colors stay exact; the others are brought to the nearest printable colour
+es = Los colores imprimibles se mantienen exactos; los demás se llevan al más cercano
+
+fr = Profil ICC illisible
+en = Unreadable ICC profile
+es = Perfil ICC ilegible
+
+fr = Ce profil ne sait pas convertir vers l'imprimante
+en = This profile cannot convert to the printer
+es = Este perfil no puede convertir hacia la impresora
+
+fr = Choisir un profil d'imprimante
+en = Choose a printer profile
+es = Elegir un perfil de impresora
+
+fr = Profil ICC
+en = ICC profile
+es = Perfil ICC
