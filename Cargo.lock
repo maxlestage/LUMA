@@ -2228,6 +2228,7 @@ dependencies = [
  "luma-core",
  "luma-image",
  "luma-project",
+ "luma-raw",
  "luma-render",
  "pollster 0.4.0",
  "wgpu",
