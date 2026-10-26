@@ -150,6 +150,12 @@ La fototeca profesional, paso a paso.
   cámara enchufada (USB, o red si lo permite) mediante el marco del sistema; cada
   foto tomada llega a la carpeta vigilada y se abre, las que ya están en la tarjeta
   se quedan donde están; «Disparar» para las cámaras que se disparan a distancia.
+- **Selección a pantalla completa** (F): la foto sola, valorada con el teclado (0 a
+  5), con sus banderas (P, X, U) y sus etiquetas de color (6 a 9: rojo, amarillo,
+  verde, azul; morado con el ratón); la foto siguiente llega por sí sola (A para
+  desactivarlo), Esc para salir. Las etiquetas se escriben en el XMP con los nombres
+  del formato, que leen los demás programas de fotos, y se buscan en francés, inglés
+  o español.
 
 ## 0.2.0 — octubre de 2026
 

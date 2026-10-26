@@ -154,6 +154,11 @@ La photothèque professionnelle, étape par étape.
   photo prise arrive dans le dossier surveillé et s'ouvre, celles déjà sur la carte
   restent où elles sont ; « Déclencher » pour les boîtiers qui se déclenchent à
   distance.
+- **Tri en plein écran** (F) : la photo seule, notée au clavier (0 à 5), avec ses
+  drapeaux (P, X, U) et ses libellés de couleur (6 à 9 : rouge, jaune, vert, bleu ;
+  violet à la souris) ; la photo suivante vient d'elle‑même (A pour couper), Échap
+  pour sortir. Les libellés s'écrivent dans le XMP sous les noms du format, que
+  lisent les autres logiciels, et se cherchent en français, anglais ou espagnol.
 
 ## 0.2.0 — octobre 2026
 

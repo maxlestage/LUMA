@@ -119,6 +119,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Lectura de los XMP (archivo sidecar `IMG_0001.xmp`), escritura en el mismo formato | ✅ guardado automático en la app |
 | Tira de película de la carpeta con miniaturas, navegación ← → | ✅ |
 | Cuadrícula, valoraciones (0 a 5), banderas (P, X, U), filtro por valoración y bandera, en el XMP | ✅ |
+| Selección a pantalla completa con el teclado (F): valoraciones, banderas, etiquetas de color (6 a 9), foto siguiente por sí sola (A), Esc para salir; etiquetas con los nombres del formato en el XMP, encontradas en francés, inglés y español | ✅ |
 | Catálogo local (`luma catalog`): carpetas y subcarpetas, fecha de captura, cámara, objetivo, ISO leídos en la cabecera sin decodificar la imagen, actualización incremental, orden por fecha | ✅ |
 | Miniaturas instantáneas (la vista previa integrada en el RAW, en 15 ms), luego renderizadas con los ajustes y guardadas sin pérdida para las visitas siguientes | ✅ |
 | Copia de trabajo a resolución completa: idéntica al original, más rápida de abrir, dos veces y media menos memoria; «Vaciar la caché» en un clic | ✅ |

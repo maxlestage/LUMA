@@ -2948,3 +2948,33 @@ es = Disparar
 fr = Déconnecter le boîtier
 en = Disconnect the camera
 es = Desconectar la cámara
+
+# ----- Tri en plein écran -----
+
+fr = Avance automatique
+en = Auto advance
+es = Avance automático
+
+fr = Avance automatique coupée
+en = Auto advance off
+es = Avance automático desactivado
+
+fr = Avance automatique (A)
+en = Auto advance (A)
+es = Avance automático (A)
+
+fr = Libellé retiré
+en = Label removed
+es = Etiqueta quitada
+
+fr = Libellé : {name}
+en = Label: {name}
+es = Etiqueta: {name}
+
+fr = Flèches : photos · 0-5 note · P X U drapeau · 6-9 libellé · Échap pour sortir
+en = Arrows: photos · 0-5 rating · P X U flag · 6-9 label · Esc to leave
+es = Flechas: fotos · 0-5 valoración · P X U bandera · 6-9 etiqueta · Esc para salir
+
+fr = Libellé
+en = Label
+es = Etiqueta
