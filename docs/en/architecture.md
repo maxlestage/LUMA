@@ -8,7 +8,7 @@ architecture; planning lives in [`roadmap.md`](roadmap.md).
 | Question | Decision |
 |---|---|
 | Platforms | **macOS and iOS/iPadOS first**, then Windows, Linux and Android |
-| Ambition | A full Lightroom competitor: RAW, editing, masks, on-device AI, photo library, then video |
+| Ambition | A complete professional photo editor: RAW, editing, masks, on-device AI, photo library, then video |
 | "100% Rust" | All of LÜMA's code and its dependencies is Rust. No third-party native libraries (C, C++, Objective‑C, Swift, Kotlin). **System frameworks** (Metal, AppKit, UIKit, PhotoKit…) are called from Rust through Rust binding crates (`objc2`) and are not third-party dependencies |
 
 ## Why Apple first

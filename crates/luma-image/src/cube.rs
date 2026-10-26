@@ -1,4 +1,4 @@
-//! Les LUT 3D (`.cube`, le format d'Adobe et de DaVinci Resolve) : un film mesuré sur
+//! Les LUT 3D (`.cube`, le format texte courant des LUT) : un film mesuré sur
 //! une vraie pellicule (voir `luma film-lut`) ou une LUT importée. Elle agit après la
 //! couleur, en sRGB encodé (l'espace des LUT créatives), avant le grain et le
 //! vignetage.
@@ -78,7 +78,7 @@ impl Cube {
                 "DOMAIN_MIN" => cube.domain_min = triple(&parts[1..]).ok_or_else(|| bad(line.into()))?,
                 "DOMAIN_MAX" => cube.domain_max = triple(&parts[1..]).ok_or_else(|| bad(line.into()))?,
                 _ if parts[0].chars().next().is_some_and(|c| c.is_ascii_alphabetic()) => {
-                    // Mots‑clés d'autres logiciels (LUT_3D_INPUT_RANGE…) : ignorés.
+                    // Mots‑clés facultatifs (LUT_3D_INPUT_RANGE…) : ignorés.
                 }
                 _ => cube
                     .data

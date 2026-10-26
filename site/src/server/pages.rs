@@ -201,7 +201,7 @@ fn hero(lang: Lang) -> Element {
                 .child(h1().class("hero-title").attr("aria-label", "LÜMA").child(title))
                 .child(heading(p, t(lang, "La lumière, *développée* en Rust.")).class("hero-sub reveal"))
                 .child(p().class("hero-lede reveal").text(t(lang,
-                    "Un moteur RAW 32 bits flottants sur le GPU, 100 films vérifiés, et vos vraies pellicules mesurées sur un scan. Pas une copie de Lightroom : un concurrent qui se mesure à lui, chiffres à l'appui.",
+                    "Un moteur RAW 32 bits flottants sur le GPU, 100 films vérifiés, et vos vraies pellicules mesurées sur un scan. Un éditeur photo professionnel, rapide et précis, chiffres à l'appui.",
                 )))
                 .child(
                     div()

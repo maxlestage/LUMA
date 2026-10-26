@@ -153,7 +153,7 @@ pub fn save_preset(name: &str) -> Option<PathBuf> {
     rfd::FileDialog::new()
         .set_title(tr("Exporter le préréglage"))
         .set_file_name(format!("{name}.xmp"))
-        .add_filter(tr("Préréglage Lightroom"), &["xmp"])
+        .add_filter(tr("Préréglage XMP"), &["xmp"])
         .save_file()
 }
 
@@ -180,7 +180,7 @@ fn export_folder() -> Option<PathBuf> {
     Some(dir)
 }
 
-/// Des préréglages `.xmp` à importer (de Lightroom, Camera Raw ou LÜMA).
+/// Des préréglages `.xmp` à importer.
 #[cfg(not(target_os = "ios"))]
 pub fn pick_presets() -> Vec<PathBuf> {
     rfd::FileDialog::new()

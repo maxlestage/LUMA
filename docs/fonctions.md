@@ -1,19 +1,21 @@
-# LÜMA face à Lightroom Classic : la parité, fonction par fonction
+# Fonctions
 
-LÜMA reprend le **flux de travail** de Lightroom Classic : les mêmes modules, les mêmes
-panneaux, les mêmes curseurs avec les mêmes noms, plages et valeurs par défaut, et la
-lecture des fichiers XMP de Lightroom. Un photographe y retrouve ses repères et ses
-retouches existantes.
+Ce que LÜMA sait faire, et ce qui vient, domaine par domaine : le développement, les
+formats et la couleur, l'export, la bibliothèque. Chaque fonction marquée « fait » est
+couverte par les tests.
 
-## Ce que « à l'identique » veut dire, et ce qu'il ne peut pas vouloir dire
+## Principes
 
-| Repris tel quel | Volontairement différent |
-|---|---|
-| Organisation en modules (Bibliothèque, Développement, Export…) et en panneaux | L'apparence : LÜMA a sa propre identité visuelle, pas celle d'Adobe |
-| Noms, plages, valeurs par défaut et sens de chaque curseur | Le moteur de rendu : celui d'Adobe est secret. LÜMA a le sien, écrit en Rust ; une même valeur a le même sens et la même amplitude, mais ne donne pas exactement les mêmes pixels |
-| Réglages échangés au format XMP `crs:` (lecture et écriture) | Les profils d'Adobe (« Adobe Couleur »…), protégés : LÜMA propose ses équivalents (Couleur, Neutre, Vif, Monochrome) |
-| Température et teinte sur l'échelle DNG (le même « 5500 K, +10 ») | Les marques et logos |
-| Raccourcis clavier (`\`, J, Z, copier‑coller, annuler…) | |
+- **Non destructif** : une retouche est une liste de paramètres, rejouée à chaque
+  rendu ; l'original n'est jamais modifié.
+- **Des curseurs précis** : chacun avec son nom, sa plage, sa valeur par défaut et
+  son sens ; température et teinte sur l'échelle DNG (« 5500 K, +10 »).
+- **Un moteur propre** : écrit en Rust, en virgule flottante 32 bits, sur le GPU, avec
+  ses propres profils de rendu (Couleur, Neutre, Vif, Monochrome).
+- **Le format XMP** : réglages lus et écrits en XMP `crs:`, dans un fichier à
+  côté du RAW ou en préréglages.
+- **Sa propre identité** : interface, rendu et raccourcis clavier (`\`, J, Z,
+  copier‑coller, annuler…) pensés pour le travail au quotidien.
 
 Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 
@@ -23,11 +25,11 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 |---|---|---|
 | Profil | Couleur, Neutre, Vif, Monochrome ; lecture de `crs:CameraProfile` | ✅ |
 | | LUT 3D `.cube` (comme les profils créatifs), à intensité réglable, sur le GPU aussi | ✅ |
-| | Profils fabricant (« Camera Standard »…) | ⏳ |
+| | Profils fabricant | ⏳ |
 | Base | Balance des blancs telle quelle, température et teinte (échelle DNG) | ✅ |
 | | Balance automatique, préréglages (lumière du jour, nuageux, ombre, tungstène, fluorescent, flash), pipette (W) | ✅ |
 | | Exposition, Contraste | ✅ |
-| | Hautes lumières, Ombres (adaptatifs à l'image, comme le processus 2012) | ✅ |
+| | Hautes lumières, Ombres (adaptatifs à l'image) | ✅ |
 | | Blancs, Noirs | 🟡 fixes, pas encore adaptatifs à l'image |
 | | Texture, Clarté, Correction du voile | ✅ |
 | | Vibrance, Saturation | ✅ |
@@ -40,28 +42,28 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |
 | | Débruitage par IA, super‑résolution | ⏳ |
-| Corrections de l'objectif | Aberration chromatique latérale estimée sur la photo, distorsion, vignetage (gain, milieu), défrangeage violet et vert ; noms XMP de Lightroom | ✅ |
+| Corrections de l'objectif | Aberration chromatique latérale estimée sur la photo, distorsion, vignetage (gain, milieu), défrangeage violet et vert | ✅ |
 | | Profils d'objectifs (base de données), aberration longitudinale | ⏳ |
 | Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
-| | Upright automatique, guidé | ⏳ |
+| | Redressement automatique, guidé | ⏳ |
 | Effets | Vignetage après recadrage (gain, milieu, arrondi, contour progressif, hautes lumières) | ✅ |
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
 | Outils | Recadrage et redressement (angle libre), outil à l'écran avec proportions verrouillées (R) | ✅ |
 | | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté | ✅ |
-| | Masques par IA (sujet, ciel), plage de luminance ou de couleur ; lecture des masques des XMP de Lightroom | ⏳ |
+| | Masques par IA (sujet, ciel), plage de luminance ou de couleur ; lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Correcteur, tampon, yeux rouges, suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |
 | | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), zoom 1:1 | ✅ |
 | | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
-| | Empilements : moyenne, médiane, maximum, ciel étoilé (au‑delà de Lightroom) | ✅ |
+| | Empilements : moyenne, médiane, maximum, ciel étoilé | ✅ |
 | | Fusion HDR, déformation des bords du panorama | ⏳ |
 | | 100 préréglages avec intensité : pellicules couleur, cinéma, noir et blanc, instantanés ; tous mesurés sur une mire à chaque test (distincts, sans image écrasée, rendus identiques sur le GPU) | ✅ |
-| | Préréglages utilisateur (enregistrer, importer des `.xmp` de Lightroom), export à l'unité ou en dossier au format Lightroom | ✅ |
+| | Préréglages utilisateur (enregistrer, importer des `.xmp`), export à l'unité ou en dossier au format XMP | ✅ |
 | | Photo modifiée signalée sous la photo et sur les vignettes (film, intensité, panneaux retouchés) | ✅ |
-| | Mesure d'une vraie pellicule : un scan comparé à la même scène en numérique, alignement automatique, LUT 3D (au‑delà de Lightroom) | ✅ |
-| | Films empilés par masques, chacun dans sa zone et à son intensité, hautes lumières, ombres et clarté comprises (au‑delà de Lightroom) | ✅ |
+| | Mesure d'une vraie pellicule : un scan comparé à la même scène en numérique, alignement automatique, LUT 3D | ✅ |
+| | Films empilés par masques, chacun dans sa zone et à son intensité, hautes lumières, ombres et clarté comprises | ✅ |
 
 ## Formats et couleur
 
@@ -90,13 +92,13 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 
 | Fonction | État |
 |---|---|
-| Lecture des XMP de Lightroom (sidecar `IMG_0001.xmp`), écriture au même format | ✅ enregistrement automatique dans l'app |
+| Lecture des XMP (sidecar `IMG_0001.xmp`), écriture au même format | ✅ enregistrement automatique dans l'app |
 | Film du dossier avec vignettes, navigation ← → | ✅ |
 | Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
 | Import, catalogue, collections, mots‑clés, recherche | ⏳ |
-| Import d'un catalogue Lightroom (`.lrcat`) | ⏳ |
+| Import de catalogues existants | ⏳ |
 
-## Ce qui est déjà mieux, ou le sera
+## Ce qui distingue LÜMA
 
 - **Rien n'est envoyé nulle part** : pas de compte, pas de cloud obligatoire.
 - **100 % Rust, vérifié** : `scripts/audit-rust.sh` contrôle le graphe de dépendances à

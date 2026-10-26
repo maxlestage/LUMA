@@ -92,9 +92,9 @@ fr = La lumière, *développée* en Rust.
 en = Light, *developed* in Rust.
 es = La luz, *revelada* en Rust.
 
-fr = Un moteur RAW 32 bits flottants sur le GPU, 100 films vérifiés, et vos vraies pellicules mesurées sur un scan. Pas une copie de Lightroom : un concurrent qui se mesure à lui, chiffres à l'appui.
-en = A 32‑bit floating‑point RAW engine on the GPU, 100 verified film looks, and your own film stocks measured from a scan. Not a Lightroom clone: a competitor that takes it on, with the numbers to prove it.
-es = Un motor RAW en coma flotante de 32 bits en la GPU, 100 películas verificadas y tus propios carretes medidos a partir de un escaneo. No es una copia de Lightroom: es un rival que se mide con él, con cifras en la mano.
+fr = Un moteur RAW 32 bits flottants sur le GPU, 100 films vérifiés, et vos vraies pellicules mesurées sur un scan. Un éditeur photo professionnel, rapide et précis, chiffres à l'appui.
+en = A 32‑bit floating‑point RAW engine on the GPU, 100 verified film looks, and your own film stocks measured from a scan. A professional photo editor, fast and precise, with the numbers to prove it.
+es = Un motor RAW en coma flotante de 32 bits en la GPU, 100 películas verificadas y tus propios carretes medidos a partir de un escaneo. Un editor fotográfico profesional, rápido y preciso, con cifras en la mano.
 
 fr = Télécharger · 14 jours d'essai
 en = Download · 14‑day free trial
@@ -809,13 +809,9 @@ fr = La matrice des boîtiers, générée depuis la base du décodeur et vérifi
 en = The camera matrix, generated from the decoder's database and checked with every release.
 es = La matriz de cámaras, generada a partir de la base de datos del decodificador y verificada en cada versión.
 
-fr = Parité avec Lightroom
-en = Parity with Lightroom
-es = Paridad con Lightroom
-
-fr = Le module Développement de Lightroom Classic, panneau par panneau : ce qui est fait, ce qui vient.
-en = Lightroom Classic's Develop module, panel by panel: what's done, what's coming.
-es = El módulo Revelar de Lightroom Classic, panel por panel: lo que está hecho y lo que viene.
+fr = Chaque fonction de LÜMA, domaine par domaine : ce qui est fait, ce qui vient.
+en = Every LÜMA feature, area by area: what's done, what's coming.
+es = Cada función de LÜMA, área por área: lo que está hecho y lo que viene.
 
 fr = Comment LÜMA est construit : le moteur, le GPU, les apps, et les règles du 100 % Rust.
 en = How LÜMA is built: the engine, the GPU, the apps, and the rules of 100% Rust.
@@ -905,9 +901,9 @@ fr = LÜMA, son logo et son interface sont la propriété de leur éditeur.
 en = LÜMA, its logo and its interface are the property of their publisher.
 es = LÜMA, su logotipo y su interfaz son propiedad de su editor.
 
-fr = Les noms de pellicules et de procédés cités dans les films de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) sont des marques de leurs propriétaires. Ils disent l'inspiration d'un rendu, sans lien avec ces marques ni copie de leurs produits. Lightroom est une marque d'Adobe.
-en = The names of film stocks and processes mentioned in LÜMA's film looks (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) are trademarks of their respective owners. They indicate what inspired a look, with no affiliation with these brands and no copying of their products. Lightroom is a trademark of Adobe.
-es = Los nombres de películas y procesos citados en las películas de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) son marcas de sus respectivos propietarios. Indican la inspiración de un acabado, sin vínculo alguno con esas marcas ni copia de sus productos. Lightroom es una marca de Adobe.
+fr = Les noms de pellicules et de procédés cités dans les films de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) sont des marques de leurs propriétaires. Ils disent l'inspiration d'un rendu, sans lien avec ces marques ni copie de leurs produits.
+en = The names of film stocks and processes mentioned in LÜMA's film looks (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) are trademarks of their respective owners. They indicate what inspired a look, with no affiliation with these brands and no copying of their products.
+es = Los nombres de películas y procesos citados en las películas de LÜMA (Kodak, Fujifilm, Ilford, Agfa, CineStill, Polaroid, Lomography…) son marcas de sus respectivos propietarios. Indican la inspiración de un acabado, sin vínculo alguno con esas marcas ni copia de sus productos.
 
 # Confidentialité.
 fr = Confidentialité

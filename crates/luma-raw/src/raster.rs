@@ -1,8 +1,8 @@
 //! Les images déjà développées, quel que soit leur format :
 //!
 //! - en Rust pur, partout : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR,
-//!   Radiance HDR, PNM, ICO, DDS, farbfeld ([image]), JPEG XL ([jxl_oxide]), PSD de
-//!   Photoshop ([psd]), JPEG 2000 ([hayro_jpeg2000]), SVG ([resvg]) ;
+//!   Radiance HDR, PNM, ICO, DDS, farbfeld ([image]), JPEG XL ([jxl_oxide]), PSD
+//!   ([psd]), JPEG 2000 ([hayro_jpeg2000]), SVG ([resvg]) ;
 //! - par le décodeur du système quand l'app en fournit un ([`set_system_decoder`] :
 //!   ImageIO d'Apple, sur Mac, iPhone et iPad) : HEIC et HEIF de l'iPhone, AVIF, et
 //!   tout ce que le système lit. Il sert aussi de recours quand un décodeur en Rust

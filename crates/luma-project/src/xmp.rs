@@ -1,14 +1,12 @@
-//! Lecture et écriture des réglages au format XMP de Camera Raw / Lightroom
-//! (espace de noms `crs:`).
+//! Lecture et écriture des réglages au format XMP (ISO 16684), espace de noms `crs:`.
 //!
-//! Un photographe qui arrive de Lightroom garde ses retouches : les fichiers `.xmp`
-//! posés à côté des RAW (ou exportés depuis son catalogue) sont lus par LÜMA, curseur
-//! par curseur. Dans l'autre sens, LÜMA écrit ses réglages dans le même vocabulaire.
+//! Les retouches sont enregistrées dans un fichier `.xmp` posé à côté du RAW, ou dans
+//! un préréglage : LÜMA les relit curseur par curseur, et les écrit dans le même
+//! vocabulaire.
 //!
-//! Les noms des réglages sont ceux du processus 2012 et suivants (`Exposure2012`,
-//! `Highlights2012`, `ToneCurvePV2012`…). Les moteurs de rendu étant différents, une
-//! même valeur ne donne pas un résultat identique au pixel près, mais elle a le même
-//! sens et la même amplitude.
+//! Les noms des réglages sont les étiquettes du format (`Exposure2012`,
+//! `Highlights2012`, `ToneCurvePV2012`…) ; chacune porte une valeur dans la plage et le
+//! sens du curseur correspondant de LÜMA.
 
 use std::collections::HashMap;
 
@@ -43,7 +41,7 @@ const META_KEYS: [&str; 8] = [
 ];
 const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
 
-/// Le drapeau de la Bibliothèque (P, X, U dans Lightroom).
+/// Le drapeau de la Bibliothèque (touches P, X, U).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Flag {
     #[default]
@@ -53,9 +51,10 @@ pub enum Flag {
 }
 
 /// Ce que la Bibliothèque sait d'une photo : note de 0 à 5 étoiles, drapeau, libellé
-/// de couleur. La note et le libellé sont ceux de Lightroom et Bridge (`xmp:Rating`,
-/// `xmp:Label`) ; un rejet s'écrit `xmp:Rating="-1"` comme dans Bridge, et le drapeau
-/// « retenue », que Lightroom garde dans son catalogue, dans l'espace `luma:`.
+/// de couleur. La note et le libellé sont les propriétés de base du XMP (`xmp:Rating`,
+/// `xmp:Label`) ; un rejet s'écrit `xmp:Rating="-1"`, la valeur que le format lui
+/// réserve, et le drapeau « retenue », qui n'a pas de propriété de base, dans l'espace
+/// `luma:`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Meta {
     pub rating: u8,
@@ -305,8 +304,8 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     {
         s.crop = crate::Crop::default();
     }
-    // Les profils d'Adobe ont un équivalent dans LÜMA ; les profils « Camera … » des
-    // fabricants restent sur le profil Couleur.
+    // Les noms de profils du format XMP ont un équivalent dans LÜMA ; les profils
+    // « Camera … » des fabricants restent sur le profil Couleur.
     if let Some(p) = values.scalars.get("CameraProfile").or(values.scalars.get("Look")) {
         let p = p.to_ascii_lowercase();
         if p.contains("neutral") || p.contains("standard") {
@@ -325,7 +324,7 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         .is_some_and(|v| v.eq_ignore_ascii_case("true"))
     {
         s.profile = Profile::Monochrome;
-        // Le mélange noir et blanc de Lightroom (crs:GrayMixer…) : en noir et blanc, c'est
+        // Le mélange noir et blanc (crs:GrayMixer…) : en noir et blanc, c'est
         // la luminance du mélangeur.
         for (i, name) in XMP_COLORS.iter().enumerate() {
             if let Some(v) = values.scalars.get(&format!("GrayMixer{name}")).and_then(|v| number(v)) {
@@ -360,7 +359,7 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
             *slot = points;
         }
     }
-    // Les masques de LÜMA (ceux de Lightroom, dans crs:MaskGroupBasedCorrections, ne
+    // Les masques de LÜMA (ceux rangés dans crs:MaskGroupBasedCorrections ne
     // sont pas encore lus).
     if let Some(json) = values.meta.get("luma:Masks")
         && let Ok(masks) = serde_json::from_str(json)
@@ -413,13 +412,13 @@ fn photo_only(name: &str) -> bool {
     KEYS.contains(&name) || PREFIXES.iter().any(|p| name.starts_with(p))
 }
 
-/// Un préréglage au format de Lightroom Classic et Camera Raw (un `.xmp` qu'on importe
+/// Un préréglage XMP (un `.xmp` qu'on importe
 /// dans le panneau Préréglages) : le look de `s` seulement, sous `name`, rangé dans le
 /// groupe `group`.
 pub fn write_preset(name: &str, group: &str, s: &Settings) -> String {
     let full = write(s);
     let mut out = String::new();
-    // Un identifiant stable, tiré du nom (Lightroom en veut un par préréglage).
+    // Un identifiant stable, tiré du nom (le format en veut un par préréglage).
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for b in format!("{group}/{name}").bytes() {
         h = (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3);
@@ -460,7 +459,7 @@ pub fn write_preset(name: &str, group: &str, s: &Settings) -> String {
     out
 }
 
-/// Un préréglage `.xmp` (de LÜMA, de Lightroom ou de Camera Raw) : son nom (ou `None`)
+/// Un préréglage `.xmp` : son nom (ou `None`)
 /// et ses réglages.
 pub fn read_preset(text: &str) -> luma_core::Result<(Option<String>, Settings)> {
     let settings = read(text)?;
@@ -501,7 +500,7 @@ fn escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// Un fichier XMP complet (sidecar), lisible par Lightroom et Camera Raw.
+/// Un fichier XMP complet (sidecar), posé à côté du RAW.
 pub fn write(settings: &Settings) -> String {
     write_with_meta(settings, &Meta::default())
 }
@@ -620,8 +619,8 @@ pub fn color_index(name: &str) -> Option<usize> {
 mod tests {
     use super::*;
 
-    /// Un extrait de sidecar tel que l'écrit Lightroom Classic.
-    const LIGHTROOM: &str = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0-c000">
+    /// Un extrait de sidecar XMP, tel qu'on en trouve à côté des RAW.
+    const SIDECAR: &str = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0-c000">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <rdf:Description rdf:about=""
     xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
@@ -669,8 +668,8 @@ mod tests {
 </x:xmpmeta>"#;
 
     #[test]
-    fn reads_a_lightroom_sidecar() {
-        let s = read(LIGHTROOM).unwrap();
+    fn reads_a_sidecar() {
+        let s = read(SIDECAR).unwrap();
         assert_eq!(
             s.white_balance,
             WhiteBalance::Custom {
@@ -712,7 +711,7 @@ mod tests {
 
     #[test]
     fn written_settings_read_back_identically() {
-        let mut s = read(LIGHTROOM).unwrap();
+        let mut s = read(SIDECAR).unwrap();
         s.hsl.hue[7] = 12.0;
         s.tone_curve.red = vec![(0.0, 0.0), (64.0, 70.0), (255.0, 255.0)];
         let text = write(&s);
@@ -723,7 +722,7 @@ mod tests {
 
     #[test]
     fn masks_round_trip() {
-        let mut s = read(LIGHTROOM).unwrap();
+        let mut s = read(SIDECAR).unwrap();
         let mut sky = crate::Mask::linear();
         sky.local.exposure = -0.8;
         sky.local.temperature = -20.0;
@@ -759,7 +758,7 @@ mod tests {
     }
 
     #[test]
-    fn presets_are_written_like_lightroom_and_read_back() {
+    fn presets_are_written_as_xmp_and_read_back() {
         let mut s = crate::presets::find("Kodachrome 64")
             .unwrap()
             .applied(&Settings::default(), 1.0);
@@ -790,7 +789,7 @@ mod tests {
     }
 
     #[test]
-    fn black_and_white_mix_round_trips_as_lightroom_gray_mixer() {
+    fn black_and_white_mix_round_trips_as_gray_mixer() {
         let mut s = Settings {
             profile: Profile::Monochrome,
             ..Settings::default()
@@ -800,16 +799,16 @@ mod tests {
         let text = write(&s);
         assert!(text.contains("crs:GrayMixerRed=\"+40\""), "{text}");
         assert!(text.contains("crs:GrayMixerBlue=\"-60\""));
-        let lr = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/" crs:ConvertToGrayscale="True" crs:GrayMixerRed="-30" crs:GrayMixerGreen="+25"/></rdf:RDF></x:xmpmeta>"#;
-        let back = read(lr).unwrap();
+        let external = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/" crs:ConvertToGrayscale="True" crs:GrayMixerRed="-30" crs:GrayMixerGreen="+25"/></rdf:RDF></x:xmpmeta>"#;
+        let back = read(external).unwrap();
         assert_eq!(back.profile, Profile::Monochrome);
         assert_eq!((back.hsl.luminance[0], back.hsl.luminance[3]), (-30.0, 25.0));
     }
 
     #[test]
     fn rating_flag_and_label() {
-        let s = read(LIGHTROOM).unwrap();
-        assert_eq!(read_meta(LIGHTROOM), Meta::default());
+        let s = read(SIDECAR).unwrap();
+        assert_eq!(read_meta(SIDECAR), Meta::default());
         for meta in [
             Meta {
                 rating: 4,
@@ -831,9 +830,9 @@ mod tests {
             assert_eq!(read_meta(&text), meta);
             assert_eq!(read(&text).unwrap(), s);
         }
-        let bridge = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:Rating="3" xmp:Label="Vert"/></rdf:RDF></x:xmpmeta>"#;
+        let basic = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:Rating="3" xmp:Label="Vert"/></rdf:RDF></x:xmpmeta>"#;
         assert_eq!(
-            read_meta(bridge),
+            read_meta(basic),
             Meta {
                 rating: 3,
                 flag: Flag::None,

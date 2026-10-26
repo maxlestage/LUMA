@@ -8,8 +8,9 @@
 //! au GPU. Quand on règle le contraste, les courbes, les couleurs ou les effets, seul le
 //! GPU travaille.
 //!
-//! L'accentuation, qui n'apparaît qu'à partir de 50 % (comme dans Lightroom), n'est pas
-//! encore portée : [`Gpu::can_finish`] dit quand le processeur doit prendre la main.
+//! L'accentuation, qui n'apparaît qu'à partir de 50 % (en dessous, elle ne se voit
+//! pas), n'est pas encore portée : [`Gpu::can_finish`] dit quand le processeur doit
+//! prendre la main.
 
 use std::sync::Mutex;
 

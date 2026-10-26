@@ -37,7 +37,7 @@ fn mul(a: &M3, b: &M3) -> M3 {
 
 /// La rotation de la caméra virtuelle, transposée (de la sortie vers l'origine).
 fn rotation(t: &Transform) -> M3 {
-    // Comme dans Lightroom : Verticale négative élargit le haut (verticales qui
+    // Verticale négative élargit le haut (verticales qui
     // convergent quand on vise vers le haut).
     let (sx, cx) = (-t.vertical / 100.0 * 25f32.to_radians()).sin_cos();
     let (sy, cy) = (t.horizontal / 100.0 * 25f32.to_radians()).sin_cos();
@@ -62,7 +62,7 @@ pub struct Mapping {
     sx: f32,
     sy: f32,
     k: f32,
-    /// Le centre de la sortie reste le centre de la photo (comme dans Lightroom).
+    /// Le centre de la sortie reste le centre de la photo.
     center: (f32, f32),
 }
 

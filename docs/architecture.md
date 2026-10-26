@@ -8,7 +8,7 @@ technique ; la planification se trouve dans [`roadmap.md`](roadmap.md).
 | Question | Décision |
 |---|---|
 | Plateformes | **macOS et iOS/iPadOS d'abord**, puis Windows, Linux et Android |
-| Ambition | Concurrent complet de Lightroom : RAW, retouche, masques, IA locale, photothèque, puis vidéo |
+| Ambition | Un éditeur photo professionnel complet : RAW, retouche, masques, IA locale, photothèque, puis vidéo |
 | « 100 % Rust » | Tout le code de LÜMA et de ses dépendances est en Rust. Aucune bibliothèque native tierce (C, C++, Objective‑C, Swift, Kotlin). Les **frameworks du système** (Metal, AppKit, UIKit, PhotoKit…) sont appelés depuis Rust, via des crates de liaison Rust (`objc2`), et ne sont pas des dépendances tierces |
 
 ## Pourquoi Apple d'abord

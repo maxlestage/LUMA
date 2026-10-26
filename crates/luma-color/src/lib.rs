@@ -4,8 +4,8 @@
 //!   Rec. 2020, ProPhoto) ;
 //! - adaptation chromatique de Bradford ;
 //! - température et teinte d'un blanc, sur la même échelle que la spécification DNG
-//!   (méthode de Robertson, teinte en Δuv × −3000) : un « 5500 K, +10 » veut dire la
-//!   même chose dans LÜMA que dans les autres logiciels qui lisent les DNG ;
+//!   (méthode de Robertson, teinte en Δuv × −3000) : un « 5500 K, +10 » a le sens que
+//!   lui donne cette spécification ;
 //! - OKLab / OKLCh (Björn Ottosson), un espace perceptuel où travaillent la TSL et
 //!   l'étalonnage des couleurs ;
 //! - fonctions de transfert des sorties.

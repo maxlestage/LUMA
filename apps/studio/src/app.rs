@@ -6,8 +6,8 @@
 //! droite, l'inspecteur de l'outil choisi, et lui seul ; en bas, la table lumineuse du
 //! dossier. L'anneau spectral de LÜMA marque ce qui est actif.
 //!
-//! Les gestes et les réglages restent ceux que connaissent les photographes : mêmes
-//! curseurs que Lightroom, historique, XMP enregistré à côté du RAW, raccourcis (`\`
+//! Les gestes et les réglages sont pensés pour le travail photo : curseurs fins,
+//! historique, XMP enregistré à côté du RAW, raccourcis (`\`
 //! avant/après, ⌘Z, ⇧⌘C et ⇧⌘V, ⇧⌘E exporter, ← →, J écrêtage, Z zoom 1:1, G, D, M,
 //! Maj+M, K, R, W, O).
 
@@ -265,7 +265,7 @@ const TRANSFORM: [Field; 5] = [
     }),
 ];
 
-/// Les préréglages de balance des blancs de Lightroom (température, teinte).
+/// Les préréglages de balance des blancs (température, teinte).
 const WB_PRESETS: [(&str, f32, f32); 6] = [
     ("Lumière du jour", 5500.0, 10.0),
     ("Nuageux", 6500.0, 10.0),
@@ -287,7 +287,7 @@ const HSL_NAMES: [&str; 8] = [
 ];
 const HSL_HUES: [f32; 8] = [0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 270.0, 300.0];
 
-/// Les modules de la barre du haut (G et D dans Lightroom).
+/// Les modules de la barre du haut (touches G et D).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Module {
     Library,
@@ -451,7 +451,7 @@ pub struct Studio {
     luts: Vec<String>,
     /// Une mesure de pellicule est en cours.
     measuring: bool,
-    /// Mes préréglages : enregistrés depuis LÜMA ou importés (Lightroom, Camera Raw).
+    /// Mes préréglages : enregistrés depuis LÜMA ou importés (fichiers `.xmp`).
     user_presets: Vec<(String, Settings)>,
     /// Le nom du préréglage à enregistrer (champ du panneau Films).
     new_preset_name: String,
@@ -923,7 +923,7 @@ impl Studio {
         self.xmp_due = Some(0.0);
     }
 
-    /// Écrit le XMP à côté du RAW (format Lightroom).
+    /// Écrit le XMP à côté du RAW (format XMP).
     pub fn flush_xmp(&mut self) {
         if self.xmp_due.take().is_none() {
             return;
@@ -2043,7 +2043,7 @@ impl Studio {
         }
     }
 
-    /// Le film `k` en préréglage Lightroom (`.xmp`) dans `path` ; une pellicule mesurée
+    /// Le film `k` en préréglage XMP (`.xmp`) dans `path` ; une pellicule mesurée
     /// emporte sa LUT (`.cube`) à côté.
     fn export_film(&self, k: usize, path: &Path) -> Result<(), String> {
         let (group, look) = match self.film(k) {
@@ -2335,7 +2335,7 @@ impl Studio {
     fn my_presets(&mut self, ui: &mut Ui) {
         ui.label(
             RichText::new(tr(
-                "Au format de Lightroom (.xmp) : clic droit sur un film pour l'exporter seul, \
+                "En préréglages XMP (.xmp) : clic droit sur un film pour l'exporter seul, \
                  ou tous d'un coup, rangés par famille.",
             ))
             .size(11.5)
@@ -2379,7 +2379,7 @@ impl Studio {
             if crate::dialogs::FOLDER_PICKER {
                 if ui
                     .button(tr("Importer…"))
-                    .on_hover_text(tr("Des préréglages .xmp de Lightroom, Camera Raw ou LÜMA"))
+                    .on_hover_text(tr("Des préréglages XMP (.xmp)"))
                     .clicked()
                 {
                     self.import_presets(&crate::dialogs::pick_presets());

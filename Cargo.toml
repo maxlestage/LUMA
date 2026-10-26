@@ -32,7 +32,7 @@ serde_json = "1"
 quick-xml = "0.42"
 # Lecture : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, Radiance HDR, PNM, ICO.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tiff", "webp", "gif", "bmp", "tga", "qoi", "exr", "hdr", "pnm", "ico", "dds", "ff"] }
-# Interface : egui dessine tout (comme Lightroom, sans contrôles natifs), wgpu affiche
+# Interface : egui dessine tout (sans contrôles natifs, même rendu partout), wgpu affiche
 # avec Metal sur Mac et iPhone, Vulkan ailleurs.
 eframe = { version = "0.37", default-features = false, features = ["wgpu_no_default_features", "default_fonts"] }
 egui = "0.37"

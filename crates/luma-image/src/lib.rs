@@ -383,7 +383,7 @@ pub fn encode16(img: &RgbImage, space: OutputSpace) -> Vec<u16> {
     out
 }
 
-/// L'histogramme RGB (256 classes) de l'image encodée, comme celui de Lightroom.
+/// L'histogramme RGB (256 classes) de l'image encodée, celui qu'affiche le panneau.
 pub fn histogram(encoded: &[u8]) -> [[u32; 256]; 3] {
     let mut h = [[0u32; 256]; 3];
     for px in encoded.as_chunks::<3>().0 {

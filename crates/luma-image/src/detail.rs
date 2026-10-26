@@ -89,8 +89,8 @@ pub fn noise_reduction(img: &mut RgbImage, d: &Detail, scale: f32) {
 /// Accentuation, sur l'image déjà rendue pour l'écran (linéaire, 0 à 1).
 pub fn sharpen(img: &mut RgbImage, d: &Detail, scale: f32) {
     let amount = d.sharpen_amount / 100.0 * 1.4;
-    // L'accentuation s'évalue à 100 % : très en dessous, on ne l'applique pas, comme
-    // Lightroom qui ne la montre qu'à partir de l'affichage 1:1.
+    // L'accentuation s'évalue à 100 % : très en dessous, on ne l'applique pas : elle
+    // ne se juge qu'à partir de l'affichage 1:1.
     if amount <= 0.0 || scale < 0.5 {
         return;
     }

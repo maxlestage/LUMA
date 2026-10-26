@@ -16,8 +16,8 @@ Todos los formatos de imagen, tres idiomas y la tienda.
 
 La primera versión para descargar: 14 días de prueba y, después, LÜMA Premium.
 
-- **Revelado RAW**: el módulo Revelar de Lightroom reproducido panel por
-  panel, motor en coma flotante de 32 bits, acabado en la GPU (Metal), XMP compatibles.
+- **Revelado RAW**: un módulo Revelar completo, panel por
+  panel, motor en coma flotante de 32 bits, acabado en la GPU (Metal), ajustes en XMP.
 - **735 cámaras** reconocidas, 714 de ellas con color calibrado; cualquier DNG, incluido el iPhone
   ProRAW.
 - **100 películas** verificadas por la máquina (películas en color, cine, blanco y negro,
@@ -25,7 +25,7 @@ La primera versión para descargar: 14 días de prueba y, después, LÜMA Premiu
   LUT `.cube`.
 - **Máscaras** lineal, radial y pincel; **películas apiladas** mediante máscaras, completas.
 - **Apilamientos** (ruido, mediana, estelas, cielo estrellado) y **panorámicas**, en DNG.
-- **Ajustes preestablecidos**: los tuyos, importados de Lightroom o exportados como ajustes
-  preestablecidos de Lightroom.
+- **Ajustes preestablecidos**: los tuyos, importados o exportados como ajustes
+  preestablecidos XMP.
 - **Mac** (Apple Silicon e Intel), **iPhone y iPad** (en preparación para la App
   Store), línea de comandos `luma`.

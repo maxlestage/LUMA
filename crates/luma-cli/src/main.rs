@@ -3,11 +3,11 @@
 //! ```text
 //! luma info <raw>…                  ce que LÜMA lit dans chaque fichier
 //! luma develop <raw> [options]      développe et exporte (JPEG, PNG, TIFF)
-//! luma xmp <raw|xmp|json> [options] écrit les réglages au format XMP de Lightroom
+//! luma xmp <raw|xmp|json> [options] écrit les réglages au format XMP
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
 //! luma merge <raw>… [options]       empilement ou panorama, en DNG
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
-//! luma presets [dossier]            exporte les 100 films en préréglages Lightroom
+//! luma presets [dossier]            exporte les 100 films en préréglages XMP
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! luma licence-keys                 une paire de clés pour signer les licences
@@ -48,7 +48,7 @@ USAGE
       Une nouvelle paire de clés pour LÜMA Premium : la privée va sur le serveur
       (LUMA_LICENCE_SECRET, à garder secrète), la publique dans l'app (LUMA_LICENCE_PUBLIC).
   luma presets [dossier]
-      Exporte les 100 films en préréglages Lightroom (.xmp), rangés par famille, dans
+      Exporte les 100 films en préréglages XMP (.xmp), rangés par famille, dans
       « dossier/Préréglages LÜMA » (dossier courant par défaut).
       Mesure une pellicule : la même scène en numérique (RAW, développé avec les réglages
       neutres de LÜMA) et sur film (scan JPEG, PNG ou TIFF). Les images sont alignées
@@ -64,8 +64,8 @@ RÉGLAGES (--set)
   noise.luminance noise.color vignette vignette.midpoint vignette.feather
   vignette.roundness grain grain.size grain.roughness crop.angle
 
-Un fichier XMP posé à côté du RAW (IMG_0001.xmp ou IMG_0001.CR3.xmp, comme ceux de
-Lightroom) est lu automatiquement, sauf avec --no-sidecar.";
+Un fichier XMP posé à côté du RAW (IMG_0001.xmp ou IMG_0001.CR3.xmp) est lu
+automatiquement, sauf avec --no-sidecar.";
 
 struct Args {
     positional: Vec<String>,
@@ -465,7 +465,7 @@ fn colorchecker(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
-/// `luma presets` : les films intégrés en préréglages Lightroom, un dossier par famille.
+/// `luma presets` : les films intégrés en préréglages XMP, un dossier par famille.
 fn export_presets(dir: &Path) -> Result<usize, String> {
     use luma_project::presets::PRESETS;
     for p in PRESETS {

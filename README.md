@@ -6,21 +6,21 @@ puis Windows, Linux et Android sur le même moteur.
 
 - [Architecture](docs/architecture.md) : couches, workspace Cargo, pipeline non destructif, règles « 100 % Rust »
 - [Feuille de route](docs/roadmap.md) : phases M0 → M36, Apple d'abord, jalons et risques
-- [Parité avec Lightroom Classic](docs/parite-lightroom.md) : chaque fonction, faite ou à faire
+- [Fonctions](docs/fonctions.md) : chaque fonction, faite ou à faire
 - [Site vitrine](site/) : animations, scènes 3D (objectif photo, Mac et iPhone), labo de retouche sur GPU
 
 ## Le moteur
 
 Le moteur de développement est en Rust, sans aucune bibliothèque native (vérifié par
-`scripts/audit-rust.sh`). Il reprend le module Développement de Lightroom Classic : mêmes
-panneaux, mêmes curseurs, mêmes plages, et il lit les fichiers XMP de Lightroom.
+`scripts/audit-rust.sh`). Il offre un module Développement complet, panneau par panneau,
+et enregistre les réglages dans un fichier XMP à côté de la photo.
 
 | Crate | Rôle |
 |---|---|
 | `luma-core` | Images `f32`, flous rapides, filtre guidé, annulation, mesures |
 | `luma-color` | Matrices, espaces (sRGB, Display P3, Rec. 2020, ProPhoto), température DNG, OKLab, profils ICC |
 | `luma-raw` | Lecture des RAW (rawler), normalisation, couleur DNG, dématriçage Bayer et X‑Trans |
-| `luma-project` | Les réglages (calqués sur Lightroom), JSON et XMP `crs:` |
+| `luma-project` | Les réglages non destructifs, JSON et XMP `crs:` |
 | `luma-image` | Le développement : tonalité locale, rendu filmique, courbes, couleur, LUT 3D, détail, effets, géométrie |
 | `luma-render` | Une photo ouverte : sources et « bases » (étapes de voisinage, celle de la photo et celles des films de masques) en cache, rendu annulable |
 | `luma-merge` | Empilements, panoramas (coins, RANSAC, projections, fondus), DNG ; mesure d'une vraie pellicule en LUT 3D |
@@ -34,13 +34,13 @@ cargo build --release
 target/release/luma info photo.ARW
 target/release/luma develop photo.ARW -o photo.jpg --space p3 --set exposure=+0.5 --set shadows=40
 target/release/luma develop photo.CR3 --size 2048 -o apercu.jpg    # lit photo.xmp s'il existe
-target/release/luma xmp photo.NEF --set clarity=20 -o photo.xmp      # réglages au format Lightroom
+target/release/luma xmp photo.NEF --set clarity=20 -o photo.xmp      # réglages au format XMP
 target/release/luma bench photo.RAF                                   # réactivité mesurée
 target/release/luma merge ciel_*.ARW --stack stars                     # empilement d'étoiles → DNG
 target/release/luma merge pano_*.CR3 --pano cylindrical --no-crop      # panorama sans rognage
 target/release/luma film-lut photo.ARW scan.tif -o MaPortra.cube       # mesure une vraie pellicule
 target/release/luma develop photo.ARW --lut MaPortra.cube:80 -o p.jpg   # ce film, à 80 %
-target/release/luma presets ~/Desktop                                   # les 100 films en préréglages Lightroom
+target/release/luma presets ~/Desktop                                   # les 100 films en préréglages XMP
 ```
 
 ### Vérifier
@@ -131,11 +131,11 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
 - **Mes pellicules** : le rendu *exact* d'une vraie pellicule. On photographie la même
   scène en numérique et sur film, on choisit le scan : LÜMA aligne les deux images et
   mesure le film couleur par couleur, en LUT 3D (`.cube`). On peut aussi importer
-  n'importe quelle LUT `.cube` (Resolve, Lightroom…). Ces films s'utilisent comme les
+  n'importe quelle LUT `.cube`. Ces films s'utilisent comme les
   autres : intensité, aperçu, masques, GPU, export.
 - **Mes préréglages** : « Enregistrer » garde le look des réglages actuels (sans
-  l'exposition, la balance ni le recadrage) ; « Importer » accepte les préréglages `.xmp`
-  de Lightroom et Camera Raw. **Export** au format des préréglages Lightroom : clic droit
+  l'exposition, la balance ni le recadrage) ; « Importer » accepte les préréglages
+  XMP (`.xmp`). **Export** en préréglages XMP : clic droit
   sur un film pour l'exporter seul, ou « Exporter tous les préréglages » pour un dossier
   rangé par famille (les pellicules mesurées emportent leur `.cube`).
 - **LÜMA Premium** : 14 jours d'essai, puis un abonnement à 9,99 € par mois ou
@@ -155,7 +155,7 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   l'ordre des masques, chacun dans sa zone, *complets* : leurs hautes lumières, ombres
   et clarté agissent aussi localement (chaque film a sa base de développement, gardée en
   cache). Sur le GPU comme à l'export.
-- Les réglages sont enregistrés automatiquement dans un XMP au format Lightroom à côté
+- Les réglages sont enregistrés automatiquement dans un fichier XMP à côté
   du RAW, qui n'est jamais modifié.
 
 | Raccourci | Action |
@@ -166,9 +166,9 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
 | Maj+Cmd+R | Réinitialiser |
 | Maj+Cmd+E | Exporter : la photo ou toutes celles du filtre ; JPEG, PNG ou TIFF 8/16 bits ; sRGB, Display P3, Rec. 2020 ou ProPhoto ; taille ; dossier |
 | G, D | Bibliothèque, Développement |
-| 0 à 5 ; P, X, U | Note ; retenir, rejeter, retirer le drapeau (enregistrés dans le XMP, `xmp:Rating` comme Lightroom) |
+| 0 à 5 ; P, X, U | Note ; retenir, rejeter, retirer le drapeau (enregistrés dans le XMP, `xmp:Rating`) |
 | R | Outil Recadrage : poignées, grille des tiers, proportions verrouillées ; Entrée valide, Échap annule |
-| W | Pipette de balance des blancs (cliquer un gris) ; le menu Balance propose aussi Auto et les préréglages de Lightroom |
+| W | Pipette de balance des blancs (cliquer un gris) ; le menu Balance propose aussi Auto et des préréglages (lumière du jour, nuageux, tungstène…) |
 | M, Maj+M, K | Masque : dégradé linéaire, dégradé radial, pinceau (Option gomme) ; O montre la zone ; chaque masque a ses curseurs |
 | Cmd+O | Ouvrir un RAW (son dossier remplit le film) ; on peut aussi le déposer |
 | ← → | Photo précédente, suivante |

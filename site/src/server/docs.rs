@@ -31,14 +31,14 @@ pub const DOCS: [Doc; 5] = [
         markdown: [CAMERAS, CAMERAS, CAMERAS],
     },
     Doc {
-        path: "/docs/parite-lightroom/",
-        title: "Parité avec Lightroom",
-        lede: "Le module Développement de Lightroom Classic, panneau par panneau : ce qui est fait, ce qui vient.",
-        file: "parite-lightroom.md",
+        path: "/docs/fonctions/",
+        title: "Fonctions",
+        lede: "Chaque fonction de LÜMA, domaine par domaine : ce qui est fait, ce qui vient.",
+        file: "fonctions.md",
         markdown: [
-            include_str!("../../../docs/parite-lightroom.md"),
-            include_str!("../../../docs/en/parite-lightroom.md"),
-            include_str!("../../../docs/es/parite-lightroom.md"),
+            include_str!("../../../docs/fonctions.md"),
+            include_str!("../../../docs/en/fonctions.md"),
+            include_str!("../../../docs/es/fonctions.md"),
         ],
     },
     Doc {
