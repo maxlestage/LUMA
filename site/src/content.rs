@@ -120,7 +120,7 @@ pub const PIPELINE: [(&str, &str, &str); 5] = [
 
 /// Les panneaux de la section Apple : (titre, texte). Dans un titre, le mot entre `*`
 /// ressort en italique.
-pub const APPLE: [(&str, &str); 3] = [
+pub const APPLE: [(&str, &str); 4] = [
     (
         "Conçu pour *Apple Silicon*.",
         "Un seul GPU à dompter au départ : Metal, via wgpu. La mémoire unifiée laisse le RAW décodé passer au GPU sans copie.",
@@ -131,7 +131,11 @@ pub const APPLE: [(&str, &str); 3] = [
     ),
     (
         "Le même moteur, *dans ta poche*.",
-        "ProRAW sur iPhone, Apple Pencil sur iPad pour les masques. Le cœur Rust est identique sur Mac, iPhone et iPad : même projet, même rendu.",
+        "ProRAW sur iPhone, réglé du bout du pouce : aperçu réduit pendant le geste, pleine netteté au lâcher.",
+    ),
+    (
+        "Les masques, *au crayon*.",
+        "Sur iPad, l'Apple Pencil peint les masques à même la photo. Le cœur Rust est identique sur Mac, iPhone et iPad : même projet, même rendu.",
     ),
 ];
 

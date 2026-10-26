@@ -368,7 +368,7 @@ fn apple(lang: Lang) -> Element {
                             .child(text(format!(" {}", t(lang, "macOS & iOS d'abord")))),
                     )
                     .child(panels)
-                    .child(div().class("apple-dots").children([i(), i(), i()])),
+                    .child(div().class("apple-dots").children([i(), i(), i(), i()])),
             ),
     )
 }
