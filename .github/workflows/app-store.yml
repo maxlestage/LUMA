@@ -1,0 +1,50 @@
+# LÜMA pour iPhone et iPad, envoyée à App Store Connect (TestFlight, puis l'App Store),
+# à la demande : onglet Actions › App Store › Run workflow. Aucun Mac à soi n'est
+# nécessaire : le runner macOS crée le certificat et le profil par l'API App Store
+# Connect, signe l'app et l'envoie (scripts/release-ios.sh).
+#
+# Secrets du dépôt (Settings › Secrets and variables › Actions) :
+#   ASC_KEY_ID     le Key ID de la clé API (rôle App Manager)
+#   ASC_ISSUER_ID  l'Issuer ID, en haut de la page des clés
+#   ASC_KEY        le contenu du fichier AuthKey_….p8
+# La fiche de l'app (Apps › + › Nouvelle app, identifiant app.luma.studio) se crée une
+# fois dans App Store Connect : l'API ne le permet pas.
+
+name: App Store
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  testflight:
+    name: Signer et envoyer à TestFlight
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Outils de l'API App Store Connect
+        run: python3 -m pip install --quiet --break-system-packages pyjwt cryptography
+
+      - name: Signer et envoyer
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY: ${{ secrets.ASC_KEY }}
+          APPLE_TEAM_ID: 2FW8T4UX4L
+          # Croissant d'un envoi à l'autre, comme l'exige App Store Connect.
+          BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+        run: scripts/release-ios.sh
+
+      - name: Publier l'ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: LUMA-ios-app-store
+          path: target/ios/app-store/LUMA.ipa
+          if-no-files-found: warn
