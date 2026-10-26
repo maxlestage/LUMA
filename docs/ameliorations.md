@@ -44,8 +44,9 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 - [x] 2.5 Filigrane texte (police embarquée, lissage exact maison) : position, taille,
   opacité, blanc ou noir.
 - [x] 2.5 bis Filigrane logo (PNG) : position, taille, opacité.
-- [ ] 2.6 Métadonnées : EXIF d'origine recopié, auteur, copyright, IPTC, mots‑clés,
+- [x] 2.6 Métadonnées : EXIF d'origine recopié, auteur, copyright, mots‑clés (XMP),
   retrait du GPS.
+- [ ] 2.6 bis Métadonnées dans les TIFF ; IPTC complet (titre, légende, lieu).
 - [ ] 2.7 Export par lot vers plusieurs préréglages à la fois, dans l'app et en ligne de
   commande.
 
@@ -201,3 +202,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-26 | 2.5 Filigrane texte (`luma_render::watermark`) : police Ubuntu Light déjà embarquée par l'interface, contours lus par `skrifa` (déjà dans le dépôt : aucune nouvelle crate compilée), rastérisation maison par aires signées (couverture exacte), neuf emplacements, taille en % du petit côté, opacité mélangée en valeurs perçues, blanc ou noir ; fenêtre Exporter, préréglages, `--watermark` | Dessin et pose d'un filigrane (meilleur de 5) : 0,85 ms sur un export 1600 px, 9,4 ms en pleine définition 24 Mpx |
 | 2026-10-26 | 1.6 Copies virtuelles (`luma_project::copies`) : un XMP par copie (`IMG_0001.ARW.copie-2.xmp`), pixels, doublon de travail, aperçu intégré et fusion ramenés à l'original, vignette et note propres, export `IMG_0001-2`, création et suppression dans la Bibliothèque | Aucun fichier dupliqué : une copie pèse son XMP (4 Ko mesurés) ; test de l'interface sur le corpus (création, note propre, relue dans le dossier, suppression) ; capture `studio-bibliotheque-copie.png` |
 | 2026-10-26 | 2.5 bis Filigrane logo (`watermark::Logo`) : PNG avec sa transparence, couleurs sRGB ramenées dans l'espace de travail, prémultipliées, réduit par moyenne des surfaces (jamais agrandi), mélangé en valeurs perçues comme le texte, neuf emplacements ; fenêtre Exporter (Mac : choix du fichier), préréglages (chemin complet), `--logo`, `--no-logo` ; un fichier absent arrête l'export avec son nom | Export 1600 px d'un NEF avec un logo de 512 px : 197 → 209 ms au mieux, environ +25 ms en médiane (lecture et conversion du PNG) |
+| 2026-10-26 | 2.6 Métadonnées d'export (`luma_render::metadata`) : EXIF écrit en TIFF maison (boîtier, objectif, pose, ouverture, ISO, focale, date, dimensions, logiciel), auteur et copyright (donnés ou inscrits par le boîtier, lus par rawler comme la position GPS), GPS retiré par défaut, paquet XMP dans les JPEG (créateur, droits, mots‑clés, note, libellé) ; doublon de travail en version 3 pour garder ces données ; fenêtre Exporter, préréglages, `--author`, `--copyright`, `--keep-gps`, `--no-exif`, `--no-keywords` | Vérifié sur le corpus : boîtier, réglages, auteur et copyright des RAW recopiés ; position de l'iPhone ProRAW retirée par défaut puis gardée avec `--keep-gps` |

@@ -1871,6 +1871,9 @@ impl Studio {
                         ui.label(tr("Filigrane"));
                         ui.vertical(|ui| watermark_editor(ui, &mut o.watermark));
                         ui.end_row();
+                        ui.label(tr("Métadonnées"));
+                        ui.vertical(|ui| metadata_editor(ui, &mut o.metadata));
+                        ui.end_row();
                         if crate::dialogs::FOLDER_PICKER || o.logo.is_some() {
                             ui.label(tr("Logo"));
                             ui.vertical(|ui| logo_editor(ui, &mut o.logo));
@@ -5066,6 +5069,39 @@ fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
     }
     let s = (area.width() / w as f32).min(area.height() / h as f32);
     egui::Rect::from_center_size(area.center(), vec2(w as f32 * s, h as f32 * s))
+}
+
+/// Les métadonnées d'un export : ce qui est recopié du RAW, l'auteur et le copyright.
+fn metadata_editor(ui: &mut Ui, m: &mut luma_render::export::MetadataOptions) {
+    ui.horizontal(|ui| {
+        ui.checkbox(&mut m.copy_exif, tr("EXIF de la prise de vue"));
+        ui.add_enabled(
+            m.copy_exif,
+            egui::Checkbox::new(&mut m.keep_gps, tr("Position GPS")),
+        );
+        ui.checkbox(&mut m.keywords, tr("Mots-clés et note"));
+    });
+    let field = |ui: &mut Ui, value: &mut Option<String>, hint: &str, name: &str| {
+        let mut text = value.clone().unwrap_or_default();
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut text)
+                    .hint_text(hint)
+                    .desired_width(260.0),
+            )
+            .accessible_name(name)
+            .changed()
+        {
+            *value = Some(text.trim().to_owned()).filter(|t| !t.is_empty());
+        }
+    };
+    field(ui, &mut m.author, tr("Auteur"), tr("Auteur"));
+    field(
+        ui,
+        &mut m.copyright,
+        tr("© 2026 votre nom"),
+        tr("Copyright"),
+    );
 }
 
 /// Le logo en filigrane d'un export : le fichier PNG, puis son emplacement, sa taille

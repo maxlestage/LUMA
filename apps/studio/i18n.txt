@@ -509,6 +509,30 @@ fr = Opacité du logo
 en = Logo opacity
 es = Opacidad del logotipo
 
+fr = EXIF de la prise de vue
+en = Capture EXIF
+es = EXIF de la toma
+
+fr = Position GPS
+en = GPS location
+es = Ubicación GPS
+
+fr = Mots-clés et note
+en = Keywords and rating
+es = Palabras clave y valoración
+
+fr = Auteur
+en = Author
+es = Autor
+
+fr = Copyright
+en = Copyright
+es = Copyright
+
+fr = © 2026 votre nom
+en = © 2026 your name
+es = © 2026 su nombre
+
 fr = Nom des fichiers
 en = File names
 es = Nombre de los archivos

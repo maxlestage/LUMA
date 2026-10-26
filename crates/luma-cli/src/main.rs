@@ -38,6 +38,7 @@ USAGE
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
                      [--logo f.png] [--logo-position p] [--logo-size 1-50] [--logo-opacity 0-100]
+                     [--author nom] [--copyright texte] [--keep-gps] [--no-exif] [--no-keywords]
       Avec --preset, les options du préréglage d'export (format, qualité, espace, taille,
       dossier, nom) ; les options données les remplacent, --size est alors le grand côté
       de l'image recadrée, et la sortie va dans son dossier (LÜMA/ à côté du RAW par
@@ -55,10 +56,16 @@ USAGE
       --logo : un logo en filigrane (PNG, avec sa transparence), mêmes emplacements ;
       grand côté en % du petit côté de l'image (12 par défaut, jamais agrandi au‑delà
       de son fichier), opacité en % (80 par défaut).
+      Métadonnées : l'EXIF de la prise de vue (boîtier, objectif, réglages, date) est
+      recopié dans les JPEG et PNG (--no-exif : rien), la position GPS est retirée
+      (--keep-gps la garde) ; --author et --copyright s'ajoutent à l'EXIF et au XMP ;
+      les mots‑clés, la note et le libellé du XMP vont dans les JPEG (--no-keywords).
   luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
                      [--space srgb|p3|rec2020|prophoto] [--size taille|0] [--folder d]
                      [--next-to-original] [--name modèle] [--output-sharpen s|none]
                      [--watermark texte …|--no-watermark] [--logo f.png …|--no-logo]
+                     [--author nom] [--copyright texte] [--keep-gps|--remove-gps]
+                     [--exif|--no-exif] [--keywords|--no-keywords]
                      [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
@@ -128,6 +135,7 @@ struct Args {
     output_sharpen: Option<export::OutputSharpen>,
     watermark: WatermarkArgs,
     logo: LogoArgs,
+    metadata: MetaArgs,
     xmp: Option<PathBuf>,
     settings: Option<PathBuf>,
     sidecar: bool,
@@ -150,6 +158,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         output_sharpen: None,
         watermark: WatermarkArgs::default(),
         logo: LogoArgs::default(),
+        metadata: MetaArgs::default(),
         xmp: None,
         settings: None,
         sidecar: true,
@@ -181,6 +190,11 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             s if s.starts_with("--logo") => {
                 let v = value(&arg)?;
                 a.logo.read(s, v)?;
+            }
+            s if MetaArgs::FLAGS.contains(&s) => a.metadata.flag(s),
+            s @ ("--author" | "--copyright") => {
+                let v = value(&arg)?;
+                a.metadata.text(s, v);
             }
             "--output-sharpen" => {
                 let v = value(&arg)?;
@@ -440,6 +454,7 @@ fn develop(a: &Args) -> Result<(), String> {
         || a.output_sharpen.is_some()
         || !a.watermark.is_empty()
         || !a.logo.is_empty()
+        || !a.metadata.is_empty()
     {
         // Un préréglage d'export (à défaut, les options par défaut) : ses options, que les
         // options données remplacent.
@@ -461,6 +476,7 @@ fn develop(a: &Args) -> Result<(), String> {
         o.sharpen = a.output_sharpen.or(o.sharpen);
         a.watermark.apply(&mut o.watermark);
         a.logo.apply(&mut o.logo);
+        a.metadata.apply(&mut o.metadata);
         o.quality = a.quality.unwrap_or(o.quality);
         o.bits = a.bits.unwrap_or(o.bits);
         o.resize = a
@@ -475,20 +491,14 @@ fn develop(a: &Args) -> Result<(), String> {
         {
             o.format = f;
         }
-        let meta = a
-            .sidecar
-            .then(|| sidecar(path))
-            .flatten()
-            .and_then(|x| std::fs::read_to_string(x).ok())
-            .map(|t| xmp::read_meta(&t))
-            .unwrap_or_default();
+        let meta = sidecar_meta(a, path);
         let fields = export::NameFields::of_photo(path, &photo, &meta, 1);
         let out = a
             .output
             .clone()
             .unwrap_or_else(|| export::output_path(path, &o, &fields));
         let t2 = Instant::now();
-        export::develop(&photo, &settings, &out, &o)?;
+        export::develop(&photo, &settings, &out, &o, &meta)?;
         println!("{} → {} ({})", path.display(), out.display(), export::describe(&o));
         println!("  {:<22} {:>8.1} ms", "lecture du RAW", ms(opened));
         println!("  {:<22} {:>8.1} ms", "rendu et encodage", ms(t2.elapsed()));
@@ -500,12 +510,26 @@ fn develop(a: &Args) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     let out = a.output.clone().unwrap_or_else(|| path.with_extension("jpg"));
     let t2 = Instant::now();
-    export::write(
+    // Les métadonnées d'un export ordinaire : EXIF recopié, GPS retiré.
+    let raw = photo.raw();
+    let embedded = export::Embedded::new(
+        &export::PhotoMetadata {
+            make: raw.make.clone(),
+            model: raw.model.clone(),
+            exif: raw.exif.clone(),
+            meta: sidecar_meta(a, path),
+        },
+        &export::MetadataOptions::default(),
+        rendered.image.width,
+        rendered.image.height,
+    );
+    export::write_with(
         &out,
         &rendered.image,
         a.space.unwrap_or_default(),
         a.quality.unwrap_or(92),
         a.bits.unwrap_or(8),
+        &embedded,
     )?;
     println!(
         "{} → {} ({} × {})",
@@ -581,6 +605,68 @@ impl WatermarkArgs {
     }
 }
 
+/// Les options des métadonnées : EXIF, GPS, mots‑clés, auteur, copyright.
+#[derive(Default)]
+struct MetaArgs {
+    copy_exif: Option<bool>,
+    keep_gps: Option<bool>,
+    keywords: Option<bool>,
+    author: Option<String>,
+    copyright: Option<String>,
+}
+
+impl MetaArgs {
+    const FLAGS: [&'static str; 6] = [
+        "--exif",
+        "--no-exif",
+        "--keep-gps",
+        "--remove-gps",
+        "--keywords",
+        "--no-keywords",
+    ];
+
+    fn flag(&mut self, f: &str) {
+        match f {
+            "--exif" => self.copy_exif = Some(true),
+            "--no-exif" => self.copy_exif = Some(false),
+            "--keep-gps" => self.keep_gps = Some(true),
+            "--remove-gps" => self.keep_gps = Some(false),
+            "--keywords" => self.keywords = Some(true),
+            _ => self.keywords = Some(false),
+        }
+    }
+
+    /// Un texte vide efface l'auteur ou le copyright.
+    fn text(&mut self, option: &str, v: String) {
+        if option == "--author" {
+            self.author = Some(v);
+        } else {
+            self.copyright = Some(v);
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.copy_exif.is_none()
+            && self.keep_gps.is_none()
+            && self.keywords.is_none()
+            && self.author.is_none()
+            && self.copyright.is_none()
+    }
+
+    fn apply(&self, m: &mut export::MetadataOptions) {
+        m.copy_exif = self.copy_exif.unwrap_or(m.copy_exif);
+        m.keep_gps = self.keep_gps.unwrap_or(m.keep_gps);
+        m.keywords = self.keywords.unwrap_or(m.keywords);
+        let text = |v: &Option<String>, old: &mut Option<String>| {
+            if let Some(v) = v {
+                *old = Some(v.trim().to_owned()).filter(|v| !v.is_empty());
+            }
+        };
+        text(&self.author, &mut m.author);
+        text(&self.copyright, &mut m.copyright);
+    }
+}
+
 /// Les options `--logo…` : le fichier, puis ce qui le règle.
 #[derive(Default)]
 struct LogoArgs {
@@ -649,6 +735,16 @@ fn resize_error(v: &str) -> String {
     format!("taille inconnue « {v} » (2048, short:1080, 1920x1080, 12mp)")
 }
 
+/// La note, le libellé et les mots‑clés du XMP posé à côté du RAW (sauf --no-sidecar).
+fn sidecar_meta(a: &Args, path: &Path) -> xmp::Meta {
+    a.sidecar
+        .then(|| sidecar(path))
+        .flatten()
+        .and_then(|x| std::fs::read_to_string(x).ok())
+        .map(|t| xmp::read_meta(&t))
+        .unwrap_or_default()
+}
+
 /// Le fichier des préréglages d'export et son contenu.
 fn load_presets() -> Result<(PathBuf, export::Presets), String> {
     let file = export::presets_path().ok_or("pas de dossier personnel (HOME) pour les préréglages d'export")?;
@@ -697,6 +793,16 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
             }
             "--no-watermark" => o.watermark = None,
             "--no-logo" => o.logo = None,
+            s if MetaArgs::FLAGS.contains(&s) => {
+                let mut m = MetaArgs::default();
+                m.flag(s);
+                m.apply(&mut o.metadata);
+            }
+            s @ ("--author" | "--copyright") => {
+                let mut m = MetaArgs::default();
+                m.text(s, value()?);
+                m.apply(&mut o.metadata);
+            }
             s if s.starts_with("--logo") => {
                 let mut l = LogoArgs::default();
                 l.read(s, value()?)?;

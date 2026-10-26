@@ -106,8 +106,9 @@ pub fn export_one(
     settings: &Settings,
     out: &Path,
     options: &ExportOptions,
+    meta: &xmp::Meta,
 ) -> Result<(), String> {
-    luma_render::export::develop(photo, settings, out, options)
+    luma_render::export::develop(photo, settings, out, options, meta)
 }
 
 struct RenderJob {
@@ -441,13 +442,13 @@ impl Worker {
                 }
                 .and_then(|photo| {
                     // Le nom vient du modèle : date, boîtier, note… et le rang dans l'export.
-                    let fields =
-                        NameFields::of_photo(&job.source, &photo, &read_meta(&job.source), k + 1);
+                    let meta = read_meta(&job.source);
+                    let fields = NameFields::of_photo(&job.source, &photo, &meta, k + 1);
                     let out = luma_render::export::unique(
                         export_path(&job.source, &options, &fields),
                         &mut taken,
                     );
-                    export_one(&photo, &job.settings, &out, &options).map(|()| out)
+                    export_one(&photo, &job.settings, &out, &options, &meta).map(|()| out)
                 })
                 .map_err(|e| format!("{} : {e}", job.source.display()));
                 let _ = sender.send(Event::Exported {
