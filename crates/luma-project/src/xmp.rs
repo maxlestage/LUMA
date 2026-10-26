@@ -29,11 +29,12 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 8] = [
+const META_KEYS: [&str; 9] = [
     "xmp:Rating",
     "xmp:Label",
     "luma:Pick",
     "luma:Masks",
+    "luma:Spots",
     "luma:Lut",
     "luma:LutAmount",
     "luma:Film",
@@ -329,6 +330,7 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     if values.scalars.is_empty()
         && values.lists.keys().all(|k| k == SUBJECT)
         && !values.meta.contains_key("luma:Masks")
+        && !values.meta.contains_key("luma:Spots")
         && !values.meta.contains_key("luma:Lut")
         && !values.meta.contains_key("luma:Film")
     {
@@ -412,6 +414,12 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     {
         s.masks = masks;
     }
+    // Les retouches (tampon et correcteur).
+    if let Some(json) = values.meta.get("luma:Spots")
+        && let Ok(spots) = serde_json::from_str(json)
+    {
+        s.spots = spots;
+    }
     // Le film mesuré (LUT 3D), et le nom du film appliqué : nom et intensité.
     let look = |name: &str, amount: &str| {
         values.meta.get(name).filter(|n| !n.is_empty()).map(|n| crate::Look {
@@ -479,7 +487,11 @@ pub fn write_preset(name: &str, group: &str, s: &Settings) -> String {
         {
             continue;
         }
-        if t.starts_with("xmp:Rating") || t.starts_with("luma:Masks") || t.starts_with("luma:Film") {
+        if t.starts_with("xmp:Rating")
+            || t.starts_with("luma:Masks")
+            || t.starts_with("luma:Spots")
+            || t.starts_with("luma:Film")
+        {
             continue;
         }
         if t.starts_with("crs:ProcessVersion") {
@@ -613,6 +625,10 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     if !s.masks.is_empty() {
         let json = serde_json::to_string(&s.masks).unwrap_or_default();
         out.push_str(&format!("    luma:Masks=\"{}\"\n", escape(&json)));
+    }
+    if !s.spots.is_empty() {
+        let json = serde_json::to_string(&s.spots).unwrap_or_default();
+        out.push_str(&format!("    luma:Spots=\"{}\"\n", escape(&json)));
     }
     for (key, look) in [("Lut", &s.lut), ("Film", &s.film)] {
         if let Some(l) = look {
@@ -830,6 +846,13 @@ mod tests {
             invert: true,
         });
         s.masks = vec![sky, brush, combined];
+        s.spots = vec![
+            crate::Spot::new(crate::SpotKind::Heal, (0.4, 0.3), 0.02),
+            crate::Spot {
+                opacity: 70.0,
+                ..crate::Spot::new(crate::SpotKind::Clone, (0.95, 0.8), 0.03)
+            },
+        ];
         s.lens.remove_ca = true;
         s.lens.camera = false;
         s.lens.distortion = 12.0;
@@ -846,11 +869,32 @@ mod tests {
         let text = write(&s);
         assert!(text.contains("crs:LensProfileEnable=\"0\""), "{text}");
         assert!(text.contains("luma:Masks="));
+        assert!(text.contains("luma:Spots="));
         assert!(text.contains("luma:LutAmount=\"70\""));
         assert_eq!(read(&text).unwrap(), s);
         // Sans l'étiquette, les corrections du boîtier restent actives.
         let without = text.replace("crs:LensProfileEnable=\"0\"", "");
         assert!(read(&without).unwrap().lens.camera);
+    }
+
+    #[test]
+    fn spots_stay_with_their_photo() {
+        // Les retouches sont propres à une photo : un préréglage ne les emporte pas, et
+        // un film appliqué les garde.
+        let s = Settings {
+            exposure: 0.5,
+            spots: vec![crate::Spot::new(crate::SpotKind::Heal, (0.5, 0.5), 0.02)],
+            ..Settings::default()
+        };
+        assert!(!write_preset("Moi", "LÜMA", &s).contains("luma:Spots"));
+        let film = crate::presets::find("Portra 400").unwrap().applied(&s, 0.6);
+        assert_eq!(film.spots, s.spots);
+        // Des retouches seules suffisent à faire un XMP de réglages.
+        let only = Settings {
+            spots: s.spots.clone(),
+            ..Settings::default()
+        };
+        assert_eq!(read(&write(&only)).unwrap().spots, s.spots);
     }
 
     #[test]

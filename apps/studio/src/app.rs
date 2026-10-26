@@ -9,7 +9,7 @@
 //! Les gestes et les réglages sont pensés pour le travail photo : curseurs fins,
 //! historique, XMP enregistré à côté du RAW, raccourcis (`\`
 //! avant/après, ⌘Z, ⇧⌘C et ⇧⌘V, ⇧⌘E exporter, ← →, J écrêtage, Z zoom 1:1, G, D, M,
-//! Maj+M, K, R, W, O).
+//! Maj+M, K, Q, R, W, O).
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
@@ -30,6 +30,7 @@ use crate::crop;
 use crate::i18n::{tr, trf};
 use crate::icons::{self, Icon};
 use crate::masking;
+use crate::retouching;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
 use crate::worker::{
     Event, ExportJob, ExportOptions, Format, MergeJob, MergeKind, Worker, read_meta, read_sidecar,
@@ -366,7 +367,7 @@ impl Tool {
         match self {
             Tool::Library => "G",
             Tool::Light => "D",
-            Tool::Masks => tr("M, Maj+M, K"),
+            Tool::Masks => tr("M, Maj+M, K, Q"),
             Tool::Geometry => "R",
             _ => "",
         }
@@ -409,6 +410,7 @@ struct Request {
     clipping: bool,
     /// La version de la table d'épreuvage, la simulation et l'alerte de gamut.
     proof: Option<(u64, bool, bool)>,
+    scene: bool,
 }
 
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
@@ -550,6 +552,12 @@ pub struct Studio {
     pub selected_mask: Option<usize>,
     /// La partie combinée en cours de réglage : (masque, partie) ; aucune pour la forme principale.
     pub selected_part: Option<(usize, usize)>,
+    /// L'outil de retouche actif (Q) : un clic sur la photo pose une retouche.
+    pub retouch: Option<luma_project::SpotKind>,
+    /// La retouche choisie.
+    pub selected_spot: Option<usize>,
+    /// Le rayon des nouvelles retouches, en fraction de la largeur.
+    pub spot_radius: f32,
     brush: masking::Brush,
     /// Le masque en rouge (touche O) : le masque dessiné et sa texture.
     show_mask: bool,
@@ -667,6 +675,11 @@ fn interactive_size(viewport_px: f32) -> Size {
 }
 
 impl Studio {
+    /// La copie réduite de la base du dernier rendu, s'il en a joint une.
+    pub fn scene_map(&self) -> Option<&luma_core::RgbImage> {
+        self.scene_map.as_deref()
+    }
+
     pub fn new(ctx: &egui::Context) -> Self {
         crate::style::apply(ctx);
         let repaint_ctx = ctx.clone();
@@ -733,6 +746,9 @@ impl Studio {
             crop_tool: None,
             selected_mask: None,
             selected_part: None,
+            retouch: None,
+            selected_spot: None,
+            spot_radius: 0.02,
             brush: masking::Brush::default(),
             show_mask: false,
             mask_style: masking::Overlay::default(),
@@ -1769,6 +1785,7 @@ impl Studio {
                 .proofing
                 .active()
                 .map(|p| (self.proofing.version, p.simulate, p.gamut)),
+            scene: self.retouch.is_some() || self.selected_spot.is_some(),
         };
         if self.last_request.as_ref() == Some(&request) {
             return;
@@ -1779,7 +1796,10 @@ impl Studio {
             request.settings.clone(),
             size,
             self.generation,
-            self.clipping,
+            crate::worker::Extras {
+                clipping: self.clipping,
+                scene: request.scene,
+            },
             self.proofing.active(),
         );
         self.last_request = Some(request);
@@ -1826,6 +1846,8 @@ impl Studio {
                     action = Some("mask_linear");
                 } else if i.consume_key(Modifiers::NONE, Key::K) {
                     action = Some("mask_brush");
+                } else if i.consume_key(Modifiers::NONE, Key::Q) {
+                    action = Some("retouch");
                 } else if i.consume_key(Modifiers::NONE, Key::W) {
                     action = Some("eyedropper");
                 } else if i.consume_key(Modifiers::NONE, Key::T) {
@@ -1954,8 +1976,31 @@ impl Studio {
                     self.export_open = false;
                 } else if self.paste_open {
                     self.paste_open = false;
+                } else if self.retouch.is_some() || self.selected_spot.is_some() {
+                    self.retouch = None;
+                    self.selected_spot = None;
                 } else {
                     self.selected_mask = None;
+                }
+            }
+            "retouch" | "retouch_heal" | "retouch_clone" if self.photo.is_some() => {
+                use luma_project::SpotKind;
+                let kind = match action {
+                    "retouch_clone" => SpotKind::Clone,
+                    "retouch_heal" => SpotKind::Heal,
+                    _ => self.retouch.unwrap_or(SpotKind::Heal),
+                };
+                // Q ou le même bouton une seconde fois : l'outil se range.
+                self.retouch = if self.retouch == Some(kind) {
+                    None
+                } else {
+                    Some(kind)
+                };
+                if self.retouch.is_some() {
+                    self.set_tool(Tool::Masks);
+                    self.zoom = false;
+                    self.selected_mask = None;
+                    self.crop_tool = None;
                 }
             }
             "mask_linear" | "mask_radial" | "mask_brush" | "mask_full" if self.photo.is_some() => {
@@ -1973,6 +2018,8 @@ impl Studio {
                 self.zoom = false;
                 self.settings.masks.push(mask);
                 self.selected_mask = Some(self.settings.masks.len() - 1);
+                self.retouch = None;
+                self.selected_spot = None;
                 self.commit(label);
                 self.touch();
             }
@@ -1984,6 +2031,15 @@ impl Studio {
                     // L'outil règle le mélangeur : son panneau s'ouvre.
                     self.tool = Tool::Color;
                     self.eyedropper = false;
+                }
+            }
+            "mask_delete" if self.selected_mask.is_none() && self.selected_spot.is_some() => {
+                if let Some(i) = self.selected_spot.take()
+                    && i < self.settings.spots.len()
+                {
+                    self.settings.spots.remove(i);
+                    self.commit(tr("Retouche supprimée").into());
+                    self.touch();
                 }
             }
             "mask_delete" => {
@@ -4445,6 +4501,27 @@ impl Studio {
                 let name = tr(&self.settings.masks[i].name).to_lowercase();
                 self.commit(trf("Masque : {mask}", &[("mask", &name)]));
             }
+        } else if self.tool == Tool::Masks
+            && (self.retouch.is_some() || self.selected_spot.is_some())
+        {
+            let target = fit(rect.shrink(18.0), iw, ih);
+            painter.image(t.id(), target, uv, Color32::WHITE);
+            self.edit_label(&painter, target);
+            let c = retouching::edit(
+                ui,
+                target,
+                &mut self.settings.spots,
+                &mut self.selected_spot,
+                self.retouch,
+                self.spot_radius,
+                self.scene_map.as_deref(),
+            );
+            if c.changed {
+                self.touch();
+            }
+            if c.committed {
+                self.commit(tr("Retouche").into());
+            }
         } else {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
@@ -4536,6 +4613,10 @@ impl Studio {
                 }
                 _ => tr("Masque : tirer les poignées, O pour voir le masque, Échap pour quitter"),
             });
+        } else if self.tool == Tool::Masks && self.retouch.is_some() {
+            badges.push(tr(
+                "Retouche : cliquez une tache, tirez la zone ou sa source, Échap pour quitter",
+            ));
         }
         for (k, b) in badges.iter().enumerate() {
             let p = rect.min + vec2(24.0, 24.0 + k as f32 * 26.0);
@@ -4584,6 +4665,131 @@ impl Studio {
             label
         })
         .inner
+    }
+
+    /// Panneau Retouche : correcteur et tampon, la liste des retouches et les réglages de
+    /// celle qui est choisie.
+    fn retouch_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
+        use luma_project::SpotKind;
+        let open = self.retouch.is_some() || self.selected_spot.is_some();
+        egui::CollapsingHeader::new(RichText::new(tr("Retouche")).strong())
+            .id_salt("Retouche")
+            .open(open.then_some(true))
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for (kind, label, hint, action) in [
+                        (
+                            SpotKind::Heal,
+                            tr("Correcteur"),
+                            tr("Q : la texture d'ailleurs, la lumière du bord de la zone"),
+                            "retouch_heal",
+                        ),
+                        (
+                            SpotKind::Clone,
+                            tr("Tampon"),
+                            tr("Une copie exacte d'une autre partie de la photo"),
+                            "retouch_clone",
+                        ),
+                    ] {
+                        if ui
+                            .selectable_label(self.retouch == Some(kind), label)
+                            .on_hover_text(hint)
+                            .clicked()
+                        {
+                            self.act(action);
+                        }
+                    }
+                });
+                let spec = |label, min, max, default, decimals| SliderSpec {
+                    label,
+                    min,
+                    max,
+                    default,
+                    decimals,
+                    track: Track::Plain,
+                    log: false,
+                };
+                let selected = self
+                    .selected_spot
+                    .filter(|&i| i < self.settings.spots.len());
+                if self.retouch.is_some() && selected.is_none() {
+                    let mut size = self.spot_radius * 100.0;
+                    widgets::slider(ui, &spec("Taille", 0.2, 20.0, 2.0, 1), &mut size);
+                    self.spot_radius = size / 100.0;
+                }
+                let mut select = None;
+                for (i, s) in self.settings.spots.iter().enumerate() {
+                    let name = match s.kind {
+                        SpotKind::Heal => tr("Correcteur"),
+                        SpotKind::Clone => tr("Tampon"),
+                    };
+                    let text = RichText::new(format!("{}. {name}", i + 1)).size(12.0);
+                    if ui.selectable_label(selected == Some(i), text).clicked() {
+                        select = Some((selected != Some(i)).then_some(i));
+                    }
+                }
+                if let Some(s) = select {
+                    self.selected_spot = s;
+                    if s.is_some() {
+                        self.selected_mask = None;
+                    }
+                }
+                let Some(i) = self
+                    .selected_spot
+                    .filter(|&i| i < self.settings.spots.len())
+                else {
+                    return;
+                };
+                let scene = self.scene_map.clone();
+                let mut delete = false;
+                let s = &mut self.settings.spots[i];
+                ui.horizontal(|ui| {
+                    for (kind, label) in [
+                        (SpotKind::Heal, tr("Correcteur")),
+                        (SpotKind::Clone, tr("Tampon")),
+                    ] {
+                        if ui.selectable_label(s.kind == kind, label).clicked() && s.kind != kind {
+                            s.kind = kind;
+                            commits
+                                .push(trf("Retouche : {tool}", &[("tool", &label.to_lowercase())]));
+                        }
+                    }
+                });
+                let mut size = s.radius * 100.0;
+                let mut c = widgets::slider(ui, &spec("Taille", 0.2, 20.0, 2.0, 1), &mut size);
+                s.radius = size / 100.0;
+                c.merge(widgets::slider(
+                    ui,
+                    &spec("Contour progressif", 0.0, 100.0, 50.0, 0),
+                    &mut s.feather,
+                ));
+                c.merge(widgets::slider(
+                    ui,
+                    &spec("Opacité", 0.0, 100.0, 100.0, 0),
+                    &mut s.opacity,
+                ));
+                if c.committed {
+                    commits.push(tr("Retouche réglée").into());
+                }
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(tr("Nouvelle source"))
+                        .on_hover_text(tr("Chercher une autre partie de la photo qui convient"))
+                        .clicked()
+                        && let Some(src) = scene.as_deref().and_then(|img| {
+                            luma_image::retouch::find_source(img, s.center, s.radius)
+                        })
+                    {
+                        s.source = src;
+                        commits.push(tr("Nouvelle source").into());
+                    }
+                    delete = ui.button(tr("Supprimer")).clicked();
+                });
+                if delete {
+                    self.act("mask_delete");
+                }
+            });
     }
 
     /// La couleur et l'opacité de la zone affichée (O).
@@ -4745,6 +4951,10 @@ impl Studio {
                 }
                 if let Some(s) = select {
                     self.selected_mask = s;
+                    if s.is_some() {
+                        self.retouch = None;
+                        self.selected_spot = None;
+                    }
                 }
                 let Some(i) = self
                     .selected_mask
@@ -5206,6 +5416,7 @@ impl Studio {
         self.proofing_panel(ui);
 
         if self.tool == Tool::Masks {
+            self.retouch_panel(ui, &mut commits);
             self.masks_panel(ui, &mut commits);
         }
 
