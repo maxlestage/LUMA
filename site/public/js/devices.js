@@ -3,7 +3,7 @@
 // l'application LÜMA.
 //
 // Les appareils sont dessinés en HTML et CSS (proportions des vrais : écran 16:10 à
-// bords fins et encoche, iPhone à Dynamic Island, iPad Pro 13 pouces et son crayon) ;
+// bords fins et encoche, iPhone 16 Pro à Dynamic Island, iPad Pro 13 pouces et son crayon) ;
 // leurs écrans sont des canvas peints par `screen.js`, et vivants : la souris glisse le
 // curseur d'exposition du Mac, la barre avant / après balaie la photo, le pouce tourne
 // la molette de l'iPhone, le crayon peint le ciel sur l'iPad. Une perspective CSS
@@ -44,13 +44,14 @@ function macOf(stage) {
   return { mac, lid, display };
 }
 
-/** L'iPhone, de face : cadre en titane, Dynamic Island, boutons. */
+/** L'iPhone 16 Pro, de face : bande en titane, Dynamic Island, boutons. */
 function phoneOf(stage) {
   const phone = el('div', 'iph', stage);
   el('i', 'iph-btn iph-action', phone);
   el('i', 'iph-btn iph-up', phone);
   el('i', 'iph-btn iph-down', phone);
   el('i', 'iph-btn iph-power', phone);
+  el('i', 'iph-btn iph-camera', phone);
   const glass = el('div', 'iph-glass', phone);
   const display = canvas(glass, 'iph-screen', 780, 1688);
   el('div', 'iph-island', glass);
@@ -83,6 +84,14 @@ export async function initDevices(stage, section, { reduced = false } = {}) {
   const { mac, lid, display } = macOf(stage);
   const { phone, display: phoneDisplay } = phoneOf(stage);
   const { pad, display: padDisplay, pencil, shadow } = padOf(stage);
+  // Les écrans de l'iPhone et de l'iPad, à la taille où ils s'affichent (un canvas
+  // beaucoup plus grand, réduit dans un plan 3D, crénèle).
+  const fit = (c) => {
+    const w = Math.round(c.parentElement.clientWidth * Math.min(window.devicePixelRatio || 1, 2) * 1.4);
+    const k = clamp(w / c.width, 0.5, 1);
+    c.width = Math.round(c.width * k); c.height = Math.round(c.height * k);
+  };
+  fit(phoneDisplay); fit(padDisplay);
   const drawMac = macScreen(display);
   const drawPhone = phoneScreen(phoneDisplay);
   const padUI = padScreen(padDisplay);
