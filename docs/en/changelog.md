@@ -101,6 +101,8 @@ The professional photo library, step by step.
 - **Combined masks**: “Combine” adds, subtracts or intersects another shape (linear
   or radial gradient, brush, each one invertible); a radial with another one
   subtracted becomes a ring, a subtracted brush spares a face under a gradient.
+- **Mask area your way**: the area shown (O) can be red, green, blue, white or white
+  on black, with an opacity from 10 to 100%.
 - **ICC profiles read** (a step towards on-screen soft proofing): display profiles
   (matrix and curves) and printer and paper profiles (lut8, lut16, A→B and B→A
   tables, versions 2 and 4), in both directions and for all four rendering intents,
