@@ -125,6 +125,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Collections manuelles et dynamiques (règle : note, date, boîtier, objectif, ISO, mots‑clés…), enregistrées dans le catalogue | ✅ |
 | Mots‑clés dans l'app : saisie (plusieurs à la fois, séparés par une virgule), ajout et retrait sur toutes les photos choisies, liste des mots‑clés du dossier avec leur nombre, filtre de la grille | ✅ |
 | Photothèque dans l'app : chaque dossier ouvert y entre (en arrière‑plan) ; toutes les photos, les collections et les dossiers, chacun avec son nombre de photos ; recherche et filtres ; vues triées par date de prise de vue | ✅ |
+| Dossier surveillé (prise de vue en connexion, carte copiée) : chaque photo complète entre dans la photothèque et le film, et s'ouvre ; `luma watch` | ✅ |
 | Copies virtuelles : plusieurs développements d'une photo sans dupliquer le fichier (un XMP par copie), chacune avec sa note, ses mots‑clés et sa vignette, à côté de son original ; export nommé `IMG_0001-2` ; suppression sans toucher l'original | ✅ |
 | Import de catalogues existants | ⏳ |
 
