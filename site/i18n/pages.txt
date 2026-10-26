@@ -260,9 +260,17 @@ fr = Le même moteur, *dans ta poche*.
 en = The same engine, *in your pocket*.
 es = El mismo motor, *en tu bolsillo*.
 
-fr = ProRAW sur iPhone, Apple Pencil sur iPad pour les masques. Le cœur Rust est identique sur Mac, iPhone et iPad : même projet, même rendu.
-en = ProRAW on iPhone, Apple Pencil on iPad for masks. The Rust core is identical on Mac, iPhone and iPad: same project, same rendering.
-es = ProRAW en el iPhone, Apple Pencil en el iPad para las máscaras. El núcleo en Rust es idéntico en Mac, iPhone y iPad: mismo proyecto, mismo resultado.
+fr = ProRAW sur iPhone, réglé du bout du pouce : aperçu réduit pendant le geste, pleine netteté au lâcher.
+en = ProRAW on iPhone, adjusted with your thumb: a lighter preview during the gesture, full sharpness the moment you let go.
+es = ProRAW en el iPhone, ajustado con el pulgar: vista previa reducida durante el gesto, nitidez completa al soltar.
+
+fr = Les masques, *au crayon*.
+en = Masks, *in pencil*.
+es = Las máscaras, *a lápiz*.
+
+fr = Sur iPad, l'Apple Pencil peint les masques à même la photo. Le cœur Rust est identique sur Mac, iPhone et iPad : même projet, même rendu.
+en = On iPad, Apple Pencil paints masks right on the photo. The Rust core is identical on Mac, iPhone and iPad: same project, same rendering.
+es = En el iPad, el Apple Pencil pinta las máscaras directamente sobre la foto. El núcleo en Rust es idéntico en Mac, iPhone y iPad: mismo proyecto, mismo resultado.
 
 # Plateformes.
 fr = Ordre de sortie
