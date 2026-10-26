@@ -454,6 +454,12 @@ pub struct Studio {
     pub view: View,
     catalog_search: String,
     export_options: ExportOptions,
+    /// Les préréglages d'export (relus à l'ouverture de la fenêtre), ceux qui sont
+    /// cochés, et si les réglages de la fenêtre sont exportés eux aussi.
+    export_presets: luma_render::export::Presets,
+    export_targets: Vec<String>,
+    export_current: bool,
+    preset_name: String,
     export_open: bool,
     export_all: bool,
     crop_tool: Option<CropTool>,
@@ -619,6 +625,10 @@ impl Studio {
             view: View::Folder,
             catalog_search: String::new(),
             export_options: ExportOptions::default(),
+            export_presets: luma_render::export::Presets::default(),
+            export_targets: Vec::new(),
+            export_current: true,
+            preset_name: String::new(),
             export_open: false,
             export_all: false,
             crop_tool: None,
@@ -1644,6 +1654,9 @@ impl Studio {
             "export" => {
                 if self.current.is_some() {
                     self.export_all = self.module == Module::Library;
+                    self.export_presets = luma_render::export::presets_path()
+                        .map(|p| luma_render::export::Presets::load(&p))
+                        .unwrap_or_default();
                     self.export_open = true;
                 }
             }
@@ -1793,7 +1806,87 @@ impl Studio {
         } else {
             tr("Export d'une photo…").into()
         };
-        self.worker.export(jobs, self.export_options.clone());
+        let mut targets = Vec::new();
+        if self.export_current {
+            targets.push(self.export_options.clone());
+        }
+        for name in &self.export_targets {
+            if let Some(p) = self.export_presets.get(name) {
+                targets.push(p.options);
+            }
+        }
+        if targets.is_empty() {
+            return;
+        }
+        self.worker.export(jobs, targets);
+    }
+
+    /// En tête de la fenêtre Exporter : vers quoi exporter (les réglages de la fenêtre,
+    /// des préréglages cochés, plusieurs à la fois), reprendre un préréglage, enregistrer
+    /// les réglages de la fenêtre comme préréglage.
+    fn presets_editor(&mut self, ui: &mut Ui) {
+        ui.label(RichText::new(tr("Exporter vers")).strong());
+        ui.checkbox(&mut self.export_current, tr("Les réglages ci-dessous"));
+        let mut load = None;
+        egui::Grid::new("export-presets")
+            .num_columns(3)
+            .spacing(vec2(10.0, 4.0))
+            .show(ui, |ui| {
+                for p in self.export_presets.all() {
+                    let mut on = self.export_targets.contains(&p.name);
+                    if ui.checkbox(&mut on, tr(&p.name)).changed() {
+                        self.export_targets.retain(|t| *t != p.name);
+                        if on {
+                            self.export_targets.push(p.name.clone());
+                        }
+                    }
+                    ui.label(
+                        RichText::new(export_summary(&p.options))
+                            .small()
+                            .color(theme::DIM),
+                    );
+                    if ui.small_button(tr("Reprendre")).clicked() {
+                        load = Some(p.options);
+                    }
+                    ui.end_row();
+                }
+            });
+        if let Some(o) = load {
+            self.export_options = o;
+            self.export_current = true;
+        }
+        ui.horizontal(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.preset_name)
+                    .hint_text(tr("Nom du préréglage"))
+                    .desired_width(180.0),
+            )
+            .accessible_name(tr("Nom du préréglage"));
+            let name = self.preset_name.trim().to_owned();
+            if ui
+                .add_enabled(
+                    !name.is_empty(),
+                    egui::Button::new(tr("Enregistrer ces réglages")),
+                )
+                .clicked()
+            {
+                self.export_presets.set(luma_render::export::Preset {
+                    name: name.clone(),
+                    options: self.export_options.clone(),
+                });
+                let saved = luma_render::export::presets_path()
+                    .ok_or_else(|| "HOME".to_owned())
+                    .and_then(|p| self.export_presets.save(&p));
+                self.status = match saved {
+                    Ok(()) => trf(
+                        "Préréglage d'export enregistré : {name}",
+                        &[("name", &name)],
+                    ),
+                    Err(e) => trf("Préréglage non enregistré : {error}", &[("error", &e)]),
+                };
+                self.preset_name.clear();
+            }
+        });
     }
 
     /// La fenêtre Exporter.
@@ -1806,8 +1899,12 @@ impl Studio {
             .open(&mut open)
             .collapsible(false)
             .resizable(false)
+            // Plus haute qu'un écran d'iPhone : elle défile.
+            .vscroll(true)
             .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
             .show(ctx, |ui| {
+                self.presets_editor(ui);
+                ui.add_space(6.0);
                 let o = &mut self.export_options;
                 egui::Grid::new("export")
                     .num_columns(2)
@@ -1925,7 +2022,8 @@ impl Studio {
                         ui.end_row();
                     });
                 ui.add_space(8.0);
-                let valid = valid_name(self.export_options.name.as_deref().unwrap_or(""));
+                let valid = valid_name(self.export_options.name.as_deref().unwrap_or(""))
+                    && (self.export_current || !self.export_targets.is_empty());
                 ui.with_layout(egui::Layout::top_down(egui::Align::Max), |ui| {
                     if ui
                         .add_enabled(valid, egui::Button::new(RichText::new(tr("Exporter")).strong()))
@@ -5346,6 +5444,31 @@ fn resize_editor(ui: &mut Ui, resize: &mut Option<luma_render::export::Resize>) 
             .accessible_name(tr("Mégapixels"));
         }
     }
+}
+
+/// Le résumé d'un préréglage d'export dans la langue de l'interface : format, espace,
+/// taille.
+fn export_summary(o: &ExportOptions) -> String {
+    use luma_render::export::Resize;
+    let format = match o.format {
+        Format::Jpeg => format!("JPEG {}", o.quality),
+        Format::Png => format!("PNG {} bits", o.bits),
+        Format::Tiff => format!("TIFF {} bits", o.bits),
+    };
+    let space = match o.space {
+        OutputSpace::Srgb => "sRGB",
+        OutputSpace::DisplayP3 => "Display P3",
+        OutputSpace::Rec2020 => "Rec. 2020",
+        OutputSpace::ProPhoto => "ProPhoto RGB",
+    };
+    let size = match o.resize {
+        None => tr("Pleine définition").to_owned(),
+        Some(Resize::LongEdge(n)) => format!("{n} px"),
+        Some(Resize::ShortEdge(n)) => trf("petit côté {n} px", &[("n", &n)]),
+        Some(Resize::Fit { width, height }) => format!("{width} × {height} px"),
+        Some(Resize::Megapixels(m)) => format!("{m} Mpx"),
+    };
+    format!("{format}, {space}, {size}")
 }
 
 /// Le modèle du nom des fichiers exportés est‑il valable ?

@@ -88,6 +88,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
 | Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels, sans jamais agrandir (`--resize`) | ✅ |
 | Fenêtre Exporter : format, qualité, profondeur, espace, taille, dossier ; export de toutes les photos du filtre | ✅ |
+| Export vers plusieurs préréglages à la fois (fenêtre Exporter : cases à cocher, reprendre, enregistrer ; `luma export --preset A --preset B`) | ✅ |
 | Préréglages d'export (format, qualité, profondeur, espace, taille, dossier) : Web, Pleine définition, Écran P3, Impression, et les vôtres ; `luma export-preset`, `luma develop --preset` | ✅ |
 | Modèles de nom des fichiers : `{nom}`, `{date}`, `{heure}`, `{séquence}`, `{boîtier}`, `{objectif}`, `{iso}`, `{note}`, `{libellé}`…, sous‑dossiers par « / » ; dans la fenêtre Exporter, les préréglages et `luma develop --name` | ✅ |
 | Accentuation de sortie : écran, papier mat, papier brillant ; faible, normale, forte ; à la taille finale (`--output-sharpen`) | ✅ |

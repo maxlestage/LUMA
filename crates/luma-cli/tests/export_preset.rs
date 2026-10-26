@@ -498,3 +498,115 @@ fn exported_metadata() {
     );
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn export_to_several_presets() {
+    let corpus = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus");
+    let (nef, arw) = (corpus.join("DSC_0750.NEF"), corpus.join("_DSC0009.ARW"));
+    if !nef.is_file() || !arw.is_file() {
+        eprintln!("corpus vide : lancer scripts/fetch-corpus.sh");
+        return;
+    }
+    let dir = scratch("export");
+    let file = dir.join("Exports.json");
+    let (small, big) = (dir.join("petit"), dir.join("grand"));
+    for (name, folder, size, format) in [("Petit", &small, "200", "jpg"), ("Grand", &big, "400", "png")] {
+        let (ok, out) = luma(
+            &file,
+            &[
+                "export-preset",
+                name,
+                "--size",
+                size,
+                "--format",
+                format,
+                "--folder",
+                folder.to_str().unwrap(),
+                "--name",
+                "{séquence:2}",
+            ],
+        );
+        assert!(ok, "{out}");
+    }
+    let absent = dir.join("absent.ARW");
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export",
+            nef.to_str().unwrap(),
+            absent.to_str().unwrap(),
+            arw.to_str().unwrap(),
+            "--no-sidecar",
+            "--preset",
+            "petit",
+            "--preset",
+            "Grand",
+        ],
+    );
+    // La photo absente est signalée, les deux autres sont exportées vers les deux préréglages.
+    assert!(
+        !ok && out.contains("absent.ARW") && out.contains("4 fichier(s)"),
+        "{out}"
+    );
+    let names = |d: &Path| {
+        let mut v: Vec<String> = std::fs::read_dir(d)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        v.sort();
+        v
+    };
+    assert_eq!(names(&small), ["01.jpg", "03.jpg"]);
+    assert_eq!(names(&big), ["01.png", "03.png"]);
+    let (w, h) = image_size(&small.join("01.jpg"));
+    assert_eq!(w.max(h), 200);
+    assert_eq!(png_rgb(&big.join("03.png")).0.max(png_rgb(&big.join("03.png")).1), 400);
+    // Le même nom deux fois : numéroté, pas écrasé.
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export",
+            nef.to_str().unwrap(),
+            "--no-sidecar",
+            "--preset",
+            "petit",
+            "--name",
+            "x",
+        ],
+    );
+    assert!(ok, "{out}");
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export",
+            nef.to_str().unwrap(),
+            nef.to_str().unwrap(),
+            "--no-sidecar",
+            "--preset",
+            "petit",
+            "--name",
+            "y",
+        ],
+    );
+    assert!(ok, "{out}");
+    assert!(small.join("y.jpg").is_file() && small.join("y-2.jpg").is_file());
+    // Un préréglage inconnu, ou -o, est refusé avant tout export.
+    let (ok, out) = luma(&file, &["export", nef.to_str().unwrap(), "--preset", "Inconnu"]);
+    assert!(!ok && out.contains("inconnu"), "{out}");
+    let (ok, _) = luma(&file, &["export", nef.to_str().unwrap(), "-o", "x.jpg"]);
+    assert!(!ok);
+    let (ok, out) = luma(
+        &file,
+        &[
+            "develop",
+            nef.to_str().unwrap(),
+            "--preset",
+            "Petit",
+            "--preset",
+            "Grand",
+        ],
+    );
+    assert!(!ok && out.contains("luma export"), "{out}");
+    std::fs::remove_dir_all(&dir).unwrap();
+}

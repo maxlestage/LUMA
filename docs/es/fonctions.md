@@ -88,6 +88,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | sRGB, Display P3, Rec. 2020, ProPhoto, con perfil ICC incrustado | ✅ |
 | Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar nunca (`--resize`) | ✅ |
 | Ventana Exportar: formato, calidad, profundidad de bits, espacio de color, tamaño, carpeta; exportación de todas las fotos del filtro | ✅ |
+| Exportación a varios ajustes preestablecidos a la vez (ventana Exportar: casillas, usar, guardar; `luma export --preset A --preset B`) | ✅ |
 | Ajustes preestablecidos de exportación (formato, calidad, profundidad, espacio, tamaño, carpeta): web, resolución completa, pantalla P3, impresión, y los suyos; `luma export-preset`, `luma develop --preset` | ✅ |
 | Plantillas de nombre de archivo: `{nom}` (o `{nombre}`), `{date}` (`{fecha}`), `{séquence}` (`{secuencia}`), `{boîtier}` (`{cámara}`), `{objectif}` (`{objetivo}`), `{iso}`, `{note}` (`{valoración}`), `{libellé}` (`{etiqueta}`)…, subcarpetas con «/»; en la ventana Exportar, los ajustes preestablecidos y `luma develop --name` | ✅ |
 | Enfoque de salida: pantalla, papel mate, papel brillante; bajo, estándar, alto; al tamaño final (`--output-sharpen`) | ✅ |

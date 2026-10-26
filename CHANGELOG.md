@@ -76,6 +76,9 @@ La photothèque professionnelle, étape par étape.
   note et le libellé ; la position GPS est retirée par défaut, pour qu'une photo
   partagée ne dise pas où vous habitez (`--keep-gps` la garde). Les TIFF les reçoivent
   aussi (EXIF, XMP), avec exactement les mêmes pixels qu'avant.
+- **Export vers plusieurs préréglages à la fois** : cochez « Web » et « Impression »
+  dans la fenêtre Exporter, chaque photo part vers les deux en une fois ; enregistrez
+  vos réglages comme préréglage ; `luma export *.ARW --preset Web --preset Impression`.
 
 ## 0.2.0 — octobre 2026
 

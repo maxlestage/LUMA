@@ -3,6 +3,7 @@
 //! ```text
 //! luma info <raw>…                  ce que LÜMA lit dans chaque fichier
 //! luma develop <raw> [options]      développe et exporte (JPEG, PNG, TIFF)
+//! luma export <raw>… [--preset p]… plusieurs photos vers un ou plusieurs préréglages
 //! luma export-preset [nom] [opt]    les préréglages d'export : liste, crée, modifie
 //! luma xmp <raw|xmp|json> [options] écrit les réglages au format XMP
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
@@ -60,6 +61,10 @@ USAGE
       recopié dans les JPEG et PNG (--no-exif : rien), la position GPS est retirée
       (--keep-gps la garde) ; --author et --copyright s'ajoutent à l'EXIF et au XMP ;
       les mots‑clés, la note et le libellé du XMP vont dans les JPEG (--no-keywords).
+  luma export <raw>… [--preset nom]… [options de develop, sauf -o]
+      Exporte chaque photo vers chacun des préréglages donnés (à défaut, les réglages
+      d'export par défaut), en une fois : chaque RAW n'est ouvert qu'une fois, deux
+      fichiers du même nom sont numérotés (-2, -3…), {séquence} compte les photos.
   luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
                      [--space srgb|p3|rec2020|prophoto] [--size taille|0] [--folder d]
                      [--next-to-original] [--name modèle] [--output-sharpen s|none]
@@ -129,7 +134,7 @@ struct Args {
     space: Option<OutputSpace>,
     quality: Option<u8>,
     bits: Option<u8>,
-    preset: Option<String>,
+    presets: Vec<String>,
     name: Option<String>,
     resize: Option<export::Resize>,
     output_sharpen: Option<export::OutputSharpen>,
@@ -152,7 +157,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         space: None,
         quality: None,
         bits: None,
-        preset: None,
+        presets: Vec::new(),
         name: None,
         resize: None,
         output_sharpen: None,
@@ -177,7 +182,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             }
             "--quality" => a.quality = Some(value(&arg)?.parse().map_err(|_| "--quality : 1 à 100")?),
             "--bits" => a.bits = Some(value(&arg)?.parse().map_err(|_| "--bits : 8 ou 16")?),
-            "--preset" => a.preset = Some(value(&arg)?),
+            "--preset" => a.presets.push(value(&arg)?),
             "--name" => a.name = Some(value(&arg)?),
             s if s.starts_with("--watermark") => {
                 let v = if s == "--watermark-dark" {
@@ -448,7 +453,10 @@ fn develop(a: &Args) -> Result<(), String> {
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
-    if a.preset.is_some()
+    if a.presets.len() > 1 {
+        return Err("develop : un seul préréglage (luma export pour en utiliser plusieurs)".into());
+    }
+    if !a.presets.is_empty()
         || a.name.is_some()
         || a.resize.is_some()
         || a.output_sharpen.is_some()
@@ -456,33 +464,12 @@ fn develop(a: &Args) -> Result<(), String> {
         || !a.logo.is_empty()
         || !a.metadata.is_empty()
     {
-        // Un préréglage d'export (à défaut, les options par défaut) : ses options, que les
-        // options données remplacent.
-        let mut o = match &a.preset {
-            Some(name) => {
-                load_presets()?
-                    .1
-                    .get(name)
-                    .ok_or_else(|| format!("préréglage d'export inconnu « {name} » (luma export-preset les liste)"))?
-                    .options
-            }
-            None => export::Options::default(),
+        let presets = if a.presets.is_empty() {
+            export::Presets::default()
+        } else {
+            load_presets()?.1
         };
-        if let Some(t) = &a.name {
-            export::check_template(t)?;
-            o.name = Some(t.clone()).filter(|t| !t.trim().is_empty());
-        }
-        o.space = a.space.unwrap_or(o.space);
-        o.sharpen = a.output_sharpen.or(o.sharpen);
-        a.watermark.apply(&mut o.watermark);
-        a.logo.apply(&mut o.logo);
-        a.metadata.apply(&mut o.metadata);
-        o.quality = a.quality.unwrap_or(o.quality);
-        o.bits = a.bits.unwrap_or(o.bits);
-        o.resize = a
-            .resize
-            .or(a.size.filter(|&n| n > 0).map(export::Resize::LongEdge))
-            .or(o.resize);
+        let mut o = export_options(a, a.presets.first().map(String::as_str), &presets)?;
         if let Some(f) = a
             .output
             .as_deref()
@@ -733,6 +720,90 @@ fn sharpen_error(v: &str) -> String {
 
 fn resize_error(v: &str) -> String {
     format!("taille inconnue « {v} » (2048, short:1080, 1920x1080, 12mp)")
+}
+
+/// Les options d'un export : celles du préréglage (à défaut, les options par défaut),
+/// que les options données remplacent.
+fn export_options(a: &Args, preset: Option<&str>, presets: &export::Presets) -> Result<export::Options, String> {
+    let mut o = match preset {
+        Some(name) => {
+            presets
+                .get(name)
+                .ok_or_else(|| format!("préréglage d'export inconnu « {name} » (luma export-preset les liste)"))?
+                .options
+        }
+        None => export::Options::default(),
+    };
+    if let Some(t) = &a.name {
+        export::check_template(t)?;
+        o.name = Some(t.clone()).filter(|t| !t.trim().is_empty());
+    }
+    o.space = a.space.unwrap_or(o.space);
+    o.sharpen = a.output_sharpen.or(o.sharpen);
+    a.watermark.apply(&mut o.watermark);
+    a.logo.apply(&mut o.logo);
+    a.metadata.apply(&mut o.metadata);
+    o.quality = a.quality.unwrap_or(o.quality);
+    o.bits = a.bits.unwrap_or(o.bits);
+    o.resize = a
+        .resize
+        .or(a.size.filter(|&n| n > 0).map(export::Resize::LongEdge))
+        .or(o.resize);
+    Ok(o)
+}
+
+/// `luma export` : des photos vers un ou plusieurs préréglages à la fois. Chaque photo est
+/// ouverte une fois, puis développée pour chaque préréglage ; deux fichiers du même nom
+/// sont numérotés plutôt qu'écrasés. Une photo illisible n'arrête pas les autres.
+fn export_many(a: &Args) -> Result<(), String> {
+    if a.positional.is_empty() {
+        return Err("export : au moins une photo".into());
+    }
+    if a.output.is_some() {
+        return Err("export : pas de -o (chaque préréglage a son dossier ; --folder… avec luma export-preset)".into());
+    }
+    let presets = load_presets()?.1;
+    let targets: Vec<export::Options> = if a.presets.is_empty() {
+        vec![export_options(a, None, &presets)?]
+    } else {
+        a.presets
+            .iter()
+            .map(|p| export_options(a, Some(p), &presets))
+            .collect::<Result<_, _>>()?
+    };
+    let start = Instant::now();
+    let mut taken = std::collections::HashSet::new();
+    let (mut written, mut failed) = (0, 0);
+    for (k, path) in a.positional.iter().enumerate() {
+        let path = Path::new(path);
+        let result = (|| -> Result<(), String> {
+            let settings = load_settings(a, Some(path))?;
+            let photo = Photo::open(path).map_err(|e| e.to_string())?;
+            let meta = sidecar_meta(a, path);
+            let fields = export::NameFields::of_photo(path, &photo, &meta, k + 1);
+            for o in &targets {
+                let out = export::unique(export::output_path(path, o, &fields), &mut taken);
+                export::develop(&photo, &settings, &out, o, &meta)?;
+                println!("{} → {}", path.display(), out.display());
+                written += 1;
+            }
+            Ok(())
+        })();
+        if let Err(e) = result {
+            eprintln!("erreur : {} : {e}", path.display());
+            failed += 1;
+        }
+    }
+    println!(
+        "{written} fichier(s) en {:.1} s, {} photo(s), {} préréglage(s)",
+        start.elapsed().as_secs_f64(),
+        a.positional.len(),
+        targets.len()
+    );
+    if failed > 0 {
+        return Err(format!("{failed} photo(s) non exportée(s)"));
+    }
+    Ok(())
 }
 
 /// La note, le libellé et les mots‑clés du XMP posé à côté du RAW (sauf --no-sidecar).
@@ -1269,6 +1340,7 @@ fn main() -> ExitCode {
     let result = match command.as_str() {
         "info" => info(&parsed),
         "develop" => develop(&parsed),
+        "export" => export_many(&parsed),
         "xmp" => to_xmp(&parsed),
         "colorchecker" => colorchecker(&parsed),
         "bench" => bench(&parsed),
