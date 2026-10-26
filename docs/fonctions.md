@@ -87,6 +87,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Orientation EXIF | ✅ |
 | Profils ICC lus (versions 2 et 4) : matrice et courbes, tables lut8, lut16, A→B et B→A des imprimantes et des papiers, quatre intentions de rendu (`luma icc`) | ✅ |
 | Épreuvage à l'écran : l'aperçu tel qu'il sera imprimé avec un profil d'imprimante, intention perceptuelle ou colorimétrique relative (histogramme compris) | ✅ |
+| Alerte de gamut : les couleurs que l'imprimante ne saura pas rendre, en bleu sur l'aperçu (aller et retour en colorimétrique relative, écart au‑delà de ΔE 3) | ✅ |
 
 ## Export
 

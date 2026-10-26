@@ -87,6 +87,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Orientación EXIF | ✅ |
 | Perfiles ICC leídos (versiones 2 y 4): matriz y curvas, tablas lut8, lut16, A→B y B→A de impresoras y papeles, cuatro intenciones de reproducción (`luma icc`) | ✅ |
 | Prueba en pantalla: la vista previa tal como se imprimirá con un perfil de impresora, intención perceptual o colorimétrica relativa (histograma incluido) | ✅ |
+| Aviso de gama: los colores que la impresora no podrá reproducir, en azul sobre la vista previa (ida y vuelta en colorimétrico relativo, diferencia superior a ΔE 3) | ✅ |
 
 ## Exportación
 
