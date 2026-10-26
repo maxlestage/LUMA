@@ -70,7 +70,8 @@ La photothèque professionnelle, étape par étape.
 - **Métadonnées d'export** : l'EXIF de la prise de vue (boîtier, objectif, réglages,
   date) recopié dans les JPEG et PNG, votre nom et votre copyright, les mots‑clés, la
   note et le libellé ; la position GPS est retirée par défaut, pour qu'une photo
-  partagée ne dise pas où vous habitez (`--keep-gps` la garde).
+  partagée ne dise pas où vous habitez (`--keep-gps` la garde). Les TIFF les reçoivent
+  aussi (EXIF, XMP), avec exactement les mêmes pixels qu'avant.
 
 ## 0.2.0 — octobre 2026
 

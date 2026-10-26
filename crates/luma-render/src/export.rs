@@ -24,8 +24,8 @@ pub fn write(path: &Path, img: &RgbImage, space: OutputSpace, quality: u8, bits:
     write_with(path, img, space, quality, bits, &Embedded::default())
 }
 
-/// `write`, avec les métadonnées : l'EXIF dans les JPEG et les PNG, le paquet XMP dans
-/// les JPEG (le TIFF n'en reçoit pas encore).
+/// `write`, avec les métadonnées : l'EXIF dans les trois formats, le paquet XMP dans
+/// les JPEG et les TIFF.
 pub fn write_with(
     path: &Path,
     img: &RgbImage,
@@ -77,9 +77,23 @@ pub fn write_with(
             enc.write_image(&bytes, w, h, kind).map_err(err)
         }
         "tif" | "tiff" => {
-            let mut enc = image::codecs::tiff::TiffEncoder::new(std::io::BufWriter::new(create()?));
-            let _ = enc.set_icc_profile(profile);
-            enc.write_image(&bytes, w, h, kind).map_err(err)
+            // Écrit par LÜMA : une bande RVB non compressée, avec ICC, EXIF et XMP ; les
+            // pixels à la suite de l'en‑tête, sans copie (déjà petit‑boutistes ici).
+            let pixels = if sixteen && cfg!(target_endian = "big") {
+                bytes
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .flat_map(|b| u16::from_ne_bytes(*b).to_le_bytes())
+                    .collect()
+            } else {
+                bytes
+            };
+            let header = crate::metadata::tiff_header(img.width, img.height, sixteen, pixels.len(), &profile, meta);
+            let io = |e: std::io::Error| format!("{} : {e}", path.display());
+            let mut f = create()?;
+            std::io::Write::write_all(&mut f, &header).map_err(io)?;
+            std::io::Write::write_all(&mut f, &pixels).map_err(io)
         }
         other => Err(format!("format de sortie inconnu « {other} » (jpg, png, tif)")),
     }
@@ -1041,6 +1055,39 @@ pub fn describe(o: &Options) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tiff_exports_decode_like_before() {
+        // Les mêmes pixels que l'ancien encodeur TIFF, en 8 et en 16 bits.
+        let img = RgbImage::from_fn(37, 23, |x, y| [x as f32 / 40.0, y as f32 / 25.0, 0.3]);
+        let dir = std::env::temp_dir().join(format!("luma-tiff-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for bits in [8, 16] {
+            let path = dir.join(format!("x{bits}.tif"));
+            write(&path, &img, OutputSpace::ProPhoto, 92, bits).unwrap();
+            let mine = image::open(&path).unwrap();
+            let (bytes, kind) = if bits == 16 {
+                let px = luma_image::encode16(&img, OutputSpace::ProPhoto);
+                (
+                    px.iter().flat_map(|v| v.to_ne_bytes()).collect::<Vec<u8>>(),
+                    ExtendedColorType::Rgb16,
+                )
+            } else {
+                (
+                    luma_image::encode8(&img, OutputSpace::ProPhoto),
+                    ExtendedColorType::Rgb8,
+                )
+            };
+            let mut old = std::io::Cursor::new(Vec::new());
+            image::codecs::tiff::TiffEncoder::new(&mut old)
+                .write_image(&bytes, 37, 23, kind)
+                .unwrap();
+            let before = image::load_from_memory(old.get_ref()).unwrap();
+            assert_eq!(mine.color(), before.color());
+            assert_eq!(mine.as_bytes(), before.as_bytes(), "{bits} bits");
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn output_paths() {

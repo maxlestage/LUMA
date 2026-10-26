@@ -68,7 +68,8 @@ The professional photo library, step by step.
 - **Export metadata**: the capture EXIF (camera, lens, settings, date) copied into
   JPEG and PNG files, your name and copyright, keywords, rating and label; the GPS
   location is removed by default, so a shared photo doesn't say where you live
-  (`--keep-gps` keeps it).
+  (`--keep-gps` keeps it). TIFF files get them too (EXIF, XMP), with exactly the same
+  pixels as before.
 
 ## 0.2.0 — October 2026
 
