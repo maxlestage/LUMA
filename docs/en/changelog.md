@@ -108,6 +108,8 @@ The professional photo library, step by step.
   printer and paper, and the preview shows the photo as it will come out, with the
   perceptual or relative colorimetric intent; the histogram follows. A view, not an
   adjustment: nothing is written to the photo.
+- **Gamut warning** (in soft proofing): the colors the printer will not be able to
+  reproduce turn blue on the preview, with or without the print simulation.
 
 ## 0.2.0 — October 2026
 

@@ -399,8 +399,8 @@ struct Request {
     settings: Settings,
     size: Size,
     clipping: bool,
-    /// La version de la table d'épreuvage, s'il est actif.
-    proof: Option<u64>,
+    /// La version de la table d'épreuvage, la simulation et l'alerte de gamut.
+    proof: Option<(u64, bool, bool)>,
 }
 
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
@@ -408,6 +408,8 @@ struct Request {
 #[derive(Default)]
 struct Proofing {
     on: bool,
+    /// L'alerte de gamut : les couleurs que l'imprimante ne saura pas rendre.
+    gamut: bool,
     path: Option<PathBuf>,
     description: String,
     profile: Option<luma_color::profile::Profile>,
@@ -418,8 +420,13 @@ struct Proofing {
 }
 
 impl Proofing {
-    fn active(&self) -> Option<Arc<luma_color::proof::Proof>> {
-        self.table.clone().filter(|_| self.on)
+    fn active(&self) -> Option<crate::worker::Proofed> {
+        let table = self.table.clone().filter(|_| self.on || self.gamut)?;
+        Some(crate::worker::Proofed {
+            table,
+            simulate: self.on,
+            gamut: self.gamut,
+        })
     }
 
     fn intent(&self) -> luma_color::profile::Intent {
@@ -443,6 +450,7 @@ impl Proofing {
                 Err(_) => {
                     self.error = Some("Ce profil ne sait pas convertir vers l'imprimante");
                     self.on = false;
+                    self.gamut = false;
                 }
             }
         }
@@ -1608,7 +1616,10 @@ impl Studio {
             settings,
             size,
             clipping: self.clipping,
-            proof: self.proofing.active().map(|_| self.proofing.version),
+            proof: self
+                .proofing
+                .active()
+                .map(|p| (self.proofing.version, p.simulate, p.gamut)),
         };
         if self.last_request.as_ref() == Some(&request) {
             return;
@@ -4059,8 +4070,11 @@ impl Studio {
         if self.clipping {
             badges.push(tr("Écrêtage (J)"));
         }
-        if self.proofing.active().is_some() {
+        if self.proofing.active().is_some_and(|p| p.simulate) {
             badges.push(tr("Épreuvage à l'écran"));
+        }
+        if self.proofing.active().is_some_and(|p| p.gamut) {
+            badges.push(tr("Alerte de gamut"));
         }
         if self.eyedropper {
             badges.push(tr("Pipette : cliquez un gris ou un blanc de la photo"));
@@ -4536,7 +4550,16 @@ impl Studio {
     }
 
     pub fn proofing_active(&self) -> bool {
-        self.proofing.active().is_some()
+        self.proofing.active().is_some_and(|p| p.simulate)
+    }
+
+    /// Montre ou cache l'alerte de gamut (il faut un profil d'imprimante).
+    pub fn set_gamut_alert(&mut self, on: bool) {
+        self.proofing.gamut = on && self.proofing.table.is_some();
+    }
+
+    pub fn gamut_alert(&self) -> bool {
+        self.proofing.active().is_some_and(|p| p.gamut)
     }
 
     fn proofing_panel(&mut self, ui: &mut Ui) {
@@ -4545,8 +4568,14 @@ impl Studio {
             .default_open(self.proofing.profile.is_some())
             .show(ui, |ui| {
                 let (mut on, mut relative) = (self.proofing.on, self.proofing.relative);
+                let mut gamut = self.proofing.gamut;
                 ui.add_enabled_ui(self.proofing.table.is_some(), |ui| {
-                    ui.checkbox(&mut on, tr("Simuler l'impression"));
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut on, tr("Simuler l'impression"));
+                        ui.checkbox(&mut gamut, tr("Alerte de gamut")).on_hover_text(tr(
+                            "En bleu : les couleurs que l'imprimante ne saura pas rendre",
+                        ));
+                    });
                 });
                 ui.horizontal(|ui| {
                     if ui.button(tr("Choisir un profil ICC…")).clicked()
@@ -4578,6 +4607,9 @@ impl Studio {
                 }
                 if (on, relative) != (self.proofing.on, self.proofing.relative) {
                     self.set_proofing(on, relative);
+                }
+                if gamut != self.proofing.gamut {
+                    self.set_gamut_alert(gamut);
                 }
             });
     }
