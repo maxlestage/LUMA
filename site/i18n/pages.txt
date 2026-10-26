@@ -1104,3 +1104,11 @@ es = Cada función marcada está hecha y verificada por las pruebas en cada vers
 fr = Et ce qui vient : {n} fonctions en préparation →
 en = And what's next: {n} features in the works →
 es = Y lo que viene: {n} funciones en preparación →
+
+fr = Voir les {n} fonctions
+en = See all {n} features
+es = Ver las {n} funciones
+
+fr = Réduire
+en = Show less
+es = Mostrar menos
