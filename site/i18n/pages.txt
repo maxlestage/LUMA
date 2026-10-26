@@ -690,9 +690,13 @@ fr = Aucun cookie
 en = No cookies
 es = Sin cookies
 
-fr = © 2026 LÜMA. Tous droits réservés.
-en = © 2026 LÜMA. All rights reserved.
-es = © 2026 LÜMA. Todos los derechos reservados.
+fr = © 2026 Maxime Lestage · LÜMA. Tous droits réservés.
+en = © 2026 Maxime Lestage · LÜMA. All rights reserved.
+es = © 2026 Maxime Lestage · LÜMA. Todos los derechos reservados.
+
+fr = Conçu et développé par
+en = Designed and built by
+es = Diseñado y desarrollado por
 
 fr = Fait en France · 100 % Rust · Aucun traceur
 en = Made in France · 100% Rust · No trackers

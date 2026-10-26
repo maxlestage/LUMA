@@ -770,12 +770,20 @@ fn site_footer(here: Here) -> Element {
         )
         .child(
             div()
+                .class("footer-signature")
+                .child(span().class("footer-signature-label").text(t(lang, "Conçu et développé par")))
+                .child(strong().class("footer-signature-name").text("Maxime Lestage")),
+        )
+        .child(
+            div()
                 .class("footer-bottom")
-                .child(span().text(t(lang, "© 2026 LÜMA. Tous droits réservés.")))
+                .child(span().text(t(lang, "© 2026 Maxime Lestage · LÜMA. Tous droits réservés.")))
                 .child(span().text(t(lang, "Fait en France · 100 % Rust · Aucun traceur")))
                 .child(lang_switch(here, true))
                 .child(a().href(target(lang, "#top")).text(t(lang, "Haut de page ↑"))),
         )
+        // Le nom, en grand, comme une signature au bas de chaque page.
+        .child(p().class("footer-wordmark").attr("aria-hidden", "true").text("LÜMA"))
 }
 
 /// La page de la clé de licence, après le paiement Stripe.
