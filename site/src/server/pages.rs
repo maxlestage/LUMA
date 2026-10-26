@@ -196,12 +196,12 @@ fn hero(lang: Lang) -> Element {
                 .child(
                     p().class("eyebrow reveal")
                         .child(span().class("dot"))
-                        .child(text(format!(" {}", t(lang, "Éditeur photo · Mac, iPhone et iPad · 100 % Rust")))),
+                        .child(text(format!(" {}", t(lang, "Éditeur photo · Mac, iPhone et iPad")))),
                 )
                 .child(h1().class("hero-title").attr("aria-label", "LÜMA").child(title))
-                .child(heading(p, t(lang, "La lumière, *développée* en Rust.")).class("hero-sub reveal"))
+                .child(heading(p, t(lang, "La lumière, *développée*.")).class("hero-sub reveal"))
                 .child(p().class("hero-lede reveal").text(t(lang,
-                    "Un moteur RAW 32 bits flottants sur le GPU, 100 films vérifiés, et vos vraies pellicules mesurées sur un scan. Un éditeur photo professionnel, rapide et précis, chiffres à l'appui.",
+                    "Ouvrez vos RAW, réglez la lumière et la couleur, posez un film, partagez. Un éditeur photo professionnel, rapide et précis, qui garde vos originaux intacts.",
                 )))
                 .child(
                     div()
@@ -211,13 +211,13 @@ fn hero(lang: Lang) -> Element {
                         } else {
                             t(lang, "Voir les tarifs")
                         })))
-                        .child(a().class("btn btn-ghost magnetic").href("#labo").child(span().text(t(lang, "Voir le moteur en action")))),
+                        .child(a().class("btn btn-ghost magnetic").href("#labo").child(span().text(t(lang, "Essayer en direct")))),
                 ),
         )
         .child(
             div()
                 .class("hero-meta reveal")
-                .children(["RAW", t(lang, "32 bits f"), "GPU", t(lang, "100 films")].map(|s| span().text(s))),
+                .children(["RAW", t(lang, "100 films"), t(lang, "Masques"), "Mac · iPhone · iPad"].map(|s| span().text(s))),
         )
         .child(
             a().class("scroll-hint")
@@ -310,10 +310,10 @@ fn pipeline(lang: Lang) -> Element {
             .child(
                 div()
                     .class("pipeline-copy")
-                    .child(kicker(t(lang, "Le moteur")))
+                    .child(kicker(t(lang, "Le développement")))
                     .child(heading(
                         h2,
-                        t(lang, "Un pipeline *non destructif*, couche par couche."),
+                        t(lang, "Vos réglages *s'empilent*. L'original ne bouge pas."),
                     ))
                     .child(steps),
             )
@@ -331,10 +331,10 @@ fn lab(lang: Lang) -> Element {
         .class("lab")
         .id("labo")
         .child(section_head(
-            t(lang, "Le labo"),
+            t(lang, "Essayez"),
             heading(h2, t(lang, "Bouge un curseur. *Rien* n'est détruit.")),
             Some(p().text(t(lang,
-                "Cette démo tourne sur le GPU de ton appareil, pilotée par du Rust compilé en WebAssembly : une scène générée en lumière linéaire (le soleil dépasse le blanc), puis exposition, balance des blancs, hautes lumières, ombres et contraste appliqués comme des paramètres. Glisse la barre pour comparer avec l'original. C'est une illustration du principe, pas encore le moteur LÜMA.",
+                "Bouge l'exposition, la balance des blancs, les hautes lumières, les ombres et le contraste : l'image change en direct, et l'original reste là. Glisse la barre pour comparer avant et après. Une démonstration du principe, directement dans ton navigateur.",
             ))),
         ))
         // La langue voyage dans les props : le navigateur hydrate le même texte.
@@ -380,7 +380,7 @@ fn platforms(lang: Lang) -> Element {
             t(lang, "Ordre de sortie"),
             heading(h2, t(lang, "Apple en premier. *Les autres suivent*, sur le même cœur.")),
             Some(p().text(t(lang,
-                "Windows, Linux et Android sont compilés en intégration continue dès le premier mois : le moteur ne doit rien supposer d'Apple. Leurs applications arrivent en phase 6.",
+                "Windows, Linux et Android suivront, avec le même moteur : une photo aura le même rendu partout.",
             ))),
         ))
         .child(div().class("platform-grid").children(PLATFORMS.iter().map(
@@ -394,18 +394,105 @@ fn platforms(lang: Lang) -> Element {
         )))
 }
 
-fn architecture(lang: Lang) -> Element {
+/// Les quatre étapes du travail, de la photothèque au partage.
+fn steps(lang: Lang) -> Element {
     section()
-        .class("arch")
-        .id("architecture")
+        .class("steps")
+        .id("etapes")
         .child(section_head(
-            t(lang, "Architecture"),
-            heading(h2, t(lang, "Un workspace Cargo. *Une crate*, une responsabilité.")),
+            t(lang, "Du déclencheur au partage"),
+            heading(h2, t(lang, "Quatre étapes, *un seul outil*.")),
             Some(p().text(t(lang,
-                "Le moteur ne dépend jamais de la plateforme. Seules l'interface et les applications voient macOS, iOS ou iPadOS.",
+                "Tout ce qu'il faut pour passer d'une carte mémoire pleine à des photos prêtes à partager, sans changer de logiciel.",
             ))),
         ))
-        .child(island("crates", lang.code(), islands::crates))
+        .child(ol().class("step-grid").children(STEPS.iter().map(|&(n, title, body)| {
+            li().class("step reveal tilt")
+                .child(span().class("step-num").attr("aria-hidden", "true").text(n))
+                .child(h3().text(t(lang, title)))
+                .child(p().text(t(lang, body)))
+        })))
+}
+
+/// Les films : une photo, puis le film qui se pose dessus en balayant l'image.
+fn films(lang: Lang) -> Element {
+    let photo = link("/photo.svg");
+    section()
+        .class("films")
+        .id("films")
+        .child(section_head(
+            t(lang, "Films"),
+            heading(h2, t(lang, "Cent films. *Et les vôtres.*")),
+            Some(p().text(t(lang,
+                "Portra, Velvia, Kodachrome, CineStill, Tri‑X : des pellicules couleur, noir et blanc, cinéma et instantanées, à poser d'un geste et à doser. Et si vous scannez vos propres pellicules, LÜMA les mesure pour les reproduire.",
+            ))),
+        ))
+        .child(div().class("film-grid").children(FILMS.iter().enumerate().map(
+            |(k, &(name, family, filter))| {
+                figure()
+                    .class("film reveal")
+                    .style(format!("--k:{k}"))
+                    .child(
+                        div()
+                            .class("film-frame")
+                            .attr("aria-hidden", "true")
+                            .child(img().attr("src", photo.clone()).attr("alt", "").attr("loading", "lazy"))
+                            .child(
+                                img()
+                                    .class("film-look")
+                                    .attr("src", photo.clone())
+                                    .attr("alt", "")
+                                    .attr("loading", "lazy")
+                                    .style(format!("filter:{filter}")),
+                            ),
+                    )
+                    .child(figcaption().child(b().text(name)).child(span().text(t(lang, family))))
+            },
+        )))
+        .child(p().class("films-note reveal").text(t(lang,
+            "Aperçus indicatifs, sur une seule photo : dans LÜMA, chaque film est un vrai rendu, réglé sur vos images.",
+        )))
+}
+
+/// Vos photos restent chez vous.
+fn privacy(lang: Lang) -> Element {
+    section()
+        .class("privacy")
+        .id("vie-privee")
+        .child(section_head(
+            t(lang, "Vos photos"),
+            heading(h2, t(lang, "Chez vous, *et nulle part ailleurs*.")),
+            None,
+        ))
+        .child(
+            div()
+                .class("privacy-grid")
+                .children(PRIVACY.iter().map(|&(title, body)| {
+                    div()
+                        .class("privacy-item reveal")
+                        .child(span().class("privacy-mark").attr("aria-hidden", "true"))
+                        .child(h3().text(t(lang, title)))
+                        .child(p().text(t(lang, body)))
+                })),
+        )
+}
+
+/// Les questions fréquentes : chaque réponse se déplie (sans script).
+fn faq(lang: Lang) -> Element {
+    section()
+        .class("faq")
+        .id("questions")
+        .child(section_head(
+            t(lang, "Questions"),
+            heading(h2, t(lang, "Vous vous *demandez*…")),
+            None,
+        ))
+        .child(div().class("faq-list").children(FAQ.iter().map(|&(q, a)| {
+            details()
+                .class("faq-item reveal")
+                .child(summary().text(t(lang, q)))
+                .child(p().text(t(lang, a)))
+        })))
 }
 
 /// Un nombre à la manière de la langue : « 6,2 » en français et en espagnol, « 6.2 » en
@@ -471,7 +558,7 @@ fn performance(lang: Lang) -> Element {
             t(lang, "Performance"),
             heading(h2, t(lang, "Des chiffres *mesurés*.")),
             Some(p().text(t(lang,
-                "Mesurés à chaque version par l'intégration continue, sur un Mac Apple Silicon (machine virtuelle, GPU Metal) et cinq vrais RAW : Sony, Canon, Nikon, Fujifilm, iPhone ProRAW. Ce sont des médianes. Sur iPhone, ce sont encore des objectifs.",
+                "Mesurés à chaque version sur un Mac à puce Apple, avec cinq vrais RAW : Sony, Canon, Nikon, Fujifilm et iPhone ProRAW. Sur iPhone, ce sont encore des objectifs.",
             ))),
         ))
         .child(div().class("perf-grid").children(cards))
@@ -509,6 +596,59 @@ fn performance(lang: Lang) -> Element {
         )
 }
 
+/// Une fonction de `docs/fonctions.md`, sans ce qui parle au développeur : les
+/// parenthèses et les morceaux de phrase qui contiennent du code (`` `…` ``), les listes
+/// de code, puis le code qui resterait.
+fn plain(feature: &str) -> String {
+    let has_code = |s: &str| s.contains('`');
+    // Les parenthèses qui contiennent du code.
+    let mut out = String::new();
+    let mut rest = feature;
+    while let Some(open) = rest.find('(') {
+        let Some(len) = rest[open..].find(')') else {
+            break;
+        };
+        let inner = &rest[open..open + len + 1];
+        out.push_str(&rest[..open]);
+        if !has_code(inner) {
+            out.push_str(inner);
+        }
+        rest = &rest[open + len + 1..];
+    }
+    out.push_str(rest);
+    // Les morceaux de phrase (après un « ; ») qui contiennent du code ; le premier
+    // reste, son code sera retiré.
+    let mut text = out
+        .split(';')
+        .enumerate()
+        .filter(|(i, part)| *i == 0 || !has_code(part))
+        .map(|(_, part)| part)
+        .collect::<Vec<_>>()
+        .join(";");
+    // Le code qui reste, et les virgules qui le séparaient.
+    while let Some(start) = text.find('`') {
+        let Some(len) = text[start + 1..].find('`') else {
+            break;
+        };
+        let mut end = start + len + 2;
+        let tail = &text[end..];
+        let skip = tail.len() - tail.trim_start_matches([',', ' ', '…']).len();
+        end += skip;
+        text.replace_range(start..end, "");
+    }
+    // Les espaces laissés devant une ponctuation, ou en double.
+    let mut text = text
+        .replace(" ,", ",")
+        .replace(" :,", " :")
+        .replace("  ", " ");
+    for p in [" :", " ;", ","] {
+        while text.trim_end().ends_with(p.trim()) {
+            text = text.trim_end().trim_end_matches(p.trim()).to_owned();
+        }
+    }
+    text.trim().to_owned()
+}
+
 /// Ce que LÜMA fait déjà : chaque fonction faite et testée de `docs/fonctions.md`,
 /// cochée, domaine par domaine.
 fn capabilities(lang: Lang) -> Element {
@@ -534,7 +674,7 @@ fn capabilities(lang: Lang) -> Element {
                                         .as_ref()
                                         .map(|p| span().class("cap-panel").text(p.clone())),
                                 )
-                                .children(rich(feature)),
+                                .children(rich(&plain(feature))),
                         )
                 })),
             )
@@ -585,99 +725,6 @@ fn p_note(text: String) -> Element {
     p().class("perf-note").text(text)
 }
 
-fn roadmap(lang: Lang) -> Element {
-    let phases = ROADMAP.iter().map(|ph| {
-        article()
-            .class(if ph.later { "phase later" } else { "phase" })
-            .child(span().class("phase-when").text(ph.when))
-            .child(h3().text(t(lang, ph.name)))
-            .child(ul().children(ph.items.iter().map(|item| li().text(t(lang, item)))))
-            .child(p().class("phase-goal").text(t(lang, ph.goal)))
-    });
-    section().class("roadmap").id("roadmap").child(
-        div()
-            .class("roadmap-sticky")
-            .child(
-                div()
-                    .class("roadmap-head")
-                    .child(kicker(t(lang, "Feuille de route")))
-                    .child(heading(
-                        h2,
-                        t(lang, "24 à 36 mois. *Apple* à chaque étape."),
-                    )),
-            )
-            .child(div().class("roadmap-track").children(phases))
-            .child(
-                div()
-                    .class("roadmap-line")
-                    .attr("aria-hidden", "true")
-                    .child(span()),
-            ),
-    )
-}
-
-/// Une ligne de `deny.toml` colorée : chaînes, invites, commentaires, sections.
-fn deny_line(class: &str, line: &str) -> Node {
-    let mut parts = Vec::<Node>::new();
-    if let Some(rest) = line.strip_prefix("$ ") {
-        parts.push(span().class("n").text("$").into());
-        parts.push(text(format!(" {rest}")));
-    } else {
-        for (n, chunk) in line.split('"').enumerate() {
-            if n % 2 == 1 {
-                parts.push(span().class("s").text(format!("\"{chunk}\"")).into());
-            } else if !chunk.is_empty() {
-                parts.push(text(chunk.to_owned()));
-            }
-        }
-    }
-    if class.is_empty() {
-        fragment(parts)
-    } else {
-        span().class(class.to_owned()).children(parts).into()
-    }
-}
-
-fn rust(lang: Lang) -> Element {
-    let mut lines = Vec::<Node>::new();
-    for (n, &(class, line)) in DENY.iter().enumerate() {
-        if n > 0 {
-            lines.push(text("\n"));
-        }
-        // Les commentaires sont traduits ; le code reste du code.
-        let line = if class == "c" { t(lang, line) } else { line };
-        lines.push(deny_line(class, line));
-    }
-    section()
-        .class("rust")
-        .id("rust")
-        .child(section_head(
-            t(lang, "100 % Rust, vérifiable"),
-            heading(h2, t(lang, "Pas une promesse. *Un audit*.")),
-            Some(p().children(rich(t(lang,
-                "Une crate sur crates.io n'est pas forcément pure Rust. LÜMA vérifie le graphe de dépendances réel à chaque build : aucune `-sys`, aucun `build.rs` qui compile du C, aucun FFI vers une bibliothèque tierce. Les frameworks du système (Metal, AppKit, UIKit, PhotoKit) sont appelés depuis Rust.",
-            )))),
-        ))
-        .child(
-            div()
-                .class("rust-grid")
-                .child(
-                    div()
-                        .class("terminal reveal")
-                        .child(
-                            div()
-                                .class("terminal-bar")
-                                .children([i(), i(), i()])
-                                .child(span().text("deny.toml")),
-                        )
-                        .child(pre().child(code().id("term").children(lines))),
-                )
-                .child(ul().class("rules").children(
-                    RULES.iter().map(|&(name, body)| li().class("reveal").child(b().text(t(lang, name))).child(text(format!(" {}", t(lang, body))))),
-                )),
-        )
-}
-
 fn cta(lang: Lang) -> Element {
     let title = t(lang, "Développer *la lumière*.");
     let mut parts = title.splitn(3, '*');
@@ -691,19 +738,20 @@ fn cta(lang: Lang) -> Element {
         .child(div().class("cta-orb").attr("aria-hidden", "true"))
         .child(h2().class("reveal").text(before).child(br()).child(em().text(accent)).child(text(after)))
         .child(p().class("reveal").text(t(lang,
-            "D'abord le meilleur moteur photo Rust possible, sur Mac et iPhone. Ensuite, tout le reste.",
+            "Quatorze jours pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.",
         )))
         .child(
             div()
                 .class("hero-cta reveal")
-                .child(a().class("btn magnetic").href(page_link(lang, "/docs/architecture/")).child(span().text(t(lang, "Lire l'architecture"))))
-                .child(a().class("btn btn-ghost magnetic").href(page_link(lang, "/docs/feuille-de-route/")).child(span().text(t(lang, "Feuille de route détaillée")))),
+                .child(a().class("btn magnetic").href("#tarifs").child(span().text(if downloads_open() {
+                    t(lang, "Télécharger · 14 jours d'essai")
+                } else {
+                    t(lang, "Voir les tarifs")
+                })))
+                .child(a().class("btn btn-ghost magnetic").href("#questions").child(span().text(t(lang, "Questions fréquentes")))),
         )
 }
 
-/// Tarifs et téléchargement : LÜMA Premium, 14 jours d'essai, puis au mois ou à l'an.
-/// Les liens de paiement viennent de `LUMA_CHECKOUT_MONTHLY` et `LUMA_CHECKOUT_ANNUAL`
-/// (liens de paiement Stripe) ; sans eux, les boutons attendent.
 /// Un prix en trois morceaux : ce qui précède le montant, le montant, ce qui le suit.
 fn price_parts(price: &str) -> (&str, &str, &str) {
     let start = price.find(|c: char| c.is_ascii_digit()).unwrap_or(0);
@@ -713,6 +761,9 @@ fn price_parts(price: &str) -> (&str, &str, &str) {
     (&price[..start], &price[start..end], &price[end..])
 }
 
+/// Tarifs et téléchargement : LÜMA Premium, 14 jours d'essai, puis au mois ou à l'an.
+/// Les liens de paiement viennent de `LUMA_CHECKOUT_MONTHLY` et `LUMA_CHECKOUT_ANNUAL`
+/// (liens de paiement Stripe) ; sans eux, les boutons attendent.
 fn pricing(lang: Lang) -> Element {
     type Plan = (
         &'static str,
@@ -849,8 +900,9 @@ fn site_footer(here: Here) -> Element {
                                 .child(span().class("brand-mark").html(BRAND_SVG))
                                 .child(span().text("LÜMA")),
                         )
-                        .child(p().class("footer-tagline").text(t(lang,
-                            "L'éditeur photo qui développe la lumière. Écrit en Rust, pour Mac, iPhone et iPad.",
+                        .child(p().class("footer-tagline").text(t(
+                            lang,
+                            "L'éditeur photo qui développe la lumière. Pour Mac, iPhone et iPad.",
                         )))
                         .child(
                             div()
@@ -860,34 +912,54 @@ fn site_footer(here: Here) -> Element {
                                         .href(link("/download/LUMA-macos.zip"))
                                         .attr("download", "")
                                         .child(span().html(APPLE_SVG))
-                                        .child(span().child(small().text(t(lang, "Télécharger pour"))).child(strong().text("Mac")))
+                                        .child(
+                                            span()
+                                                .child(small().text(t(lang, "Télécharger pour")))
+                                                .child(strong().text("Mac")),
+                                        )
                                 } else {
                                     span()
                                         .class("store store-soon")
                                         .attr("aria-disabled", "true")
                                         .child(span().html(APPLE_SVG))
-                                        .child(span().child(small().text(t(lang, "Bientôt sur"))).child(strong().text("Mac")))
+                                        .child(
+                                            span()
+                                                .child(small().text(t(lang, "Bientôt sur")))
+                                                .child(strong().text("Mac")),
+                                        )
                                 })
                                 .child(
                                     span()
                                         .class("store store-soon")
                                         .attr("aria-disabled", "true")
                                         .child(span().html(APPLE_SVG))
-                                        .child(span().child(small().text(t(lang, "Bientôt sur"))).child(strong().text(t(lang, "l'App Store")))),
+                                        .child(
+                                            span()
+                                                .child(small().text(t(lang, "Bientôt sur")))
+                                                .child(strong().text(t(lang, "l'App Store"))),
+                                        ),
                                 ),
                         ),
                 )
-                .child(div().class("footer-cols").children(FOOTER.iter().map(|c| column(*c)))),
+                .child(
+                    div()
+                        .class("footer-cols")
+                        .children(FOOTER.iter().map(|c| column(*c))),
+                ),
         )
         // La signature, au centre : l'auteur, l'origine, puis le nom de l'app en grand.
         .child(
             div()
                 .class("footer-signature")
-                .child(p().class("footer-signature-label").text(t(lang, "Conçu et développé par")))
                 .child(
-                    p().class("footer-signature-name").text("Maxime Nathan Lestage"),
+                    p().class("footer-signature-label")
+                        .text(t(lang, "Conçu et développé par")),
                 )
-                .child(heading(p, t(lang, "*Fabriqué en Rust*, en France")).class("footer-signature-made"))
+                .child(
+                    p().class("footer-signature-name")
+                        .text("Maxime Nathan Lestage"),
+                )
+                .child(heading(p, t(lang, "Fabriqué *en France*")).class("footer-signature-made"))
                 .child(
                     // Les lettres montent une à une quand le pied de page arrive, comme le titre
                     // de l'accueil.
@@ -903,7 +975,10 @@ fn site_footer(here: Here) -> Element {
         .child(
             div()
                 .class("footer-bottom")
-                .child(span().text(t(lang, "© 2026 Maxime Nathan Lestage. Tous droits réservés.")))
+                .child(span().text(t(
+                    lang,
+                    "© 2026 Maxime Nathan Lestage. Tous droits réservés.",
+                )))
                 .child(span().text(t(lang, "Logiciel propriétaire")))
                 .child(lang_switch(here, true))
                 .child(
@@ -913,7 +988,10 @@ fn site_footer(here: Here) -> Element {
                         .attr("rel", "noopener")
                         .text(t(lang, "Site fait avec Paquets ↗")),
                 )
-                .child(a().href(target(lang, "#top")).text(t(lang, "Haut de page ↑"))),
+                .child(
+                    a().href(target(lang, "#top"))
+                        .text(t(lang, "Haut de page ↑")),
+                ),
         )
 }
 
@@ -1127,16 +1205,17 @@ pub fn home(site: &Site, origin: &str, lang: Lang) -> Page {
                 .child(marquee(lang))
                 .child(manifesto(lang))
                 .child(stats(lang))
+                .child(steps(lang))
                 .child(pipeline(lang))
                 .child(lab(lang))
+                .child(films(lang))
                 .child(apple(lang))
-                .child(platforms(lang))
-                .child(architecture(lang))
-                .child(performance(lang))
                 .child(capabilities(lang))
-                .child(roadmap(lang))
-                .child(rust(lang))
+                .child(privacy(lang))
+                .child(performance(lang))
+                .child(platforms(lang))
                 .child(pricing(lang))
+                .child(faq(lang))
                 .child(cta(lang)),
         )
         .child(site_footer(here));
@@ -1207,4 +1286,37 @@ fn download_note(lang: Lang) -> String {
 /// page, page de la clé, raccourcis de la PWA) jusqu'à l'ouverture.
 pub fn downloads_open() -> bool {
     std::env::var("LUMA_DOWNLOADS").is_ok_and(|v| v == "1")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::plain;
+
+    #[test]
+    fn features_lose_their_code() {
+        assert_eq!(
+            plain("Couleur, Neutre, Vif, Monochrome ; lecture de `crs:CameraProfile`"),
+            "Couleur, Neutre, Vif, Monochrome"
+        );
+        assert_eq!(
+            plain("DNG linéaire, Apple ProRAW (avec `BaselineExposure`)"),
+            "DNG linéaire, Apple ProRAW"
+        );
+        assert_eq!(
+            plain(
+                "Modèles de nom des fichiers : `{nom}`, `{date}`, `{iso}`…, sous‑dossiers par date"
+            ),
+            "Modèles de nom des fichiers : sous‑dossiers par date"
+        );
+        assert_eq!(
+            plain(
+                "Modèles : `{nom}`, `{date}`…, sous‑dossiers\u{a0}; dans la fenêtre et `luma develop --name`"
+            ),
+            "Modèles : sous‑dossiers"
+        );
+        assert_eq!(
+            plain("Grain (gain, taille, rugosité)"),
+            "Grain (gain, taille, rugosité)"
+        );
+    }
 }
