@@ -97,7 +97,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Cuadrícula, valoraciones (0 a 5), banderas (P, X, U), filtro por valoración y bandera, en el XMP | ✅ |
 | Catálogo local (`luma catalog`): carpetas y subcarpetas, fecha de captura, cámara, objetivo, ISO leídos en la cabecera sin decodificar la imagen, actualización incremental, orden por fecha | ✅ |
 | Palabras clave en el XMP (`dc:subject`), leídas y escritas | ✅ |
-| Catálogo en la app, colecciones, búsqueda y filtros, copias virtuales | ⏳ |
+| Búsqueda y filtros (`luma catalog --search`): palabras sin tener en cuenta los acentos; valoración, bandera, etiqueta, fechas, ISO, focal, cámara, objetivo, palabra clave; recuento de palabras clave, cámaras y objetivos | ✅ |
+| Catálogo en la app, colecciones, copias virtuales | ⏳ |
 | Importación de catálogos existentes | ⏳ |
 
 ## Lo que distingue a LÜMA

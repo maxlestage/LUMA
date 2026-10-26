@@ -11,6 +11,11 @@ La fototeca profesional, paso a paso.
   milisegundo). Fotos ordenadas por fecha de captura.
 - **Palabras clave**: leídas y escritas en el XMP (`dc:subject`), como hacen todas las
   aplicaciones de fotografía.
+- **Búsqueda y filtros**: `luma catalog --search "mar rating:3 date:2024-06 iso:..800
+  camera:sony"`; palabras (nombre, cámara, objetivo, etiqueta, palabras clave, sin
+  tener en cuenta los acentos) y filtros (valoración, bandera, etiqueta, fechas, ISO,
+  focal, cámara, objetivo, palabra clave). 100 000 fotos exploradas en 4 a 25 ms.
+  `--keywords` cuenta palabras clave, cámaras y objetivos.
 
 ## 0.2.0 — octubre de 2026
 

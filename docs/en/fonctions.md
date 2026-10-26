@@ -96,7 +96,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Grid, ratings (0 to 5), flags (P, X, U), filter by rating and flag, stored in the XMP | ✅ |
 | Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
-| Catalogue in the app, collections, search and filters, virtual copies | ⏳ |
+| Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates, ISO, focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
+| Catalogue in the app, collections, virtual copies | ⏳ |
 | Importing existing catalogues | ⏳ |
 
 ## What sets LÜMA apart
