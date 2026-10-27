@@ -757,6 +757,11 @@ pub struct Studio {
     /// Le guide de composition du recadrage, et son quart de tour (0 à 3).
     pub crop_guide: crop::Guide,
     pub crop_turn: u8,
+    /// Le redressement guidé : actif, les lignes tracées (coordonnées de la photo avant
+    /// la Transformation), et le point de départ de celle qu'on trace.
+    pub guiding: bool,
+    pub guides: Vec<luma_image::lens::Guide>,
+    guide_start: Option<egui::Pos2>,
     /// La couche de sortie montrée par le mélangeur de couches (0 rouge, 1 vert, 2 bleu).
     mixer_tab: usize,
     /// L'outil de retouche actif (Q) : un clic sur la photo pose une retouche.
@@ -1069,6 +1074,9 @@ impl Studio {
             selected_part: None,
             crop_guide: crop::Guide::default(),
             crop_turn: 0,
+            guiding: false,
+            guides: Vec::new(),
+            guide_start: None,
             mixer_tab: 0,
             retouch: None,
             selected_spot: None,
@@ -3978,6 +3986,12 @@ impl Studio {
                 ..Crop::default()
             };
         }
+        if self.guiding {
+            // Pendant le redressement guidé, la photo telle qu'elle est (ni perspective ni
+            // recadrage) : on y trace les lignes qui doivent être droites.
+            settings.crop = Crop::default();
+            settings.transform = luma_project::Transform::default();
+        }
         let request = Request {
             path: path.to_path_buf(),
             settings,
@@ -6627,6 +6641,68 @@ impl Studio {
         Some(label)
     }
 
+    /// Les lignes du redressement guidé sur `target` (la photo affichée sans
+    /// Transformation, `iw × ih` pixels) : on en trace une en glissant, chacune redresse
+    /// aussitôt la photo. Rend le libellé de l'historique quand une ligne est ajoutée.
+    fn guide_lines(&mut self, ui: &mut Ui, target: Rect, iw: usize, ih: usize) -> Option<String> {
+        // Coordonnées normalisées par la demi‑diagonale, centre en 0.
+        let half = (((iw * iw + ih * ih) as f32).sqrt() / 2.0).max(1.0);
+        let to_norm = |p: egui::Pos2| {
+            (
+                ((p.x - target.min.x) / target.width() - 0.5) * iw as f32 / half,
+                ((p.y - target.min.y) / target.height() - 0.5) * ih as f32 / half,
+            )
+        };
+        let to_screen = |(x, y): (f32, f32)| {
+            pos2(
+                target.min.x + (x * half / iw as f32 + 0.5) * target.width(),
+                target.min.y + (y * half / ih as f32 + 0.5) * target.height(),
+            )
+        };
+        let response = ui.interact(target, ui.scope_id().with("guides"), egui::Sense::drag());
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+        let painter = ui.painter_at(target);
+        let stroke = |vertical: bool| {
+            egui::Stroke::new(
+                2.0,
+                if vertical {
+                    theme::ACCENT
+                } else {
+                    Color32::from_rgb(120, 200, 255)
+                },
+            )
+        };
+        for g in &self.guides {
+            painter.line_segment([to_screen(g.a), to_screen(g.b)], stroke(g.vertical));
+        }
+        if response.drag_started() {
+            self.guide_start = response.interact_pointer_pos();
+        }
+        let current = ui.ctx().pointer_latest_pos();
+        if let (Some(a), Some(b)) = (self.guide_start, current) {
+            let vertical = (b.y - a.y).abs() > (b.x - a.x).abs();
+            painter.line_segment([a, b], stroke(vertical));
+        }
+        if response.drag_stopped()
+            && let (Some(a), Some(b)) = (self.guide_start.take(), current)
+            && a.distance(b) > 20.0
+        {
+            let vertical = (b.y - a.y).abs() > (b.x - a.x).abs();
+            self.guides.push(luma_image::lens::Guide {
+                a: to_norm(a),
+                b: to_norm(b),
+                vertical,
+            });
+            if self.guides.len() > 4 {
+                self.guides.remove(0);
+            }
+            self.settings.transform =
+                luma_image::lens::guided(&self.guides, &self.settings.transform);
+            return Some(tr("Redressement guidé").into());
+        }
+        None
+    }
+
     /// La photo de référence pour accorder les couleurs : l'autre photo choisie dans le
     /// film, quand il y en a exactement deux (celle affichée et elle).
     fn match_reference(&self) -> Option<PathBuf> {
@@ -8660,6 +8736,12 @@ impl Studio {
             if c.changed {
                 self.touch();
             }
+        } else if self.guiding && self.tool == Tool::Geometry {
+            let target = fit(rect.shrink(36.0), iw, ih);
+            painter.image(t.id(), target, uv, Color32::WHITE);
+            if let Some(label) = self.guide_lines(ui, target, iw, ih) {
+                self.commit(label);
+            }
         } else if let Some(i) = self
             .selected_mask
             .filter(|i| *i < self.settings.masks.len() && self.tool == Tool::Masks)
@@ -10217,14 +10299,48 @@ impl Studio {
                 .id_salt("Transformation")
                 .default_open(true)
                 .show(ui, |ui| {
-                    if ui
-                        .button(tr("Verticales automatiques"))
-                        .on_hover_text(tr(
-                            "Rend parallèles les verticales d'un bâtiment photographié en visant vers le haut (Maj+V)",
-                        ))
-                        .clicked()
-                    {
-                        self.act("auto_vertical");
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button(tr("Verticales automatiques"))
+                            .on_hover_text(tr(
+                                "Rend parallèles les verticales d'un bâtiment photographié en visant vers le haut (Maj+V)",
+                            ))
+                            .clicked()
+                        {
+                            self.act("auto_vertical");
+                        }
+                        let label = if self.guiding {
+                            tr("Terminer le tracé")
+                        } else {
+                            tr("Redressement guidé")
+                        };
+                        if ui
+                            .selectable_label(self.guiding, label)
+                            .on_hover_text(tr(
+                                "Tracez sur la photo deux à quatre lignes qui doivent être droites (arêtes, horizon) : LÜMA règle la perspective et la rotation",
+                            ))
+                            .clicked()
+                        {
+                            self.guiding = !self.guiding;
+                            self.guide_start = None;
+                            if !self.guiding {
+                                self.guides.clear();
+                            }
+                            self.touch();
+                        }
+                    });
+                    if self.guiding {
+                        ui.label(
+                            RichText::new(trf(
+                                "{n} ligne(s) sur 4 : glissez le long d'une arête verticale ou horizontale.",
+                                &[("n", &self.guides.len())],
+                            ))
+                            .size(11.5)
+                            .color(theme::DIM),
+                        );
+                        if !self.guides.is_empty() && ui.button(tr("Effacer les lignes")).clicked() {
+                            self.guides.clear();
+                        }
                     }
                     let l = self.fields(ui, &TRANSFORM);
                     keep(l, &mut commits);
