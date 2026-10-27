@@ -298,9 +298,9 @@ fr = Partager
 en = Share
 es = Compartir
 
-fr = JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Tirages au profil de l'imprimante, planches contact, livre photo et diaporama.
-en = JPEG, PNG or 16‑bit TIFF, at the right size, with your watermark and your author details. Prints in the printer's profile, contact sheets, photo book and slideshow.
-es = JPEG, PNG o TIFF de 16 bits, al tamaño justo, con tu marca de agua y tus datos de autor. Copias con el perfil de la impresora, hojas de contactos, libro de fotos y presentación.
+fr = JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Tirages au profil de l'imprimante, planches contact, livre photo, diaporama et galerie web.
+en = JPEG, PNG or 16‑bit TIFF, at the right size, with your watermark and your author details. Prints in the printer's profile, contact sheets, photo book, slideshow and web gallery.
+es = JPEG, PNG o TIFF de 16 bits, al tamaño justo, con tu marca de agua y tus datos de autor. Copias con el perfil de la impresora, hojas de contactos, libro de fotos, presentación y galería web.
 
 fr = Le développement
 en = Developing

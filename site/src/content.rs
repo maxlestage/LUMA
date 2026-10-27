@@ -142,7 +142,7 @@ pub const STEPS: [(&str, &str, &str); 4] = [
     (
         "04",
         "Partager",
-        "JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Tirages au profil de l'imprimante, planches contact, livre photo et diaporama.",
+        "JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Tirages au profil de l'imprimante, planches contact, livre photo, diaporama et galerie web.",
     ),
 ];
 
