@@ -2121,3 +2121,39 @@ fn custom_shortcuts_and_hidden_panels() {
     s.harness.get_by_label("Raccourcis clavier");
     s.capture("raccourcis");
 }
+
+#[test]
+fn workspaces_switch_tool_and_panels() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("espaces") else {
+        return;
+    };
+    let file = s.dir.join("Espaces de travail.txt");
+    s.studio().use_workspaces_file(file.clone());
+    // Cmd+1 : le tri (la Bibliothèque) ; Cmd+4 : la présentation, panneaux masqués.
+    s.keys(&[(Modifiers::COMMAND, Key::Num1)]);
+    assert_eq!(s.studio().module, Module::Library);
+    s.keys(&[(Modifiers::COMMAND, Key::Num4)]);
+    assert_eq!(s.studio().tool, luma_studio::app::Tool::Light);
+    assert!(s.studio().hide_panels);
+    // Un espace à soi : la couleur, panneaux montrés, en cinquième place.
+    s.keys(&[(Modifiers::COMMAND, Key::Num3)]);
+    assert_eq!(s.studio().tool, luma_studio::app::Tool::Masks);
+    assert!(!s.studio().hide_panels, "la retouche montre les panneaux");
+    s.harness
+        .get_by_role_and_label(egui::accesskit::Role::Button, "Couleur")
+        .click();
+    s.wait();
+    s.studio().save_workspace("Couleur seule");
+    assert_eq!(
+        std::fs::read_to_string(&file).unwrap(),
+        "Couleur seule = Color, panneaux\n"
+    );
+    s.keys(&[
+        (Modifiers::COMMAND, Key::Num1),
+        (Modifiers::COMMAND, Key::Num5),
+    ]);
+    assert_eq!(s.studio().tool, luma_studio::app::Tool::Color);
+    s.studio().remove_workspace("Couleur seule");
+    assert!(s.studio().workspaces.is_empty());
+}
