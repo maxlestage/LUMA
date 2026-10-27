@@ -3213,7 +3213,7 @@ impl Studio {
                     self.render_gpu = frame.gpu;
                     // Sur iPhone et iPad, la durée des aperçus dans le journal : les 30
                     // premiers, puis un sur vingt.
-                    if TOUCH {
+                    if crate::touch() {
                         self.renders_logged += 1;
                         if self.renders_logged <= 30 || self.renders_logged.is_multiple_of(20) {
                             crate::journal(&format!(
