@@ -224,3 +224,21 @@ pub fn pick_presets() -> Vec<PathBuf> {
 pub fn pick_presets() -> Vec<PathBuf> {
     Vec::new()
 }
+
+/// Où écrire le PDF d'impression. Sur iPhone et iPad : `Documents/Tirages` (lisible
+/// dans l'app Fichiers, d'où il s'imprime).
+#[cfg(not(target_os = "ios"))]
+pub fn save_pdf(name: &str) -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title(tr("Enregistrer le PDF à imprimer"))
+        .set_file_name(name)
+        .add_filter("PDF", &["pdf"])
+        .save_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn save_pdf(name: &str) -> Option<PathBuf> {
+    let dir = documents()?.join("Tirages");
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir.join(name))
+}

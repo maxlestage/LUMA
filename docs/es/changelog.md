@@ -251,6 +251,13 @@ La fototeca profesional, paso a paso.
   `--restore` (el catálogo reemplazado se guarda antes). **Fotos que faltan**:
   `--missing` las lista, `--relocate antigua nueva` recupera una carpeta movida fuera de
   LÜMA, colecciones incluidas.
+- **Impresión** («Imprimir…» en las fotos seleccionadas, `luma print`): un PDF al
+  tamaño exacto del papel (A4, A3, A3+, 10 × 15 cm…), vertical u horizontal, márgenes,
+  una foto por página o una **hoja de contactos** (cuadrícula, nombre bajo cada foto),
+  fotos enteras o llenando su celda, enfoque para papel mate o brillante, vista previa
+  de la página; páginas convertidas al **perfil de la impresora** (el de la prueba en
+  pantalla, con compensación del punto negro), para imprimir sin la gestión de color
+  del controlador.
 
 ## 0.2.0 — octubre de 2026
 

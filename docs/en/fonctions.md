@@ -105,6 +105,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | On-screen soft proofing: the preview as it will print with a printer profile, perceptual or relative colorimetric intent (histogram included) | ✅ |
 | Gamut warning: the colors the printer will not be able to reproduce, shown in blue on the preview (relative colorimetric round trip, beyond ΔE 3) | ✅ |
 | Paper simulation (tone and brightness, absolute colorimetric) and black ink simulation (its real black); without them, black point compensation | ✅ |
+| Printing (“Print…”, `luma print`): a PDF at the paper's exact size (A4, A3, A3+, A5, US Letter, 10 × 15 to 20 × 30 cm, or custom), portrait or landscape, margins, one photo per page or a contact sheet (grid, spacing, name under each photo), photos whole or filling their cell, resolution, output sharpening for matte or glossy paper; pages converted to the printer's RGB profile (the soft-proofing one, black point compensated) | ✅ |
 
 ## Export
 
