@@ -778,7 +778,7 @@ pub struct Studio {
     /// Les photos choisies dans le film ou la grille (⌘‑clic, Maj‑clic), pour la fusion.
     pub selected: BTreeSet<usize>,
     merge_stack: bool,
-    stack_mode: luma_merge::StackMode,
+    pub stack_mode: luma_merge::StackMode,
     stack_align: bool,
     projection: luma_merge::Projection,
     auto_crop: bool,
@@ -6919,6 +6919,10 @@ impl Studio {
                     S::Stars,
                     tr("Suit le ciel qui tourne, rejette satellites et avions"),
                 ),
+                (
+                    S::Hdr,
+                    tr("Bracketing : ombres et ciel détaillés, sans fantômes"),
+                ),
             ] {
                 ui.horizontal(|ui| {
                     ui.radio_value(
@@ -6930,7 +6934,11 @@ impl Studio {
                 });
             }
             ui.add_space(4.0);
-            let stars = self.stack_mode == luma_merge::StackMode::Stars;
+            // Les étoiles et le HDR s'alignent toujours.
+            let stars = matches!(
+                self.stack_mode,
+                luma_merge::StackMode::Stars | luma_merge::StackMode::Hdr
+            );
             ui.add_enabled_ui(!stars, |ui| {
                 let mut align = self.stack_align || stars;
                 ui.checkbox(&mut align, tr("Aligner les poses (à main levée)"));
