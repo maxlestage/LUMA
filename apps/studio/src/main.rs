@@ -86,6 +86,17 @@ fn main() -> eframe::Result {
         options,
         Box::new(move |cc| {
             luma_studio::journal("interface créée");
+            // Sur iPhone et iPad : la vue de LÜMA, d'où s'ouvre le sélecteur de Photos.
+            #[cfg(target_os = "ios")]
+            {
+                use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+                match cc.window_handle().map(|h| h.as_raw()) {
+                    Ok(RawWindowHandle::UiKit(h)) => {
+                        luma_apple::photos::set_view(h.ui_view.as_ptr() as usize);
+                    }
+                    other => luma_studio::journal(&format!("vue introuvable : {other:?}")),
+                }
+            }
             let mut studio = Studio::new(&cc.egui_ctx);
             if let Some(path) = &arg {
                 studio.open_path(path);
