@@ -405,6 +405,35 @@ fn huffman_segment(out: &mut Vec<u8>, class: u8, dest: u8, bits: &[u8; 16], valu
     segment(out, DHT, &m);
 }
 
+/// Les images d'une vidéo Motion JPEG omettent souvent leurs tables de Huffman : ce
+/// sont alors les tables standard, ajoutées ici juste avant le début des données. Un
+/// JPEG qui a les siennes (ou qu'on ne sait pas lire) reste tel quel.
+pub fn with_standard_tables(jpeg: &[u8]) -> std::borrow::Cow<'_, [u8]> {
+    let mut i = 2;
+    if !jpeg.starts_with(&[0xFF, SOI]) {
+        return jpeg.into();
+    }
+    while i + 4 <= jpeg.len() && jpeg[i] == 0xFF {
+        match jpeg[i + 1] {
+            // Octets de bourrage avant un marqueur.
+            0xFF => i += 1,
+            DHT => return jpeg.into(),
+            SOS => {
+                let mut out = Vec::with_capacity(jpeg.len() + 432);
+                out.extend_from_slice(&jpeg[..i]);
+                huffman_segment(&mut out, 0, 0, &LUMA_DC_BITS, &LUMA_DC_VALUES);
+                huffman_segment(&mut out, 1, 0, &LUMA_AC_BITS, &LUMA_AC_VALUES);
+                huffman_segment(&mut out, 0, 1, &CHROMA_DC_BITS, &CHROMA_DC_VALUES);
+                huffman_segment(&mut out, 1, 1, &CHROMA_AC_BITS, &CHROMA_AC_VALUES);
+                out.extend_from_slice(&jpeg[i..]);
+                return out.into();
+            }
+            _ => i += 2 + usize::from(u16::from_be_bytes([jpeg[i + 2], jpeg[i + 3]])),
+        }
+    }
+    jpeg.into()
+}
+
 /// Le début du fichier : JFIF, puis l'EXIF et le profil ICC s'ils ne sont pas vides.
 fn applications(out: &mut Vec<u8>, exif: &[u8], icc: &[u8]) -> Result<(), String> {
     segment(out, APP0, &[b'J', b'F', b'I', b'F', 0, 1, 2, 0, 0, 1, 0, 1, 0, 0]);
@@ -912,6 +941,30 @@ mod tests {
         let with = encode_web(&rgb, w, h, 85, b"II*\0\x08\0\0\0\0\0\0\0\0\0", &icc).unwrap();
         assert!(with.windows(12).any(|x| x == b"ICC_PROFILE\0"));
         assert!(with.windows(6).any(|x| x == b"Exif\0\0"));
+    }
+
+    #[test]
+    fn standard_tables_restored_for_motion_jpeg() {
+        let rgb = pixels(40, 24, 7);
+        let full = encode(&rgb, 40, 24, 85, &[], &[]).unwrap();
+        // Le même fichier sans ses tables de Huffman, comme dans une vidéo Motion JPEG.
+        let mut bare = full[..2].to_vec();
+        let mut i = 2;
+        while full[i + 1] != SOS {
+            let n = 2 + usize::from(u16::from_be_bytes([full[i + 2], full[i + 3]]));
+            if full[i + 1] != DHT {
+                bare.extend_from_slice(&full[i..i + n]);
+            }
+            i += n;
+        }
+        bare.extend_from_slice(&full[i..]);
+        assert!(bare.len() < full.len());
+        let fixed = with_standard_tables(&bare);
+        let a = image::load_from_memory(&full).unwrap().to_rgb8();
+        let b = image::load_from_memory(&fixed).unwrap().to_rgb8();
+        assert_eq!(a.as_raw(), b.as_raw());
+        // Un JPEG complet n'est pas touché.
+        assert!(matches!(with_standard_tables(&full), std::borrow::Cow::Borrowed(_)));
     }
 
     #[test]
