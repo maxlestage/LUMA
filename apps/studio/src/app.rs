@@ -340,6 +340,15 @@ impl Tool {
         Tool::Merge,
     ];
 
+    /// Le nom sous l'icône, dans la barre de l'iPhone : un mot.
+    pub fn short_name(self) -> &'static str {
+        match self {
+            Tool::Library => tr("Photos"),
+            Tool::Geometry => tr("Cadrage"),
+            t => t.name(),
+        }
+    }
+
     pub fn name(self) -> &'static str {
         match self {
             Tool::Library => tr("Bibliothèque"),
@@ -350,15 +359,6 @@ impl Tool {
             Tool::Films => tr("Films"),
             Tool::Geometry => tr("Géométrie"),
             Tool::Merge => tr("Fusion"),
-        }
-    }
-
-    /// Le nom court, sous l'icône de la barre d'outils de l'iPhone.
-    pub fn short_name(self) -> &'static str {
-        match self {
-            Tool::Library => tr("Photos"),
-            Tool::Geometry => tr("Cadre"),
-            other => other.name(),
         }
     }
 
@@ -548,6 +548,7 @@ pub struct Studio {
     memory_check: f64,
     /// Les photos importées depuis Photos déjà vues (voir `watch_imports`).
     imports_seen: usize,
+    imports_failed: usize,
     /// Les vignettes libérées faute de mémoire : redemandées quand elles réapparaissent.
     evicted: std::collections::HashSet<PathBuf>,
     /// Les vignettes affichées sans image pendant cette image de l'interface.
@@ -767,6 +768,7 @@ impl Studio {
             thumbs: HashMap::new(),
             memory_check: 0.0,
             imports_seen: 0,
+            imports_failed: 0,
             evicted: Default::default(),
             shown_missing: Default::default(),
             // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
@@ -1755,8 +1757,18 @@ impl Studio {
         if !luma_apple::photos::AVAILABLE {
             return;
         }
+        let failed = luma_apple::photos::failed();
+        if failed != self.imports_failed {
+            crate::journal(&format!("import : {failed} échec(s)"));
+            self.imports_failed = failed;
+            self.status = trf(
+                "{n} photo(s) n'ont pas pu être importée(s).",
+                &[("n", &failed)],
+            );
+        }
         let count = luma_apple::photos::imported();
         if count != self.imports_seen {
+            crate::journal(&format!("import : {count} photo(s) copiée(s)"));
             let new = count - self.imports_seen;
             self.imports_seen = count;
             let current = self.current_path().map(Path::to_path_buf);
@@ -2264,6 +2276,7 @@ impl Studio {
                     let opened = crate::dialogs::documents()
                         .ok_or("dossier Documents introuvable")
                         .and_then(luma_apple::photos::pick);
+                    crate::journal(&format!("importer : {opened:?}"));
                     if let Err(why) = opened {
                         self.status = trf("Photos ne s'ouvre pas ({why}).", &[("why", &why)]);
                     }
@@ -2727,7 +2740,7 @@ impl Studio {
             );
             let bar = Rect::from_min_size(
                 pos2(full.min.x + m, stage.max.y + m),
-                vec2(full.width() - 2.0 * m, 74.0),
+                vec2(full.width() - 2.0 * m, 70.0),
             );
             let sheet = Rect::from_min_max(
                 pos2(full.min.x + m, bar.max.y + m),
@@ -3607,30 +3620,36 @@ impl Studio {
     /// Le rail des outils (vertical ; horizontal sur iPhone).
     fn rail(&mut self, ui: &mut Ui, horizontal: bool) {
         let mut clicked = None;
-        let size = if horizontal {
-            (ui.available_width() / Tool::ALL.len() as f32).min(52.0)
+        // Sur iPhone, la barre est en bas de la photo : chaque outil porte son nom court
+        // sous l'icône.
+        let (width, size) = if horizontal {
+            (
+                (ui.available_width() / Tool::ALL.len() as f32).min(64.0),
+                36.0,
+            )
         } else {
-            44.0
+            (44.0, 44.0)
         };
-        // Sur iPhone, la case est plus haute : le nom tient sous l'icône.
-        let height = if horizontal { size.max(58.0) } else { size };
+        let label = if horizontal { 14.0 } else { 0.0 };
         let mut draw = |ui: &mut Ui| {
             for tool in Tool::ALL {
-                let (rect, r) = ui.allocate_exact_size(vec2(size, height), egui::Sense::click());
+                let (cell, r) =
+                    ui.allocate_exact_size(vec2(width, size + label), egui::Sense::click());
+                let rect = Rect::from_center_size(
+                    pos2(cell.center().x, cell.min.y + size / 2.0),
+                    vec2(size, size),
+                );
                 let active = self.tool == tool;
                 let p = ui.painter();
-                // Le rond de l'outil choisi : autour de l'icône (au‑dessus du nom sur
-                // iPhone).
-                let (ring_c, ring_r) = if horizontal {
-                    (rect.center() - vec2(0.0, 9.0), size * 0.4)
-                } else {
-                    (rect.center(), size * 0.46)
-                };
                 if active {
-                    p.circle_filled(ring_c, ring_r, Color32::from_rgb(0x24, 0x22, 0x1e));
-                    widgets::spectral_ring(p, ring_c, ring_r, 2.2, 1.0);
+                    p.circle_filled(
+                        rect.center(),
+                        size * 0.46,
+                        Color32::from_rgb(0x24, 0x22, 0x1e),
+                    );
+                    widgets::spectral_ring(p, rect.center(), size * 0.46, 2.2, 1.0);
                 } else if r.hovered() {
-                    p.circle_filled(ring_c, ring_r * 0.96, theme::SECTION);
+                    p.circle_filled(rect.center(), size * 0.44, theme::SECTION);
                 }
                 let color = if active {
                     Color32::WHITE
@@ -3639,22 +3658,15 @@ impl Studio {
                 } else {
                     theme::DIM
                 };
+                icons::paint(p, tool.icon(), rect.shrink(size * 0.27), color);
                 if horizontal {
-                    // Sur iPhone : l'icône, et son nom en dessous.
-                    let icon = Rect::from_center_size(
-                        rect.center() - vec2(0.0, 9.0),
-                        vec2(size * 0.46, size * 0.46),
-                    );
-                    icons::paint(p, tool.icon(), icon, color);
                     p.text(
-                        pos2(rect.center().x, rect.max.y - 2.0),
+                        pos2(cell.center().x, cell.max.y),
                         egui::Align2::CENTER_BOTTOM,
                         tool.short_name(),
                         egui::FontId::proportional(10.0),
                         color,
                     );
-                } else {
-                    icons::paint(p, tool.icon(), rect.shrink(size * 0.27), color);
                 }
                 let tip = if tool.key().is_empty() {
                     tool.name().to_owned()
@@ -5021,7 +5033,18 @@ impl Studio {
         )
         .fill(theme::ACCENT)
         .corner_radius(24.0);
-        if ui.put(rect, button).clicked() {
+        let r = ui.put(rect, button);
+        // Pour les essais sur simulateur : où toucher (en points), une fois.
+        static SHOWN: std::sync::Once = std::sync::Once::new();
+        SHOWN.call_once(|| {
+            crate::journal(&format!(
+                "bouton importer : centre {:.0} {:.0} (points)",
+                rect.center().x,
+                rect.center().y
+            ))
+        });
+        if r.clicked() {
+            crate::journal("bouton importer : touché");
             self.act("open");
         }
     }

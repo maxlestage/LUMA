@@ -16,3 +16,21 @@ pub mod widgets;
 pub mod worker;
 
 pub use app::Studio;
+
+/// Le journal de démarrage : sur la sortie d'erreur, et sur iPhone et iPad dans
+/// `Documents/LÜMA-journal.txt` (lisible dans l'app Fichiers).
+pub fn journal(message: &str) {
+    eprintln!("LÜMA : {message}");
+    if cfg!(target_os = "ios")
+        && let Some(dir) = crate::dialogs::documents()
+    {
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dir.join("LÜMA-journal.txt"))
+        {
+            let _ = writeln!(f, "{message}");
+        }
+    }
+}
