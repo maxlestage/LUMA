@@ -274,17 +274,17 @@ fr = Ranger
 en = Organize
 es = Ordenar
 
-fr = Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections et recherche : vos photos se retrouvent en un instant.
-en = Every folder you open joins the photo library. Ratings, flags, keywords, collections and search: your photos turn up in an instant.
-es = Cada carpeta que abres entra en la fototeca. Valoraciones, banderas, palabras clave, colecciones y búsqueda: encuentras tus fotos al instante.
+fr = Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche et renommage par lot : vos photos se retrouvent en un instant.
+en = Every folder you open joins the photo library. Ratings, flags, keywords, collections, search and batch renaming: your photos turn up in an instant.
+es = Cada carpeta que abres entra en la fototeca. Valoraciones, banderas, palabras clave, colecciones, búsqueda y renombrado por lotes: encuentras tus fotos al instante.
 
 fr = Développer
 en = Develop
 es = Revelar
 
-fr = Lumière, couleur, courbes, détails, corrections d'objectif : chaque réglage s'affiche aussitôt, et l'original reste intact.
-en = Light, color, curves, detail, lens corrections: every adjustment shows up right away, and the original stays untouched.
-es = Luz, color, curvas, detalle, correcciones de objetivo: cada ajuste se ve al instante y el original queda intacto.
+fr = Lumière, couleur, courbes, détails, corrections d'objectif : chaque réglage s'affiche aussitôt, mesuré par la forme d'onde et le vectorscope, et l'original reste intact.
+en = Light, color, curves, detail, lens corrections: every adjustment shows up right away, measured by the waveform and vectorscope, and the original stays untouched.
+es = Luz, color, curvas, detalle, correcciones de objetivo: cada ajuste se ve al instante, medido por la forma de onda y el vectorscopio, y el original queda intacto.
 
 fr = Affiner
 en = Refine
