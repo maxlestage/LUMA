@@ -177,6 +177,7 @@ impl Licence {
         std::thread::spawn(move || {
             let r = op(&mut state).map_err(|e| (matches!(e, Refused::Offline(_)), refusal(&e)));
             let _ = tx.send((state, r));
+            crate::wake();
         });
         self.pending = Some(rx);
     }

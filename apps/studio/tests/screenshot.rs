@@ -2229,3 +2229,47 @@ fn premium_screen_on_iphone() {
     harness.step();
     assert!(!harness.state().as_ref().unwrap().premium_open);
 }
+
+#[test]
+fn an_idle_screen_does_not_redraw() {
+    let _gpu = one_at_a_time();
+    let dir = std::env::temp_dir().join(format!("luma-repos-{}", std::process::id()));
+    let mut harness = Harness::builder()
+        .with_size([440.0, 956.0])
+        .with_pixels_per_point(3.0)
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(dir.join("licence"));
+                        s.use_catalog(dir.join("cat.lumacat"));
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    // Le temps que la licence soit vérifiée et le reste prêt.
+    let start = Instant::now();
+    loop {
+        harness.step();
+        let busy = harness
+            .state()
+            .as_ref()
+            .is_some_and(|s| s.licence.busy() || s.is_indexing());
+        if !busy || start.elapsed() > Duration::from_secs(30) {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    for _ in 0..5 {
+        harness.step();
+    }
+    // Rien ne bouge : l'écran ne demande pas d'image de plus (la batterie).
+    assert!(
+        !harness.ctx.has_requested_repaint(),
+        "redessin demandé : {:?}",
+        harness.ctx.repaint_causes()
+    );
+}
