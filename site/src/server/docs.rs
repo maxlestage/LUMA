@@ -332,7 +332,7 @@ mod tests {
     fn the_done_features_are_counted_in_every_language() {
         let fr = features(Lang::Fr);
         assert!(
-            fr.done > 40 && fr.todo > 5,
+            fr.done > 40 && fr.done > fr.todo,
             "{} faites, {} à venir",
             fr.done,
             fr.todo
