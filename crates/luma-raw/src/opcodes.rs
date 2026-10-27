@@ -405,26 +405,46 @@ fn splines(img: &mut RgbImage, frame: Frame, knots: &[f64], distortion: &[Vec<f6
     // L'écart au centre de chaque colonne, calculé une fois (la même formule, donc les
     // mêmes valeurs au bit près).
     let columns: Vec<f32> = (0..w).map(|x| (x as f32 + 0.5 - cx) / unit).collect();
+    // Huit pixels à la fois : d'abord leurs positions source (des calculs en colonnes,
+    // que le processeur fait d'un coup), puis les lectures, pixel par pixel. Les mêmes
+    // opérations dans le même ordre : les mêmes valeurs au bit près.
+    const LANES: usize = 8;
     out.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
         let dy = (y as f32 + 0.5 - cy) / unit;
-        for (px, &dx) in row.iter_mut().zip(&columns) {
-            let t = ((dx * dx + dy * dy) * N as f32).min(N as f32);
-            let k = t as usize;
-            let f = t - k as f32;
-            let (a, b) = (table[k], table[k + 1]);
-            let light = a[3] + (b[3] - a[3]) * f;
-            for (c, v) in px.iter_mut().enumerate() {
-                let d = a[c] + (b[c] - a[c]) * f;
-                let sx = (cx + dx * d * unit - 0.5).clamp(0.0, mx);
-                let sy = (cy + dy * d * unit - 0.5).clamp(0.0, my);
-                let (x0, y0) = (sx as usize, sy as usize);
-                let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
-                let (fx, fy) = (sx - x0 as f32, sy - y0 as f32);
-                let (p, q) = (src[y0 * w + x0][c], src[y0 * w + x1][c]);
-                let top = p + (q - p) * fx;
-                let (p, q) = (src[y1 * w + x0][c], src[y1 * w + x1][c]);
-                let bottom = p + (q - p) * fx;
-                *v = (top + (bottom - top) * fy) * light;
+        for (pixels, dxs) in row.chunks_mut(LANES).zip(columns.chunks(LANES)) {
+            let n = pixels.len();
+            let mut t = [0.0f32; LANES];
+            for j in 0..n {
+                t[j] = ((dxs[j] * dxs[j] + dy * dy) * N as f32).min(N as f32);
+            }
+            let mut light = [0.0f32; LANES];
+            let mut d = [[0.0f32; LANES]; 3];
+            for j in 0..n {
+                let k = t[j] as usize;
+                let f = t[j] - k as f32;
+                let (a, b) = (table[k], table[k + 1]);
+                light[j] = a[3] + (b[3] - a[3]) * f;
+                for c in 0..3 {
+                    d[c][j] = a[c] + (b[c] - a[c]) * f;
+                }
+            }
+            for c in 0..3 {
+                let mut sx = [0.0f32; LANES];
+                let mut sy = [0.0f32; LANES];
+                for j in 0..n {
+                    sx[j] = (cx + dxs[j] * d[c][j] * unit - 0.5).clamp(0.0, mx);
+                    sy[j] = (cy + dy * d[c][j] * unit - 0.5).clamp(0.0, my);
+                }
+                for j in 0..n {
+                    let (x0, y0) = (sx[j] as usize, sy[j] as usize);
+                    let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
+                    let (fx, fy) = (sx[j] - x0 as f32, sy[j] - y0 as f32);
+                    let (p, q) = (src[y0 * w + x0][c], src[y0 * w + x1][c]);
+                    let top = p + (q - p) * fx;
+                    let (p, q) = (src[y1 * w + x0][c], src[y1 * w + x1][c]);
+                    let bottom = p + (q - p) * fx;
+                    pixels[j][c] = (top + (bottom - top) * fy) * light[j];
+                }
             }
         }
     });
@@ -511,6 +531,104 @@ fn remap(img: &mut RgbImage, source: impl Fn(f64, f64, usize) -> (f64, f64) + Sy
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Les corrections en courbes, pixel par pixel, telles qu'écrites avant le calcul par
+    /// huit : la version actuelle doit donner exactement les mêmes valeurs.
+    fn splines_reference(
+        img: &mut RgbImage,
+        frame: Frame,
+        knots: &[f64],
+        distortion: &[Vec<f64>; 3],
+        vignetting: &[f64],
+        zoom: f64,
+    ) {
+        const N: usize = 1024;
+        let (cx, cy, m) = frame.center([0.5, 0.5]);
+        // Les rayons de l'image corrigée vont de 0 à 1 sur l'échelle agrandie.
+        let table: Vec<[f32; 4]> = (0..=N + 1)
+            .map(|i| {
+                let r = (i as f64 / N as f64).sqrt();
+                let d = distortion.each_ref().map(|d| spline(knots, d, r));
+                let light = 1.0 / spline(knots, vignetting, r * zoom * d[1]).max(1e-4);
+                [d[0] as f32, d[1] as f32, d[2] as f32, light as f32]
+            })
+            .collect();
+        let (w, h) = (img.width, img.height);
+        // L'image corrigée s'écrit dans une image neuve (des pages mises à zéro par le
+        // système, remplies en parallèle) : pas de copie de la source, qui coûtait un tiers
+        // du temps.
+        let src = std::mem::take(&mut img.data);
+        let mut out = vec![[0.0f32; 3]; w * h];
+        let (cx, cy, unit) = (cx as f32, cy as f32, (m * zoom) as f32);
+        let (mx, my) = ((w - 1) as f32, (h - 1) as f32);
+        // L'écart au centre de chaque colonne, calculé une fois (la même formule, donc les
+        // mêmes valeurs au bit près).
+        let columns: Vec<f32> = (0..w).map(|x| (x as f32 + 0.5 - cx) / unit).collect();
+        out.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+            let dy = (y as f32 + 0.5 - cy) / unit;
+            for (px, &dx) in row.iter_mut().zip(&columns) {
+                let t = ((dx * dx + dy * dy) * N as f32).min(N as f32);
+                let k = t as usize;
+                let f = t - k as f32;
+                let (a, b) = (table[k], table[k + 1]);
+                let light = a[3] + (b[3] - a[3]) * f;
+                for (c, v) in px.iter_mut().enumerate() {
+                    let d = a[c] + (b[c] - a[c]) * f;
+                    let sx = (cx + dx * d * unit - 0.5).clamp(0.0, mx);
+                    let sy = (cy + dy * d * unit - 0.5).clamp(0.0, my);
+                    let (x0, y0) = (sx as usize, sy as usize);
+                    let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
+                    let (fx, fy) = (sx - x0 as f32, sy - y0 as f32);
+                    let (p, q) = (src[y0 * w + x0][c], src[y0 * w + x1][c]);
+                    let top = p + (q - p) * fx;
+                    let (p, q) = (src[y1 * w + x0][c], src[y1 * w + x1][c]);
+                    let bottom = p + (q - p) * fx;
+                    *v = (top + (bottom - top) * fy) * light;
+                }
+            }
+        });
+        img.data = out;
+    }
+
+    #[test]
+    fn spline_corrections_by_eight_give_the_same_pixels() {
+        // Une liste Fujifilm réaliste (distorsion, aberration, vignetage), une image de
+        // largeur impaire (le dernier paquet de huit incomplet) et décalée dans le capteur.
+        let knots: Vec<f64> = (1..=9).map(|i| f64::from(i) / 8.0).collect();
+        let list = |values: &[f64]| [&[416.0][..], &knots, values].concat();
+        let d = list(&[-0.2, -0.5, -0.9, -1.4, -2.0, -2.7, -3.5, -4.4, -5.4]);
+        let ca = [list(&[-0.001; 9]), vec![0.002; 9], vec![416.0]].concat();
+        let v = list(&[100.0, 99.0, 97.0, 94.0, 90.0, 85.0, 79.0, 72.0, 64.0]);
+        let Some(Opcode::Spline {
+            knots,
+            distortion,
+            vignetting,
+            zoom,
+        }) = fuji(&d, &ca, &v, 1.0)
+        else {
+            panic!()
+        };
+        let img = RgbImage::from_fn(203, 117, |x, y| {
+            let n = ((x * 7919 + y * 104_729) % 997) as f32 / 997.0;
+            [n, (x as f32 * 0.01).sin().abs(), (y as f32 * 0.02).cos().abs() * n]
+        });
+        let frame = Frame {
+            x: -7.0,
+            y: -3.0,
+            width: 220.0,
+            height: 125.0,
+        };
+        let (mut a, mut b) = (img.clone(), img.clone());
+        splines(&mut a, frame, &knots, &distortion, &vignetting, zoom);
+        assert_ne!(a.data, img.data, "la correction déplace bien l'image");
+        splines_reference(&mut b, frame, &knots, &distortion, &vignetting, zoom);
+        let same = a
+            .data
+            .iter()
+            .zip(&b.data)
+            .all(|(p, q)| (0..3).all(|c| p[c].to_bits() == q[c].to_bits()));
+        assert!(same);
+    }
 
     /// Une liste d'opcodes écrite comme dans un DNG.
     fn list(ops: &[(u32, u32, Vec<f64>)]) -> Vec<u8> {
