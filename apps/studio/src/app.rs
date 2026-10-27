@@ -576,6 +576,11 @@ pub struct Studio {
     imports_failed: usize,
     /// Jusqu'à quand guetter les photos d'un import Photos (il en arrive une à une).
     imports_until: f64,
+    /// Le bouton « Importer des photos » (iPhone, iPad) est affiché : vrai là où le
+    /// sélecteur de Photos existe ; les essais l'allument ailleurs.
+    pub photos_button: bool,
+    /// Combien de fois l'import depuis Photos a été demandé (pour les essais).
+    pub import_asks: usize,
     /// Les vignettes libérées faute de mémoire : redemandées quand elles réapparaissent.
     evicted: std::collections::HashSet<PathBuf>,
     /// Les vignettes affichées sans image pendant cette image de l'interface.
@@ -831,6 +836,8 @@ impl Studio {
             imports_seen: 0,
             imports_failed: 0,
             imports_until: 0.0,
+            photos_button: luma_apple::photos::AVAILABLE,
+            import_asks: 0,
             evicted: Default::default(),
             shown_missing: Default::default(),
             // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
@@ -2785,6 +2792,9 @@ impl Studio {
             "open" => {
                 // Sur iPhone et iPad : le sélecteur de Photos ; les photos choisies sont
                 // copiées dans le dossier de LÜMA, relu dès qu'elles arrivent.
+                if self.photos_button {
+                    self.import_asks += 1;
+                }
                 if luma_apple::photos::AVAILABLE {
                     let opened = crate::dialogs::documents()
                         .ok_or("dossier Documents introuvable")
@@ -2795,7 +2805,9 @@ impl Studio {
                     if let Err(why) = opened {
                         self.status = trf("Photos ne s'ouvre pas ({why}).", &[("why", &why)]);
                     }
-                } else if let Some(p) = crate::dialogs::pick_raw() {
+                } else if !self.photos_button
+                    && let Some(p) = crate::dialogs::pick_raw()
+                {
                     self.open_path(&p);
                 }
             }
@@ -5910,7 +5922,7 @@ impl Studio {
 
     /// Sur iPhone et iPad, sans photo : le bouton qui ouvre Photos, sous l'accueil.
     fn import_button(&mut self, ui: &mut Ui, top: egui::Pos2) {
-        if !luma_apple::photos::AVAILABLE {
+        if !self.photos_button {
             return;
         }
         let size = vec2(240.0, 48.0);
