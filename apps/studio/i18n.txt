@@ -4188,3 +4188,15 @@ es = Idioma, espacios de trabajo, teclado y caché
 fr = Sur iPhone et iPad, avec toutes les mises à jour
 en = On iPhone and iPad, with every update
 es = En iPhone y iPad, con todas las actualizaciones
+
+fr = HDR
+en = HDR
+es = HDR
+
+fr = Fusion HDR
+en = HDR merge
+es = Fusión HDR
+
+fr = Bracketing : ombres et ciel détaillés, sans fantômes
+en = Bracketing: detailed shadows and sky, no ghosts
+es = Horquillado: sombras y cielo con detalle, sin fantasmas

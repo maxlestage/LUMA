@@ -1564,6 +1564,25 @@ fn films_and_merge_tools() {
 }
 
 #[test]
+fn hdr_merge_is_offered() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("hdr") else {
+        return;
+    };
+    let st = s.studio();
+    st.tool = luma_studio::app::Tool::Merge;
+    st.selected = [0, 1, 2].into_iter().collect();
+    s.wait();
+    // Le choix HDR de la fusion, avec son explication.
+    s.harness.get_by_label("HDR").click();
+    s.wait();
+    assert_eq!(s.studio().stack_mode, luma_merge::StackMode::Hdr);
+    s.harness
+        .get_by_label("Bracketing : ombres et ciel détaillés, sans fantômes");
+    s.capture("fusion-hdr");
+}
+
+#[test]
 fn films_stacked_with_masks() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("films-empiles") else {
