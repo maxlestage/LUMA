@@ -164,6 +164,9 @@ La photothèque professionnelle, étape par étape.
   la photo ouverte et la suivante), chacune développée avec ses réglages ; le zoom
   et le déplacement sont communs à toutes, la loupe (L) agrandit le même endroit de
   chacune, un clic ouvre la photo.
+- **iPhone plus simple et plus sobre** : l'accueil ne se redessine plus deux fois par
+  seconde pour rien (seulement pendant un import depuis Photos) ; la barre du haut ne
+  montre que ce qui sert : sans photo, ni « Après » ni export ; l'épreuvage pour l'impression n'encombre plus l'iPhone et l'iPad.
 
 ## 0.2.0 — octobre 2026
 

@@ -988,6 +988,45 @@ fn welcome_screen() {
     image.save(&out).unwrap();
 }
 
+/// L'accueil sur iPhone : rien qui ne serve sans photo dans la barre du haut, et l'écran
+/// immobile ne se redessine pas (la batterie).
+#[test]
+fn iphone_welcome_is_simple_and_quiet() {
+    let _gpu = one_at_a_time();
+    let mut harness = Harness::builder()
+        .with_size([393.0, 852.0])
+        .with_pixels_per_point(3.0)
+        .wgpu()
+        .build_ui_state(
+            |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(std::env::temp_dir().join("luma-accueil-iphone-licence"));
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    for _ in 0..5 {
+        harness.step();
+    }
+    let image = harness.render().expect("rendu de l'interface");
+    let out = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/studio-accueil-iphone.png");
+    image.save(&out).unwrap();
+    for useless in ["Après", "Avant"] {
+        assert!(
+            harness.query_by_label(useless).is_none(),
+            "« {useless} » sans photo"
+        );
+    }
+    assert!(
+        !harness.ctx.has_requested_repaint(),
+        "l'accueil immobile se redessine"
+    );
+}
+
 /// L'écran Premium quand l'essai est fini : les deux formules et la clé.
 #[test]
 fn premium_screen_after_the_trial() {
