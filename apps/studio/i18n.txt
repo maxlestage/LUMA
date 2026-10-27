@@ -4242,3 +4242,19 @@ es = Fotos rechazó la exportación: permite que LÜMA añada fotos (Ajustes ›
 fr = {n} photo(s) ajoutée(s) à la Pellicule.
 en = {n} photo(s) added to your library.
 es = {n} foto(s) añadida(s) a la fototeca.
+
+fr = Accorder sur la photo choisie
+en = Match to the selected photo
+es = Igualar con la foto elegida
+
+fr = Deux photos de la même scène, prises par deux boîtiers : choisissez aussi celle de référence dans le film, et cette photo en prend les couleurs.
+en = Two photos of the same scene, taken with two cameras: also select the reference one in the filmstrip, and this photo takes on its colors.
+es = Dos fotos de la misma escena, tomadas con dos cámaras: elige también la de referencia en la tira, y esta foto toma sus colores.
+
+fr = Couleurs accordées : écart de {before} à {after}
+en = Colors matched: error from {before} to {after}
+es = Colores igualados: error de {before} a {after}
+
+fr = Couleurs non accordées : {error}
+en = Colors not matched: {error}
+es = Colores no igualados: {error}

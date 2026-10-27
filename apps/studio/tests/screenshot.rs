@@ -1354,6 +1354,39 @@ fn profile_from_a_chart() {
 }
 
 #[test]
+fn colors_matched_to_another_photo() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("accord") else {
+        return;
+    };
+    s.studio().tool = luma_studio::app::Tool::Color;
+    s.wait();
+    // Accordée sur elle-même : la correction est presque neutre.
+    let me = s.studio().current_path().unwrap().to_path_buf();
+    let label = s.studio().match_colors_to(&me).expect("même scène");
+    assert!(label.starts_with("Couleurs accordées"), "{label}");
+    let m = s.studio().settings.channel_mixer;
+    for (r, row) in [m.red, m.green, m.blue].iter().enumerate() {
+        for (c, v) in row.iter().enumerate() {
+            assert!((v - if r == c { 100.0 } else { 0.0 }).abs() < 3.0, "{m:?}");
+        }
+    }
+    // Sur une autre scène : refusé, le mélangeur ne bouge pas.
+    s.studio().settings.channel_mixer = luma_project::ChannelMixer::default();
+    let other = s
+        .studio()
+        .photos()
+        .iter()
+        .find(|p| **p != me)
+        .cloned()
+        .expect("une autre photo");
+    assert!(s.studio().match_colors_to(&other).is_none());
+    assert!(s.studio().settings.channel_mixer.is_identity());
+    s.wait();
+    s.capture("accord");
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {
