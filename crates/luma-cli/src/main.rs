@@ -13,6 +13,7 @@
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
+//! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! luma licence-keys                 une paire de clés pour signer les licences
 //! ```
@@ -92,6 +93,17 @@ USAGE
       même prise gardent un même nom ; le XMP et les copies virtuelles suivent ; un nom
       déjà pris reçoit -2. Au moindre échec, tout revient comme avant. --dry-run montre
       les nouveaux noms sans rien renommer. La photothèque suit.
+  luma print <photo>… -o sortie.pdf [--paper A4|A3|A3+|A5|Letter|10x15|13x18|20x25|20x30|LxH]
+                     [--landscape] [--margin mm] [--grid 4x5] [--gap mm] [--dpi 300]
+                     [--captions] [--fill] [--profile imprimante.icc]
+                     [--intent perceptual|relative|saturation|absolute]
+                     [--output-sharpen matte|glossy[:low|standard|high]]
+      Met les photos en page pour l'imprimante, dans un PDF à la taille exacte du papier :
+      une photo par page (entière, ou remplissant la page avec --fill), ou une planche
+      contact avec --grid (colonnes × lignes, le nom de chaque photo dessous avec
+      --captions). Marges de 10 mm et 300 points par pouce par défaut. --profile
+      convertit chaque page vers le profil RVB de l'imprimante (colorimétrique relative
+      par défaut, noir compensé) : imprimez alors sans gestion des couleurs du pilote.
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -1389,6 +1401,114 @@ fn rename(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// La mise en page pour l'imprimante, en PDF.
+fn print(args: Vec<String>) -> Result<(), String> {
+    use luma_color::profile::{Intent, Profile};
+    use luma_render::print::{self, Layout};
+    let mut layout = Layout::default();
+    let (mut out, mut profile, mut intent, mut photos) = (None, None, Intent::Relative, Vec::new());
+    let mut it = args.into_iter();
+    let number = |o: &str, v: Option<String>| -> Result<f32, String> {
+        v.and_then(|v| v.replace(',', ".").parse::<f32>().ok())
+            .filter(|v| (0.0..=500.0).contains(v))
+            .ok_or_else(|| format!("{o} : un nombre de millimètres"))
+    };
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "-o" | "--output" => out = Some(PathBuf::from(it.next().ok_or("-o : fichier attendu")?)),
+            "--paper" => {
+                let v = it.next().unwrap_or_default();
+                layout.paper = print::paper(&v).ok_or_else(|| format!("--paper : format inconnu « {v} »"))?;
+            }
+            "--landscape" => layout.landscape = true,
+            "--margin" => layout.margin = number("--margin", it.next())?,
+            "--gap" => layout.gap = number("--gap", it.next())?,
+            "--grid" => {
+                let v = it.next().unwrap_or_default();
+                let (c, r) = v
+                    .split_once(['x', '×'])
+                    .and_then(|(c, r)| Some((c.parse::<usize>().ok()?, r.parse::<usize>().ok()?)))
+                    .filter(|&(c, r)| (1..=20).contains(&c) && (1..=20).contains(&r))
+                    .ok_or("--grid : colonnes x lignes, de 1 à 20 (4x5)")?;
+                (layout.columns, layout.rows) = (c, r);
+            }
+            "--dpi" => {
+                layout.dpi = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .filter(|d| (72..=1200).contains(d))
+                    .ok_or("--dpi : de 72 à 1200")?;
+            }
+            "--captions" => layout.captions = true,
+            "--fill" => layout.fill = true,
+            "--profile" => profile = Some(PathBuf::from(it.next().ok_or("--profile : fichier ICC attendu")?)),
+            "--intent" => {
+                intent = match it.next().as_deref() {
+                    Some("perceptual" | "perceptuelle") => Intent::Perceptual,
+                    Some("relative") => Intent::Relative,
+                    Some("saturation") => Intent::Saturation,
+                    Some("absolute" | "absolue") => Intent::Absolute,
+                    _ => return Err("--intent : perceptual, relative, saturation ou absolute".into()),
+                }
+            }
+            "--output-sharpen" => {
+                let v = it.next().unwrap_or_default();
+                layout.sharpen = Some(export::OutputSharpen::parse(&v).ok_or_else(|| sharpen_error(&v))?);
+            }
+            _ => photos.push(PathBuf::from(a)),
+        }
+    }
+    let out = out.ok_or("il faut un fichier de sortie (-o tirage.pdf)")?;
+    if photos.is_empty() {
+        return Err("aucune photo à imprimer".into());
+    }
+    let cells = layout.cells();
+    if cells.is_empty() {
+        return Err("les marges ne laissent plus de place sur le papier".into());
+    }
+    let printer = match &profile {
+        Some(p) => {
+            let bytes = std::fs::read(p).map_err(|e| format!("{} : {e}", p.display()))?;
+            let profile = Profile::parse(&bytes).map_err(|e| format!("{} : {}", p.display(), e.0))?;
+            Some(luma_color::proof::Conversion::new(&profile, intent).map_err(|e| e.0.to_owned())?)
+        }
+        None => None,
+    };
+    let start = Instant::now();
+    // Page par page : développées, posées, compressées.
+    let mut pages = Vec::new();
+    for chunk in photos.chunks(cells.len()) {
+        let mut pictures = Vec::with_capacity(chunk.len());
+        for (path, cell) in chunk.iter().zip(&cells) {
+            let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
+            let settings = match sidecar(path) {
+                Some(x) => {
+                    xmp::read(&std::fs::read_to_string(&x).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?
+                }
+                None => photo.default_settings(),
+            };
+            let name = path
+                .file_name()
+                .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+            pictures.push(print::develop(&photo, &settings, &layout, cell, name)?);
+        }
+        for page in print::compose(&layout, &pictures, printer.as_ref()) {
+            pages.push(print::encode(&page)?);
+        }
+    }
+    let pdf = print::pdf_of(&layout, &pages);
+    std::fs::write(&out, pdf).map_err(|e| format!("{} : {e}", out.display()))?;
+    let (w, h) = layout.page_mm();
+    println!(
+        "{} : {} page(s) de {w:.0} × {h:.0} mm, {} photo(s), en {:.1} s",
+        out.display(),
+        pages.len(),
+        photos.len(),
+        start.elapsed().as_secs_f64()
+    );
+    Ok(())
+}
+
 /// Décrit un profil ICC.
 fn icc(path: &Path) -> Result<(), String> {
     use luma_color::profile::{Class, Intent, Pcs, Profile, Space, xyz_to_lab};
@@ -1569,6 +1689,15 @@ fn main() -> ExitCode {
             }
         }
         return if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE };
+    }
+    if command == "print" {
+        return match print(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
     }
     if command == "rename" {
         return match rename(args.collect()) {
