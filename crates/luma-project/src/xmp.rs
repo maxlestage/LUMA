@@ -29,13 +29,14 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 14] = [
+const META_KEYS: [&str; 15] = [
     "luma:Snapshots",
     "xmp:Rating",
     "xmp:Label",
     "luma:Pick",
     "luma:Masks",
     "luma:Spots",
+    "luma:Liquify",
     "luma:ChannelMixer",
     "luma:Lut",
     "luma:LutAmount",
@@ -557,6 +558,7 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
             .all(|k| k == SUBJECT || TEXT_LISTS.contains(&k.as_str()))
         && !values.meta.contains_key("luma:Masks")
         && !values.meta.contains_key("luma:Spots")
+        && !values.meta.contains_key("luma:Liquify")
         && !values.meta.contains_key("luma:ChannelMixer")
         && !values.meta.contains_key("luma:Lut")
         && !values.meta.contains_key("luma:Film")
@@ -647,6 +649,12 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     {
         s.spots = spots;
     }
+    // La fluidité : les coups de pinceau.
+    if let Some(json) = values.meta.get("luma:Liquify")
+        && let Ok(warps) = serde_json::from_str(json)
+    {
+        s.liquify = warps;
+    }
     // Le mélangeur de couches : trois lignes de trois pour cent.
     if let Some(json) = values.meta.get("luma:ChannelMixer")
         && let Ok(rows) = serde_json::from_str::<[[f32; 3]; 3]>(json)
@@ -736,6 +744,7 @@ pub fn write_preset(name: &str, group: &str, s: &Settings) -> String {
         if t.starts_with("xmp:Rating")
             || t.starts_with("luma:Masks")
             || t.starts_with("luma:Spots")
+            || t.starts_with("luma:Liquify")
             || t.starts_with("luma:Film")
             || t.starts_with("luma:NoiseWavelets")
             || t.starts_with("luma:Deconvolution")
@@ -882,6 +891,10 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     if !s.spots.is_empty() {
         let json = serde_json::to_string(&s.spots).unwrap_or_default();
         out.push_str(&format!("    luma:Spots=\"{}\"\n", escape(&json)));
+    }
+    if !s.liquify.is_empty() {
+        let json = serde_json::to_string(&s.liquify).unwrap_or_default();
+        out.push_str(&format!("    luma:Liquify=\"{}\"\n", escape(&json)));
     }
     if s.detail.luminance_nr_wavelets {
         out.push_str("    luma:NoiseWavelets=\"True\"\n");
@@ -1196,6 +1209,10 @@ mod tests {
             invert: true,
         });
         s.masks = vec![sky, brush, combined];
+        s.liquify = vec![crate::Warp {
+            points: vec![(0.3, 0.3), (0.32, 0.31)],
+            ..crate::Warp::new(crate::WarpKind::Push, (0.3, 0.3), 0.06, 40.0)
+        }];
         s.spots = vec![
             crate::Spot::new(crate::SpotKind::Heal, (0.4, 0.3), 0.02),
             crate::Spot {
@@ -1222,6 +1239,7 @@ mod tests {
         assert!(text.contains("crs:LensProfileEnable=\"0\""), "{text}");
         assert!(text.contains("luma:Masks="));
         assert!(text.contains("luma:Spots="));
+        assert!(text.contains("luma:Liquify="));
         assert!(text.contains("luma:LutAmount=\"70\""));
         assert_eq!(read(&text).unwrap(), s);
         // Sans l'étiquette, les corrections du boîtier restent actives.
@@ -1297,6 +1315,13 @@ mod tests {
             ..Settings::default()
         };
         assert!(!write_preset("Moi", "LÜMA", &s).contains("luma:Spots"));
+        let pushed = Settings {
+            liquify: vec![crate::Warp::new(crate::WarpKind::Pucker, (0.5, 0.5), 0.05, 60.0)],
+            ..Settings::default()
+        };
+        assert!(!write_preset("Moi", "LÜMA", &pushed).contains("luma:Liquify"));
+        // La fluidité seule suffit, elle aussi, à faire un XMP de réglages.
+        assert_eq!(read(&write(&pushed)).unwrap().liquify, pushed.liquify);
         let film = crate::presets::find("Portra 400").unwrap().applied(&s, 0.6);
         assert_eq!(film.spots, s.spots);
         // Des retouches seules suffisent à faire un XMP de réglages.
