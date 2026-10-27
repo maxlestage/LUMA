@@ -117,6 +117,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Remove** (Retouch, next to healing): a circle over what is in the way, a wire, a
+  passer-by, litter, and LÜMA replaces it with pieces of the surrounding photo, texture
+  and grain included. No AI: only the photo itself.
 - **Panorama edges warped** (Merge, Panorama, “Warp the edges”, or
   `luma merge --pano … --warp`): instead of cropping a panorama's ragged edges, LÜMA
   gently stretches them to fill the whole rectangle; the whole scene is kept.
