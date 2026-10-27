@@ -42,7 +42,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Channel mixer: each output channel made from the photo's three channels (−200 to +200%) | ✅ |
 | Detail | Sharpening: amount, radius, detail, masking | ✅ |
 | | Luminance and colour noise reduction | ✅ |
-| | Advanced noise reduction (non-local means, wavelets), without AI | ⏳ |
+| | Advanced noise reduction (wavelets, “Wavelets” box), without AI | ✅ |
 | Lens Corrections | Lateral chromatic aberration estimated from the photo, distortion, vignetting (amount, midpoint), purple and green defringe | ✅ |
 | | Lens corrections written in DNG files (`WarpRectilinear` and `FixVignetteRadial` opcodes): distortion, lateral chromatic aberration and vignetting, applied automatically at every size | ✅ |
 | | Lens corrections of Sony ARW files (distortion, lateral chromatic aberration, vignetting, recorded by the camera), applied automatically with no empty border | ✅ |

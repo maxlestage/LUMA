@@ -106,6 +106,7 @@ pub fn base_key(s: &Settings) -> Settings {
     detail.luminance_nr = s.detail.luminance_nr;
     detail.luminance_nr_detail = s.detail.luminance_nr_detail;
     detail.luminance_nr_contrast = s.detail.luminance_nr_contrast;
+    detail.luminance_nr_wavelets = s.detail.luminance_nr_wavelets;
     detail.color_nr = s.detail.color_nr;
     detail.color_nr_detail = s.detail.color_nr_detail;
     detail.color_nr_smoothness = s.detail.color_nr_smoothness;

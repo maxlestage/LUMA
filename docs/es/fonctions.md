@@ -43,7 +43,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Mezclador de canales: cada canal de salida hecho de los tres canales de la foto (−200 a +200 %) | ✅ |
 | Detalle | Enfoque: cantidad, radio, detalle, máscara | ✅ |
 | | Reducción de ruido de luminancia y de color | ✅ |
-| | Reducción de ruido avanzada (medias no locales, ondículas), sin IA | ⏳ |
+| | Reducción de ruido avanzada (ondículas, casilla «Ondículas»), sin IA | ✅ |
 | Correcciones de lente | Aberración cromática lateral estimada en la foto, distorsión, viñeteado (cantidad, punto medio), eliminación de halos púrpuras y verdes | ✅ |
 | | Correcciones de objetivo escritas en los DNG (opcodes `WarpRectilinear` y `FixVignetteRadial`): distorsión, aberración cromática lateral y viñeteo, aplicadas automáticamente en todos los tamaños | ✅ |
 | | Correcciones de objetivo de los ARW de Sony (distorsión, aberración cromática lateral, viñeteo, registradas por la cámara), aplicadas automáticamente sin borde vacío | ✅ |

@@ -29,7 +29,7 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 11] = [
+const META_KEYS: [&str; 12] = [
     "luma:Snapshots",
     "xmp:Rating",
     "xmp:Label",
@@ -41,6 +41,7 @@ const META_KEYS: [&str; 11] = [
     "luma:LutAmount",
     "luma:Film",
     "luma:FilmAmount",
+    "luma:NoiseWavelets",
 ];
 const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
 
@@ -663,6 +664,8 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     };
     s.lut = look("luma:Lut", "luma:LutAmount");
     s.film = look("luma:Film", "luma:FilmAmount");
+    // La réduction du bruit de luminance par ondelettes.
+    s.detail.luminance_nr_wavelets = values.meta.get("luma:NoiseWavelets").is_some_and(|v| v == "True");
     Ok(s.clamped())
 }
 
@@ -725,6 +728,7 @@ pub fn write_preset(name: &str, group: &str, s: &Settings) -> String {
             || t.starts_with("luma:Masks")
             || t.starts_with("luma:Spots")
             || t.starts_with("luma:Film")
+            || t.starts_with("luma:NoiseWavelets")
         {
             continue;
         }
@@ -868,6 +872,9 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     if !s.spots.is_empty() {
         let json = serde_json::to_string(&s.spots).unwrap_or_default();
         out.push_str(&format!("    luma:Spots=\"{}\"\n", escape(&json)));
+    }
+    if s.detail.luminance_nr_wavelets {
+        out.push_str("    luma:NoiseWavelets=\"True\"\n");
     }
     for (key, look) in [("Lut", &s.lut), ("Film", &s.film)] {
         if let Some(l) = look {
@@ -1203,6 +1210,20 @@ mod tests {
         // Sans l'étiquette, les corrections du boîtier restent actives.
         let without = text.replace("crs:LensProfileEnable=\"0\"", "");
         assert!(read(&without).unwrap().lens.camera);
+    }
+
+    #[test]
+    fn wavelet_noise_reduction_round_trip() {
+        let mut s = Settings::default();
+        s.detail.luminance_nr = 40.0;
+        s.detail.luminance_nr_wavelets = true;
+        let text = write(&s);
+        assert!(text.contains("luma:NoiseWavelets=\"True\""), "{text}");
+        assert!(read(&text).unwrap().detail.luminance_nr_wavelets);
+        // Le détail reste à la photo : un préréglage ne l'emporte pas.
+        assert!(!write_preset("Bruit", "LÜMA", &s).contains("NoiseWavelets"));
+        // Par défaut, rien d'écrit.
+        assert!(!write(&Settings::default()).contains("NoiseWavelets"));
     }
 
     #[test]

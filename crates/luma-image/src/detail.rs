@@ -4,6 +4,10 @@
 //!   (luminance et deux différences de couleur) : la luminance par un filtre guidé qui
 //!   garde les contours, la couleur par un flou plus large, guidé lui aussi pour ne pas
 //!   baver sur les bords colorés.
+//!   Au choix, la luminance passe par des ondelettes « à trous » : l'image est
+//!   découpée en cinq échelles de détail, et chacune perd ce qui ne dépasse pas le bruit
+//!   mesuré sur la plus fine (un Wiener local). Les contours, forts à toutes les
+//!   échelles, restent ; le grain, faible et fin, s'en va.
 //! - L'accentuation est un masque flou sur la luminance perçue, avec un plafond contre
 //!   les halos (Détail) et un masque de contours (Masquage).
 //!
@@ -49,6 +53,9 @@ pub fn noise_reduction(img: &mut RgbImage, d: &Detail, scale: f32) {
             height: h,
             data: img.data.par_iter().map(|p| ycc(*p).0).collect(),
         };
+        if d.luminance_nr_wavelets {
+            return wavelet_denoise(&y, lum, d.luminance_nr_detail / 100.0, d.luminance_nr_contrast / 100.0);
+        }
         // Le détail garde les petites structures : il baisse le seuil de lissage.
         let eps = (lum * lum * 0.0015 * (1.0 - 0.8 * d.luminance_nr_detail / 100.0)).max(1e-7);
         let smooth = y.guided(lum_sigma, eps);
@@ -91,6 +98,101 @@ pub fn noise_reduction(img: &mut RgbImage, d: &Detail, scale: f32) {
             *p = [r.max(0.0).powi(2), g.max(0.0).powi(2), b.max(0.0).powi(2)];
         }
     });
+}
+
+/// Bruit blanc d'écart type 1 : son écart type dans chaque échelle d'ondelettes
+/// « à trous » (noyau B3, 1 4 6 4 1).
+const WAVELET_NOISE: [f32; 5] = [0.889, 0.200, 0.086, 0.041, 0.020];
+
+/// Débruite un plan par ondelettes « à trous » : `strength`, `detail` et `contrast` de
+/// 0 à 1. Le bruit est mesuré sur l'échelle la plus fine (écart absolu médian, que les
+/// contours, rares, ne faussent pas) ; chaque échelle perd en douceur ce dont
+/// l'énergie locale reste proche de celle de ce bruit. Le détail ménage les deux échelles fines, le contraste les
+/// grandes.
+fn wavelet_denoise(y: &Plane, strength: f32, detail: f32, contrast: f32) -> Plane {
+    let (w, h) = (y.width, y.height);
+    let mut coarse = y.clone();
+    let mut out = Plane::new(w, h);
+    let mut sigma = 0.0;
+    for (level, noise) in WAVELET_NOISE.iter().enumerate() {
+        let step = 1 << level;
+        if 2 * step >= w.min(h) {
+            break;
+        }
+        let smooth = atrous(&coarse, step);
+        let mut fine = coarse.zip(&smooth, |c, s| c - s);
+        if level == 0 {
+            sigma = median_abs(&fine.data) / 0.6745 / noise;
+        }
+        let keep = if level < 2 {
+            1.0 - 0.7 * detail
+        } else {
+            1.0 - 0.8 * contrast
+        };
+        // Un Wiener local : là où l'énergie du voisinage (le carré des coefficients,
+        // flouté à la taille de l'échelle) dépasse à peine celle du bruit, le
+        // coefficient s'efface ; une texture ou un contour, bien plus énergiques, restent.
+        let t = 3.0 * strength * keep * sigma * noise;
+        if t > 0.0 {
+            let energy = atrous(&fine.zip(&fine, |a, b| a * b), step);
+            fine.data.par_iter_mut().zip(&energy.data).for_each(|(v, e)| {
+                *v *= ((e - t * t) / e.max(1e-12)).max(0.0);
+            });
+        }
+        out.data.par_iter_mut().zip(&fine.data).for_each(|(o, f)| *o += f);
+        coarse = smooth;
+    }
+    out.data.par_iter_mut().zip(&coarse.data).for_each(|(o, c)| *o += c);
+    out
+}
+
+/// Un lissage B3 (1 4 6 4 1, sur 16) dont les prises sont espacées de `step` pixels,
+/// en lignes puis en colonnes ; les bords se reflètent.
+fn atrous(p: &Plane, step: usize) -> Plane {
+    const K: [f32; 5] = [1.0 / 16.0, 4.0 / 16.0, 6.0 / 16.0, 4.0 / 16.0, 1.0 / 16.0];
+    let (w, h) = (p.width, p.height);
+    let reflect = |i: isize, n: usize| -> usize {
+        let n = n as isize;
+        let i = if i < 0 { -i } else { i };
+        (if i >= n { 2 * (n - 1) - i } else { i }).clamp(0, n - 1) as usize
+    };
+    let tap = |v: [f32; 5]| K[0] * (v[0] + v[4]) + K[1] * (v[1] + v[3]) + K[2] * v[2];
+    let mut rows = Plane::new(w, h);
+    rows.data.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
+        let src = &p.data[yy * w..(yy + 1) * w];
+        for (x, o) in row.iter_mut().enumerate() {
+            // L'intérieur, sans réflexion ; les bords la prennent.
+            *o = if x >= 2 * step && x + 2 * step < w {
+                tap(std::array::from_fn(|k| src[x + k * step - 2 * step]))
+            } else {
+                tap(std::array::from_fn(|k| {
+                    src[reflect(x as isize + (k as isize - 2) * step as isize, w)]
+                }))
+            };
+        }
+    });
+    let mut out = Plane::new(w, h);
+    out.data.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
+        let lines: [&[f32]; 5] = std::array::from_fn(|k| {
+            let l = reflect(yy as isize + (k as isize - 2) * step as isize, h) * w;
+            &rows.data[l..l + w]
+        });
+        for (x, o) in row.iter_mut().enumerate() {
+            *o = tap(std::array::from_fn(|k| lines[k][x]));
+        }
+    });
+    out
+}
+
+/// La médiane des valeurs absolues (sur au plus 2¹⁸ valeurs régulièrement prises).
+fn median_abs(data: &[f32]) -> f32 {
+    let every = (data.len() >> 18).max(1);
+    let mut v: Vec<f32> = data.iter().step_by(every).map(|x| x.abs()).collect();
+    if v.is_empty() {
+        return 0.0;
+    }
+    let mid = v.len() / 2;
+    *v.select_nth_unstable_by(mid, f32::total_cmp).1
 }
 
 const WR: f32 = 0.2627;
@@ -294,6 +396,114 @@ mod tests {
     fn variance(img: &RgbImage, c: usize) -> f32 {
         let m: f32 = img.data.iter().map(|p| p[c]).sum::<f32>() / img.data.len() as f32;
         img.data.iter().map(|p| (p[c] - m).powi(2)).sum::<f32>() / img.data.len() as f32
+    }
+
+    /// Une scène nette (dégradé, disques aux bords francs, fines rayures) et la même
+    /// avec un bruit gaussien de luminance.
+    fn scene() -> (RgbImage, RgbImage) {
+        let clean = RgbImage::from_fn(192, 160, |x, y| {
+            let (fx, fy) = (x as f32, y as f32);
+            let mut v = 0.05 + fx / 192.0 * 0.3;
+            if (fx - 60.0).powi(2) + (fy - 60.0).powi(2) < 900.0 {
+                v = 0.6;
+            }
+            if (fx - 140.0).powi(2) + (fy - 110.0).powi(2) < 600.0 {
+                v = 0.02;
+            }
+            if y > 130 {
+                v = 0.25 + 0.15 * (fx * 0.9).sin();
+            }
+            [v; 3]
+        });
+        let hash = |i: u64| {
+            let mut z = i.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+            z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            ((z ^ (z >> 31)) >> 40) as f32 / (1u64 << 24) as f32
+        };
+        let mut noisy = clean.clone();
+        for (i, p) in noisy.data.iter_mut().enumerate() {
+            let (u, v) = (hash(2 * i as u64).max(1e-7), hash(2 * i as u64 + 1));
+            let n = (-2.0 * u.ln()).sqrt() * (std::f32::consts::TAU * v).cos();
+            // Un bruit uniforme dans l'encodage « racine carrée », donc plus fort dans
+            // les lumières en linéaire, comme celui d'un capteur.
+            let e = p[0].sqrt() + n * 0.03;
+            *p = [e.max(0.0).powi(2); 3];
+        }
+        (clean, noisy)
+    }
+
+    /// Le rapport signal sur bruit (dB), mesuré dans l'encodage « racine carrée ».
+    fn psnr(a: &RgbImage, b: &RgbImage) -> f32 {
+        let mse = a
+            .data
+            .iter()
+            .zip(&b.data)
+            .map(|(p, q)| (p[1].max(0.0).sqrt() - q[1].max(0.0).sqrt()).powi(2))
+            .sum::<f32>()
+            / a.data.len() as f32;
+        -10.0 * mse.log10()
+    }
+
+    #[test]
+    fn wavelets_beat_the_guided_filter() {
+        let (clean, noisy) = scene();
+        let before = psnr(&clean, &noisy);
+        let best = |wavelets: bool| {
+            [30.0, 50.0, 70.0, 90.0]
+                .iter()
+                .map(|&lum| {
+                    let mut img = noisy.clone();
+                    let d = Detail {
+                        luminance_nr: lum,
+                        luminance_nr_wavelets: wavelets,
+                        color_nr: 0.0,
+                        ..Detail::default()
+                    };
+                    noise_reduction(&mut img, &d, 1.0);
+                    psnr(&clean, &img)
+                })
+                .fold(f32::MIN, f32::max)
+        };
+        let (guided, wavelets) = (best(false), best(true));
+        eprintln!("avant {before:.2} dB, guidé {guided:.2} dB, ondelettes {wavelets:.2} dB");
+        assert!(wavelets > before + 5.0);
+        assert!(wavelets > guided + 2.5);
+    }
+
+    #[test]
+    fn wavelets_keep_edges_and_spare_a_clean_image() {
+        let (clean, noisy) = scene();
+        let d = Detail {
+            luminance_nr: 60.0,
+            luminance_nr_wavelets: true,
+            color_nr: 0.0,
+            ..Detail::default()
+        };
+        // Le bord du disque clair (x = 30) reste franc : à deux pixels de part et d'autre, l'écart
+        // garde l'essentiel de sa hauteur.
+        let mut img = noisy.clone();
+        noise_reduction(&mut img, &d, 1.0);
+        let at = |x: usize| img.data[60 * 192 + x][1];
+        assert!(
+            at(32) - at(28) > 0.8 * (0.6 - clean.data[60 * 192 + 28][1]),
+            "{} {}",
+            at(28),
+            at(32)
+        );
+        // Sans bruit, presque rien ne bouge : le seuil suit le bruit mesuré.
+        let mut same = clean.clone();
+        noise_reduction(&mut same, &d, 1.0);
+        assert!(psnr(&clean, &same) > 45.0, "{}", psnr(&clean, &same));
+        // Désactivé, le chemin habituel ne change pas.
+        let off = Detail {
+            luminance_nr_wavelets: false,
+            ..d.clone()
+        };
+        let (mut a, mut b) = (noisy.clone(), noisy.clone());
+        noise_reduction(&mut a, &off, 1.0);
+        noise_reduction_reference(&mut b, &off, 1.0);
+        assert_eq!(a, b);
     }
 
     #[test]
