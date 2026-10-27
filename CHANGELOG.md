@@ -261,7 +261,7 @@ La photothèque professionnelle, étape par étape.
   entières ou remplissant leur case, accentuation pour papier mat ou brillant, aperçu
   de la page ; les pages converties vers le **profil de l'imprimante** (celui de
   l'épreuvage, noir compensé), à imprimer sans gestion des couleurs du pilote.
-- **Livre photo** (« Livre et diaporama… », `luma book`) : un PDF avec sa couverture
+- **Livre photo** (« Livre, diaporama, galerie… », `luma book`) : un PDF avec sa couverture
   (la première photo, le titre et le sous‑titre), puis des pages d'une, deux ou quatre
   photos choisies d'après leur orientation ; formats 20 × 20, 30 × 30, A4, 21 × 28, A3.
 - **Diaporama** : en plein écran dans l'app (la photo seule, elle avance d'elle‑même,
@@ -269,6 +269,13 @@ La photothèque professionnelle, étape par étape.
   dossier qui se suffit à lui‑même, index.html et les photos, à ouvrir dans n'importe
   quel navigateur ou à mettre en ligne (fondu, flèches, glissement du doigt, plein
   écran).
+- **Galerie web** (« Livre, diaporama, galerie… », `luma gallery`) : un dossier
+  statique à mettre en ligne tel quel, la grille des vignettes et chaque photo en grand
+  d'un clic (flèches, glissement du doigt, Échap), avec titre, description et légendes.
+- **JPEG allégé pour le web** : chrominance 4:2:0 et tables de Huffman calculées pour
+  chaque image, de 9 à 29 % plus léger sur les photos d'essai, pour un écart à peine
+  mesurable ; dans le préréglage Web, la fenêtre d'export (« Allégé pour le web ») et
+  `--web`.
 
 ## 0.2.0 — octobre 2026
 

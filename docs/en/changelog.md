@@ -242,13 +242,19 @@ The professional photo library, step by step.
   their cell, output sharpening for matte or glossy paper, page preview; pages
   converted to the **printer profile** (the soft-proofing one, black point
   compensated), to print without the driver's color management.
-- **Photo book** (“Book and slideshow…”, `luma book`): a PDF with its cover (the first
+- **Photo book** (“Book, slideshow, gallery…”, `luma book`): a PDF with its cover (the first
   photo, the title and subtitle), then pages of one, two or four photos chosen from
   their orientation; 20 × 20, 30 × 30, A4, 21 × 28, A3 formats.
 - **Slideshow**: full screen in the app (the photo alone, advancing by itself, Space to
   pause, Esc to leave), and **exported** (`luma slideshow`): a self-contained folder,
   index.html and the photos, to open in any browser or put online (crossfade, arrows,
   swipe, full screen).
+- **Web gallery** (“Book, slideshow, gallery…”, `luma gallery`): a static folder to
+  put online as is, the grid of thumbnails and each photo large in one click (arrows,
+  swipe, Esc), with title, description and captions.
+- **JPEG optimized for the web**: 4:2:0 chroma and Huffman tables computed for each
+  image, 9 to 29% lighter on the test photos, for a barely measurable difference; in the
+  Web preset, the export window (“Optimized for the web”) and `--web`.
 
 ## 0.2.0 — October 2026
 

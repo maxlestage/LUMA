@@ -46,6 +46,7 @@ target/release/luma rename ~/Photos/*.ARW --name "{date}_{séquence}" -n  # reno
 target/release/luma print ~/Photos/*.ARW --grid 4x5 --captions -o planche.pdf  # planche contact
 target/release/luma book ~/Photos/Islande/*.ARW --title "Islande" -o livre.pdf  # livre photo
 target/release/luma slideshow ~/Photos/Islande/*.ARW -o ~/Sites/islande     # diaporama autonome
+target/release/luma gallery ~/Photos/Islande/*.ARW -o ~/Sites/galerie --title "Islande"  # galerie web
 target/release/luma presets ~/Desktop                                   # les 100 films en préréglages XMP
 ```
 
