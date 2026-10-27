@@ -83,7 +83,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Mesure au point (RVB, Lab), écrêtage couche par couche | ✅ |
 | | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
 | | Empilements : moyenne, médiane, maximum, ciel étoilé | ✅ |
-| | Fusion HDR, déformation des bords du panorama | ⏳ |
+| | Fusion HDR : poses de bracketing alignées, sans fantômes, en DNG (`luma merge --stack hdr`) | ✅ |
+| | Déformation des bords du panorama | ⏳ |
 | | 100 préréglages avec intensité : pellicules couleur, cinéma, noir et blanc, instantanés ; tous mesurés sur une mire à chaque test (distincts, sans image écrasée, rendus identiques sur le GPU) | ✅ |
 | | Préréglages utilisateur (enregistrer, importer des `.xmp`), export à l'unité ou en dossier au format XMP | ✅ |
 | | Photo modifiée signalée sous la photo et sur les vignettes (film, intensité, panneaux retouchés) | ✅ |

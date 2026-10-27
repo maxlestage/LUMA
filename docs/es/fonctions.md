@@ -83,7 +83,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Medición puntual (RGB, Lab), recorte por canal | ✅ |
 | | Panorámica (perspectiva, cilíndrica, esférica), recorte automático reversible, DNG | ✅ |
 | | Apilamientos: media, mediana, máximo, cielo estrellado | ✅ |
-| | Combinación HDR, deformación de los límites de la panorámica | ⏳ |
+| | Fusión HDR: tomas en horquillado alineadas, sin fantasmas, en DNG (`luma merge --stack hdr`) | ✅ |
+| | Deformación de los bordes del panorama | ⏳ |
 | | 100 ajustes preestablecidos con cantidad: películas en color, cine, blanco y negro, instantáneas; todos medidos sobre una carta de prueba en cada ejecución de las pruebas (distintos, sin imágenes empastadas, renderizados idénticos en la GPU) | ✅ |
 | | Ajustes preestablecidos del usuario (guardar, importar `.xmp`), exportación uno a uno o por carpeta en formato XMP | ✅ |
 | | Foto editada señalada bajo la foto y en las miniaturas (película, cantidad, paneles ajustados) | ✅ |

@@ -113,6 +113,10 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **HDR merge** (Merge, “HDR”, or `luma merge --stack hdr`): bracketed shots, even
+  handheld, become a single DNG where shadows and sky keep their detail. LÜMA measures
+  the exposure difference between shots itself, and whatever moved from one to the next
+  (foliage, passers-by) leaves no ghost.
 - **Highlight reconstruction**: the “Reconstruct highlights” box (Light, under Tone)
   gives a channel clipped by the sensor the color of its neighbors; a burnt sky turns
   orange again, a white towel gets its texture back. A pixel where everything clips
