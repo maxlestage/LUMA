@@ -207,6 +207,10 @@ The professional photo library, step by step.
   and shooting location, for one photo or all selected photos, in the XMP and in
   exported JPEGs; **hierarchical keywords** (“Places > France > Paris”); **metadata
   templates** (creator, copyright, location, keywords) saved and applied in one go.
+- **Map** (Library, “Map”): the filmstrip's photos where they were taken (GPS
+  position from the EXIF, kept in the library), grouped when close together; drag,
+  zoom with the wheel or two fingers, tap a group to see its photos. Open tile base
+  map, downloaded by the system and kept on the device; offline, those already kept.
 
 ## 0.2.0 — October 2026
 

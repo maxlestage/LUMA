@@ -25,6 +25,8 @@ luma-licence.workspace = true
 luma-i18n.workspace = true
 luma-apple.workspace = true
 egui.workspace = true
+# Les tuiles de la carte (PNG).
+image.workspace = true
 wgpu.workspace = true
 
 # Sur Mac : l'accessibilité (VoiceOver). Ailleurs : X11 seulement (Wayland compilerait
