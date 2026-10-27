@@ -23,7 +23,7 @@ C'est une estimation, pas une garantie.
 - workspace Cargo (`crates/`), règle « 100 % Rust » vérifiée en CI sur le graphe de
   dépendances réel ;
 - lecture des RAW Bayer, X‑Trans et DNG linéaire (ProRAW), couleur au sens DNG,
-  dématriçage Malvar‑He‑Cutler et X‑Trans ;
+  dématriçage directionnel (Bayer) et X‑Trans ;
 - module Développement complet, panneau par panneau (voir
   [`fonctions.md`](fonctions.md)), lecture et écriture des XMP `crs:` ;
 - export JPEG, PNG, TIFF 8/16 bits en sRGB ou Display P3 avec profil ICC ;

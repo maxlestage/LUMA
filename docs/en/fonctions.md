@@ -92,6 +92,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 |---|---|
 | Bayer RAW: Sony ARW, Canon CR3, Nikon NEF (and the other common RAW formats) | ✅ 3 camera bodies checked continuously |
 | X‑Trans RAW (Fujifilm) | ✅ dedicated demosaicing |
+| Directional Bayer demosaicing: green follows edges (no zipper or beading on fine detail) | ✅ |
 | Linear DNG, Apple ProRAW (with `BaselineExposure`) | ✅ |
 | Rendered images: JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG; HEIC, HEIF, AVIF (Apple ImageIO); unknown extensions read by content | ✅ “Original” profile: identical on opening |
 | DNG colour: two matrices interpolated by temperature | ✅ |
