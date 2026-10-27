@@ -33,5 +33,14 @@ pub fn apply(ctx: &egui::Context) {
     ctx.global_style_mut(|s| {
         s.spacing.item_spacing = egui::vec2(6.0, 4.0);
         s.spacing.button_padding = egui::vec2(12.0, 5.0);
+        // Au doigt (iPhone, iPad) : des cibles d'au moins 40 points de haut, plus
+        // d'espace entre elles, et les menus plus larges.
+        if cfg!(target_os = "ios") {
+            s.spacing.item_spacing = egui::vec2(8.0, 8.0);
+            s.spacing.button_padding = egui::vec2(14.0, 10.0);
+            s.spacing.interact_size = egui::vec2(44.0, 40.0);
+            s.spacing.menu_width = 260.0;
+            s.spacing.combo_height = 400.0;
+        }
     });
 }
