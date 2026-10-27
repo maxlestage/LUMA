@@ -210,7 +210,13 @@ fn point_measurement() {
     s.harness.hover_at(center);
     s.harness.step();
     s.harness.step();
-    assert_eq!(s.studio().measured(), Some(rgb));
+    // Deux rendus du même aperçu : quelques niveaux d'écart au plus (GPU), jamais la
+    // couleur de l'indicateur d'écrêtage.
+    let again = s.studio().measured().expect("une couleur sous le pointeur");
+    assert!(
+        (0..3).all(|c| rgb[c].abs_diff(again[c]) <= 4),
+        "{rgb:?} {again:?}"
+    );
     s.capture("mesure");
     s.harness.hover_at(egui::pos2(2.0, 450.0));
     s.harness.step();
