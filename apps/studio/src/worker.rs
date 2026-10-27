@@ -64,6 +64,11 @@ pub enum Event {
     Merged {
         result: Result<PathBuf, String>,
     },
+    /// La balance automatique d'une photo d'un lot.
+    AutoBalanced {
+        path: PathBuf,
+        balance: luma_color::TempTint,
+    },
     /// Une photo de la comparaison, développée avec ses réglages.
     Compared {
         tag: u64,
@@ -469,6 +474,25 @@ impl Worker {
     }
 
     /// Les aperçus des préréglages (petits rendus), dans l'ordre.
+    /// La balance automatique de chaque photo du lot, l'une après l'autre (sur un aperçu
+    /// réduit : quelques dizaines de millisecondes par photo depuis son doublon).
+    pub fn auto_balance(&self, paths: Vec<PathBuf>) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-balance-auto".into())
+            .spawn(move || {
+                for path in paths {
+                    let Ok(photo) = crate::dialogs::open_photo(&path) else {
+                        continue;
+                    };
+                    let balance = photo.auto_white_balance();
+                    let _ = sender.send(Event::AutoBalanced { path, balance });
+                    repaint();
+                }
+            })
+            .expect("fil de la balance automatique");
+    }
+
     /// Développe les photos à comparer, chacune avec ses réglages, au grand côté `side`,
     /// l'une après l'autre (la première arrive vite).
     pub fn compare(&self, paths: Vec<PathBuf>, side: usize, tag: u64) {

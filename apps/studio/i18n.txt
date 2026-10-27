@@ -3158,3 +3158,49 @@ es = Buscar duplicados
 fr = La même image dans plusieurs fichiers : copiée, exportée à une autre taille, recompressée
 en = The same image in several files: copied, exported at another size, recompressed
 es = La misma imagen en varios archivos: copiada, exportada a otro tamaño, recomprimida
+
+# ----- Synchroniser -----
+
+fr = Choisissez d'abord les photos à synchroniser.
+en = First choose the photos to sync.
+es = Elija primero las fotos que sincronizar.
+
+fr = Synchroniser {n} photos
+en = Sync {n} photos
+es = Sincronizar {n} fotos
+
+fr = Synchroniser ({n})
+en = Sync ({n})
+es = Sincronizar ({n})
+
+fr = Réglages synchronisés sur {n} photo(s).
+en = Adjustments synced to {n} photo(s).
+es = Ajustes sincronizados en {n} foto(s).
+
+fr = Balance automatique de {n} photo(s)…
+en = Auto white balance of {n} photo(s)…
+es = Balance automático de {n} foto(s)…
+
+fr = Balance automatique appliquée.
+en = Auto white balance applied.
+es = Balance automático aplicado.
+
+fr = {n} photos choisies
+en = {n} photos selected
+es = {n} fotos elegidas
+
+fr = Synchroniser…
+en = Sync…
+es = Sincronizar…
+
+fr = Les réglages de la photo ouverte, aux autres photos choisies (Maj+Cmd+S)
+en = The open photo's adjustments, to the other selected photos (Shift+Cmd+S)
+es = Los ajustes de la foto abierta, a las demás fotos elegidas (Mayús+Cmd+S)
+
+fr = Balance auto
+en = Auto balance
+es = Balance auto
+
+fr = Chaque photo choisie reçoit sa propre balance automatique
+en = Each selected photo gets its own automatic white balance
+es = Cada foto elegida recibe su propio balance automático
