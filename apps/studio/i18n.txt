@@ -613,6 +613,14 @@ fr = Retouche réglée
 en = Retouch adjusted
 es = Retoque ajustado
 
+fr = Yeux rouges
+en = Red eye
+es = Ojos rojos
+
+fr = Un cercle sur chaque œil : la pupille rouge redevient noire
+en = A circle on each eye: the red pupil turns black again
+es = Un círculo en cada ojo: la pupila roja vuelve a ser negra
+
 fr = Voir les taches
 en = Show spots
 es = Ver las manchas

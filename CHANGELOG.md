@@ -116,6 +116,8 @@ La photothèque professionnelle, étape par étape.
   la texture et prend la lumière du bord de la zone ; le tampon en fait une copie
   exacte. Zone et source se déplacent à la souris ; taille, contour progressif,
   opacité. Enregistrés dans le XMP.
+- **Yeux rouges** : un cercle sur chaque œil, et la pupille rouge redevient noire ; la
+  peau autour et le reflet blanc de l'œil ne changent pas.
 - **Taches de capteur** : « Voir les taches » fait ressortir les poussières du capteur
   en points sombres ; « Retirer les poussières » les trouve dans les zones unies (un
   ciel, un mur) et pose un correcteur sur chacune, en laissant les textures, les
