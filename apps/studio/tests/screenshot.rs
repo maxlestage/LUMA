@@ -2010,3 +2010,52 @@ fn slideshow_and_photo_book() {
     assert_eq!(page.matches("loading=\"lazy\"").count(), all);
     assert!(site.join(format!("vignettes/{all:03}.jpg")).is_file());
 }
+
+#[test]
+fn import_from_a_memory_card() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("importer") else {
+        return;
+    };
+    let dir = s.dir.clone();
+    // Une « carte » : deux photos du corpus dans DCIM.
+    let card = dir.join("CARTE/DCIM/100MSDCF");
+    std::fs::create_dir_all(&card).unwrap();
+    for name in ["_DSC0009.ARW", "DSC_0750.NEF"] {
+        std::fs::hard_link(dir.join(name), card.join(name))
+            .or_else(|_| std::fs::copy(dir.join(name), card.join(name)).map(|_| ()))
+            .unwrap();
+    }
+    let (lib, second) = (dir.join("Photos"), dir.join("Second"));
+    s.studio().set_import_source(dir.join("CARTE"));
+    s.studio().import.dest = Some(lib.clone());
+    s.studio().import.backup = Some(second.clone());
+    s.studio().import.name = "essai_{séquence:2}".into();
+    s.studio().open_import();
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    s.capture("importer");
+    s.harness.get_by_label("Importer 2 photos").click();
+    s.harness.step();
+    s.wait();
+    // Rangées par date, renommées, sur les deux disques ; puis ouvertes.
+    let imported = luma_library::import::photos(&lib);
+    assert_eq!(imported.len(), 2, "{imported:?}");
+    assert!(imported.iter().all(|p| {
+        p.file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("essai_")
+    }));
+    assert_eq!(luma_library::import::photos(&second).len(), 2);
+    assert!(
+        card.join("_DSC0009.ARW").is_file(),
+        "la carte reste intacte"
+    );
+    let shown = s.studio().photos().to_vec();
+    assert!(
+        !shown.is_empty() && shown.iter().all(|p| p.starts_with(&lib)),
+        "{shown:?}"
+    );
+}
