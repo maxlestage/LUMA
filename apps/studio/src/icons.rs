@@ -24,6 +24,8 @@ pub enum Icon {
     Stack,
     Panorama,
     Star,
+    /// Annuler : la flèche qui revient en arrière.
+    Undo,
 }
 
 fn p(r: Rect, x: f32, y: f32) -> Pos2 {
@@ -153,6 +155,27 @@ pub fn paint(painter: &Painter, icon: Icon, rect: Rect, color: Color32) {
             painter.line_segment([p(r, 0.5, 0.62), p(r, 0.5, 0.1)], s);
             painter.add(egui::Shape::line(
                 vec![p(r, 0.36, 0.24), p(r, 0.5, 0.1), p(r, 0.64, 0.24)],
+                s,
+            ));
+        }
+        Icon::Undo => {
+            // Un arc ouvert vers la gauche, et sa pointe en haut à gauche.
+            let center = p(r, 0.55, 0.58);
+            let radius = w * 0.3;
+            let points: Vec<Pos2> = (0..=16)
+                .map(|k| {
+                    let a = std::f32::consts::PI * (-0.95 + 1.45 * k as f32 / 16.0);
+                    center + vec2(a.cos(), a.sin()) * radius
+                })
+                .collect();
+            let start = points[0];
+            painter.add(egui::Shape::line(points, s));
+            painter.add(egui::Shape::line(
+                vec![
+                    start + vec2(w * 0.02, -w * 0.2),
+                    start,
+                    start + vec2(w * 0.2, w * 0.02),
+                ],
                 s,
             ));
         }

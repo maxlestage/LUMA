@@ -388,8 +388,18 @@ pub fn color_wheel(
 /// allumés si des pixels sont bouchés ou brûlés. Un clic les active
 /// à l'écran (touche J).
 pub fn histogram(ui: &mut Ui, h: &[[u32; 256]; 3], clipping: &mut bool) -> Response {
+    histogram_sized(ui, h, clipping, 96.0)
+}
+
+/// [`histogram`], à la hauteur `height`.
+pub fn histogram_sized(
+    ui: &mut Ui,
+    h: &[[u32; 256]; 3],
+    clipping: &mut bool,
+    height: f32,
+) -> Response {
     let width = ui.available_width();
-    let (rect, response) = ui.allocate_exact_size(vec2(width, 96.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(width, height), Sense::click());
     let painter = ui.painter();
     painter.rect_filled(rect, 4.0, Color32::from_gray(0x16));
     let total: u32 = h[1].iter().sum();

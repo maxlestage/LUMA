@@ -539,6 +539,8 @@ pub struct Studio {
     compare_tag: u64,
     /// Le tri en plein écran (F) : la photo seule, notée au clavier.
     culling: bool,
+    /// L'écran est étroit (iPhone) : une interface plus simple.
+    compact: bool,
     /// Au tri, passer à la suivante après chaque note, drapeau ou libellé (A).
     auto_advance: bool,
     thumbs: HashMap<PathBuf, TextureHandle>,
@@ -761,6 +763,7 @@ impl Studio {
             compare: None,
             compare_tag: 0,
             culling: false,
+            compact: false,
             auto_advance: true,
             thumbs: HashMap::new(),
             memory_check: 0.0,
@@ -1663,6 +1666,52 @@ impl Studio {
     /// Les réglages ont changé : le XMP sera écrit dans un instant.
     /// Le menu de la barre du haut : la langue (appliquée tout de suite, gardée au
     /// prochain lancement) et le cache (sa taille, et le bouton pour le vider).
+    /// Sur iPhone, un seul menu « ••• » : les commandes d'édition, puis la langue et le
+    /// cache (sur Mac, ils sont dans la barre).
+    fn more_menu(&mut self, ui: &mut Ui) {
+        let mut action = None;
+        let mut clear = false;
+        let menu = ui.menu_button(
+            RichText::new("•••").size(13.0).color(theme::TEXT),
+            |ui| {
+                for (label, act) in [
+                    (tr("Annuler"), "undo"),
+                    (tr("Rétablir"), "redo"),
+                    (tr("Copier les réglages"), "copy"),
+                    (tr("Coller les réglages"), "paste"),
+                    (tr("Coller une partie des réglages"), "paste_some"),
+                    (tr("Réinitialiser la photo"), "reset"),
+                ] {
+                    if ui.button(label).clicked() {
+                        action = Some(act);
+                        ui.close();
+                    }
+                }
+                ui.separator();
+                let current = crate::i18n::lang();
+                ui.label(RichText::new(tr("Langue")).small().color(theme::DIM));
+                for l in crate::i18n::Lang::ALL {
+                    if ui.selectable_label(l == current, l.name()).clicked() {
+                        crate::i18n::choose(l);
+                        ui.close();
+                    }
+                }
+                ui.separator();
+                if ui.button(tr("Vider le cache")).clicked() {
+                    clear = true;
+                    ui.close();
+                }
+            },
+        );
+        menu.response.accessible_name(tr("Plus"));
+        if let Some(a) = action {
+            self.act(a);
+        }
+        if clear {
+            self.clear_cache();
+        }
+    }
+
     fn settings_menu(&mut self, ui: &mut Ui) {
         let current = crate::i18n::lang();
         let label = RichText::new(current.code().to_uppercase())
@@ -2661,6 +2710,7 @@ impl Studio {
         // iPhone (ou fenêtre étroite) : la photo en haut, la barre d'outils, puis
         // l'inspecteur en feuille.
         let compact = full.width() < 820.0;
+        self.compact = compact;
         let m = if compact { 8.0 } else { 14.0 };
         let top = Rect::from_min_size(full.min + vec2(m, m), vec2(full.width() - 2.0 * m, 50.0));
         // Au tri en plein écran, la photo prend tout, la barre du haut aussi.
@@ -3448,12 +3498,15 @@ impl Studio {
                 );
             }
             ui.add_space(2.0);
-            ui.label(
-                RichText::new("LÜMA")
-                    .size(15.0)
-                    .extra_letter_spacing(5.0)
-                    .color(theme::TEXT),
-            );
+            // Sur iPhone, l'anneau suffit : la place va aux boutons.
+            if !compact {
+                ui.label(
+                    RichText::new("LÜMA")
+                        .size(15.0)
+                        .extra_letter_spacing(5.0)
+                        .color(theme::TEXT),
+                );
+            }
             // La puce Premium : l'essai, ou l'abonnement ; un clic ouvre l'écran Premium.
             let premium = matches!(self.licence.access(), luma_licence::Access::Premium { .. });
             let badge = egui::Button::new(
@@ -3470,7 +3523,9 @@ impl Studio {
             if ui.add(badge).on_hover_text("LÜMA Premium").clicked() {
                 self.premium_open = true;
             }
-            self.settings_menu(ui);
+            if !compact {
+                self.settings_menu(ui);
+            }
             if !compact {
                 ui.add_space(14.0);
                 if let Some(p) = self.current_path() {
@@ -3492,6 +3547,10 @@ impl Studio {
                 }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Sur iPhone, le reste des commandes est dans « ••• ».
+                if compact {
+                    self.more_menu(ui);
+                }
                 if icon_button(
                     ui,
                     Icon::Export,
@@ -3521,6 +3580,13 @@ impl Studio {
                     self.act("open");
                 }
                 ui.add_space(6.0);
+                if compact
+                    && icon_button(ui, Icon::Undo, "", false)
+                        .on_hover_text(tr("Annuler"))
+                        .clicked()
+                {
+                    self.act("undo");
+                }
                 if !compact {
                     ui.spacing_mut().item_spacing.x = 12.0;
                     for (label, action, tip) in [
@@ -3616,6 +3682,10 @@ impl Studio {
                 } else {
                     format!("{} ({})", tool.name(), tool.key())
                 };
+                // Le nom de l'outil, pour VoiceOver (et les essais).
+                r.widget_info(|| {
+                    egui::WidgetInfo::selected(egui::Role::Button, true, active, tool.name())
+                });
                 if r.on_hover_text(tip).clicked() {
                     clicked = Some(tool);
                 }
@@ -6061,11 +6131,22 @@ impl Studio {
             }
         };
 
-        section_title(ui, tr("Histogramme"));
-        widgets::histogram(ui, &self.histogram, &mut self.clipping)
-            .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
+        // Sur iPhone, l'histogramme est plus petit, sans titre, et l'épreuvage (pour
+        // l'impression) n'apparaît qu'avec un profil d'imprimante.
+        if !self.compact {
+            section_title(ui, tr("Histogramme"));
+        }
+        widgets::histogram_sized(
+            ui,
+            &self.histogram,
+            &mut self.clipping,
+            if self.compact { 52.0 } else { 96.0 },
+        )
+        .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
         ui.add_space(6.0);
-        self.proofing_panel(ui);
+        if !self.compact || self.proofing.profile.is_some() {
+            self.proofing_panel(ui);
+        }
 
         if self.tool == Tool::Masks {
             self.retouch_panel(ui, &mut commits);
