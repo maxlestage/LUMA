@@ -25,7 +25,8 @@ The professional photo library, step by step.
   is set (NEF 372 → 136 ms), same bytes.
   Then 16-bit TIFF and PNG exports: the image written straight to
   bytes, on every core, without a second copy: 20 to 28% shorter (24 MP: 372 → 299 ms)
-  and 144 MB less memory, same bytes.
+  and 144 MB less memory, same bytes. Then batch export with a logo: the logo is read
+  once for the whole batch (40 ms less per photo for a 1200 × 600 logo).
   Then wavelet noise reduction, without a new image at each scale: 1.8 times faster
   (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
   shorter (0.83 → 0.60 s), same pixels. Then the edge-following filter (Shadows,
