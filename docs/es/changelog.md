@@ -200,6 +200,11 @@ La fototeca profesional, paso a paso.
   fotos elegidas): los ajustes de la foto abierta pasan a las demás, grupo por grupo
   (recorte y máscaras propios de cada una por defecto). **Balance auto en lote**:
   cada foto elegida recibe su propio balance automático.
+- **Ajustes predeterminados por cámara y por ISO** («Ajustes predeterminados…»,
+  herramienta Luz): los ajustes de la foto abierta pasan a ser el punto de partida de
+  las fotos de esa cámara sin XMP, a cualquier ISO o a partir de su ISO (gana la regla
+  más precisa; salvo recorte y máscaras). **Película de importación**: elegida en la
+  carpeta vigilada, se da a cada foto que llega.
 
 ## 0.2.0 — octubre de 2026
 

@@ -325,6 +325,66 @@ fn bursts_are_stacked() {
 }
 
 #[test]
+fn defaults_per_camera_and_import_film() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("defauts") else {
+        return;
+    };
+    let dir = s
+        .studio()
+        .current_path()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    s.studio().use_defaults_file(dir.join("defauts.json"));
+    // Le Sony du corpus (ISO 400) : +0,7 IL deviennent ses réglages à partir d'ISO 400.
+    let sony = dir.join("_DSC0009.ARW");
+    assert_eq!(s.studio().current_path(), Some(sony.as_path()));
+    s.studio().settings.exposure = 0.7;
+    s.studio().settings.crop.left = 0.25;
+    s.studio().set_camera_defaults(true);
+    let saved = luma_project::defaults::Defaults::load(&dir.join("defauts.json"));
+    assert_eq!(saved.rules.len(), 1);
+    assert_eq!(saved.rules[0].from_iso, Some(400));
+    // Une copie du même Sony, sans XMP, s'ouvre avec ces réglages (pas le recadrage) ;
+    // un autre boîtier garde ceux de LÜMA.
+    std::fs::copy(&sony, dir.join("autre-sony.ARW")).unwrap();
+    s.studio().open_path(&dir.join("autre-sony.ARW"));
+    s.wait();
+    assert_eq!(s.studio().settings.exposure, 0.7);
+    assert_eq!(s.studio().settings.crop.left, 0.0);
+    s.studio().open_path(&dir.join("DSC_0750.NEF"));
+    s.wait();
+    assert_eq!(s.studio().settings.exposure, 0.0);
+    s.studio().open_path(&sony);
+    s.wait();
+    s.studio().clear_camera_defaults();
+    assert!(
+        luma_project::defaults::Defaults::load(&dir.join("defauts.json"))
+            .rules
+            .is_empty()
+    );
+
+    // Le film d'import : donné aux photos qui arrivent dans le dossier surveillé.
+    s.studio()
+        .set_import_preset(Some(luma_project::presets::PRESETS[0].name.to_owned()));
+    s.studio().watch_folder(&dir);
+    s.wait();
+    let new = dir.join("arrivee.ARW");
+    std::fs::copy(&sony, &new).unwrap();
+    s.studio().poll_watch();
+    s.studio().poll_watch();
+    let got = luma_studio::worker::read_sidecar(&new).expect("un XMP à l'arrivée");
+    assert_ne!(
+        got,
+        luma_project::Settings::default(),
+        "le film est appliqué"
+    );
+    s.studio().stop_watching();
+}
+
+#[test]
 fn sync_and_auto_balance_a_selection() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("synchroniser") else {
