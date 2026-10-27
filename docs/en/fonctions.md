@@ -55,6 +55,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Longitudinal chromatic aberration, corrections of other brands (Canon, Nikon, Pentax…) | ⏳ |
 | Transform | Vertical and horizontal perspective, rotate, aspect, scale (homography, fixed centre) | ✅ |
 | | Automatic (Shift+R, Shift+V) and guided straightening: two to four lines drawn on the photo set the perspective and rotation | ✅ |
+| | Empty edges cropped: the largest centered frame, in the photo's proportions, with no empty edge after Transform or Distortion | ✅ |
 | Effects | Post-crop vignetting (amount, midpoint, roundness, feather, highlights) | ✅ |
 | | Grain (amount, size, roughness), identical at every size | ✅ |
 | Calibration | Shadows tint, hue and saturation of the primaries | ✅ |

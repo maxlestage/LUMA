@@ -116,6 +116,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Empty edges cropped** (Geometry, Transform): after a perspective, rotation or
+  distortion correction, one click crops to the largest frame with no black corner, in
+  the photo's proportions.
 - **Guided upright** (Geometry, Transform): drag along two to four edges that should
   be straight (a wall, a pole, the horizon); LÜMA sets the perspective and rotation
   right away. A single line only rotates the photo.
