@@ -25,6 +25,9 @@ La photothèque professionnelle, étape par étape.
   Puis la réduction du bruit par ondelettes, sans image neuve à chaque échelle : 1,8 fois
   plus rapide (24 Mpx : 1,17 → 0,65 s), et l'accentuation par déconvolution, huit pixels
   à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels.
+- **Plus de carré vide à l'écran** : deux descriptions de films et le message
+  « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
+  essai vérifie désormais chaque texte de l'interface, dans les trois langues.
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
