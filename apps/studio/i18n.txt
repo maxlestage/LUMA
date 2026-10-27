@@ -5312,3 +5312,15 @@ es = Cobre
 fr = Des reflets cuivrés : oranges métalliques, ombres brunes.
 en = Copper glints: metallic oranges, brown shadows.
 es = Reflejos cobrizos: naranjas metálicos, sombras marrones.
+
+fr = Ciel
+en = Sky
+es = Cielo
+
+fr = Sélectionner le ciel
+en = Select sky
+es = Seleccionar el cielo
+
+fr = Un masque sur le ciel de la photo, trouvé sur la photo elle-même (clair, uni, relié au haut), ses bords sur les branches et les toits
+en = A mask on the photo's sky, found from the photo itself (bright, even, connected to the top), its edges following branches and roofs
+es = Una máscara sobre el cielo de la foto, encontrado en la propia foto (claro, uniforme, unido a la parte superior), con los bordes sobre ramas y tejados
