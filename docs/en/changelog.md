@@ -183,6 +183,10 @@ The professional photo library, step by step.
   its integers, on all cores, with no prior copy to floats; NEF 145 → 67 ms, ARW
   143 → 65, RW2 131 → 65, RAF 169 → 73, DNG 285 → 158, CR3 547 → 399, bit-identical
   data.
+- **Sync a selection** (Shift+Cmd+S, or “Sync…” as soon as two photos are selected):
+  the open photo's adjustments go to the others, group by group (crop and masks left
+  to each one by default). **Batch auto balance**: each selected photo gets its own
+  automatic white balance.
 
 ## 0.2.0 — October 2026
 
