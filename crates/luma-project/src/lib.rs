@@ -656,6 +656,20 @@ impl Settings {
             };
             return Ok(());
         }
+        // Les deux méthodes du Détail : oui ou non.
+        let switch = match key.as_str() {
+            "sharpen.deconvolution" => Some(&mut self.detail.sharpen_deconvolution),
+            "noise.wavelets" => Some(&mut self.detail.luminance_nr_wavelets),
+            _ => None,
+        };
+        if let Some(slot) = switch {
+            *slot = match value.trim().to_ascii_lowercase().as_str() {
+                "on" | "oui" | "yes" | "true" | "1" => true,
+                "off" | "non" | "no" | "false" | "0" => false,
+                other => return Err(format!("« {other} » : attendu on ou off")),
+            };
+            return Ok(());
+        }
         let v: f32 = value
             .trim()
             .trim_start_matches('+')
@@ -794,6 +808,12 @@ mod tests {
         s.set("profile=vivid").unwrap();
         assert_eq!(s.profile, Profile::Vivid);
         assert!(s.set("profile=sepia").is_err());
+        s.set("sharpen.deconvolution=on").unwrap();
+        s.set("noise.wavelets=oui").unwrap();
+        assert!(s.detail.sharpen_deconvolution && s.detail.luminance_nr_wavelets);
+        s.set("noise.wavelets=off").unwrap();
+        assert!(!s.detail.luminance_nr_wavelets);
+        assert!(s.set("sharpen.deconvolution=peut-être").is_err());
         assert_eq!(s.exposure, 0.7);
         assert_eq!(s.hsl.saturation[5], -30.0);
         assert_eq!(s.color_grading.shadows.hue, 220.0);
