@@ -57,11 +57,7 @@ pub fn write_file(
     let err = |e: image::ImageError| e.to_string();
     let sixteen = bits == 16 && ext != "jpg" && ext != "jpeg";
     let (bytes, kind) = if sixteen {
-        let px = luma_image::encode16(img, space);
-        (
-            px.iter().flat_map(|v| v.to_ne_bytes()).collect::<Vec<u8>>(),
-            ExtendedColorType::Rgb16,
-        )
+        (luma_image::encode16_bytes(img, space), ExtendedColorType::Rgb16)
     } else {
         (luma_image::encode8(img, space), ExtendedColorType::Rgb8)
     };
