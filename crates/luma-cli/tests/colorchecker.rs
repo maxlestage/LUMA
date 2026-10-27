@@ -89,3 +89,92 @@ fn a_chart_gives_a_camera_profile() {
     assert!(mean_after(&text, "moyenne ") < 0.2, "{text}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_second_camera_is_matched_to_the_first() {
+    // La référence : le RAW Sony du corpus ; l'autre boîtier : la même scène, recadrée,
+    // aux couleurs qui dérivent, écrite en DNG (sa matrice dit « espace de travail »).
+    let arw = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus/_DSC0009.ARW");
+    if !arw.is_file() {
+        eprintln!("corpus absent (scripts/fetch-corpus.sh) : essai ignoré");
+        return;
+    }
+    let dir = scratch("match-colors");
+    let photo = luma_render::Photo::open(&arw).unwrap();
+    let mut t = luma_core::Timings::default();
+    let base = photo
+        .base(
+            &luma_project::Settings::default(),
+            luma_render::Size::Fit(1600),
+            &luma_core::Cancel::new(),
+            &mut t,
+        )
+        .unwrap();
+    let img = &base.image;
+    let drift = [[0.9, 0.14, -0.04], [0.05, 0.86, 0.09], [-0.02, 0.12, 0.9]];
+    let (x0, y0) = (img.width / 20, img.height / 20);
+    let (w, h) = (img.width - 2 * x0, img.height - 2 * y0);
+    let rgb: Vec<[f32; 3]> = (0..w * h)
+        .map(|i| {
+            let p = img.data[(i / w + y0) * img.width + i % w + x0];
+            lc::apply(&drift, p).map(|v| (v * 0.8).clamp(0.0, 1.0))
+        })
+        .collect();
+    let to_working = lc::inverse(&lc::rgb_to_xyz(&lc::WORKING)).unwrap();
+    let template = RawPhoto {
+        make: "LÜMA".into(),
+        model: "Second".into(),
+        width: 0,
+        height: 0,
+        mosaic: Mosaic::Linear,
+        data: Vec::new(),
+        as_shot_neutral: [1.0, 1.0, 1.0],
+        matrices: vec![(6504.0, to_working)],
+        orientation: Orientation::Normal,
+        baseline_exposure: 0.0,
+        exif: Exif::default(),
+        rendered: false,
+        opcodes: None,
+    };
+    let other = dir.join("second.dng");
+    luma_raw::dng::write_linear_dng(&other, w, h, &rgb, &template, 0.0, "LÜMA essai").unwrap();
+    let preset = dir.join("accord.xmp");
+    let out = Command::new(env!("CARGO_BIN_EXE_luma"))
+        .args([
+            "match-colors",
+            arw.to_str().unwrap(),
+            other.to_str().unwrap(),
+            "-o",
+            preset.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let text = String::from_utf8_lossy(&out.stdout).into_owned() + &String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{text}");
+    eprintln!("{text}");
+    let line = text.lines().find(|l| l.contains("écart de couleur")).unwrap();
+    let numbers: Vec<f32> = line
+        .split("écart de couleur ")
+        .nth(1)
+        .unwrap()
+        .split(" (")
+        .next()
+        .unwrap()
+        .split(" → ")
+        .map(|v| v.parse().unwrap())
+        .collect();
+    assert!(numbers[1] < numbers[0] * 0.5, "{line}");
+    let xmp = std::fs::read_to_string(&preset).unwrap();
+    assert!(
+        xmp.contains("luma:ChannelMixer=") && xmp.contains("Accord LÜMA Second sur Sony"),
+        "{xmp}"
+    );
+    // Une seule photo : l'erreur le dit.
+    let out = Command::new(env!("CARGO_BIN_EXE_luma"))
+        .args(["match-colors", arw.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("deux photos"));
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -19,6 +19,7 @@
 //! luma slideshow <photo>… -o dossier un diaporama autonome (index.html et JPEG)
 //! luma gallery <photo>… -o dossier  une galerie web statique, prête à mettre en ligne
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
+//! luma match-colors <réf> <autre>   les couleurs d'un boîtier accordées sur un autre
 //! luma licence-keys                 une paire de clés pour signer les licences
 //! ```
 
@@ -173,6 +174,11 @@ USAGE
       bon). Avec -o, écrit le profil du boîtier mesuré sur la charte : un préréglage XMP
       (mélangeur de couches, le blanc reste neutre) à importer dans les Préréglages et à
       poser sur les photos de ce boîtier.
+  luma match-colors <référence> <autre> [-o accord.xmp] [--name nom]
+      Accorde les couleurs de deux boîtiers : la même scène photographiée par l'un
+      (référence) et par l'autre, même cadrée un peu autrement. Écart de couleur avant et
+      après ; avec -o, écrit la correction du second boîtier en préréglage XMP (mélangeur
+      de couches, le blanc reste neutre) à poser sur ses photos.
   luma licence-keys
       Une nouvelle paire de clés pour LÜMA Premium : la privée va sur le serveur
       (LUMA_LICENCE_SECRET, à garder secrète), la publique dans l'app (LUMA_LICENCE_PUBLIC).
@@ -1311,6 +1317,61 @@ fn colorchecker(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma match-colors` : les couleurs d'un second boîtier accordées sur celles d'un
+/// premier, d'après la même scène.
+fn match_colors(a: &Args) -> Result<(), String> {
+    let [reference, other] = a.positional.as_slice() else {
+        return Err("deux photos de la même scène : la référence, puis l'autre boîtier".into());
+    };
+    let develop = |path: &str| -> Result<(std::sync::Arc<Photo>, luma_core::RgbImage), String> {
+        let photo = std::sync::Arc::new(Photo::open(Path::new(path)).map_err(|e| e.to_string())?);
+        // Développées sans look (balance telle quelle), comme pour la charte.
+        let mut t = luma_core::Timings::default();
+        let base = photo
+            .base(&Settings::default(), Size::Fit(1600), &Cancel::new(), &mut t)
+            .map_err(|e| e.to_string())?;
+        Ok((photo.clone(), (*base.image).clone()))
+    };
+    let (ref_photo, ref_img) = develop(reference)?;
+    let (photo, img) = develop(other)?;
+    let m = luma_merge::matching::match_colors(&ref_img, &img).map_err(|e| e.to_string())?;
+    println!(
+        "{} {} accordé sur {} {} : écart de couleur {:.2} → {:.2} (ΔE 2000, {} points)",
+        photo.raw().make,
+        photo.raw().model,
+        ref_photo.raw().make,
+        ref_photo.raw().model,
+        m.before,
+        m.after,
+        m.samples
+    );
+    if let Some(out) = &a.output {
+        let name = a.name.clone().unwrap_or_else(|| {
+            format!(
+                "Accord {} {} sur {} {}",
+                photo.raw().make,
+                photo.raw().model,
+                ref_photo.raw().make,
+                ref_photo.raw().model
+            )
+        });
+        let row = |r: usize| m.matrix[r].map(|v| v * 100.0);
+        let settings = Settings {
+            channel_mixer: luma_project::ChannelMixer {
+                red: row(0),
+                green: row(1),
+                blue: row(2),
+            },
+            ..Settings::default()
+        }
+        .clamped();
+        let text = xmp::write_preset(&name, "Profils de boîtier", &settings);
+        std::fs::write(out, text).map_err(|e| format!("{} : {e}", out.display()))?;
+        println!("accord écrit : {} (« {name} »)", out.display());
+    }
+    Ok(())
+}
+
 /// `luma presets` : les films intégrés en préréglages XMP, un dossier par famille.
 fn export_presets(dir: &Path) -> Result<usize, String> {
     use luma_project::presets::PRESETS;
@@ -2165,6 +2226,7 @@ fn main() -> ExitCode {
         "export" => export_many(&parsed),
         "xmp" => to_xmp(&parsed),
         "colorchecker" => colorchecker(&parsed),
+        "match-colors" => match_colors(&parsed),
         "bench" => bench(&parsed),
         "-h" | "--help" | "help" => {
             println!("{USAGE}");
