@@ -156,6 +156,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Sur Mac, boîtier relié (USB, ou réseau s'il le permet) par le cadre du système : chaque photo prise arrive dans le dossier surveillé, déclenchement depuis LÜMA pour les boîtiers qui le permettent | ✅ |
 | Copies virtuelles : plusieurs développements d'une photo sans dupliquer le fichier (un XMP par copie), chacune avec sa note, ses mots‑clés et sa vignette, à côté de son original ; export nommé `IMG_0001-2` ; suppression sans toucher l'original | ✅ |
 | Import de catalogues existants | ⏳ |
+| Raccourcis clavier personnalisables (« Raccourcis clavier… » : chaque commande, ses touches, une touche déjà prise passe à la nouvelle commande, retour aux touches par défaut ; « Raccourcis.txt ») ; Tab masque les panneaux ; espaces de travail (Tri, Développement, Retouche, Présentation et les vôtres : outil et panneaux), Cmd+1 à Cmd+9 | ✅ |
 
 ## Ce qui distingue LÜMA
 
