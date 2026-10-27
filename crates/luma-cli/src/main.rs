@@ -166,11 +166,13 @@ USAGE
   luma cameras [--markdown] [--corpus dossier]
       Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
       --corpus marque ceux dont un vrai RAW est dans le dossier.
-  luma colorchecker <raw> [--xmp f.xmp]
+  luma colorchecker <raw> [--xmp f.xmp] [-o profil.xmp] [--name nom]
       Mesure la fidélité des couleurs d'un boîtier : photographier une charte ColorChecker
       (24 plages), la recadrer au plus juste dans LÜMA (le XMP garde le recadrage), puis
       lancer la commande : ΔE 2000 de chaque plage (moins de 2 : invisible ; moins de 5 :
-      bon).
+      bon). Avec -o, écrit le profil du boîtier mesuré sur la charte : un préréglage XMP
+      (mélangeur de couches, le blanc reste neutre) à importer dans les Préréglages et à
+      poser sur les photos de ce boîtier.
   luma licence-keys
       Une nouvelle paire de clés pour LÜMA Premium : la privée va sur le serveur
       (LUMA_LICENCE_SECRET, à garder secrète), la publique dans l'app (LUMA_LICENCE_PUBLIC).
@@ -1244,16 +1246,24 @@ fn colorchecker(a: &Args) -> Result<(), String> {
         .ok_or("un RAW de la charte, recadré au plus juste")?;
     let raw = Path::new(path);
     let mut s = load_settings(a, Some(raw))?;
-    // La couleur seule : pas de look, pas de courbe (l'étape d'entrée et la balance).
-    let keep = (s.white_balance, s.crop, s.transform.clone(), s.lens.clone());
+    // La couleur seule : pas de look, pas de courbe (l'étape d'entrée et la balance) ; le
+    // mélangeur reste, pour vérifier un profil déjà posé (ou l'affiner).
+    let keep = (
+        s.white_balance,
+        s.crop,
+        s.transform.clone(),
+        s.lens.clone(),
+        s.channel_mixer,
+    );
     s = Settings::default();
-    (s.white_balance, s.crop, s.transform, s.lens) = keep;
+    (s.white_balance, s.crop, s.transform, s.lens, s.channel_mixer) = keep;
     let photo = Photo::open(raw).map_err(|e| e.to_string())?;
     let mut t = luma_core::Timings::default();
     let base = photo
         .base(&s, Size::Fit(1600), &Cancel::new(), &mut t)
         .map_err(|e| e.to_string())?;
-    let de = luma_render::chart::measure_chart(&base.image);
+    let profile = luma_render::chart::fit_profile(&base.image);
+    let de = profile.before;
     println!(
         "{} {} — ΔE 2000 par plage (charte ColorChecker)",
         photo.raw().make,
@@ -1275,6 +1285,29 @@ fn colorchecker(a: &Args) -> Result<(), String> {
             "écart visible : vérifier le recadrage, la balance des blancs et l'éclairage"
         }
     );
+    let after = profile.after.iter().sum::<f32>() / 24.0;
+    let worst_after = profile.after.iter().copied().fold(0.0, f32::max);
+    println!("avec le profil du boîtier : moyenne {after:.2}, maximum {worst_after:.2}");
+    if let Some(out) = &a.output {
+        let name = a
+            .name
+            .clone()
+            .unwrap_or_else(|| format!("Profil {} {}", photo.raw().make, photo.raw().model));
+        // Mesuré par‑dessus le mélangeur déjà posé : le profil est les deux à la suite.
+        let total = luma_color::mul(&profile.matrix, &s.channel_mixer.matrix());
+        let settings = Settings {
+            channel_mixer: luma_project::ChannelMixer {
+                red: total[0].map(|v| v * 100.0),
+                green: total[1].map(|v| v * 100.0),
+                blue: total[2].map(|v| v * 100.0),
+            },
+            ..Settings::default()
+        }
+        .clamped();
+        let text = xmp::write_preset(&name, "Profils de boîtier", &settings);
+        std::fs::write(out, text).map_err(|e| format!("{} : {e}", out.display()))?;
+        println!("profil écrit : {} (« {name} »)", out.display());
+    }
     Ok(())
 }
 
