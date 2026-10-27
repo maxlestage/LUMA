@@ -28,6 +28,7 @@ pub mod horizon;
 pub mod lens;
 pub mod local;
 pub mod retouch;
+pub mod scopes;
 pub mod tone;
 
 use luma_color::{self as lc, EncodeLut, Mat3, OutputSpace, luminance};

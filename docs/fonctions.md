@@ -78,6 +78,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |
 | | iPhone et iPad : aperçu réduit pendant un geste (12 fois plus rapide), mémoire surveillée, caches libérés avant que le système ne ferme l'app | ✅ |
 | | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), zoom 1:1 | ✅ |
+| | Forme d'onde, parade RVB, vectorscope (Maj+J) | ✅ |
 | | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
 | | Empilements : moyenne, médiane, maximum, ciel étoilé | ✅ |
 | | Fusion HDR, déformation des bords du panorama | ⏳ |

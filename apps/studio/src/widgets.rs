@@ -1,6 +1,6 @@
 //! Les composants de l'interface, sobres et précis : curseurs fins à repère
 //! central (double‑clic : valeur par défaut), pistes colorées pour la balance des
-//! blancs et le mélangeur, roues chromatiques de l'étalonnage, histogramme.
+//! blancs et le mélangeur, roues chromatiques de l'étalonnage, histogramme et instruments.
 
 use egui::{
     Color32, Mesh, Pos2, Rect, Response, Sense, Shape, Stroke, StrokeKind, Ui, Vec2, pos2, vec2,
@@ -469,6 +469,111 @@ pub fn histogram_sized(
     if response.clicked() {
         *clipping = !*clipping;
     }
+    response
+}
+
+/// Un instrument (forme d'onde, parade RVB, vectorscope) rendu par le moteur, avec ses
+/// repères : les niveaux 0, 25, 50, 75 et 100 % ; pour le vectorscope, les cibles des
+/// six couleurs primaires et secondaires à 75 % et la ligne des tons chair.
+pub fn scope(
+    ui: &mut Ui,
+    scope: luma_image::scopes::Scope,
+    texture: &egui::TextureHandle,
+    height: f32,
+) -> Response {
+    use luma_image::scopes::{
+        LEVELS, PARADE_COLUMNS, PARADE_GAP, Scope, vectorscope_point, waveform_level,
+    };
+    let width = ui.available_width();
+    let vector = scope == Scope::Vectorscope;
+    let h = if vector {
+        width.min(height * 1.7)
+    } else {
+        height
+    };
+    let (rect, response) = ui.allocate_exact_size(vec2(width, h), Sense::hover());
+    let painter = ui.painter();
+    painter.rect_filled(rect, 4.0, Color32::from_gray(0x16));
+    let grid = Stroke::new(1.0, Color32::from_gray(0x34));
+    let image = if vector {
+        Rect::from_center_size(rect.center(), Vec2::splat(h - 8.0))
+    } else {
+        rect.shrink2(vec2(6.0, 5.0))
+    };
+    if vector {
+        let c = image.center();
+        let r = image.width() / 2.0;
+        painter.circle_stroke(c, r, grid);
+        painter.circle_stroke(c, r * 0.5, Stroke::new(1.0, Color32::from_gray(0x26)));
+        painter.line_segment([c - vec2(r, 0.0), c + vec2(r, 0.0)], grid);
+        painter.line_segment([c - vec2(0.0, r), c + vec2(0.0, r)], grid);
+        let at = |rgb: [f32; 3]| {
+            let [u, v] = vectorscope_point(rgb);
+            pos2(
+                image.min.x + u * image.width(),
+                image.min.y + v * image.height(),
+            )
+        };
+        // Les tons chair : toutes les peaux tombent près de cette ligne.
+        let skin = at([0.87, 0.67, 0.55]) - c;
+        painter.line_segment(
+            [c, c + skin.normalized() * r],
+            Stroke::new(1.0, Color32::from_rgb(0x7a, 0x5a, 0x44)),
+        );
+        let targets = [
+            (crate::i18n::tr("R|vectorscope"), [0.75, 0.0, 0.0]),
+            (crate::i18n::tr("J|vectorscope"), [0.75, 0.75, 0.0]),
+            (crate::i18n::tr("V|vectorscope"), [0.0, 0.75, 0.0]),
+            (crate::i18n::tr("C|vectorscope"), [0.0, 0.75, 0.75]),
+            (crate::i18n::tr("B|vectorscope"), [0.0, 0.0, 0.75]),
+            (crate::i18n::tr("M|vectorscope"), [0.75, 0.0, 0.75]),
+        ];
+        for (name, rgb) in targets {
+            let p = at(rgb);
+            painter.rect_stroke(
+                Rect::from_center_size(p, Vec2::splat(7.0)),
+                1.0,
+                grid,
+                StrokeKind::Middle,
+            );
+            let out = (p - c).normalized() * 10.0;
+            painter.text(
+                p + out,
+                egui::Align2::CENTER_CENTER,
+                name,
+                egui::FontId::proportional(9.0),
+                Color32::from_gray(0x70),
+            );
+        }
+    } else {
+        for level in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            // Le milieu de la ligne de l'image qui porte ce niveau.
+            let row = waveform_level(level) * (LEVELS - 1) as f32 + 0.5;
+            let y = image.min.y + row / LEVELS as f32 * image.height();
+            painter.line_segment([pos2(image.min.x, y), pos2(image.max.x, y)], grid);
+        }
+        if scope == Scope::Parade {
+            let total = (PARADE_COLUMNS * 3 + PARADE_GAP * 2) as f32;
+            for k in 1..3 {
+                let x = image.min.x
+                    + (k * (PARADE_COLUMNS + PARADE_GAP)) as f32 / total * image.width()
+                    - PARADE_GAP as f32 / 2.0 / total * image.width();
+                painter.line_segment([pos2(x, image.min.y), pos2(x, image.max.y)], grid);
+            }
+        }
+    }
+    painter.image(
+        texture.id(),
+        image,
+        Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+        Color32::WHITE,
+    );
+    painter.rect_stroke(
+        rect,
+        4.0,
+        Stroke::new(1.0, Color32::from_gray(0x30)),
+        StrokeKind::Inside,
+    );
     response
 }
 

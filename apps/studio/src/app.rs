@@ -20,6 +20,7 @@ use egui::{
     vec2,
 };
 use luma_color::OutputSpace;
+use luma_image::scopes::Scope;
 use luma_library::query::fold;
 use luma_project::presets::{self, PRESETS};
 use luma_project::xmp::{Flag, Meta};
@@ -438,6 +439,7 @@ struct Request {
     scene: bool,
     dust_view: bool,
     find_dust: bool,
+    scope: Scope,
 }
 
 /// La comparaison de 2 à 4 photos : leurs rendus, et la vue commune (zoom et centre
@@ -540,6 +542,9 @@ pub struct Studio {
     texture: Option<TextureHandle>,
     image_size: [usize; 2],
     histogram: [[u32; 256]; 3],
+    /// L'instrument affiché à la place de l'histogramme (Maj+J), et son image.
+    scope: Scope,
+    scope_texture: Option<TextureHandle>,
     generation: u64,
     shown: u64,
     last_request: Option<Request>,
@@ -773,6 +778,11 @@ impl Studio {
         self.histogram
     }
 
+    /// L'instrument affiché, et s'il est rendu (son image arrivée avec l'aperçu).
+    pub fn scope(&self) -> (Scope, bool) {
+        (self.scope, self.scope_texture.is_some())
+    }
+
     /// Une image de photo est affichée.
     pub fn has_image(&self) -> bool {
         self.texture.is_some()
@@ -814,6 +824,8 @@ impl Studio {
             texture: None,
             image_size: [0, 0],
             histogram: [[0; 256]; 3],
+            scope: Scope::default(),
+            scope_texture: None,
             generation: 0,
             shown: 0,
             last_request: None,
@@ -1787,6 +1799,23 @@ impl Studio {
                     self.render_ms = frame.millis;
                     self.render_gpu = frame.gpu;
                     self.histogram = frame.histogram;
+                    match &frame.scope {
+                        Some(s) => {
+                            let image =
+                                ColorImage::from_rgba_unmultiplied([s.width, s.height], &s.rgba);
+                            match &mut self.scope_texture {
+                                Some(t) => t.set(image, TextureOptions::LINEAR),
+                                None => {
+                                    self.scope_texture = Some(ctx.load_texture(
+                                        "instrument",
+                                        image,
+                                        TextureOptions::LINEAR,
+                                    ))
+                                }
+                            }
+                        }
+                        None => self.scope_texture = None,
+                    }
                     self.image_size = frame.size;
                     self.pick_map = pick_map(frame.size, &frame.rgba);
                     // Une nouvelle base : la zone d'un masque à plage est à relire.
@@ -2425,6 +2454,7 @@ impl Studio {
             scene: self.retouch.is_some() || self.selected_spot.is_some(),
             dust_view: self.show_dust && self.tool == Tool::Masks,
             find_dust: self.dust_pending,
+            scope: self.scope,
         };
         if self.last_request.as_ref() == Some(&request) {
             return;
@@ -2440,6 +2470,7 @@ impl Studio {
                 scene: request.scene,
                 dust_view: request.dust_view,
                 find_dust: request.find_dust,
+                scope: request.scope,
             },
             self.proofing.active(),
         );
@@ -2549,6 +2580,9 @@ impl Studio {
                     action = Some("prev");
                 } else if i.consume_key(Modifiers::NONE, Key::ArrowRight) {
                     action = Some("next");
+                } else if i.consume_key(Modifiers::SHIFT, Key::J) {
+                    // Avant J seul, qui accepterait aussi Maj+J.
+                    action = Some("scope");
                 } else if i.consume_key(Modifiers::NONE, Key::J) {
                     action = Some("clipping");
                 } else if i.consume_key(Modifiers::NONE, Key::Z) {
@@ -2832,6 +2866,10 @@ impl Studio {
                 }
             }
             "clipping" => self.clipping = !self.clipping,
+            "scope" => {
+                self.scope = self.scope.next();
+                self.scope_texture = None;
+            }
             "zoom" => self.zoom = !self.zoom,
             _ => {}
         }
@@ -4288,7 +4326,7 @@ impl Studio {
                 }
                 Tool::Merge => self.merge_panel(ui),
                 Tool::Films => {
-                    widgets::histogram(ui, &self.histogram, &mut self.clipping);
+                    self.scopes(ui, 96.0);
                     ui.add_space(8.0);
                     self.films_panel(ui);
                 }
@@ -5383,10 +5421,50 @@ impl Studio {
         }
     }
 
+    /// L'histogramme, ou l'instrument choisi à sa place (forme d'onde, parade RVB,
+    /// vectorscope), avec le sélecteur au‑dessus (Maj+J : le suivant).
+    fn scopes(&mut self, ui: &mut Ui, height: f32) {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 2.0;
+            for s in Scope::ALL {
+                let name = match s {
+                    Scope::Histogram => tr("Histogramme"),
+                    Scope::Waveform => tr("Forme d'onde"),
+                    Scope::Parade => tr("Parade RVB"),
+                    Scope::Vectorscope => tr("Vectorscope"),
+                };
+                let selected = self.scope == s;
+                let text = RichText::new(name).size(10.5).color(if selected {
+                    theme::TEXT
+                } else {
+                    theme::DIM
+                });
+                if ui
+                    .selectable_label(selected, text)
+                    .on_hover_text(tr("Maj+J : instrument suivant"))
+                    .clicked()
+                    && !selected
+                {
+                    self.scope = s;
+                    self.scope_texture = None;
+                }
+            }
+        });
+        ui.add_space(2.0);
+        match (&self.scope_texture, self.scope) {
+            (Some(texture), scope) if scope != Scope::Histogram => {
+                widgets::scope(ui, scope, texture, height);
+            }
+            _ => {
+                widgets::histogram_sized(ui, &self.histogram, &mut self.clipping, height)
+                    .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
+            }
+        }
+    }
+
     /// Bibliothèque, à droite : la note, le drapeau et les informations de la photo.
     fn library_right(&mut self, ui: &mut Ui) {
-        section_title(ui, tr("Histogramme"));
-        widgets::histogram(ui, &self.histogram, &mut self.clipping);
+        self.scopes(ui, 96.0);
         ui.add_space(10.0);
         let Some(path) = self.current_path().map(Path::to_path_buf) else {
             return;
@@ -7199,16 +7277,12 @@ impl Studio {
 
         // Sur iPhone, l'histogramme est plus petit, sans titre, et l'épreuvage (pour
         // l'impression) n'apparaît qu'avec un profil d'imprimante.
-        if !self.compact {
-            section_title(ui, tr("Histogramme"));
+        if self.compact {
+            widgets::histogram_sized(ui, &self.histogram, &mut self.clipping, 52.0)
+                .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
+        } else {
+            self.scopes(ui, 96.0);
         }
-        widgets::histogram_sized(
-            ui,
-            &self.histogram,
-            &mut self.clipping,
-            if self.compact { 52.0 } else { 96.0 },
-        )
-        .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
         ui.add_space(6.0);
         self.selection_actions(ui);
         if !self.compact || self.proofing.profile.is_some() {
