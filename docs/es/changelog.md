@@ -18,6 +18,8 @@ La fototeca profesional, paso a paso.
   corta (24 Mpx: 200 → 175 ms), mismos bytes. Después las correcciones de objetivo
   grabadas por la cámara (Sony, Fujifilm, Olympus, Panasonic), ocho píxeles a la vez:
   un 30 % más rápidas (ARW de 24 Mpx: 385 → 270 ms), mismos archivos byte a byte.
+  Después la Intensidad, igual: la etapa de color 2,7 veces más rápida cuando se ajusta
+  (NEF 372 → 136 ms), mismos bytes.
 
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y

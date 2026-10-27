@@ -17,7 +17,8 @@ La photothèque professionnelle, étape par étape.
   des JPEG, encore 13 à 15 % plus court (24 Mpx : 200 → 175 ms), mêmes octets. Puis
   les corrections d'objectif enregistrées par le boîtier (Sony, Fujifilm, Olympus,
   Panasonic), huit pixels à la fois : 30 % plus rapides (ARW 24 Mpx : 385 → 270 ms),
-  mêmes fichiers octet pour octet.
+  mêmes fichiers octet pour octet. Puis la Vibrance, de même : l'étape couleur 2,7 fois
+  plus rapide quand elle est réglée (NEF 372 → 136 ms), mêmes octets.
 
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
