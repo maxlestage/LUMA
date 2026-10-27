@@ -15,7 +15,7 @@
 //! 7. **effets** : vignetage, grain.
 //!
 //! Tout est calculé en `f32`, en parallèle (rayon). Le résultat est en Rec. 2020
-//! linéaire ; [`encode8`] et [`encode16`] le convertissent vers l'espace de sortie.
+//! linéaire ; [`encode8`] et [`encode16`] (ou [`encode16_bytes`]) le convertissent vers l'espace de sortie.
 
 pub mod color;
 pub mod cube;
@@ -563,15 +563,27 @@ pub fn encode8(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
 
 /// L'image encodée sur 16 bits (TIFF, PNG).
 pub fn encode16(img: &RgbImage, space: OutputSpace) -> Vec<u16> {
+    encode16_bytes(img, space)
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|b| u16::from_ne_bytes(*b))
+        .collect()
+}
+
+/// [`encode16`] directement en octets (dans l'ordre de la machine), ceux qu'écrivent le
+/// PNG et le TIFF : ni seconde copie de l'image, ni conversion sur un seul cœur.
+pub fn encode16_bytes(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
     let m = lc::rgb_to_rgb(&lc::WORKING, &space.primaries());
-    let mut out = vec![0u16; img.data.len() * 3];
-    out.par_chunks_mut(3 * img.width.max(1))
+    let mut out = vec![0u8; img.data.len() * 6];
+    out.par_chunks_mut(6 * img.width.max(1))
         .zip(img.data.par_chunks(img.width.max(1)))
         .for_each(|(dst, src)| {
-            for (d, &p) in dst.as_chunks_mut::<3>().0.iter_mut().zip(src) {
+            for (d, &p) in dst.as_chunks_mut::<6>().0.iter_mut().zip(src) {
                 let c = to_output(&m, p);
                 for i in 0..3 {
-                    d[i] = (space.encode(c[i]) * 65535.0 + 0.5) as u16;
+                    let v = (space.encode(c[i]) * 65535.0 + 0.5) as u16;
+                    d[2 * i..2 * i + 2].copy_from_slice(&v.to_ne_bytes());
                 }
             }
         });
@@ -866,6 +878,32 @@ mod tests {
             assert!(px[4] > 200 && px[3] < 60, "{space:?} {px:?}");
         }
         assert_eq!(encode16(&img, OutputSpace::Srgb)[0], 65535);
+    }
+
+    #[test]
+    fn sixteen_bit_bytes_are_the_same_as_before() {
+        // Hors gamut, dans les ombres, au blanc : chaque valeur comme le calcul d'avant.
+        let img = RgbImage::from_fn(97, 61, |x, y| {
+            let (a, b) = (x as f32 / 96.0, y as f32 / 60.0);
+            [a * a * 1.2 - 0.05, b, (a * b).sqrt() * 0.003]
+        });
+        for space in [
+            OutputSpace::Srgb,
+            OutputSpace::DisplayP3,
+            OutputSpace::Rec2020,
+            OutputSpace::ProPhoto,
+        ] {
+            let m = lc::rgb_to_rgb(&lc::WORKING, &space.primaries());
+            let before: Vec<u8> = img
+                .data
+                .iter()
+                .flat_map(|&p| to_output(&m, p))
+                .flat_map(|c| ((space.encode(c) * 65535.0 + 0.5) as u16).to_ne_bytes())
+                .collect();
+            assert_eq!(encode16_bytes(&img, space), before, "{space:?}");
+            let words: Vec<u8> = encode16(&img, space).iter().flat_map(|v| v.to_ne_bytes()).collect();
+            assert_eq!(words, before);
+        }
     }
 
     #[test]

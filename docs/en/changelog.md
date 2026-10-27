@@ -18,7 +18,9 @@ The professional photo library, step by step.
   Panasonic), eight pixels at a time: 30% faster (24 MP ARW: 385 → 270 ms), same files
   byte for byte. Then Vibrance, the same way: the colour stage 2.7 times faster when it
   is set (NEF 372 → 136 ms), same bytes.
-
+  Then 16-bit TIFF and PNG exports: the image written straight to
+  bytes, on every core, without a second copy: 20 to 28% shorter (24 MP: 372 → 299 ms)
+  and 144 MB less memory, same bytes.
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and
