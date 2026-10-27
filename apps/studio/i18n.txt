@@ -4554,3 +4554,23 @@ es = Buscar una película
 fr = Aucun film ne correspond.
 en = No film matches.
 es = Ninguna película coincide.
+
+fr = Redressement guidé
+en = Guided upright
+es = Enderezado guiado
+
+fr = Terminer le tracé
+en = Finish drawing
+es = Terminar el trazado
+
+fr = Tracez sur la photo deux à quatre lignes qui doivent être droites (arêtes, horizon) : LÜMA règle la perspective et la rotation
+en = Draw two to four lines on the photo that should be straight (edges, horizon): LÜMA sets the perspective and rotation
+es = Traza en la foto de dos a cuatro líneas que deberían ser rectas (aristas, horizonte): LÜMA ajusta la perspectiva y la rotación
+
+fr = {n} ligne(s) sur 4 : glissez le long d'une arête verticale ou horizontale.
+en = {n} line(s) of 4: drag along a vertical or horizontal edge.
+es = {n} línea(s) de 4: arrastra a lo largo de una arista vertical u horizontal.
+
+fr = Effacer les lignes
+en = Clear the lines
+es = Borrar las líneas
