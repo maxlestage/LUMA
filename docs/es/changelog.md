@@ -272,6 +272,11 @@ La fototeca profesional, paso a paso.
   cada imagen, de un 9 a un 29 % más ligero en las fotos de prueba, con una diferencia
   apenas medible; en el ajuste Web, la ventana de exportación («Optimizado para la web»)
   y `--web`.
+- **Importación desde una tarjeta** («Importar una tarjeta…» en la Fototeca, `luma
+  import`): la tarjeta montada se encuentra sola; las fotos se ordenan por fecha de
+  toma, se renombran si se quiere y se copian también en un segundo disco; cada copia
+  se relee y se compara con el original, el RAW, su JPEG y su XMP conservan el mismo
+  nombre, una foto ya importada se omite y la tarjeta nunca se modifica.
 
 ## 0.2.0 — octubre de 2026
 

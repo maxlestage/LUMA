@@ -276,6 +276,11 @@ La photothèque professionnelle, étape par étape.
   chaque image, de 9 à 29 % plus léger sur les photos d'essai, pour un écart à peine
   mesurable ; dans le préréglage Web, la fenêtre d'export (« Allégé pour le web ») et
   `--web`.
+- **Import depuis une carte** (« Importer une carte… » dans la Photothèque, `luma
+  import`) : la carte montée est trouvée seule ; les photos sont rangées par date de
+  prise de vue, renommées si on le veut, copiées aussi sur un second disque ; chaque
+  copie est relue et comparée à l'original, le RAW, son JPEG et son XMP gardent un même
+  nom, une photo déjà importée est sautée, la carte n'est jamais modifiée.
 
 ## 0.2.0 — octobre 2026
 
