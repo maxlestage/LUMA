@@ -1,0 +1,55 @@
+# LÜMA pour iPhone essayée dans le simulateur d'iOS (scripts/simulator-ios.sh) : les
+# captures d'écran de chaque étape et le journal de l'app sont publiés en artefact et
+# sur la branche captures-simulateur.
+
+name: Simulateur iPhone
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  simulateur:
+    name: Essayer l'app dans le simulateur
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+
+      - name: idb (touchers dans le simulateur)
+        run: |
+          brew tap facebook/fb
+          brew install idb-companion
+          python3 -m pip install --quiet --break-system-packages fb-idb
+
+      - name: Essayer
+        run: scripts/simulator-ios.sh
+
+      - name: Publier les captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures-simulateur
+          path: target/ios/simulateur
+          if-no-files-found: warn
+
+      - name: Captures sur la branche captures-simulateur
+        if: always()
+        run: |
+          dir=$(mktemp -d)
+          cp -R target/ios/simulateur/. "$dir"/ 2>/dev/null || true
+          cd "$dir"
+          git init -q -b captures-simulateur
+          git config user.name "Maxime Lestage"
+          git config user.email "maxlestage@icloud.com"
+          git add -A
+          git commit -q -m "Captures du simulateur ($GITHUB_SHA)" || exit 0
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:captures-simulateur
