@@ -1278,6 +1278,28 @@ fn channel_mixer() {
 }
 
 #[test]
+fn wavelet_noise_reduction() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("ondelettes") else {
+        return;
+    };
+    let st = s.studio();
+    st.tool = luma_studio::app::Tool::Detail;
+    st.settings.detail.luminance_nr = 60.0;
+    s.wait();
+    assert!(!s.studio().settings.detail.luminance_nr_wavelets);
+    // La case du panneau Détail passe la luminance aux ondelettes, et la décoche revient.
+    s.harness.get_by_label("Ondelettes").click();
+    s.wait();
+    assert!(s.studio().settings.detail.luminance_nr_wavelets);
+    assert!(s.studio().has_image());
+    s.capture("ondelettes");
+    s.harness.get_by_label("Ondelettes").click();
+    s.wait();
+    assert!(!s.studio().settings.detail.luminance_nr_wavelets);
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {

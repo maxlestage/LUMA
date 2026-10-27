@@ -8280,6 +8280,19 @@ impl Studio {
                     sub_title(ui, tr("Réduction du bruit"));
                     let l = self.fields(ui, &NOISE);
                     keep(l, &mut commits);
+                    if ui
+                        .checkbox(&mut self.settings.detail.luminance_nr_wavelets, tr("Ondelettes"))
+                        .on_hover_text(tr(
+                            "Lisse la luminance échelle par échelle : plus de détail gardé à force égale, environ deux fois plus lent",
+                        ))
+                        .changed()
+                    {
+                        commits.push(if self.settings.detail.luminance_nr_wavelets {
+                            tr("Bruit par ondelettes").into()
+                        } else {
+                            tr("Bruit par filtre guidé").into()
+                        });
+                    }
                 });
         }
 

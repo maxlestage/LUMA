@@ -113,6 +113,10 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Wavelet noise reduction**: the “Wavelets” box in Detail smooths luminance scale by
+  scale, each according to the noise measured on the photo; at the same strength, more
+  texture and edges are kept than with the usual filter (3.7 dB better in our tests),
+  for about twice its time. No AI.
 - **Auto verticals** (Shift+V, or the Transform button): a building shot while aiming
   upwards gets straight walls back; LÜMA measures where its verticals meet and sets the
   Vertical accordingly.

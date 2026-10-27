@@ -119,6 +119,10 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Reducción de ruido por ondículas**: la casilla «Ondículas» de Detalle suaviza la
+  luminancia escala por escala, cada una según el ruido medido en la foto; con la misma
+  intensidad, conserva más textura y contornos que el filtro habitual (3,7 dB mejor en
+  nuestras pruebas), por aproximadamente el doble de tiempo. Sin IA.
 - **Verticales automáticas** (Mayús+V, o el botón de la Transformación): un edificio
   fotografiado apuntando hacia arriba recupera sus paredes rectas; LÜMA mide dónde se
   juntan sus verticales y ajusta la Vertical en consecuencia.

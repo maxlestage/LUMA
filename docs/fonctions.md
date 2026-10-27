@@ -43,7 +43,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Mélangeur de couches : chaque couche de sortie faite des trois couches de la photo (−200 à +200 %) | ✅ |
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |
-| | Réduction du bruit avancée (moyennes non locales, ondelettes), sans IA | ⏳ |
+| | Réduction du bruit avancée (ondelettes, case « Ondelettes »), sans IA | ✅ |
 | Corrections de l'objectif | Aberration chromatique latérale estimée sur la photo, distorsion, vignetage (gain, milieu), défrangeage violet et vert | ✅ |
 | | Corrections d'objectif écrites dans les DNG (opcodes `WarpRectilinear` et `FixVignetteRadial`) : distorsion, aberration chromatique latérale et vignetage, appliqués automatiquement à toutes les tailles | ✅ |
 | | Corrections d'objectif des ARW de Sony (distorsion, aberration chromatique latérale, vignetage, enregistrées par le boîtier), appliquées automatiquement sans bord vide | ✅ |

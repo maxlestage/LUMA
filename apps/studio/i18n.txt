@@ -3508,3 +3508,19 @@ es = Descarga los mosaicos libres del mapa y los guarda en el dispositivo; si no
 fr = Aucune photo de ce film n'a de position GPS.
 en = No photo in this filmstrip has a GPS position.
 es = Ninguna foto de esta tira tiene posición GPS.
+
+fr = Ondelettes
+en = Wavelets
+es = Ondículas
+
+fr = Lisse la luminance échelle par échelle : plus de détail gardé à force égale, environ deux fois plus lent
+en = Smooths luminance scale by scale: more detail kept at the same strength, about twice as slow
+es = Suaviza la luminancia escala por escala: conserva más detalle con la misma intensidad, aproximadamente el doble de lento
+
+fr = Bruit par ondelettes
+en = Wavelet noise reduction
+es = Reducción de ruido por ondículas
+
+fr = Bruit par filtre guidé
+en = Guided-filter noise reduction
+es = Reducción de ruido por filtro guiado
