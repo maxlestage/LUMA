@@ -209,6 +209,18 @@ fn panorama_from_three_rotated_views() {
         assert!((ph as f64) < 1.3 * h as f64);
         let covered = merged.covered.iter().filter(|c| **c).count() as f64 / merged.covered.len() as f64;
         assert!(covered > 0.85, "couverture {covered}");
+        // Les bords déformés plutôt que rognés : tout le rectangle est rempli, et ce
+        // qu'on garde est bien plus grand que le rognage.
+        let kept = merged.crop.map_or(1.0, |c| (c.right - c.left) * (c.bottom - c.top));
+        let mut warped = merged;
+        warped.warp_edges();
+        let filled = warped.covered.iter().filter(|c| **c).count() as f64 / warped.covered.len() as f64;
+        let kept_after = warped.crop.map_or(1.0, |c| (c.right - c.left) * (c.bottom - c.top));
+        eprintln!("bords déformés : couverture {covered:.3} → {filled:.3}, gardé {kept:.3} → {kept_after:.3}");
+        assert!(
+            filled > 0.995 && kept_after > 0.995 && kept_after > kept,
+            "{filled} {kept} → {kept_after}"
+        );
     }
 }
 
