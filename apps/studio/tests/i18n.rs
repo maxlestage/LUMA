@@ -113,6 +113,7 @@ fn texts() -> Vec<(String, String)> {
             StackMode::Median,
             StackMode::Maximum,
             StackMode::Stars,
+            StackMode::Hdr,
         ]
         .map(|m| m.name().to_owned())
         .to_vec(),
