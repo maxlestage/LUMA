@@ -14,7 +14,9 @@ The professional photo library, step by step.
   at a time: 1.8 to 1.9 times faster (NEF 160 → 85 ms), byte-for-byte identical files.
   Then colour (profile and Saturation), the same way: three times faster (NEF 147 →
   48 ms). Then JPEG coding, another 13 to 15% shorter (24 MP: 200 → 175 ms), same
-  bytes.
+  bytes. Then the lens corrections recorded by the camera (Sony, Fujifilm, Olympus,
+  Panasonic), eight pixels at a time: 30% faster (24 MP ARW: 385 → 270 ms), same files
+  byte for byte.
 
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
