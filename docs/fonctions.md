@@ -76,6 +76,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Yeux rouges : un cercle sur l'œil, la pupille rouge redevient noire, la peau reste | ✅ |
 | | Moiré et frange (aberration chromatique locale) au pinceau, dans chaque masque | ✅ |
 | | Suppression : un cercle sur ce qui gêne (fil, passant, déchet), rempli par des morceaux de la photo qui l'entourent, texture comprise, sans IA | ✅ |
+| | Fluidité (Retouche) : pousser, gonfler, dégonfler au pinceau (taille, force), coups gardés dans le XMP, annulables ; sans IA | ✅ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |
 | | Synchroniser une sélection (Maj+Cmd+S) : les réglages de la photo ouverte aux autres photos choisies, groupe par groupe ; balance automatique en lot, chaque photo la sienne | ✅ |
@@ -125,7 +126,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 |---|---|
 | JPEG (qualité), PNG et TIFF 8 ou 16 bits | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
-| Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels, sans jamais agrandir (`--resize`) | ✅ |
+| Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels, sans agrandir par défaut (`--resize`) | ✅ |
+| Agrandissement au besoin (« Agrandir au besoin », `--enlarge`) : Lanczos sans halo, jusqu'à quatre fois chaque côté et 200 Mpx, pour les grands tirages ; sans IA | ✅ |
 | Fenêtre Exporter : format, qualité, profondeur, espace, taille, dossier ; export de toutes les photos du filtre | ✅ |
 | Export vers plusieurs préréglages à la fois (fenêtre Exporter : cases à cocher, reprendre, enregistrer ; `luma export --preset A --preset B`) | ✅ |
 | Préréglages d'export (format, qualité, profondeur, espace, taille, dossier) : Web, Pleine définition, Écran P3, Impression, et les vôtres ; `luma export-preset`, `luma develop --preset` | ✅ |

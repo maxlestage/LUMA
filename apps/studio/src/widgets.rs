@@ -722,6 +722,116 @@ pub fn rating(ui: &mut Ui, value: u8, size: f32) -> Option<u8> {
     }
 }
 
+/// Le bouton d'une action principale (acheter, s'abonner) : toute la largeur, plein,
+/// couleur d'accent, son texte au centre. `true` quand il est touché.
+pub fn call_to_action(ui: &mut egui::Ui, label: &str, enabled: bool) -> bool {
+    let h = if crate::touch() { 48.0 } else { 38.0 };
+    let sense = if enabled {
+        egui::Sense::click()
+    } else {
+        egui::Sense::hover()
+    };
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), h), sense);
+    let resp = resp.on_hover_cursor(if enabled {
+        egui::CursorIcon::PointingHand
+    } else {
+        egui::CursorIcon::Default
+    });
+    let fill = if !enabled {
+        egui::Color32::from_rgb(0x2c, 0x2e, 0x3a)
+    } else if resp.is_pointer_button_down_on() {
+        theme::ACCENT.gamma_multiply(0.8)
+    } else if resp.hovered() {
+        theme::ACCENT.gamma_multiply(1.08)
+    } else {
+        theme::ACCENT
+    };
+    let p = ui.painter();
+    p.rect_filled(rect, 12.0, fill);
+    p.text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        label,
+        egui::FontId::proportional(16.0),
+        if enabled {
+            egui::Color32::from_rgb(0x1a, 0x12, 0x06)
+        } else {
+            theme::DIM
+        },
+    );
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, label));
+    enabled && resp.clicked()
+}
+
+/// Une petite étiquette arrondie, couleur d'accent (« Une fois pour toutes »).
+pub fn pill(ui: &mut egui::Ui, text: &str) {
+    let galley = ui.painter().layout_no_wrap(
+        text.to_owned(),
+        egui::FontId::proportional(11.0),
+        theme::ACCENT,
+    );
+    let (rect, _) =
+        ui.allocate_exact_size(galley.size() + egui::vec2(16.0, 8.0), egui::Sense::hover());
+    let p = ui.painter();
+    p.rect_filled(
+        rect,
+        rect.height() / 2.0,
+        theme::ACCENT.gamma_multiply(0.16),
+    );
+    p.galley(rect.center() - galley.size() / 2.0, galley, theme::ACCENT);
+}
+
+/// Des onglets côte à côte, de même largeur, qui tiennent toujours dans la largeur
+/// disponible (le texte rapetisse s'il le faut). `on` dit lesquels sont allumés ;
+/// `tips` donne la bulle de chaque onglet (vide : aucune). Rend celui qui est touché.
+pub fn segments(
+    ui: &mut egui::Ui,
+    labels: &[&str],
+    on: &[bool],
+    tips: &[&str],
+    size: f32,
+) -> Option<usize> {
+    let n = labels.len().max(1) as f32;
+    let h = if crate::touch() { 36.0 } else { 24.0 };
+    let (row, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), h), egui::Sense::hover());
+    let w = row.width() / n;
+    let mut hit = None;
+    for (k, label) in labels.iter().enumerate() {
+        let cell =
+            egui::Rect::from_min_size(row.min + egui::vec2(w * k as f32, 0.0), egui::vec2(w, h));
+        let id = ui.scope_id().with(("segment", k, *label));
+        let mut resp = ui.interact(cell, id, egui::Sense::click());
+        if let Some(tip) = tips.get(k).filter(|t| !t.is_empty()) {
+            resp = resp.on_hover_text(*tip);
+        }
+        let lit = on.get(k).copied().unwrap_or(false);
+        let p = ui.painter();
+        if lit {
+            p.rect_filled(
+                cell.shrink(1.0),
+                8.0,
+                egui::Color32::from_rgb(0x3a, 0x2f, 0x1e),
+            );
+        } else if resp.hovered() {
+            p.rect_filled(cell.shrink(1.0), 8.0, theme::SECTION);
+        }
+        let color = if lit { theme::TEXT } else { theme::DIM };
+        let mut font = egui::FontId::proportional(size);
+        let mut galley = p.layout_no_wrap((*label).to_owned(), font.clone(), color);
+        if galley.size().x > w - 8.0 {
+            font.size = (size * (w - 8.0) / galley.size().x).max(7.0);
+            galley = p.layout_no_wrap((*label).to_owned(), font, color);
+        }
+        p.galley(cell.center() - galley.size() / 2.0, galley, color);
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Tab, true, lit, *label));
+        if resp.clicked() {
+            hit = Some(k);
+        }
+    }
+    hit
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -50,6 +50,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
   viendront avec 13.1 : l'export les recopiera alors.
 - [x] 2.7 Export par lot vers plusieurs préréglages à la fois, dans l'app et en ligne de
   commande.
+- [x] 2.8 Agrandissement à l'export, sans IA (Lanczos sans halo).
 
 ### 3. Corrections d'objectif automatiques
 
@@ -104,6 +105,7 @@ du binaire, démarrage, place des doublons de travail), mesuré avec
 - [x] 9.3 Yeux rouges.
 - [x] 9.4 Moiré et aberration chromatique locale au pinceau.
 - [x] 9.5 Suppression d'objets : remplissage par des morceaux de la photo, sans IA.
+- [x] 9.6 Fluidité : pousser, gonfler, dégonfler au pinceau, sans IA.
 
 ### 10. Outils de développement avancés
 
@@ -179,9 +181,6 @@ et blanc, vignetage après recadrage et grain existent).
   garde l'image non corrigée jusqu'à ce qu'il soit refait.
 - Copies virtuelles dans le catalogue (aujourd'hui, elles n'apparaissent que dans le
   dossier de leur original, pas dans les vues « toutes les photos » ni les recherches).
-- Le trait d'union insécable (U+2011) n'est pas dans la police de l'app : un texte
-  affiché qui en contient (descriptions de films : « sous‑exposé », « vert‑cyan »)
-  fait échouer le rendu de test ; à remplacer par un trait d'union simple à l'écran.
 - Carte : placer à la main les photos sans position (les glisser sur la carte, écrit
   dans le XMP), et suivre une trace GPX ; le téléchargement des tuiles n'existe que sur
   Mac, iPhone et iPad (ailleurs, le cache seul).
@@ -317,3 +316,6 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-27 | Vitesse et légèreté (export 16 bits) : `luma_image::encode16_bytes` écrit l'image directement en octets (ordre de la machine), en parallèle, au lieu d'un `Vec<u16>` converti ensuite octet par octet sur un seul cœur ; l'export TIFF et PNG 16 bits s'en sert (`encode16` en dérive) | 24 Mpx, 4 cœurs, meilleur de 5 : conversion et mise en octets 372 → 299 ms en sRGB (−20 %), 287 → 208 ms en ProPhoto (−28 %) ; 144 Mo de moins en mémoire pendant l'export ; mêmes octets dans les quatre espaces (essai contre le calcul d'avant, hors gamut, ombres, blanc ; TIFF relu à l'identique) |
 | 2026-10-27 | 4.6 Sélection du ciel (`Shape::Sky`, `luma_image::sky::sky`, bouton « Sélectionner le ciel » de Masquage) : analyse à 256 px en OKLab, couleur de référence prise dans le haut peu texturé de l'image, ressemblance de couleur ou de nuage, remplissage depuis le bord haut (un lac qui reflète le ciel reste hors du masque), affinage par filtre guidé sur la photo entière ; refusée quand le haut n'est pas plus clair que le bas ou qu'il est chaud | Essai d'écran sur l'ORF de paysage : zone supérieure à 0,5 en haut, inférieure à 0,05 en bas ; essai moteur : ciel et nuages trouvés, lac et sol laissés ; limites connues : un mur blanc lisse en haut d'une photo d'intérieur peut être pris, un ciel couvert derrière des branches n'est pas trouvé |
 | 2026-10-27 | Vitesse : ondelettes (`wavelet_denoise`) avec quatre tampons pour toutes les échelles, coefficients fins et leur carré calculés à la lecture, atténuation et cumul dans la passe des colonnes ; déconvolution (`convolve_rows`) huit pixels à la fois, mêmes produits ajoutés dans le même ordre | Plan de 24 Mpx, 4 cœurs : ondelettes 1,17 → 0,65 s (1,8 fois), Richardson‑Lucy 0,83 → 0,60 s (− 28 %) ; essais au bit près contre l'ancienne version (trois tailles, trois réglages) et contre la somme pixel par pixel (six largeurs, quatre rayons) ; la passe des lignes des ondelettes en colonnes n'a rien gagné (mémoire), laissée simple |
+| 2026-10-27 | 9.6 Fluidité (`luma_project::Warp`, `luma_image::liquify::apply`, pinceaux Pousser, Gonfler, Dégonfler de la Retouche, XMP `luma:Liquify`) : chaque coup garde son chemin, sa taille et sa force ; au rendu, un champ de déplacement sur une grille d'au plus 512 nœuds, composé touche après touche (une touche tous les quarts de rayon, douceur (1 − t²)²), puis la photo relue en bilinéaire ; posée avant les retouches, qui se placent sur la photo déformée ; hors de la zone touchée, pixels inchangés au bit près | 24 Mpx, un coup de 20 points et un gonflement : 0,22 s ; essais : un point poussé de 60 à 100 px arrive au‑delà de 90 px et reste entier, gonfler double au moins sa surface et dégonfler la réduit d'un tiers, même déformation à 200 et à 800 px de large ; essai d'écran : glisser, cliquer, annuler, effacer |
+| 2026-10-27 | Idée : caractères absents de la police de l'app : un essai (`apps/studio/tests/i18n.rs`) vérifie chaque texte de l'interface, en français, anglais et espagnol (ceux du code, des films, des modes…), caractère par caractère dans la police ; corrigés : le trait d'union insécable de deux descriptions de films et la flèche du message « Pellicule mesurée » | L'essai trouvait 5 textes (deux descriptions, le message dans les trois langues) qui s'affichaient avec un carré vide ; plus aucun |
+| 2026-10-27 | 2.8 Agrandissement à l'export (`luma_image::enlarge::enlarge`, `Options::enlarge`, `Resize::fit`, case « Agrandir au besoin », `--enlarge` et `--no-enlarge`, enregistré dans les préréglages) : Lanczos à trois lobes en lignes puis en colonnes, chaque pixel borné par ses quatre voisins d'origine (pas de halo), jusqu'à quatre fois chaque côté et 200 Mpx | Scène détaillée réduite de moitié puis agrandie : 43,5 dB contre 41,9 pour le bilinéaire ; bord noir et blanc agrandi trois fois : aucune valeur hors des deux teintes, transition sur 3 pixels au plus ; 24 → 96 Mpx en 1,7 s (4 cœurs) ; export d'essai 24 × 64 → 48 × 128 seulement avec l'option |

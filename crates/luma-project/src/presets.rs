@@ -291,7 +291,7 @@ pub fn summary(s: &Settings) -> Summary {
     if own.lut.is_some() && s.film.is_none() {
         panels.push("LUT");
     }
-    if !s.spots.is_empty() {
+    if !s.spots.is_empty() || !s.liquify.is_empty() {
         panels.push("Retouche");
     }
     Summary {
@@ -1142,7 +1142,7 @@ pub const PRESETS: &[Preset] = &[
     preset!(
         "Nuit américaine",
         Cinema,
-        "Tourner de jour pour faire la nuit : sous‑exposé, bleu, peu saturé.",
+        "Tourner de jour pour faire la nuit : sous-exposé, bleu, peu saturé.",
         |s| {
             base(s, 10.0, -35.0, 0.0);
             tones(s, -40.0, -20.0, -30.0, -10.0);
@@ -1583,7 +1583,7 @@ pub const PRESETS: &[Preset] = &[
     preset!(
         "Polaroid 600",
         Instant,
-        "L'instantané carré des années 80 : chaud, délavé, ombres vert‑cyan.",
+        "L'instantané carré des années 80 : chaud, délavé, ombres vert-cyan.",
         |s| {
             base(s, -10.0, -10.0, 0.0);
             fade(s, 30.0, 236.0);

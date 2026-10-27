@@ -76,6 +76,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Ojos rojos: un círculo en el ojo, la pupila roja vuelve a ser negra, la piel se queda | ✅ |
 | | Muaré y desflecado (aberración cromática local) con el pincel, en cada máscara | ✅ |
 | | Eliminar: un círculo sobre lo que molesta (cable, transeúnte, basura), rellenado con trozos de la foto de alrededor, textura incluida, sin IA | ✅ |
+| | Licuar (Retoque): empujar, inflar, desinflar con un pincel (tamaño, fuerza), trazos guardados en el XMP, deshacibles; sin IA | ✅ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Copiar y pegar selectivo de ajustes («Pegar…», Alt+Mayús+Cmd+V): catorce grupos a elegir, recorte y máscaras propios de cada foto por defecto | ✅ |
 | | Sincronizar una selección (Mayús+Cmd+S): los ajustes de la foto abierta a las demás fotos elegidas, grupo por grupo; balance automático en lote, cada foto el suyo | ✅ |
@@ -125,7 +126,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 |---|---|
 | JPEG (calidad), PNG y TIFF de 8 o 16 bits | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, con perfil ICC incrustado | ✅ |
-| Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar nunca (`--resize`) | ✅ |
+| Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar por defecto (`--resize`) | ✅ |
+| Ampliación si es necesario («Ampliar si es necesario», `--enlarge`): Lanczos sin halos, hasta cuatro veces cada lado y 200 MP, para copias grandes; sin IA | ✅ |
 | Ventana Exportar: formato, calidad, profundidad de bits, espacio de color, tamaño, carpeta; exportación de todas las fotos del filtro | ✅ |
 | Exportación a varios ajustes preestablecidos a la vez (ventana Exportar: casillas, usar, guardar; `luma export --preset A --preset B`) | ✅ |
 | Ajustes preestablecidos de exportación (formato, calidad, profundidad, espacio, tamaño, carpeta): web, resolución completa, pantalla P3, impresión, y los suyos; `luma export-preset`, `luma develop --preset` | ✅ |

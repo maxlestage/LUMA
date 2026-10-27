@@ -23,11 +23,13 @@ pub mod curve;
 pub mod detail;
 pub mod dust;
 pub mod effects;
+pub mod enlarge;
 pub mod geometry;
 pub mod highlights;
 pub mod horizon;
 pub mod inpaint;
 pub mod lens;
+pub mod liquify;
 pub mod local;
 pub mod retouch;
 pub mod scopes;
@@ -88,6 +90,12 @@ pub fn develop_base(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel
     // L'étape d'entrée lit la source (en cache, partagée) et écrit l'image de travail.
     let mut img = t.time("entrée", || input_stage(cam, input, s));
     cancel.check()?;
+    // La fluidité d'abord : les retouches se posent sur la photo déformée, là où on
+    // les voit.
+    if !s.liquify.is_empty() {
+        t.time("fluidité", || liquify::apply(&mut img, &s.liquify));
+        cancel.check()?;
+    }
     if !s.spots.is_empty() {
         t.time("retouche", || retouch::apply(&mut img, &s.spots));
         cancel.check()?;
@@ -135,6 +143,7 @@ pub fn base_key(s: &Settings) -> Settings {
         lens: s.lens.clone(),
         transform: s.transform.clone(),
         spots: s.spots.clone(),
+        liquify: s.liquify.clone(),
         // Les films des masques n'agissent qu'à la fin : ils ne changent pas la base.
         masks: s
             .masks

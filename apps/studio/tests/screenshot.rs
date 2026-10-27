@@ -1099,6 +1099,24 @@ fn crop_tool_and_export_window() {
 }
 
 #[test]
+fn export_enlarge() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("export-agrandir") else {
+        return;
+    };
+    // En pleine définition, pas de case : rien à agrandir.
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::E)]);
+    assert!(s.harness.query_by_label("Agrandir au besoin").is_none());
+    // Un grand côté de 12 000 px : la case apparaît et se coche.
+    s.studio().export_options.resize = Some(luma_render::export::Resize::LongEdge(12000));
+    s.wait();
+    s.harness.get_by_label("Agrandir au besoin").click();
+    s.wait();
+    assert!(s.studio().export_options.enlarge);
+    s.capture("export-agrandir");
+}
+
+#[test]
 fn masks_linear_and_radial() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("masques") else {
@@ -1185,6 +1203,76 @@ fn retouch_spots() {
     s.wait();
     assert!(s.studio().has_image());
     s.capture("retouche-supprimer");
+}
+
+#[test]
+fn liquify() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("fluidite") else {
+        return;
+    };
+    // Q ouvre la Retouche ; « Pousser » prend la place du correcteur.
+    s.keys(&[(NONE, Key::Q)]);
+    s.wait();
+    s.harness.get_by_label("Pousser").click();
+    s.wait();
+    assert_eq!(s.studio().liquify, Some(luma_project::WarpKind::Push));
+    assert_eq!(s.studio().retouch, None);
+    let press = |s: &mut Session, path: &[egui::Pos2]| {
+        let (a, b) = (path[0], path[path.len() - 1]);
+        let mut events = vec![
+            egui::Event::PointerMoved(a),
+            egui::Event::PointerButton {
+                pos: a,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: NONE,
+            },
+        ];
+        events.extend(path[1..].iter().map(|p| egui::Event::PointerMoved(*p)));
+        events.push(egui::Event::PointerButton {
+            pos: b,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: NONE,
+        });
+        for e in events {
+            s.harness.input_mut().events.push(e);
+            s.harness.step();
+        }
+        s.wait();
+    };
+    // Un glissement sur la photo : un coup de pinceau, gardé pas à pas.
+    let path: Vec<egui::Pos2> = (0..=8)
+        .map(|i| egui::pos2(480.0 + 12.0 * i as f32, 420.0 - 3.0 * i as f32))
+        .collect();
+    press(&mut s, &path);
+    let st = s.studio();
+    assert_eq!(st.settings.liquify.len(), 1);
+    assert!(
+        st.settings.liquify[0].points.len() >= 3,
+        "{:?}",
+        st.settings.liquify[0]
+    );
+    // Gonfler : un clic suffit.
+    s.harness.get_by_label("Gonfler").click();
+    s.wait();
+    assert_eq!(s.studio().liquify, Some(luma_project::WarpKind::Bloat));
+    press(&mut s, &[egui::pos2(760.0, 360.0)]);
+    let st = s.studio();
+    assert_eq!(st.settings.liquify.len(), 2);
+    assert_eq!(st.settings.liquify[1].kind, luma_project::WarpKind::Bloat);
+    assert!(st.has_image());
+    s.capture("fluidite");
+    // Annulable, puis tout effacé d'un bouton.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.liquify.len(), 1);
+    s.harness.get_by_label("Effacer").click();
+    s.wait();
+    assert!(s.studio().settings.liquify.is_empty());
+    // Échap range le pinceau.
+    s.keys(&[(NONE, Key::Escape)]);
+    assert_eq!(s.studio().liquify, None);
 }
 
 #[test]
