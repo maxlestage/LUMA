@@ -292,6 +292,12 @@ La fototeca profesional, paso a paso.
   los paneles.
 - **Espacios de trabajo**: Selección, Revelado, Retoque, Presentación y los que se
   guardan (la herramienta y los paneles), de Cmd+1 a Cmd+9.
+- **iPhone: la cuadrícula de fotos realineada**: columnas calculadas según el ancho de
+  la pantalla, con los márgenes de las islas, el nombre encima de la foto y ya no sobre
+  ella; la barra Cuadrícula, Mapa y Pase de diapositivas cabe en una línea («Libro,
+  pase de diapositivas, galería…» pasa a «•••»); solo el histograma en el panel Fotos.
+  Tras una actualización de la app, las fotos siguen a la nueva carpeta de la app en
+  lugar de aparecer en un segundo «Documents».
 
 ## 0.2.0 — octubre de 2026
 
