@@ -18,7 +18,11 @@ use std::path::PathBuf;
 use crate::{Catalog, Collection, Entry};
 
 pub(crate) const MAGIC: &[u8; 8] = b"LUMACAT\0";
-const VERSION: u64 = 1;
+const VERSION: u64 = 2;
+
+/// La version d'avant la position GPS : encore lue, ses photos relues à la prochaine
+/// mise à jour de leur dossier.
+const WITHOUT_GPS: u64 = 1;
 
 /// Les textes du fichier, chacun une fois.
 #[derive(Default)]
@@ -66,6 +70,11 @@ fn real(out: &mut Vec<u8>, v: Option<f32>) {
 }
 
 pub(crate) fn encode(cat: &Catalog) -> Vec<u8> {
+    encode_as(cat, VERSION)
+}
+
+/// Le catalogue écrit dans cette version (l'ancienne, pour les essais).
+fn encode_as(cat: &Catalog, version: u64) -> Vec<u8> {
     let entries: Vec<(&str, &str, &Entry)> = cat
         .entries
         .values()
@@ -92,6 +101,15 @@ pub(crate) fn encode(cat: &Catalog) -> Vec<u8> {
         real(&mut body, e.aperture);
         real(&mut body, e.exposure_time);
         real(&mut body, e.focal_length);
+        match e.gps.filter(|_| version == VERSION) {
+            Some([lat, lon]) => {
+                body.push(1);
+                body.extend_from_slice(&lat.to_le_bytes());
+                body.extend_from_slice(&lon.to_le_bytes());
+            }
+            None if version == VERSION => body.push(0),
+            None => {}
+        }
         body.push(e.rating);
         body.push(e.flag as u8);
         varint(&mut body, e.keywords.len() as u64);
@@ -101,7 +119,7 @@ pub(crate) fn encode(cat: &Catalog) -> Vec<u8> {
     }
     let mut out = Vec::with_capacity(body.len() + table.texts.len() * 24 + 64);
     out.extend_from_slice(MAGIC);
-    varint(&mut out, VERSION);
+    varint(&mut out, version);
     varint(&mut out, table.texts.len() as u64);
     for t in &table.texts {
         text(&mut out, t);
@@ -154,6 +172,16 @@ impl<'a> Reader<'a> {
         })
     }
 
+    fn gps(&mut self) -> Option<Option<[f64; 2]>> {
+        Some(match self.byte()? {
+            0 => None,
+            _ => {
+                let mut f = || Some(f64::from_le_bytes(self.bytes(8)?.try_into().ok()?));
+                Some([f()?, f()?])
+            }
+        })
+    }
+
     fn real(&mut self) -> Option<Option<f32>> {
         Some(match self.byte()? {
             0 => None,
@@ -164,7 +192,11 @@ impl<'a> Reader<'a> {
 
 pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
     let mut r = Reader { bytes, at: 0 };
-    if r.bytes(MAGIC.len())? != MAGIC || r.varint()? != VERSION {
+    if r.bytes(MAGIC.len())? != MAGIC {
+        return None;
+    }
+    let version = r.varint()?;
+    if version != VERSION && version != WITHOUT_GPS {
         return None;
     }
     let count = usize::try_from(r.varint()?).ok()?;
@@ -197,6 +229,7 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
         let (make, model, lens, label) = (owned()?, owned()?, owned()?, owned()?);
         let iso = r.optional()?;
         let (aperture, exposure_time, focal_length) = (r.real()?, r.real()?, r.real()?);
+        let gps = if version == VERSION { r.gps()? } else { None };
         let (rating, flag) = (r.byte()?, r.byte()? as i8);
         let n = usize::try_from(r.varint()?).ok()?;
         let mut keywords = Vec::with_capacity(n.min(64));
@@ -206,7 +239,9 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
         let e = Entry {
             path: path.clone(),
             size,
-            modified,
+            // Sans date, une photo d'avant la position GPS est relue (et sa position
+            // avec elle).
+            modified: if version == VERSION { modified } else { 0 },
             sidecar,
             date,
             make,
@@ -216,6 +251,7 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
             aperture,
             exposure_time,
             focal_length,
+            gps,
             rating,
             flag,
             label,
@@ -267,6 +303,7 @@ mod tests {
                 aperture: Some(2.8),
                 exposure_time: (i == 0).then_some(1.0 / 250.0),
                 focal_length: Some(35.0),
+                gps: (i == 1).then_some([48.8584, 2.2945]),
                 rating: i as u8 + 3,
                 flag: [1, -1, 0][i],
                 label: if i == 0 { "Rouge".into() } else { String::new() },
@@ -287,6 +324,19 @@ mod tests {
         assert!(is_binary(&bytes));
         assert_eq!(decode(&bytes).unwrap(), cat);
         assert_eq!(decode(&encode(&Catalog::default())).unwrap(), Catalog::default());
+    }
+
+    #[test]
+    fn a_catalog_without_gps_is_read_and_its_photos_reread() {
+        let cat = sample();
+        let read = decode(&encode_as(&cat, WITHOUT_GPS)).unwrap();
+        assert_eq!(read.len(), cat.len());
+        assert_eq!(read.collections, cat.collections);
+        for e in read.entries() {
+            let was = cat.get(&e.path).unwrap();
+            assert_eq!((e.gps, e.modified), (None, 0), "relue à la prochaine mise à jour");
+            assert_eq!((e.rating, &e.keywords, &e.lens), (was.rating, &was.keywords, &was.lens));
+        }
     }
 
     #[test]
