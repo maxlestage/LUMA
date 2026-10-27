@@ -3875,10 +3875,6 @@ fr = Cliquez sur une commande, puis appuyez sur ses nouvelles touches.
 en = Click a command, then press its new keys.
 es = Haga clic en un comando y pulse sus nuevas teclas.
 
-fr = Langue, clavier et cache
-en = Language, keyboard and cache
-es = Idioma, teclado y caché
-
 fr = Par défaut
 en = Default
 es = Por defecto
@@ -4106,3 +4102,69 @@ es = Ajuste selectivo
 fr = Masquer les panneaux
 en = Hide the panels
 es = Ocultar los paneles
+
+# ----- Les espaces de travail -----
+
+fr = Espace de travail 1
+en = Workspace 1
+es = Espacio de trabajo 1
+
+fr = Espace de travail 2
+en = Workspace 2
+es = Espacio de trabajo 2
+
+fr = Espace de travail 3
+en = Workspace 3
+es = Espacio de trabajo 3
+
+fr = Espace de travail 4
+en = Workspace 4
+es = Espacio de trabajo 4
+
+fr = Espace de travail 5
+en = Workspace 5
+es = Espacio de trabajo 5
+
+fr = Espace de travail 6
+en = Workspace 6
+es = Espacio de trabajo 6
+
+fr = Espace de travail 7
+en = Workspace 7
+es = Espacio de trabajo 7
+
+fr = Espace de travail 8
+en = Workspace 8
+es = Espacio de trabajo 8
+
+fr = Espace de travail 9
+en = Workspace 9
+es = Espacio de trabajo 9
+
+fr = Tri
+en = Culling
+es = Selección
+
+fr = Présentation
+en = Presentation
+es = Presentación
+
+fr = Espaces de travail
+en = Workspaces
+es = Espacios de trabajo
+
+fr = Nom
+en = Name
+es = Nombre
+
+fr = Enregistrer l'espace actuel
+en = Save the current workspace
+es = Guardar el espacio actual
+
+fr = Espace de travail : {name}
+en = Workspace: {name}
+es = Espacio de trabajo: {name}
+
+fr = Langue, espaces de travail, clavier et cache
+en = Language, workspaces, keyboard and cache
+es = Idioma, espacios de trabajo, teclado y caché
