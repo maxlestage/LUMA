@@ -195,6 +195,10 @@ La fototeca profesional, paso a paso.
   normalizan directamente desde sus enteros, en todos los núcleos, sin copia previa
   a flotantes; NEF 145 → 67 ms, ARW 143 → 65, RW2 131 → 65, RAF 169 → 73, DNG
   285 → 158, CR3 547 → 399, datos idénticos bit a bit.
+- **Sincronizar una selección** (Mayús+Cmd+S, o «Sincronizar…» en cuanto hay dos
+  fotos elegidas): los ajustes de la foto abierta pasan a las demás, grupo por grupo
+  (recorte y máscaras propios de cada una por defecto). **Balance auto en lote**:
+  cada foto elegida recibe su propio balance automático.
 
 ## 0.2.0 — octubre de 2026
 
