@@ -228,6 +228,12 @@ La fototeca profesional, paso a paso.
   recorte. **Recorte por canal**: en la foto y en la esquina del histograma, el color
   indica qué canales están quemados (rojo, amarillo para rojo y verde…, blanco para
   los tres).
+- **Renombrado por lotes** («Renombrar…» en las fotos seleccionadas, `luma rename`):
+  una plantilla con los marcadores de la exportación (`{date}_{séquence}`,
+  `{boîtier}-{nom}`…), con una vista previa de los nuevos nombres antes de confirmar;
+  el RAW y el JPEG de una misma toma conservan un mismo nombre, el XMP y las copias
+  virtuales los acompañan, un nombre ya ocupado recibe `-2`; ante cualquier fallo, todo
+  vuelve a como estaba. La fototeca y sus colecciones lo siguen.
 
 ## 0.2.0 — octubre de 2026
 

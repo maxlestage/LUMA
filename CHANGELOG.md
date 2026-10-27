@@ -232,6 +232,12 @@ La photothèque professionnelle, étape par étape.
   affiché. **Écrêtage couche par couche** : sur la photo comme dans le coin de
   l'histogramme, la couleur dit quelles couches sont brûlées (rouge, jaune pour rouge
   et vert…, blanc pour les trois).
+- **Renommage par lot** (« Renommer… » sur les photos choisies, `luma rename`) : un
+  modèle avec les repères de l'export (`{date}_{séquence}`, `{boîtier}-{nom}`…),
+  l'aperçu des nouveaux noms avant de valider ; le RAW et le JPEG d'une même prise
+  gardent un même nom, le XMP et les copies virtuelles suivent, un nom déjà pris reçoit
+  `-2` ; au moindre échec, tout revient comme avant. La photothèque et ses collections
+  suivent.
 
 ## 0.2.0 — octobre 2026
 

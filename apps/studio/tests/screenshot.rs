@@ -218,6 +218,46 @@ fn point_measurement() {
     assert_eq!(s.studio().measured(), None);
 }
 
+/// Renommer : la photo ouverte et une autre choisie prennent le nom du modèle, dans
+/// l'ordre du film ; leur XMP suit, le film et la photo ouverte aussi.
+#[test]
+fn batch_rename() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("renommer") else {
+        return;
+    };
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let dir = open.parent().unwrap().to_path_buf();
+    let settings = luma_project::Settings {
+        exposure: 0.7,
+        ..Default::default()
+    };
+    luma_studio::worker::write_sidecar(&open, &settings, &Default::default()).unwrap();
+    let photos = s.studio().photos().to_vec();
+    let k = photos.iter().position(|p| *p == open).unwrap();
+    let other = if k == 0 { 1 } else { 0 };
+    s.studio().selected = [k, other].into_iter().collect();
+    let n = s.studio().rename_photos("vacances_{séquence:2}").unwrap();
+    assert_eq!(n, 2);
+    s.wait();
+    let ext = open.extension().unwrap().to_string_lossy().into_owned();
+    let new = dir.join(format!(
+        "vacances_{:02}.{ext}",
+        if k < other { 1 } else { 2 }
+    ));
+    assert!(new.is_file() && !open.exists());
+    assert_eq!(s.studio().current_path(), Some(new.as_path()));
+    assert_eq!(s.studio().photos().len(), photos.len());
+    assert!(s.studio().photos().contains(&new));
+    // Son XMP l'a suivie.
+    let got = luma_studio::worker::read_sidecar(&new).unwrap();
+    assert_eq!(got.exposure, 0.7);
+    // Un modèle qui ne change rien : rien à faire.
+    s.studio().selected.clear();
+    let again = format!("{}", new.file_stem().unwrap().to_string_lossy());
+    assert_eq!(s.studio().rename_photos(&again).unwrap(), 0);
+}
+
 #[test]
 fn library_ratings_and_flags() {
     let _gpu = one_at_a_time();

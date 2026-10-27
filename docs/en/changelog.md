@@ -216,6 +216,11 @@ The professional photo library, step by step.
   under the pointer, read from the true colours even while clipping is shown.
   **Per‑channel clipping**: on the photo and in the histogram corner, the colour tells
   which channels are blown (red, yellow for red and green…, white for all three).
+- **Batch rename** (“Rename…” on the selected photos, `luma rename`): a template with
+  the export tokens (`{date}_{séquence}`, `{boîtier}-{nom}`…), with a preview of the new
+  names before confirming; the RAW and JPEG of the same shot keep one name, the XMP and
+  virtual copies follow, a name already taken gets `-2`; on any failure, everything goes
+  back as it was. The library and its collections follow.
 
 ## 0.2.0 — October 2026
 
