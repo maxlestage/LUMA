@@ -135,6 +135,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Stacks: bursts and exposure brackets recognized (same camera, less than two seconds apart; a changing exposure makes a bracket), folded behind the first photo (S to expand), “Merge the bracket” to the Merge tool | ✅ |
 | Duplicates by image fingerprint (the same photo copied, exported at another size or recompressed), grouped side by side; ratings, flags and labels in batch on the selected photos | ✅ |
 | Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
+| Batch rename (“Rename…”, `luma rename`): the export tokens (`{date}_{séquence}`…), the RAW and JPEG of a shot together, XMP and virtual copies follow, `-2` when a name is taken, rolled back on any failure; the library and its collections follow | ✅ |
 | Instant thumbnails (the preview embedded in the raw file, in 15 ms), then rendered with the adjustments and saved losslessly for later visits | ✅ |
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |

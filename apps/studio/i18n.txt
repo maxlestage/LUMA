@@ -3394,3 +3394,45 @@ es = V
 fr = B|mesure
 en = B
 es = A
+
+# ----- Renommage par lot -----
+
+fr = Renommer…
+en = Rename…
+es = Renombrar…
+
+fr = Renommer
+en = Rename
+es = Renombrar
+
+fr = Renommer les photos choisies d'après un modèle
+en = Rename the selected photos from a template
+es = Renombrar las fotos seleccionadas según una plantilla
+
+fr = Renommer {n} photos
+en = Rename {n} photos
+es = Renombrar {n} fotos
+
+fr = Modèle
+en = Template
+es = Plantilla
+
+fr = … et {n} autres
+en = … and {n} more
+es = … y {n} más
+
+fr = Les noms ne changent pas.
+en = The names don't change.
+es = Los nombres no cambian.
+
+fr = Le RAW et le JPEG d'une même prise gardent un même nom ; le XMP et les copies virtuelles suivent.
+en = The RAW and JPEG of the same shot keep the same name; the XMP and virtual copies follow.
+es = El RAW y el JPEG de una misma toma conservan el mismo nombre; el XMP y las copias virtuales los acompañan.
+
+fr = {n} photos renommées
+en = {n} photos renamed
+es = {n} fotos renombradas
+
+fr = Renommage impossible : {error}
+en = Couldn't rename: {error}
+es = No se pudo renombrar: {error}
