@@ -6200,6 +6200,16 @@ impl Studio {
                         commits.push(tr("Mélangeur de couches réinitialisé").into());
                     }
                 });
+                if ui
+                    .add_enabled(self.photo.is_some(), egui::Button::new(tr("Profil depuis une charte")))
+                    .on_hover_text(tr(
+                        "La photo d'une charte ColorChecker, recadrée au plus juste : LÜMA règle le mélangeur pour en rendre les couleurs exactes. Enregistrez-le ensuite comme préréglage pour les photos de ce boîtier.",
+                    ))
+                    .clicked()
+                    && let Some(label) = self.profile_from_chart()
+                {
+                    commits.push(label);
+                }
                 let out = self.mixer_tab.min(2);
                 let mixer = &mut self.settings.channel_mixer;
                 let row = match out {
@@ -6467,6 +6477,58 @@ impl Studio {
             )?;
         }
         Ok((root, self.film_count()))
+    }
+
+    /// Le profil du boîtier mesuré sur la photo affichée (une charte recadrée au plus
+    /// juste) : posé dans le mélangeur, par‑dessus celui qui y est. Rend le libellé de
+    /// l'historique, ou `None` si la photo ne se développe pas ou n'est pas une charte.
+    pub fn profile_from_chart(&mut self) -> Option<String> {
+        let photo = self.photo.clone()?;
+        // La couleur seule, comme pour `luma colorchecker`.
+        let s = Settings {
+            white_balance: self.settings.white_balance,
+            crop: self.settings.crop,
+            transform: self.settings.transform.clone(),
+            lens: self.settings.lens.clone(),
+            channel_mixer: self.settings.channel_mixer,
+            ..Settings::default()
+        };
+        let mut t = luma_core::Timings::default();
+        let base = photo
+            .base(
+                &s,
+                luma_render::Size::Fit(1600),
+                &luma_core::Cancel::new(),
+                &mut t,
+            )
+            .ok()?;
+        let profile = luma_render::chart::fit_profile(&base.image);
+        let mean = |e: &[f32; 24]| e.iter().sum::<f32>() / 24.0;
+        // Même corrigée, une photo qui n'est pas une charte reste loin de ses couleurs :
+        // rien n'est changé.
+        if mean(&profile.after) > 6.0 {
+            self.status = trf(
+                "Pas une charte recadrée au plus juste (écart de couleur {error}) : mélangeur inchangé",
+                &[("error", &format_value(mean(&profile.after), 1, false))],
+            );
+            return None;
+        }
+        let total = luma_color::mul(&profile.matrix, &s.channel_mixer.matrix());
+        let row = |r: usize| total[r].map(|v| (v * 100.0).clamp(-200.0, 200.0));
+        self.settings.channel_mixer = luma_project::ChannelMixer {
+            red: row(0),
+            green: row(1),
+            blue: row(2),
+        };
+        let label = trf(
+            "Profil de charte : écart de couleur de {before} à {after}",
+            &[
+                ("before", &format_value(mean(&profile.before), 1, false)),
+                ("after", &format_value(mean(&profile.after), 1, false)),
+            ],
+        );
+        self.status = label.clone();
+        Some(label)
     }
 
     /// Enregistre le look des réglages actuels comme préréglage.

@@ -4212,3 +4212,19 @@ es = Apilado de enfoque
 fr = Tout net, du premier plan au fond
 en = All sharp, from foreground to background
 es = Todo nítido, del primer plano al fondo
+
+fr = Profil depuis une charte
+en = Profile from a chart
+es = Perfil desde una carta
+
+fr = La photo d'une charte ColorChecker, recadrée au plus juste : LÜMA règle le mélangeur pour en rendre les couleurs exactes. Enregistrez-le ensuite comme préréglage pour les photos de ce boîtier.
+en = A photo of a ColorChecker chart, cropped tightly: LÜMA sets the mixer to make its colors exact. Then save it as a preset for this camera's photos.
+es = La foto de una carta ColorChecker, recortada al justo: LÜMA ajusta el mezclador para que sus colores sean exactos. Guárdalo después como ajuste preestablecido para las fotos de esta cámara.
+
+fr = Profil de charte : écart de couleur de {before} à {after}
+en = Chart profile: color error from {before} to {after}
+es = Perfil de carta: error de color de {before} a {after}
+
+fr = Pas une charte recadrée au plus juste (écart de couleur {error}) : mélangeur inchangé
+en = Not a tightly cropped chart (color error {error}): mixer unchanged
+es = No es una carta recortada al justo (error de color {error}): mezclador sin cambios
