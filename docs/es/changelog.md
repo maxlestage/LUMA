@@ -317,6 +317,10 @@ La fototeca profesional, paso a paso.
   pantalla (estaba hecha para la zona segura y luego estirada un 11 % en altura); se
   ve el final de los paneles (Instantáneas, bajo el historial), el dedo desplaza el
   panel y toca lo que apunta. La barra superior contiene sus botones de 40 puntos.
+- **iPhone y iPad: la exportación va a la fototeca**: cada imagen exportada se añade a
+  la app Fotos tal cual (EXIF, IPTC y perfil de color conservados; iOS pide permiso la
+  primera vez), y también queda en LÜMA/ (app Archivos). La ventana Exportar cabe en la
+  pantalla del iPhone, cada ajuste bajo su título.
 
 ## 0.2.0 — octubre de 2026
 

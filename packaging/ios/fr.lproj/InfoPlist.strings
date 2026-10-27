@@ -1,0 +1,2 @@
+/* La demande d'autorisation d'ajouter des photos (Info.plist). */
+"NSPhotoLibraryAddUsageDescription" = "LÜMA ajoute vos photos exportées à la Pellicule.";

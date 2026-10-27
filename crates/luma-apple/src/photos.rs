@@ -80,6 +80,30 @@ pub fn pending() -> bool {
 /// Le sélecteur de Photos existe‑t‑il (iPhone et iPad) ?
 pub const AVAILABLE: bool = cfg!(target_os = "ios");
 
+static SAVED: AtomicUsize = AtomicUsize::new(0);
+static SAVE_FAILED: AtomicUsize = AtomicUsize::new(0);
+
+/// Ajoute une image exportée (JPEG, PNG, TIFF, HEIC) à la Pellicule de l'app Photos,
+/// telle quelle : son EXIF, ses informations IPTC et son profil de couleur restent. La
+/// première fois, iOS demande l'autorisation d'ajouter des photos. Le résultat arrive
+/// plus tard : voir [`saved`] et [`save_failed`]. Ailleurs qu'iPhone et iPad, rien.
+pub fn save_to_library(path: &std::path::Path) {
+    #[cfg(target_os = "ios")]
+    ios::save(path);
+    #[cfg(not(target_os = "ios"))]
+    let _ = path;
+}
+
+/// Le nombre d'images ajoutées à Photos depuis le lancement.
+pub fn saved() -> usize {
+    SAVED.load(Ordering::Acquire)
+}
+
+/// Le nombre d'images que Photos a refusées (autorisation refusée, format inconnu).
+pub fn save_failed() -> usize {
+    SAVE_FAILED.load(Ordering::Acquire)
+}
+
 /// Un nom libre dans `dir` pour `name` : `IMG_0001.DNG`, sinon `IMG_0001 2.DNG`…
 #[cfg_attr(not(target_os = "ios"), allow(dead_code))]
 fn free_name(dir: &std::path::Path, name: &str) -> PathBuf {
@@ -116,7 +140,7 @@ mod ios {
     use objc2_ui_kit::{UIApplication, UIView, UIViewController, UIWindow, UIWindowScene};
     use std::sync::atomic::AtomicBool;
 
-    use super::{CHOSEN, FAILED, IMPORTED, VIEW, free_name};
+    use super::{CHOSEN, FAILED, IMPORTED, SAVE_FAILED, SAVED, VIEW, free_name};
 
     struct Ivars {
         dest: PathBuf,
@@ -246,6 +270,43 @@ mod ios {
 
     unsafe extern "C" {
         fn dlopen(path: *const std::ffi::c_char, mode: std::ffi::c_int) -> *mut std::ffi::c_void;
+    }
+
+    /// Ajoute le fichier à la Pellicule (Photos.framework, chargé au besoin) :
+    /// `PHAssetCreationRequest` depuis le fichier, dans un changement de la photothèque.
+    pub fn save(path: &std::path::Path) {
+        let library = AnyClass::get(c"PHPhotoLibrary").or_else(|| {
+            // SAFETY: dlopen d'un framework du système, par son chemin fixe ; le
+            // pointeur rendu n'est pas utilisé (le framework reste chargé).
+            let _ = unsafe { dlopen(c"/System/Library/Frameworks/Photos.framework/Photos".as_ptr(), 1) };
+            AnyClass::get(c"PHPhotoLibrary")
+        });
+        let (Some(library), Some(request)) = (library, AnyClass::get(c"PHAssetCreationRequest")) else {
+            SAVE_FAILED.fetch_add(1, Ordering::AcqRel);
+            return;
+        };
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // Le changement : une nouvelle photo, faite du fichier (copié par Photos).
+        let changes = RcBlock::new(move || {
+            // SAFETY: méthode de classe documentée de PHAssetCreationRequest, appelée
+            // dans le bloc de `performChanges:` comme l'exige Photos ; `url` est une URL
+            // de fichier retenue par le bloc.
+            let _: *mut AnyObject = unsafe { msg_send![request, creationRequestForAssetFromImageAtFileURL: &*url] };
+        });
+        let done = RcBlock::new(|ok: objc2::runtime::Bool, _error: *mut NSError| {
+            if ok.as_bool() {
+                SAVED.fetch_add(1, Ordering::AcqRel);
+            } else {
+                SAVE_FAILED.fetch_add(1, Ordering::AcqRel);
+            }
+        });
+        // SAFETY: `sharedPhotoLibrary` puis `performChanges:completionHandler:`, les
+        // signatures de PHPhotoLibrary (un bloc sans argument, un bloc (BOOL, NSError*)) ;
+        // Photos retient les blocs le temps du changement.
+        unsafe {
+            let shared: Retained<AnyObject> = msg_send![library, sharedPhotoLibrary];
+            let _: () = msg_send![&*shared, performChanges: &*changes, completionHandler: &*done];
+        }
     }
 
     /// La classe du sélecteur ; si PhotosUI n'est pas encore chargé, on le charge.

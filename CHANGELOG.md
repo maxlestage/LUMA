@@ -320,6 +320,10 @@ La photothèque professionnelle, étape par étape.
   (elle était faite pour la zone sûre puis étirée de 11 % en hauteur) ; le bas des
   panneaux s'affiche (Instantanés, sous l'historique), le doigt fait défiler le
   panneau et touche ce qu'il vise. La barre du haut contient ses boutons de 40 points.
+- **iPhone et iPad : l'export va dans la Pellicule** : chaque image exportée est ajoutée
+  à l'app Photos telle quelle (EXIF, IPTC et profil de couleur gardés ; iOS demande
+  l'autorisation la première fois), et reste aussi dans LÜMA/ (app Fichiers). La
+  fenêtre Exporter tient dans l'écran de l'iPhone, chaque réglage sous son titre.
 
 ## 0.2.0 — octobre 2026
 

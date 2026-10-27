@@ -1,0 +1,2 @@
+/* La petición de permiso para añadir fotos (Info.plist). */
+"NSPhotoLibraryAddUsageDescription" = "LÜMA añade tus fotos exportadas a la fototeca.";

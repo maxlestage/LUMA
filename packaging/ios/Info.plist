@@ -10,6 +10,7 @@
   <key>CFBundleVersion</key><string>@VERSION@</string>
   <key>CFBundleShortVersionString</key><string>@VERSION@</string>
   <key>CFBundleDevelopmentRegion</key><string>fr</string>
+  <key>CFBundleLocalizations</key><array><string>fr</string><string>en</string><string>es</string></array>
   <key>CFBundleSupportedPlatforms</key><array><string>@PLATFORM@</string></array>
   <key>CFBundleIcons</key>
   <dict>
@@ -42,6 +43,9 @@
   <!-- Les RAW arrivent par l'app Fichiers (Sur mon iPhone › LÜMA). -->
   <key>UIFileSharingEnabled</key><true/>
   <key>LSSupportsOpeningDocumentsInPlace</key><true/>
+  <!-- Les exports vont dans la Pellicule de l'app Photos (ajout seulement : LÜMA n'y lit
+       rien, l'import passe par le sélecteur du système). -->
+  <key>NSPhotoLibraryAddUsageDescription</key><string>LÜMA ajoute vos photos exportées à la Pellicule.</string>
   <!-- App Store : LÜMA ne chiffre rien elle-même (pas de déclaration d'exportation). -->
   <key>ITSAppUsesNonExemptEncryption</key><false/>
 </dict>
