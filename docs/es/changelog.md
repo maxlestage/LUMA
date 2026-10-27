@@ -367,6 +367,19 @@ La fototeca profesional, paso a paso.
 - **Buscar una película** (herramienta Películas): por nombre o descripción, sin tener
   en cuenta acentos ni mayúsculas; solo quedan las películas encontradas, en sus
   familias abiertas.
+- **275 películas**: 125 más. 35 de color (Gold 100, Pro Foto 100, Portra 100T, Ektar
+  25, Kodachrome 200, Fortia 50, Superia 1600, Vista 400, Ultra 50, Agfacolor CT18,
+  Impresa 50, Redscale, Orwocolor NC 19…), 30 películas y looks de cine (Vision 320T,
+  Vision2 250D y 100T, Eastman 5248 y 5287, Eterna 500, Kodachrome Super 8, Technicolor
+  IB, Neo-Tokio, Edad de oro, Ciencia ficción, Giallo, Nouvelle Vague, VHS,
+  Videocámara…), 25 en blanco y negro (Tri-X 320, T-Max 100, HP5 a 3200, Ortho 25,
+  Silvermax, CMS 20, APX 400, ORWO UN54 y N74, Svema 125, P30, HIE, Neopan 400,
+  Technical Pan…), 15 instantáneas (Polaroid Duochrome, azul, Type 100, 55, Time-Zero,
+  Instax Mini, Square, Monochrome y sepia, Fotomatón…) y 20 creativos (Ámbar, Menta,
+  Lavanda, Océano, Bosque, Noche azul, Alba, Crepúsculo, Mate cálido y frío,
+  Claroscuro, Pop, Selenio, Cobre…). Cada blanco y negro tiene su propia sensibilidad
+  a los colores. Todas verificadas en la carta: distintas entre sí, sin imagen
+  aplastada, blanco y negro neutros, mismos renders en la GPU.
 
 ## 0.2.0 — octubre de 2026
 
