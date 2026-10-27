@@ -314,12 +314,144 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
                 }
                 *p = c;
             });
+        if l.moire > 0.0 || l.defringe > 0.0 {
+            colour_fix(img, &weights, l.moire / 100.0, l.defringe / 100.0, diag);
+        }
     }
+}
+
+/// Le moiré et les franges d'un masque, sur l'image en cours : seules les couleurs
+/// changent (l'écart de chaque canal à la luminance), la luminance reste au bit près
+/// des calculs. Le moiré floute ces couleurs à l'échelle d'un motif fin ; la frange les
+/// retire près des contours nets, où l'aberration chromatique laisse ses liserés.
+fn colour_fix(img: &mut RgbImage, weights: &Plane, moire: f32, defringe: f32, diag: f32) {
+    let (w, h) = (img.width, img.height);
+    let y = Plane::from_rgb(img, luminance);
+    let chroma: [Plane; 3] = std::array::from_fn(|k| Plane::from_rgb(img, |p| p[k] - luminance(p)));
+    // À l'échelle d'un motif fin : 3 px à 2048 px de diagonale, 11 à 24 Mpx.
+    let sigma = (0.0015 * diag).max(1.0);
+    let smooth: Option<[Plane; 3]> = (moire > 0.0).then(|| std::array::from_fn(|k| chroma[k].blur(sigma)));
+    // Les contours nets : la pente du logarithme de la luminance, étendue de quelques
+    // pixels (les liserés débordent du contour).
+    let edges = (defringe > 0.0).then(|| {
+        let log = Plane::from_rgb(img, |p| luminance(p).max(1e-4).ln()).blur(0.7);
+        let mut slope = Plane::new(w, h);
+        slope.data.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
+            for (x, v) in row.iter_mut().enumerate() {
+                let at = |x: usize, y: usize| log.data[y.min(h - 1) * w + x.min(w - 1)];
+                let gx = at(x + 1, yy) - at(x.saturating_sub(1), yy);
+                let gy = at(x, yy + 1) - at(x, yy.saturating_sub(1));
+                *v = smoothstep(0.15, 0.6, (gx * gx + gy * gy).sqrt());
+            }
+        });
+        let reach = (0.0008 * diag).max(1.5);
+        slope.blur(reach).map(|v| (v * 3.0).min(1.0))
+    });
+    img.data.par_iter_mut().enumerate().for_each(|(i, p)| {
+        let m = weights.data[i];
+        if m <= 0.0 {
+            return;
+        }
+        let mut c = [chroma[0].data[i], chroma[1].data[i], chroma[2].data[i]];
+        if let Some(s) = &smooth {
+            let a = moire * m;
+            for (k, v) in c.iter_mut().enumerate() {
+                *v += (s[k].data[i] - *v) * a;
+            }
+        }
+        if let Some(e) = &edges {
+            let keep = 1.0 - defringe * m * e.data[i];
+            c = c.map(|v| v * keep);
+        }
+        let l = y.data[i];
+        *p = c.map(|v| (l + v).max(0.0));
+    });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn moire_softens_colour_and_keeps_luminance() {
+        // Un motif fin de rayures colorées, de même luminance : un moiré typique.
+        let (w, h) = (200, 120);
+        let mut img = RgbImage {
+            width: w,
+            height: h,
+            data: vec![[0.0; 3]; w * h],
+        };
+        for y in 0..h {
+            for x in 0..w {
+                let (a, b) = ([0.30, 0.18, 0.10], [0.12, 0.20, 0.35]);
+                // Même luminance : on ajuste le second.
+                let la = luminance(a);
+                let lb = luminance(b);
+                let b = b.map(|v| v * la / lb);
+                img.data[y * w + x] = if (x / 2) % 2 == 0 { a } else { b };
+            }
+        }
+        let before = img.clone();
+        let spread = |img: &RgbImage| {
+            let v: Vec<f32> = img.data.iter().map(|p| p[0] - luminance(*p)).collect();
+            let mean = v.iter().sum::<f32>() / v.len() as f32;
+            (v.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / v.len() as f32).sqrt()
+        };
+        let mut mask = Mask::full();
+        mask.local.moire = 100.0;
+        apply(&mut img, std::slice::from_ref(&mask));
+        assert!(
+            spread(&img) < 0.2 * spread(&before),
+            "{} {}",
+            spread(&img),
+            spread(&before)
+        );
+        for (a, b) in img.data.iter().zip(&before.data) {
+            assert!((luminance(*a) - luminance(*b)).abs() < 1e-5);
+        }
+        // À zéro, rien ne change.
+        let mut same = before.clone();
+        mask.local.moire = 0.0;
+        apply(&mut same, &[mask]);
+        assert_eq!(same, before);
+    }
+
+    #[test]
+    fn defringe_clears_edges_and_keeps_flat_colour() {
+        let (w, h) = (200, 120);
+        let mut img = RgbImage {
+            width: w,
+            height: h,
+            data: vec![[0.02; 3]; w * h],
+        };
+        for y in 0..h {
+            for x in 0..w {
+                // Un ciel blanc à droite d'un bord net, un liseré violet sur le bord, et
+                // un aplat rouge loin de tout contour.
+                if x >= 60 {
+                    img.data[y * w + x] = [0.9; 3];
+                }
+                if (58..62).contains(&x) {
+                    img.data[y * w + x] = [0.35, 0.05, 0.45];
+                }
+                if (130..190).contains(&x) && (30..90).contains(&y) {
+                    img.data[y * w + x] = [0.6, 0.1, 0.1];
+                }
+            }
+        }
+        let chroma = |p: [f32; 3]| (p[0] - p[1]).abs() + (p[2] - p[1]).abs();
+        let fringe = chroma(img.data[60 * w + 59]);
+        let flat = chroma(img.data[60 * w + 160]);
+        let mut mask = Mask::full();
+        mask.local.defringe = 100.0;
+        apply(&mut img, &[mask]);
+        assert!(
+            chroma(img.data[60 * w + 59]) < 0.3 * fringe,
+            "liseré {:?}",
+            img.data[60 * w + 59]
+        );
+        assert!((chroma(img.data[60 * w + 160]) - flat).abs() < 1e-4, "aplat rouge");
+    }
 
     #[test]
     fn combined_masks_add_subtract_intersect() {

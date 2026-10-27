@@ -6052,7 +6052,7 @@ impl Studio {
                 }
                 sub_title(ui, tr("Réglages du masque"));
                 let l = &mut m.local;
-                let rows: [(SliderSpec, &mut f32); 11] = [
+                let rows: [(SliderSpec, &mut f32); 13] = [
                     (spec("Intensité", 0.0, 100.0, 0), &mut m.amount),
                     (spec("Température", -100.0, 100.0, 0), &mut l.temperature),
                     (spec("Teinte", -100.0, 100.0, 0), &mut l.tint),
@@ -6064,6 +6064,9 @@ impl Studio {
                     (spec("Noirs", -100.0, 100.0, 0), &mut l.blacks),
                     (spec("Saturation", -100.0, 100.0, 0), &mut l.saturation),
                     (spec("Clarté", -100.0, 100.0, 0), &mut l.clarity),
+                    // Au pinceau sur un tissu, une grille, un contour à liserés.
+                    (spec("Moiré", 0.0, 100.0, 0), &mut l.moire),
+                    (spec("Frange", 0.0, 100.0, 0), &mut l.defringe),
                 ];
                 let mut changed = film_changed;
                 for (spec, value) in rows {
