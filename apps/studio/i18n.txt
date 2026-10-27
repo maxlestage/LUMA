@@ -2992,3 +2992,7 @@ es = Comparación · {zoom} · rueda o doble clic: zoom · arrastrar: mover · L
 fr = {n} photo(s) n'ont pas pu être importée(s).
 en = {n} photo(s) could not be imported.
 es = No se pudieron importar {n} foto(s).
+
+fr = Cadrage
+en = Crop
+es = Encuadre
