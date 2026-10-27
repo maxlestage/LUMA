@@ -126,6 +126,9 @@ The professional photo library, step by step.
   printer and paper, and the preview shows the photo as it will come out, with the
   perceptual or relative colorimetric intent; the histogram follows. A view, not an
   adjustment: nothing is written to the photo.
+- **Simpler iPhone app**: an Undo arrow in the top bar and a “•••” menu for the rest
+  (redo, copy, paste, reset, language); a “Before” button that says what it shows;
+  each tool named under its icon; in the tools sheet, sliders first.
 - **LÜMA Premium on the App Store** (iPhone and iPad): both subscriptions at their App
   Store price, “Subscribe” and “Restore Purchases”; every purchase and renewal unlocks
   Premium. On iPhone and iPad, only the App Store sells the subscription; on Mac, only

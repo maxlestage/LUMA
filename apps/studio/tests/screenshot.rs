@@ -874,6 +874,44 @@ fn iphone_layout() {
     s.wait();
     assert_eq!(s.studio().tool, luma_studio::app::Tool::Color);
     s.capture("iphone-couleur");
+    // La flèche annule une vraie retouche (un masque ajouté).
+    s.keys(&[(NONE, Key::M)]);
+    s.wait();
+    assert_eq!(s.studio().settings.masks.len(), 1);
+    s.harness.get_by_label("Annuler").click();
+    s.wait();
+    assert!(s.studio().settings.masks.is_empty(), "annulé");
+    // Le bouton de l'avant dit ce qu'il montre.
+    assert!(s.harness.query_by_label("Après").is_none());
+    s.harness.get_by_label("Avant").click();
+    s.wait();
+    assert!(s.studio().before);
+}
+
+/// Sur iPhone, sans photo : la barre du haut n'a que le menu « ••• » (la langue), rien
+/// à exporter ni à annuler.
+#[test]
+fn iphone_welcome_is_bare() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_sized("iphone-accueil", [393.0, 852.0], 3.0) else {
+        return;
+    };
+    let empty = s.dir.join("vide");
+    std::fs::create_dir_all(&empty).unwrap();
+    s.studio().open_path(&empty);
+    for _ in 0..10 {
+        s.harness.step();
+    }
+    assert!(s.studio().current_path().is_none());
+    assert!(
+        !s.studio().has_image(),
+        "plus d'image de la photo précédente"
+    );
+    s.harness.get_by_label("Plus");
+    for label in ["Exporter", "Annuler", "Avant", "Après"] {
+        assert!(s.harness.query_by_label(label).is_none(), "{label}");
+    }
+    s.capture("iphone-accueil");
 }
 
 #[test]

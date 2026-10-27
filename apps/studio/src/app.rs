@@ -531,7 +531,7 @@ pub struct Studio {
     last_request: Option<Request>,
     render_ms: f32,
     render_gpu: bool,
-    before: bool,
+    pub before: bool,
     clipping: bool,
     proofing: Proofing,
     zoom: bool,
@@ -730,6 +730,11 @@ fn interactive_size(viewport_px: f32) -> Size {
 }
 
 impl Studio {
+    /// Une image de photo est affichée.
+    pub fn has_image(&self) -> bool {
+        self.texture.is_some()
+    }
+
     /// La copie réduite de la base du dernier rendu, s'il en a joint une.
     pub fn scene_map(&self) -> Option<&luma_core::RgbImage> {
         self.scene_map.as_deref()
@@ -877,7 +882,8 @@ impl Studio {
         }
         self.view = View::Folder;
         let empty = if luma_apple::photos::AVAILABLE {
-            tr("Aucune photo pour l'instant : touchez « Importer des photos ».").to_owned()
+            // Le bouton « Importer des photos » est juste en dessous.
+            tr("Vos photos apparaîtront ici.").to_owned()
         } else {
             trf("Aucune photo dans {dir}", &[("dir", &dir.display())])
         };
@@ -913,7 +919,9 @@ impl Studio {
         match index {
             Some(i) => self.select(i),
             None => {
+                // Plus de photo : l'image de la précédente ne reste pas affichée.
                 self.photo = None;
+                self.texture = None;
                 self.status = empty;
             }
         }
@@ -3562,6 +3570,11 @@ impl Studio {
                 // Sur iPhone, le reste des commandes est dans « ••• ».
                 if compact {
                     self.more_menu(ui);
+                    // Sans photo, rien d'autre : l'accueil a son bouton « Importer des
+                    // photos », et il n'y a encore rien à exporter ni à annuler.
+                    if !has_photo {
+                        return;
+                    }
                 }
                 if icon_button(
                     ui,
@@ -3570,6 +3583,7 @@ impl Studio {
                     false,
                 )
                 .on_hover_text(tr("Maj+Cmd+E"))
+                .accessible_name(tr("Exporter"))
                 .clicked()
                 {
                     self.act("export");
@@ -3597,6 +3611,7 @@ impl Studio {
                 if compact
                     && icon_button(ui, Icon::Undo, "", false)
                         .on_hover_text(tr("Annuler"))
+                        .accessible_name(tr("Annuler"))
                         .clicked()
                 {
                     self.act("undo");
@@ -3627,7 +3642,9 @@ impl Studio {
                 if compact && !(has_photo && self.module == Module::Develop) {
                     return;
                 }
-                let label = if self.before {
+                // Sur iPhone, le bouton dit ce qu'il montre : « Avant », allumé quand on
+                // voit la photo sans retouche.
+                let label = if self.before || compact {
                     tr("Avant")
                 } else {
                     tr("Après")
@@ -3726,6 +3743,31 @@ impl Studio {
 
     /// L'inspecteur : l'outil choisi, et lui seul.
     fn inspector(&mut self, ui: &mut Ui) {
+        // Sur iPhone, la barre nomme déjà l'outil : la place va aux réglages.
+        if !self.compact {
+            self.inspector_title(ui);
+            ui.add_space(8.0);
+        }
+        egui::ScrollArea::vertical()
+            .auto_shrink(false)
+            .show(ui, |ui| match self.tool {
+                Tool::Library => {
+                    self.library_right(ui);
+                    ui.add_space(12.0);
+                    self.library_left(ui);
+                }
+                Tool::Merge => self.merge_panel(ui),
+                Tool::Films => {
+                    widgets::histogram(ui, &self.histogram, &mut self.clipping);
+                    ui.add_space(8.0);
+                    self.films_panel(ui);
+                }
+                _ => self.develop_panels(ui),
+            });
+    }
+
+    /// Le nom et le sous-titre de l'outil, en tête de l'inspecteur.
+    fn inspector_title(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(vec2(30.0, 30.0), egui::Sense::hover());
             widgets::spectral_ring(ui.painter(), r.center(), 14.0, 2.0, 0.9);
@@ -3749,23 +3791,6 @@ impl Studio {
                 );
             });
         });
-        ui.add_space(8.0);
-        egui::ScrollArea::vertical()
-            .auto_shrink(false)
-            .show(ui, |ui| match self.tool {
-                Tool::Library => {
-                    self.library_right(ui);
-                    ui.add_space(12.0);
-                    self.library_left(ui);
-                }
-                Tool::Merge => self.merge_panel(ui),
-                Tool::Films => {
-                    widgets::histogram(ui, &self.histogram, &mut self.clipping);
-                    ui.add_space(8.0);
-                    self.films_panel(ui);
-                }
-                _ => self.develop_panels(ui),
-            });
     }
 
     /// L'historique (outil Lumière).
