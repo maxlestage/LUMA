@@ -12,7 +12,8 @@ La photothèque professionnelle, étape par étape.
   l'écriture des JPEG, sur tous les cœurs : 2,3 à 2,6 fois plus rapide, fichiers
   identiques octet pour octet ; un export pleine définition de 24 Mpx en 1,8 s au lieu
   de 2,4. Puis l'étape de rendu, calculée huit pixels à la fois : 1,8 à 1,9 fois plus
-  rapide (NEF 160 → 85 ms), mêmes fichiers octet pour octet.
+  rapide (NEF 160 → 85 ms), mêmes fichiers octet pour octet. Puis la couleur (profil
+  et Saturation), de même : trois fois plus rapide (NEF 147 → 48 ms).
 
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,

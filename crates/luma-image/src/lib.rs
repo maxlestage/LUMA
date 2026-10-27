@@ -149,7 +149,7 @@ pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: 
     cancel.check()?;
     t.time("couleur", || {
         if let Some(stage) = color::ColorStage::new(s) {
-            img.data.par_iter_mut().for_each(|p| *p = stage.apply(*p));
+            img.data.par_chunks_mut(LANES).for_each(|c| stage.apply_lanes(c));
         }
     });
     cancel.check()?;
@@ -405,11 +405,11 @@ pub fn highlight_rolloff(s: &Settings) -> f32 {
 /// valeurs de chaque canal côte à côte, que le compilateur calcule avec les instructions
 /// vectorielles du processeur. Les mêmes opérations, dans le même ordre, que pixel par
 /// pixel : les mêmes bits.
-const LANES: usize = 8;
+pub(crate) const LANES: usize = 8;
 
 /// Les trois canaux de `px` (au plus [`LANES`] pixels) en colonnes.
 #[inline]
-fn columns(px: &[[f32; 3]]) -> [[f32; LANES]; 3] {
+pub(crate) fn columns(px: &[[f32; 3]]) -> [[f32; LANES]; 3] {
     let mut c = [[0.0; LANES]; 3];
     for (k, p) in px.iter().enumerate() {
         for ch in 0..3 {

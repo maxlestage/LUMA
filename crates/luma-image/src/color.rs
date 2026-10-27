@@ -227,6 +227,37 @@ impl ColorStage {
         self.vibrance == 0.0 && self.grading.is_none() && !self.mono && self.hsl.iter().all(|b| *b == [0.0; 3])
     }
 
+    /// [`Self::apply`] sur `px` (au plus [`crate::LANES`] pixels), en colonnes pour le
+    /// cas simple (le profil et la Saturation) : trois fois plus vite, mêmes bits. Les
+    /// autres réglages, et un bloc incomplet, passent pixel par pixel.
+    pub fn apply_lanes(&self, px: &mut [Vec3]) {
+        const N: usize = crate::LANES;
+        if !self.simple || px.len() < N {
+            for p in px.iter_mut() {
+                *p = self.apply(*p);
+            }
+            return;
+        }
+        let ([to_lms, from_lms, lms_to_lab, lab_to_lms], white) = self.ok.parts();
+        let k = (1.0 + self.saturation) * self.profile_chroma;
+        let c = crate::columns(px);
+        let mut out = [[0.0f32; N]; 3];
+        for i in 0..N {
+            // Les calculs de `OkLab::from_rgb` puis `to_rgb`, dans le même ordre.
+            let lms = color::apply(&to_lms, [c[0][i], c[1][i], c[2][i]]);
+            let lab = color::apply(&lms_to_lab, lms.map(color::fast_cbrt));
+            let (l, a, b) = (lab[0], lab[1] - lab[0] * white.0, lab[2] - lab[0] * white.1);
+            let q = color::apply(&lab_to_lms, [l, a * k + l * white.0, b * k + l * white.1]);
+            let rgb = color::apply(&from_lms, q.map(|v| v * v * v));
+            for ch in 0..3 {
+                out[ch][i] = rgb[ch];
+            }
+        }
+        for (i, p) in px.iter_mut().enumerate() {
+            *p = [out[0][i], out[1][i], out[2][i]];
+        }
+    }
+
     #[inline]
     pub fn apply(&self, rgb: Vec3) -> Vec3 {
         if self.simple {
@@ -348,6 +379,54 @@ pub fn calibration_matrix(c: &Calibration) -> Mat3 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// La couleur en colonnes donne exactement les bits du calcul pixel par pixel, pour
+    /// le cas simple (profils, Saturation) comme pour les autres (qui passent pixel par
+    /// pixel), blocs incomplets compris.
+    #[test]
+    fn colour_lanes_match_pixel_by_pixel() {
+        let pixels: Vec<Vec3> = (0..1003)
+            .map(|i| {
+                let t = i as f32 / 97.0;
+                [
+                    (t * 1.7).sin().abs() * 1.4,
+                    (t * 0.9).cos().abs(),
+                    ((t * 2.3).sin() * 0.5 + 0.5).powi(2) - 0.02,
+                ]
+            })
+            .chain([[0.0; 3], [1.0; 3], [-0.1, 0.2, 0.0]])
+            .collect();
+        let mut settings = vec![
+            Settings {
+                saturation: 30.0,
+                ..Settings::default()
+            },
+            Settings {
+                profile: luma_project::Profile::Vivid,
+                saturation: -60.0,
+                ..Settings::default()
+            },
+            Settings {
+                vibrance: 40.0,
+                ..Settings::default()
+            },
+        ];
+        settings.push(Settings::default());
+        for s in &settings {
+            let Some(stage) = ColorStage::new(s) else {
+                continue;
+            };
+            let one: Vec<Vec3> = pixels.iter().map(|p| stage.apply(*p)).collect();
+            let mut lanes = pixels.clone();
+            lanes.chunks_mut(crate::LANES).for_each(|c| stage.apply_lanes(c));
+            for (k, (a, b)) in one.iter().zip(&lanes).enumerate() {
+                assert!(
+                    a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits()),
+                    "{k} : {a:?} {b:?}"
+                );
+            }
+        }
+    }
 
     fn close3(a: Vec3, b: Vec3, eps: f32) -> bool {
         a.iter().zip(b).all(|(x, y)| (x - y).abs() <= eps)
