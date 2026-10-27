@@ -13,6 +13,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 static IMPORTED: AtomicUsize = AtomicUsize::new(0);
 static CHOSEN: AtomicUsize = AtomicUsize::new(0);
 static FAILED: AtomicUsize = AtomicUsize::new(0);
+static VIEW: AtomicUsize = AtomicUsize::new(0);
+
+/// La vue de LÜMA (l'adresse de sa UIView, rendue par la fenêtre d'eframe) : le
+/// sélecteur sera présenté par le contrôleur de sa fenêtre, plutôt que par une fenêtre
+/// cherchée parmi celles de l'app (sur un appareil, il y en a d'autres : clavier,
+/// TestFlight…, d'où rien ne s'affiche). À appeler une fois, sur le fil principal.
+pub fn set_view(view: usize) {
+    VIEW.store(view, Ordering::Release);
+}
 
 /// Le nombre de photos copiées depuis le lancement : quand il change, de nouvelles
 /// photos sont dans le dossier d'import.
@@ -31,8 +40,9 @@ pub fn failed() -> usize {
 }
 
 /// Ouvre le sélecteur de Photos ; les photos choisies arrivent dans `dest`. À appeler sur
-/// le fil principal. En cas d'échec, ce qui a manqué (pour le dire à l'utilisateur).
-pub fn pick(dest: PathBuf) -> Result<(), &'static str> {
+/// le fil principal. Rend le contrôleur qui l'a présenté (pour le journal) ; en cas
+/// d'échec, ce qui a manqué (pour le dire à l'utilisateur).
+pub fn pick(dest: PathBuf) -> Result<String, &'static str> {
     #[cfg(target_os = "ios")]
     {
         ios::pick(dest)
@@ -80,9 +90,9 @@ mod ios {
     use objc2_photos_ui::{
         PHPickerConfiguration, PHPickerConfigurationAssetRepresentationMode, PHPickerFilter, PHPickerResult,
     };
-    use objc2_ui_kit::{UIApplication, UIViewController, UIWindowScene};
+    use objc2_ui_kit::{UIApplication, UIView, UIViewController, UIWindowScene};
 
-    use super::{CHOSEN, FAILED, IMPORTED, free_name};
+    use super::{CHOSEN, FAILED, IMPORTED, VIEW, free_name};
 
     struct Ivars {
         dest: PathBuf,
@@ -150,23 +160,39 @@ mod ios {
     }
 
     /// Le contrôleur au premier plan, qui présentera le sélecteur : celui de la fenêtre
-    /// principale, cherchée dans les scènes, sinon parmi les fenêtres de l'app (une app
-    /// sans scène déclarée n'en a pas toujours).
+    /// de LÜMA (sa vue, donnée par `set_view`), sinon celui de la fenêtre principale
+    /// cherchée dans les scènes et parmi les fenêtres de l'app. Seule une fenêtre
+    /// visible et au niveau normal compte : celles du clavier ou du système ne
+    /// présentent rien.
     #[allow(deprecated)]
     fn top_controller(mtm: MainThreadMarker) -> Option<Retained<UIViewController>> {
         let app = UIApplication::sharedApplication(mtm);
         let mut windows = Vec::new();
+        let view = VIEW.load(Ordering::Acquire);
+        if view != 0 {
+            // SAFETY: l'adresse est celle de la UIView de la fenêtre d'eframe, qui vit
+            // aussi longtemps que l'app ; on est sur le fil principal.
+            let view = unsafe { &*(view as *const UIView) };
+            windows.extend(view.window());
+        }
+        let mut others = Vec::new();
         for scene in app.connectedScenes().iter() {
             if let Ok(window_scene) = scene.downcast::<UIWindowScene>() {
-                windows.extend(window_scene.windows().iter());
+                others.extend(window_scene.windows().iter());
             }
         }
-        windows.extend(app.keyWindow());
-        windows.extend(app.windows().iter());
+        others.extend(app.keyWindow());
+        others.extend(app.windows().iter());
+        others.retain(|w| !w.isHidden() && w.windowLevel() == 0.0);
         // La fenêtre principale d'abord, puis n'importe laquelle qui a un contrôleur.
-        windows.sort_by_key(|w| !w.isKeyWindow());
+        others.sort_by_key(|w| !w.isKeyWindow());
+        windows.extend(others);
         let mut top = windows.iter().find_map(|w| w.rootViewController())?;
         while let Some(next) = top.presentedViewController() {
+            // Un contrôleur qui s'en va (un sélecteur qu'on ferme) ne présente plus rien.
+            if next.isBeingDismissed() {
+                break;
+            }
             top = next;
         }
         Some(top)
@@ -186,7 +212,7 @@ mod ios {
         })
     }
 
-    pub fn pick(dest: PathBuf) -> Result<(), &'static str> {
+    pub fn pick(dest: PathBuf) -> Result<String, &'static str> {
         let mtm = MainThreadMarker::new().ok_or("hors du fil principal")?;
         let class = picker_class().ok_or("PhotosUI introuvable")?;
         let top = top_controller(mtm).ok_or("fenêtre introuvable")?;
@@ -222,7 +248,15 @@ mod ios {
                 msg_send![&top, presentViewController: &*picker, animated: true, completion: None::<&Block<dyn Fn()>>];
         }
         DELEGATE.with(|d| *d.borrow_mut() = Some(delegate));
-        Ok(())
+        // UIKit refuse sans rien dire (un message dans la console) de présenter depuis
+        // un contrôleur hors de l'écran : on vérifie que le sélecteur est bien là.
+        let shown = top.presentedViewController().is_some_and(|p| p.class() == class);
+        let name = top.class().name().to_string_lossy().into_owned();
+        if shown {
+            Ok(name)
+        } else {
+            Err("le sélecteur ne s'affiche pas")
+        }
     }
 }
 
