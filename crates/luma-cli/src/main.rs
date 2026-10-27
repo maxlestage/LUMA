@@ -42,7 +42,7 @@ USAGE
   luma develop <raw> [-o sortie.jpg|.png|.tif] [--size N] [--space srgb|p3|rec2020|prophoto]
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
-                     [--preset nom] [--name modèle] [--resize taille] [--web]
+                     [--preset nom] [--name modèle] [--resize taille] [--enlarge] [--web]
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
@@ -57,7 +57,8 @@ USAGE
       --web : un JPEG allégé pour le web (chrominance 4:2:0 et tables de Huffman
       calculées pour l'image : de 9 à 29 % plus léger ; le préréglage Web le fait).
       --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
-      (l'image tient dans le cadre), 12mp (mégapixels) ; jamais d'agrandissement.
+      (l'image tient dans le cadre), 12mp (mégapixels) ; jamais d'agrandissement, sauf
+      avec --enlarge (Lanczos sans halo, jusqu'à quatre fois chaque côté et 200 Mpx).
       --output-sharpen : l'accentuation de sortie, à la taille finale, pour l'écran ou
       le papier mat ou brillant (écran, mat, brillant ; faible, normale, forte aussi).
       --watermark : un filigrane texte (police de LÜMA), blanc ou noir (--watermark-dark),
@@ -81,7 +82,7 @@ USAGE
                      [--watermark texte …|--no-watermark] [--logo f.png …|--no-logo]
                      [--author nom] [--copyright texte] [--keep-gps|--remove-gps]
                      [--exif|--no-exif] [--keywords|--no-keywords] [--web|--no-web]
-                     [--delete]
+                     [--enlarge|--no-enlarge] [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
       (partagé avec l'app) ; --delete le retire.
@@ -234,6 +235,8 @@ struct Args {
     lut: Option<String>,
     /// `--web` / `--no-web` : le JPEG allégé pour le web.
     web: Option<bool>,
+    /// `--enlarge` / `--no-enlarge` : agrandir au‑delà de la pleine définition.
+    enlarge: Option<bool>,
 }
 
 fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
@@ -258,6 +261,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         runs: 20,
         lut: None,
         web: None,
+        enlarge: None,
     };
     while let Some(arg) = it.next() {
         let mut value = |name: &str| it.next().ok_or_else(|| format!("{name} attend une valeur"));
@@ -273,6 +277,8 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--preset" => a.presets.push(value(&arg)?),
             "--web" => a.web = Some(true),
             "--no-web" => a.web = Some(false),
+            "--enlarge" => a.enlarge = Some(true),
+            "--no-enlarge" => a.enlarge = Some(false),
             "--name" => a.name = Some(value(&arg)?),
             s if s.starts_with("--watermark") => {
                 let v = if s == "--watermark-dark" {
@@ -589,6 +595,7 @@ fn develop(a: &Args) -> Result<(), String> {
     if !a.presets.is_empty()
         || a.name.is_some()
         || a.resize.is_some()
+        || a.enlarge.is_some()
         || a.output_sharpen.is_some()
         || !a.watermark.is_empty()
         || !a.logo.is_empty()
@@ -877,6 +884,7 @@ fn export_options(a: &Args, preset: Option<&str>, presets: &export::Presets) -> 
     o.quality = a.quality.unwrap_or(o.quality);
     o.bits = a.bits.unwrap_or(o.bits);
     o.web = a.web.unwrap_or(o.web);
+    o.enlarge = a.enlarge.unwrap_or(o.enlarge);
     o.resize = a
         .resize
         .or(a.size.filter(|&n| n > 0).map(export::Resize::LongEdge))
@@ -977,6 +985,8 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
             "--quality" => o.quality = value()?.parse().map_err(|_| "--quality : 1 à 100")?,
             "--web" => o.web = true,
             "--no-web" => o.web = false,
+            "--enlarge" => o.enlarge = true,
+            "--no-enlarge" => o.enlarge = false,
             "--bits" => {
                 o.bits = match value()?.as_str() {
                     "8" => 8,
