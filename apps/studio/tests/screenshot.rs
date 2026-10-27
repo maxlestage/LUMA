@@ -325,6 +325,60 @@ fn bursts_are_stacked() {
 }
 
 #[test]
+fn sync_and_auto_balance_a_selection() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("synchroniser") else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let k = photos.iter().position(|p| *p == open).unwrap();
+    // La photo ouverte : +1 IL et un recadrage ; deux autres choisies avec elle.
+    s.studio().settings.exposure = 1.0;
+    s.studio().settings.crop.left = 0.2;
+    s.studio().selected = [k, 0, 1].into_iter().collect();
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::S)]);
+    let groups = luma_project::paste::default_groups();
+    assert_eq!(s.studio().sync_selected(&groups), 2);
+    for p in &photos[..2] {
+        let got = luma_studio::worker::read_sidecar(p).unwrap();
+        assert_eq!(got.exposure, 1.0, "{}", p.display());
+        assert_eq!(got.crop.left, 0.0, "le recadrage reste à chaque photo");
+    }
+
+    // Chacune sa balance automatique : des scènes différentes, des balances différentes.
+    s.studio().selected = [0, 1].into_iter().collect();
+    s.studio().auto_balance_selected();
+    let start = Instant::now();
+    while !s.studio().auto_balance_done() {
+        s.harness.step();
+        assert!(
+            start.elapsed() < Duration::from_secs(120),
+            "la balance n'arrive pas"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let wb = |p: &std::path::Path| luma_studio::worker::read_sidecar(p).unwrap().white_balance;
+    let (a, b) = (wb(&photos[0]), wb(&photos[1]));
+    assert!(
+        matches!(a, luma_project::WhiteBalance::Custom { .. }),
+        "{a:?}"
+    );
+    assert!(
+        matches!(b, luma_project::WhiteBalance::Custom { .. }),
+        "{b:?}"
+    );
+    assert_ne!(a, b);
+    // La synchronisation précédente est restée.
+    assert_eq!(
+        luma_studio::worker::read_sidecar(&photos[0])
+            .unwrap()
+            .exposure,
+        1.0
+    );
+}
+
+#[test]
 fn duplicates_and_batch_ratings() {
     let _gpu = one_at_a_time();
     // Une copie du RAW Sony sous un autre nom : la même image.
