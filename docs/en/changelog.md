@@ -153,6 +153,10 @@ The professional photo library, step by step.
   otherwise the open photo and the next one), each developed with its own
   adjustments; zoom and pan are shared by all, the loupe (L) magnifies the same spot
   of each one, a click opens the photo.
+- **Simpler, leaner iPhone**: the welcome screen no longer redraws twice a second for
+  nothing (only during an import from Photos); the top bar shows only what is useful:
+  no “After” or export without a photo; with a photo, an Undo button; soft proofing
+  for print no longer clutters iPhone and iPad.
 
 ## 0.2.0 — October 2026
 
