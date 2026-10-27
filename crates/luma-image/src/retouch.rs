@@ -94,8 +94,13 @@ fn apply_one(img: &mut RgbImage, spot: &Spot) {
     } else {
         Vec::new()
     };
-    // La source lue avant d'écrire : elle peut chevaucher la zone.
+    let red_eye = spot.kind == SpotKind::RedEye;
+    // La source lue avant d'écrire : elle peut chevaucher la zone. Les yeux rouges
+    // partent du pixel lui‑même.
     let read = |x: usize, y: usize| {
+        if red_eye {
+            return pupil(img.data[y * w + x]);
+        }
         let sx = (x as f32 + d.dx).clamp(0.0, (w - 1) as f32) as usize;
         let sy = (y as f32 + d.dy).clamp(0.0, (h - 1) as f32) as usize;
         img.data[sy * w + sx]
@@ -204,6 +209,25 @@ pub fn find_source(img: &RgbImage, center: (f32, f32), radius: f32) -> Option<(f
         }
     }
     best.map(|(_, p)| p)
+}
+
+/// Un pixel d'yeux rouges : d'autant plus ramené vers un sombre neutre que son rouge
+/// domine franchement le vert et le bleu. En linéaire, une peau a un rouge d'environ
+/// deux fois la moyenne du vert et du bleu, une pupille rouge de cinq à dix fois : seule
+/// celle‑ci change. Le reflet blanc de l'œil, sans rouge dominant, reste.
+pub fn pupil(p: [f32; 3]) -> [f32; 3] {
+    let gb = 0.5 * (p[1] + p[2]);
+    let ratio = p[0] / gb.max(1e-6);
+    let smooth = |e0: f32, e1: f32, x: f32| {
+        let t = ((x - e0) / (e1 - e0)).clamp(0.0, 1.0);
+        t * t * (3.0 - 2.0 * t)
+    };
+    // Un rouge assez fort pour être vu (pas le bruit d'une ombre).
+    let red = smooth(3.0, 5.0, ratio) * smooth(0.004, 0.02, p[0]);
+    // La pupille : le rouge devient la moyenne du vert et du bleu, le tout un peu
+    // assombri.
+    let dark = [gb * 0.8, p[1] * 0.8, p[2] * 0.8];
+    std::array::from_fn(|k| p[k] + (dark[k] - p[k]) * red)
 }
 
 /// La membrane en (x, y) : les écarts du bord interpolés par les coordonnées de valeur
@@ -347,6 +371,43 @@ mod tests {
         apply(&mut img, &[spot(SpotKind::Heal, (0.0, 0.0), (-2.0, 5.0))]);
         apply(&mut img, &[]);
         assert_eq!(img.data[50 * w + 100], base.data[50 * w + 100]);
+    }
+
+    #[test]
+    fn red_eye_darkens_only_the_red_pupil() {
+        let (w, h) = (120, 80);
+        let skin = [0.5, 0.3, 0.2];
+        let mut img = RgbImage {
+            width: w,
+            height: h,
+            data: vec![skin; w * h],
+        };
+        // La pupille rouge (rayon 6 px) et son reflet blanc.
+        for y in 0..h {
+            for x in 0..w {
+                let d = ((x as f32 - 60.0).powi(2) + (y as f32 - 40.0).powi(2)).sqrt();
+                if d < 6.0 {
+                    img.data[y * w + x] = [0.35, 0.03, 0.04];
+                }
+            }
+        }
+        img.data[38 * w + 58] = [0.9, 0.9, 0.9];
+        // Un cercle généreux sur l'œil : il déborde sur la peau.
+        let spot = Spot {
+            feather: 20.0,
+            ..Spot::new(SpotKind::RedEye, (0.5, 0.5), 0.1)
+        };
+        assert_eq!(spot.source, spot.center);
+        apply(&mut img, &[spot]);
+        let p = img.data[40 * w + 60];
+        assert!(p[0] < 0.04 && (p[0] - p[1]).abs() < 0.01, "pupille {p:?}");
+        assert_eq!(img.data[38 * w + 58], [0.9, 0.9, 0.9], "reflet");
+        assert_eq!(img.data[40 * w + 69], skin, "peau dans le cercle");
+        assert_eq!(img.data[5 * w + 5], skin, "hors du cercle");
+        // Sur un pixel : la peau et le blanc ne bougent pas, un rouge franc si.
+        assert_eq!(pupil(skin), skin);
+        assert_eq!(pupil([0.9; 3]), [0.9; 3]);
+        assert!(pupil([0.3, 0.02, 0.02])[0] < 0.02);
     }
 
     #[test]

@@ -3,7 +3,8 @@
 //! Chaque retouche est un disque de la photo recadrée, remplacé par un disque de même
 //! taille pris ailleurs (la source). Le tampon copie la source telle quelle ; le
 //! correcteur n'en garde que la texture et prend la lumière et la couleur du bord de la
-//! zone, pour une réparation qui ne se voit pas.
+//! zone, pour une réparation qui ne se voit pas. Les yeux rouges, eux, n'ont pas de
+//! source : dans le disque, la pupille rouge redevient sombre.
 //!
 //! Les positions sont en fractions de l'image recadrée (0 à 1 en largeur et en
 //! hauteur), le rayon en fraction de la largeur : la retouche suit la photo à toutes
@@ -20,6 +21,9 @@ pub enum SpotKind {
     /// Correcteur : la texture de la source, la lumière et la couleur du bord.
     #[default]
     Heal,
+    /// Yeux rouges : les pixels d'un rouge franc du disque redeviennent sombres et
+    /// neutres (la peau autour et le reflet blanc restent).
+    RedEye,
 }
 
 /// Une retouche.
@@ -52,9 +56,12 @@ fn full() -> f32 {
 impl Spot {
     /// Une retouche en `center`, sa source à côté (à droite, ou à gauche près du bord
     /// droit), à deux rayons et demi.
+    /// Pour les yeux rouges, la source est le centre (elle ne sert pas).
     pub fn new(kind: SpotKind, center: (f32, f32), radius: f32) -> Spot {
         let dx = 2.5 * radius;
-        let x = if center.0 + dx + radius <= 1.0 {
+        let x = if kind == SpotKind::RedEye {
+            center.0
+        } else if center.0 + dx + radius <= 1.0 {
             center.0 + dx
         } else {
             center.0 - dx

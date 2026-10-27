@@ -114,6 +114,8 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Ojos rojos**: un círculo en cada ojo, y la pupila roja vuelve a ser negra; la piel
+  de alrededor y el reflejo blanco del ojo no cambian.
 - **Manchas del sensor**: «Ver las manchas» hace resaltar el polvo del sensor como
   puntos oscuros; «Quitar el polvo» lo encuentra en las zonas uniformes (un cielo,
   una pared) y pone un corrector en cada mancha, sin tocar texturas, cables ni el
