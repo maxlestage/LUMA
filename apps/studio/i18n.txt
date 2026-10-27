@@ -3080,3 +3080,25 @@ es = Fusionar la serie
 fr = Ouvre l'outil Fusion avec les photos de la série
 en = Opens the Merge tool with the photos of the bracket
 es = Abre la herramienta Fusión con las fotos de la serie
+
+# ----- Doublons -----
+
+fr = Aucun doublon dans ce dossier
+en = No duplicates in this folder
+es = No hay duplicados en esta carpeta
+
+fr = {groups} groupe(s) de doublons, {photos} photos
+en = {groups} group(s) of duplicates, {photos} photos
+es = {groups} grupo(s) de duplicados, {photos} fotos
+
+fr = Tout afficher
+en = Show all
+es = Mostrar todo
+
+fr = Chercher les doublons
+en = Find duplicates
+es = Buscar duplicados
+
+fr = La même image dans plusieurs fichiers : copiée, exportée à une autre taille, recompressée
+en = The same image in several files: copied, exported at another size, recompressed
+es = La misma imagen en varios archivos: copiada, exportada a otro tamaño, recomprimida
