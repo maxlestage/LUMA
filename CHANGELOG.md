@@ -241,6 +241,11 @@ La photothèque professionnelle, étape par étape.
 - **Instantanés** (outil Lumière, sous l'historique) : les réglages d'un moment, sous
   un nom, rangés dans le XMP de la photo ; un clic y revient (une étape de l'historique,
   qu'on peut annuler).
+- **Sauvegardes du catalogue** : une par semaine, d'elle‑même, dans « Sauvegardes » à
+  côté du catalogue (les dix dernières gardées) ; `luma catalog --backup`, `--backups`,
+  `--restore` (le catalogue remplacé est sauvegardé d'abord). **Photos manquantes** :
+  `--missing` les liste, `--relocate ancien nouveau` retrouve un dossier déplacé hors de
+  LÜMA, collections comprises.
 
 ## 0.2.0 — octobre 2026
 
