@@ -57,13 +57,134 @@ pub enum Flag {
 /// `xmp:Label`) ; un rejet s'écrit `xmp:Rating="-1"`, la valeur que le format lui
 /// réserve, et le drapeau « retenue », qui n'a pas de propriété de base, dans l'espace
 /// `luma:`. Les mots‑clés sont la liste `dc:subject`, que lisent tous les logiciels.
+///
+/// Les informations de la photo sont celles de l'IPTC : titre (`dc:title`), légende
+/// (`dc:description`), auteur (`dc:creator`), droits (`dc:rights`), et le lieu de la
+/// prise de vue dans la structure `Iptc4xmpExt:LocationCreated`. Un mot‑clé
+/// hiérarchique s'écrit « Lieux|France|Paris » : rangé tel quel dans l'espace
+/// `luma:`, et chacun de ses niveaux dans `dc:subject`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Meta {
     pub rating: u8,
     pub flag: Flag,
     pub label: String,
     pub keywords: Vec<String>,
+    pub title: String,
+    pub caption: String,
+    pub creator: String,
+    pub rights: String,
+    pub location: Location,
 }
+
+/// Le lieu de la prise de vue.
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct Location {
+    /// Le lieu dans la ville (un quartier, un monument).
+    pub sublocation: String,
+    pub city: String,
+    /// La région, la province, l'État.
+    pub state: String,
+    pub country: String,
+}
+
+impl Location {
+    pub fn is_empty(&self) -> bool {
+        self.sublocation.is_empty() && self.city.is_empty() && self.state.is_empty() && self.country.is_empty()
+    }
+}
+
+/// Le séparateur des niveaux d'un mot‑clé hiérarchique.
+pub const LEVEL: char = '|';
+
+/// Les mots de `dc:subject` : chaque niveau de chaque mot‑clé, sans doublon, dans
+/// l'ordre.
+pub fn flat_keywords(keywords: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for k in keywords {
+        for w in k.split(LEVEL).map(str::trim).filter(|w| !w.is_empty()) {
+            if !out.iter().any(|o| o == w) {
+                out.push(w.to_owned());
+            }
+        }
+    }
+    out
+}
+
+/// Un modèle de métadonnées : l'auteur, les droits, le lieu et des mots‑clés, à donner
+/// d'un coup à des photos (ce qui est vide dans le modèle ne change rien).
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct Template {
+    pub name: String,
+    pub creator: String,
+    pub rights: String,
+    pub location: Location,
+    pub keywords: Vec<String>,
+}
+
+impl Template {
+    /// Le modèle des informations d'une photo.
+    pub fn of(name: &str, m: &Meta) -> Template {
+        Template {
+            name: name.to_owned(),
+            creator: m.creator.clone(),
+            rights: m.rights.clone(),
+            location: m.location.clone(),
+            keywords: m.keywords.clone(),
+        }
+    }
+
+    pub fn apply(&self, m: &mut Meta) {
+        let set = |field: &mut String, v: &str| {
+            if !v.trim().is_empty() {
+                *field = v.trim().to_owned();
+            }
+        };
+        set(&mut m.creator, &self.creator);
+        set(&mut m.rights, &self.rights);
+        set(&mut m.location.sublocation, &self.location.sublocation);
+        set(&mut m.location.city, &self.location.city);
+        set(&mut m.location.state, &self.location.state);
+        set(&mut m.location.country, &self.location.country);
+        for k in &self.keywords {
+            if !m.keywords.iter().any(|w| w == k) {
+                m.keywords.push(k.clone());
+            }
+        }
+    }
+}
+
+/// Les modèles de métadonnées d'un fichier (vide s'il n'existe pas ou ne se lit pas).
+pub fn load_templates(path: &std::path::Path) -> Vec<Template> {
+    std::fs::read(path)
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_default()
+}
+
+/// Écrit les modèles de métadonnées (à côté puis renommé).
+pub fn save_templates(path: &std::path::Path, templates: &[Template]) -> std::io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    std::fs::write(
+        &tmp,
+        serde_json::to_vec_pretty(templates).map_err(std::io::Error::other)?,
+    )?;
+    std::fs::rename(&tmp, path)
+}
+
+/// Les listes d'informations de l'IPTC (en `rdf:Alt` ou `rdf:Seq`), et les mots‑clés
+/// hiérarchiques.
+const TEXT_LISTS: [&str; 5] = ["dc:title", "dc:description", "dc:creator", "dc:rights", HIERARCHY];
+const HIERARCHY: &str = "luma:HierarchicalSubject";
+/// Les champs du lieu, dans la structure `Iptc4xmpExt:LocationCreated`.
+const PLACE: [&str; 4] = [
+    "Iptc4xmpExt:Sublocation",
+    "Iptc4xmpExt:City",
+    "Iptc4xmpExt:ProvinceState",
+    "Iptc4xmpExt:CountryName",
+];
+const IPTC_EXT: &str = "http://iptc.org/std/Iptc4xmpExt/2008-02-29/";
 
 /// Les cinq libellés de couleur, tels qu'ils s'écrivent dans `xmp:Label` : les noms
 /// anglais, que lisent les autres logiciels photo.
@@ -128,8 +249,43 @@ pub fn read_meta(text: &str) -> Meta {
             Flag::None
         },
         label: values.meta.get("xmp:Label").cloned().unwrap_or_default(),
-        keywords: values.lists.get(SUBJECT).cloned().unwrap_or_default(),
+        keywords: {
+            // Les mots‑clés hiérarchiques, puis les mots de `dc:subject` qui n'en sont
+            // pas un niveau (écrits par un autre logiciel).
+            let mut k = values.lists.get(HIERARCHY).cloned().unwrap_or_default();
+            let levels = flat_keywords(&k);
+            for w in values.lists.get(SUBJECT).into_iter().flatten() {
+                if !levels.contains(w) && !k.contains(w) {
+                    k.push(w.clone());
+                }
+            }
+            k
+        },
+        title: first(&values, "dc:title"),
+        caption: first(&values, "dc:description"),
+        creator: values.lists.get("dc:creator").map(|l| l.join(", ")).unwrap_or_default(),
+        rights: first(&values, "dc:rights"),
+        location: Location {
+            sublocation: place(&values, 0),
+            city: place(&values, 1),
+            state: place(&values, 2),
+            country: place(&values, 3),
+        },
     }
+}
+
+/// La première valeur d'une liste (celle de la langue par défaut d'un `rdf:Alt`).
+fn first(values: &Values, tag: &str) -> String {
+    values
+        .lists
+        .get(tag)
+        .and_then(|l| l.first())
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn place(values: &Values, i: usize) -> String {
+    values.scalars.get(PLACE[i]).cloned().unwrap_or_default()
 }
 
 /// La liste des mots‑clés, rangée avec les listes `crs:`.
@@ -164,7 +320,12 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                 }
                 let qname = e.name();
                 let tag: &str = qname.as_ref();
-                if let Some(name) = tag.strip_prefix("crs:").or((tag == SUBJECT).then_some(SUBJECT)) {
+                let listed = TEXT_LISTS.iter().chain(&PLACE).find(|t| **t == tag).copied();
+                if let Some(name) = tag
+                    .strip_prefix("crs:")
+                    .or((tag == SUBJECT).then_some(SUBJECT))
+                    .or(listed)
+                {
                     if !empty {
                         open = Some(name.to_owned());
                     }
@@ -212,7 +373,10 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                     {
                         *item = item.trim().to_owned();
                     }
-                } else if (tag.starts_with("crs:") || tag == SUBJECT)
+                } else if (tag.starts_with("crs:")
+                    || tag == SUBJECT
+                    || TEXT_LISTS.contains(&tag)
+                    || PLACE.contains(&tag))
                     && let Some(v) = open.take().and_then(|n| values.scalars.get_mut(&n))
                 {
                     *v = v.trim().to_owned();
@@ -352,9 +516,12 @@ fn leak(name: String) -> &'static str {
 /// Les réglages d'un document XMP. Ce qui manque garde sa valeur par défaut.
 pub fn read(text: &str) -> luma_core::Result<Settings> {
     let values = parse_values(text)?;
-    // Les mots‑clés seuls ne sont pas des réglages.
-    if values.scalars.is_empty()
-        && values.lists.keys().all(|k| k == SUBJECT)
+    // Les mots‑clés et les informations de la photo seuls ne sont pas des réglages.
+    if values.scalars.keys().all(|k| PLACE.contains(&k.as_str()))
+        && values
+            .lists
+            .keys()
+            .all(|k| k == SUBJECT || TEXT_LISTS.contains(&k.as_str()))
         && !values.meta.contains_key("luma:Masks")
         && !values.meta.contains_key("luma:Spots")
         && !values.meta.contains_key("luma:ChannelMixer")
@@ -718,8 +885,13 @@ fn open_document(meta: &Meta, settings: bool) -> String {
         out.push_str(&format!("    xmlns:crs=\"{CRS}\"\n"));
     }
     out.push_str("    xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n");
-    if !meta.keywords.is_empty() {
+    let texts =
+        !meta.title.is_empty() || !meta.caption.is_empty() || !meta.creator.is_empty() || !meta.rights.is_empty();
+    if !meta.keywords.is_empty() || texts {
         out.push_str("    xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n");
+    }
+    if !meta.location.is_empty() {
+        out.push_str(&format!("    xmlns:Iptc4xmpExt=\"{IPTC_EXT}\"\n"));
     }
     out.push_str(&format!("    xmlns:luma=\"{LUMA_NS}\"\n"));
     let rating = if meta.flag == Flag::Reject {
@@ -739,14 +911,56 @@ fn open_document(meta: &Meta, settings: bool) -> String {
 
 /// La fin d'un document : la liste des mots‑clés, puis les balises fermantes.
 fn close_document(out: &mut String, meta: &Meta) {
-    if !meta.keywords.is_empty() {
-        out.push_str("   <dc:subject>\n    <rdf:Bag>\n");
-        for k in &meta.keywords {
-            out.push_str(&format!("     <rdf:li>{}</rdf:li>\n", escape(k)));
-        }
-        out.push_str("    </rdf:Bag>\n   </dc:subject>\n");
-    }
+    out.push_str(&meta_elements(meta));
     out.push_str("  </rdf:Description>\n </rdf:RDF>\n</x:xmpmeta>\n");
+}
+
+/// Les éléments des informations d'une photo (titre, légende, auteur, droits,
+/// mots‑clés, lieu), pour un XMP ; les espaces `dc:`, `luma:` et `Iptc4xmpExt:` sont
+/// déclarés par celui qui l'écrit.
+pub fn meta_elements(meta: &Meta) -> String {
+    let mut out = String::new();
+    let alt = |out: &mut String, tag: &str, text: &str| {
+        if !text.trim().is_empty() {
+            out.push_str(&format!(
+                "   <{tag}>\n    <rdf:Alt>\n     <rdf:li xml:lang=\"x-default\">{}</rdf:li>\n    </rdf:Alt>\n   </{tag}>\n",
+                escape(text.trim())
+            ));
+        }
+    };
+    alt(&mut out, "dc:title", &meta.title);
+    alt(&mut out, "dc:description", &meta.caption);
+    if !meta.creator.trim().is_empty() {
+        out.push_str("   <dc:creator>\n    <rdf:Seq>\n");
+        for c in meta.creator.split(',').map(str::trim).filter(|c| !c.is_empty()) {
+            out.push_str(&format!("     <rdf:li>{}</rdf:li>\n", escape(c)));
+        }
+        out.push_str("    </rdf:Seq>\n   </dc:creator>\n");
+    }
+    alt(&mut out, "dc:rights", &meta.rights);
+    let bag = |out: &mut String, tag: &str, items: &[String]| {
+        if !items.is_empty() {
+            out.push_str(&format!("   <{tag}>\n    <rdf:Bag>\n"));
+            for k in items {
+                out.push_str(&format!("     <rdf:li>{}</rdf:li>\n", escape(k)));
+            }
+            out.push_str(&format!("    </rdf:Bag>\n   </{tag}>\n"));
+        }
+    };
+    bag(&mut out, SUBJECT, &flat_keywords(&meta.keywords));
+    let paths: Vec<String> = meta.keywords.iter().filter(|k| k.contains(LEVEL)).cloned().collect();
+    bag(&mut out, HIERARCHY, &paths);
+    let l = &meta.location;
+    if !l.is_empty() {
+        out.push_str("   <Iptc4xmpExt:LocationCreated>\n    <rdf:Bag>\n     <rdf:li rdf:parseType=\"Resource\">\n");
+        for (tag, v) in PLACE.iter().zip([&l.sublocation, &l.city, &l.state, &l.country]) {
+            if !v.trim().is_empty() {
+                out.push_str(&format!("      <{tag}>{}</{tag}>\n", escape(v.trim())));
+            }
+        }
+        out.push_str("     </rdf:li>\n    </rdf:Bag>\n   </Iptc4xmpExt:LocationCreated>\n");
+    }
+    out
 }
 
 /// L'index d'une couleur du mélangeur à partir de son nom XMP.
@@ -1015,6 +1229,81 @@ mod tests {
     }
 
     #[test]
+    fn iptc_information_round_trip() {
+        let meta = Meta {
+            rating: 3,
+            keywords: vec!["Lieux|France|Paris".into(), "Nuit".into(), "Lieux|France".into()],
+            title: "La Seine & ses ponts".into(),
+            caption: "Le pont des Arts au crépuscule.\nPose de 4 s.".into(),
+            creator: "Maxime Lestage, Assistante".into(),
+            rights: "© 2026 Maxime Lestage".into(),
+            location: Location {
+                sublocation: "Pont des Arts".into(),
+                city: "Paris".into(),
+                state: "Île-de-France".into(),
+                country: "France".into(),
+            },
+            ..Meta::default()
+        };
+        let text = write_meta(&meta);
+        // Chaque niveau dans `dc:subject`, que lisent les autres logiciels.
+        for w in ["Lieux", "France", "Paris", "Nuit"] {
+            assert!(text.contains(&format!("<rdf:li>{w}</rdf:li>")), "{w}");
+        }
+        let back = read_meta(&text);
+        assert_eq!(back.title, meta.title);
+        assert_eq!(back.caption, meta.caption);
+        assert_eq!(back.creator, "Maxime Lestage, Assistante");
+        assert_eq!(back.rights, meta.rights);
+        assert_eq!(back.location, meta.location);
+        assert_eq!(back.keywords, ["Lieux|France|Paris", "Lieux|France", "Nuit"]);
+        // Un XMP d'informations seules n'a pas de réglages.
+        assert!(read(&text).is_err());
+    }
+
+    #[test]
+    fn iptc_written_elsewhere() {
+        // Le lieu dans sa structure, des mots‑clés à plat, le titre dans une autre langue.
+        let other = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/"><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Marée</rdf:li><rdf:li xml:lang="en">Tide</rdf:li></rdf:Alt></dc:title><dc:subject><rdf:Bag><rdf:li>mer</rdf:li></rdf:Bag></dc:subject><Iptc4xmpExt:LocationCreated><rdf:Bag><rdf:li rdf:parseType="Resource"><Iptc4xmpExt:City>Saint-Malo</Iptc4xmpExt:City><Iptc4xmpExt:CountryName>France</Iptc4xmpExt:CountryName></rdf:li></rdf:Bag></Iptc4xmpExt:LocationCreated></rdf:Description></rdf:RDF></x:xmpmeta>"#;
+        let m = read_meta(other);
+        assert_eq!(m.title, "Marée");
+        assert_eq!(m.keywords, ["mer"]);
+        assert_eq!(
+            (m.location.city.as_str(), m.location.country.as_str()),
+            ("Saint-Malo", "France")
+        );
+    }
+
+    #[test]
+    fn metadata_templates() {
+        let t = Template {
+            name: "Studio".into(),
+            creator: "Maxime Lestage".into(),
+            rights: "Tous droits réservés".into(),
+            keywords: vec!["Studio".into()],
+            ..Template::default()
+        };
+        let mut m = Meta {
+            title: "Portrait".into(),
+            keywords: vec!["Studio".into(), "Lumière".into()],
+            location: Location {
+                city: "Lyon".into(),
+                ..Location::default()
+            },
+            ..Meta::default()
+        };
+        t.apply(&mut m);
+        assert_eq!(
+            (m.creator.as_str(), m.rights.as_str()),
+            ("Maxime Lestage", "Tous droits réservés")
+        );
+        assert_eq!(m.title, "Portrait", "le modèle ne touche pas au titre");
+        assert_eq!(m.location.city, "Lyon", "un champ vide du modèle ne change rien");
+        assert_eq!(m.keywords, ["Studio", "Lumière"], "pas de mot‑clé en double");
+        assert_eq!(Template::of("Copie", &m).creator, "Maxime Lestage");
+    }
+
+    #[test]
     fn colour_labels_in_three_languages() {
         assert_eq!(label_color("Red"), Some(0));
         assert_eq!(label_color("rouge"), Some(0));
@@ -1035,18 +1324,21 @@ mod tests {
                 flag: Flag::Pick,
                 label: "Rouge".into(),
                 keywords: vec!["Montagne".into(), "Été & neige <2026>".into()],
+                ..Meta::default()
             },
             Meta {
                 rating: 0,
                 flag: Flag::Reject,
                 label: String::new(),
                 keywords: Vec::new(),
+                ..Meta::default()
             },
             Meta {
                 rating: 5,
                 flag: Flag::None,
                 label: String::new(),
                 keywords: Vec::new(),
+                ..Meta::default()
             },
         ] {
             let text = write_with_meta(&s, &meta);
@@ -1061,6 +1353,7 @@ mod tests {
                 flag: Flag::None,
                 label: "Vert".into(),
                 keywords: Vec::new(),
+                ..Meta::default()
             }
         );
         // Les mots‑clés écrits par un autre logiciel : la liste `dc:subject`.
@@ -1073,6 +1366,7 @@ mod tests {
             flag: Flag::Pick,
             label: String::new(),
             keywords: vec!["Mer".into()],
+            ..Meta::default()
         };
         let text = write_meta(&only);
         assert_eq!(read_meta(&text), only);

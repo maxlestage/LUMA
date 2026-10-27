@@ -81,25 +81,28 @@ pub struct Embedded {
 impl Embedded {
     /// Les blocs d'une image de `width × height` pixels.
     pub fn new(photo: &PhotoMetadata, o: &MetadataOptions, width: usize, height: usize) -> Embedded {
+        // L'auteur et les droits : ceux de l'export, sinon ceux des informations de la
+        // photo (IPTC), sinon ceux de l'EXIF du boîtier.
+        let m = &photo.meta;
+        let own = |v: &str| (o.keywords && !v.trim().is_empty()).then(|| v.trim().to_owned());
         let author = o
             .author
             .clone()
+            .or_else(|| own(&m.creator))
             .or_else(|| photo.exif.artist.clone().filter(|_| o.copy_exif));
         let copyright = o
             .copyright
             .clone()
+            .or_else(|| own(&m.rights))
             .or_else(|| photo.exif.copyright.clone().filter(|_| o.copy_exif));
         let tags = exif_tags(photo, o, author.as_deref(), copyright.as_deref(), width, height);
         let exif = tags.as_ref().map(|t| serialize(t, Vec::new())).unwrap_or_default();
-        let m = &photo.meta;
-        let keywords: &[String] = if o.keywords { &m.keywords } else { &[] };
-        let (rating, label) = if o.keywords {
-            (m.rating, m.label.as_str())
-        } else {
-            (0, "")
-        };
-        let xmp = (author.is_some() || copyright.is_some() || !keywords.is_empty() || rating > 0 || !label.is_empty())
-            .then(|| xmp_packet(author.as_deref(), copyright.as_deref(), keywords, rating, label));
+        // Les informations de la photo (titre, légende, lieu, mots‑clés, note, libellé),
+        // sauf --no-keywords ; l'auteur et les droits retenus ci‑dessus.
+        let mut info = if o.keywords { m.clone() } else { Meta::default() };
+        info.creator = author.clone().unwrap_or_default();
+        info.rights = copyright.clone().unwrap_or_default();
+        let xmp = (info != Meta::default()).then(|| xmp_packet(&info));
         Embedded { exif, xmp, tags }
     }
 }
@@ -372,42 +375,27 @@ fn escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// Le paquet XMP : créateur, droits, mots‑clés, note et libellé.
-fn xmp_packet(author: Option<&str>, copyright: Option<&str>, keywords: &[String], rating: u8, label: &str) -> String {
+/// Le paquet XMP : les informations de la photo (titre, légende, auteur, droits,
+/// mots‑clés, lieu), sa note et son libellé.
+fn xmp_packet(m: &Meta) -> String {
     let mut x = String::from(
         "<?xpacket begin=\"\u{feff}\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n\
          <x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"LÜMA\">\n \
          <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  \
          <rdf:Description rdf:about=\"\"\n    \
          xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n    \
-         xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"",
+         xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n    \
+         xmlns:luma=\"https://luma.photo/ns/1.0/\"\n    \
+         xmlns:Iptc4xmpExt=\"http://iptc.org/std/Iptc4xmpExt/2008-02-29/\"",
     );
-    if rating > 0 {
-        x += &format!("\n    xmp:Rating=\"{}\"", rating.min(5));
+    if m.rating > 0 {
+        x += &format!("\n    xmp:Rating=\"{}\"", m.rating.min(5));
     }
-    if !label.trim().is_empty() {
-        x += &format!("\n    xmp:Label=\"{}\"", escape(label.trim()));
+    if !m.label.trim().is_empty() {
+        x += &format!("\n    xmp:Label=\"{}\"", escape(m.label.trim()));
     }
     x += ">\n";
-    if let Some(a) = author {
-        x += &format!(
-            "   <dc:creator><rdf:Seq><rdf:li>{}</rdf:li></rdf:Seq></dc:creator>\n",
-            escape(a.trim())
-        );
-    }
-    if let Some(c) = copyright {
-        x += &format!(
-            "   <dc:rights><rdf:Alt><rdf:li xml:lang=\"x-default\">{}</rdf:li></rdf:Alt></dc:rights>\n",
-            escape(c.trim())
-        );
-    }
-    if !keywords.is_empty() {
-        x += "   <dc:subject><rdf:Bag>";
-        for k in keywords {
-            x += &format!("<rdf:li>{}</rdf:li>", escape(k.trim()));
-        }
-        x += "</rdf:Bag></dc:subject>\n";
-    }
+    x += &luma_project::xmp::meta_elements(m);
     x += "  </rdf:Description>\n </rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>";
     x
 }
@@ -665,5 +653,30 @@ pub(crate) mod tests {
         assert_eq!(exposure(0.3), (300, 1000));
         let d = dms(48.8584);
         assert_eq!((d[0], d[1]), ((48, 1), (51, 1)));
+    }
+
+    #[test]
+    fn iptc_information_goes_into_the_export() {
+        let m = Meta {
+            title: "Phare".into(),
+            caption: "Au petit matin".into(),
+            creator: "Maxime Lestage".into(),
+            keywords: vec!["Lieux|Bretagne".into()],
+            location: luma_project::xmp::Location {
+                city: "Brest".into(),
+                ..Default::default()
+            },
+            ..Meta::default()
+        };
+        let packet = xmp_packet(&m);
+        let back = luma_project::xmp::read_meta(&packet);
+        assert_eq!(
+            (back.title.as_str(), back.caption.as_str()),
+            ("Phare", "Au petit matin")
+        );
+        assert_eq!(back.creator, "Maxime Lestage");
+        assert_eq!(back.location.city, "Brest");
+        assert_eq!(back.keywords, ["Lieux|Bretagne"]);
+        assert!(packet.contains("<rdf:li>Bretagne</rdf:li>"));
     }
 }

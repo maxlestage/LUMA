@@ -469,6 +469,7 @@ mod tests {
             flag: Flag::Pick,
             label: "Rouge".into(),
             keywords: vec!["Mer".into(), "Été".into()],
+            ..Meta::default()
         };
         std::fs::write(
             dir.join("a.xmp"),

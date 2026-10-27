@@ -200,6 +200,10 @@ The professional photo library, step by step.
   XMP, at any ISO or from its ISO (the most precise rule wins; crop and masks
   excepted). **Import film**: chosen in the watched folder, it is given to each
   arriving photo.
+- **IPTC information** (Library, “Information”): title, caption, creator, copyright
+  and shooting location, for one photo or all selected photos, in the XMP and in
+  exported JPEGs; **hierarchical keywords** (“Places > France > Paris”); **metadata
+  templates** (creator, copyright, location, keywords) saved and applied in one go.
 
 ## 0.2.0 — October 2026
 

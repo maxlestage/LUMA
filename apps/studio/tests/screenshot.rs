@@ -385,6 +385,71 @@ fn defaults_per_camera_and_import_film() {
 }
 
 #[test]
+fn iptc_information_and_templates() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("informations") else {
+        return;
+    };
+    let dir = s
+        .studio()
+        .current_path()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    s.studio().use_templates_file(dir.join("modeles.json"));
+    s.keys(&[(NONE, Key::G)]);
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    // Les informations de la photo ouverte, et un mot‑clé hiérarchique.
+    s.studio().set_info("title", "Le parc en hiver");
+    s.studio().set_info("creator", "Maxime Lestage");
+    s.studio().set_info("rights", "© 2026 Maxime Lestage");
+    s.studio().set_info("city", "Strasbourg");
+    s.studio().set_info("country", "France");
+    assert_eq!(s.studio().add_keywords("Lieux > France > Strasbourg"), 1);
+    s.studio().flush_xmp();
+    let m = luma_studio::worker::read_meta(&open);
+    assert_eq!(m.title, "Le parc en hiver");
+    assert_eq!(
+        (m.location.city.as_str(), m.location.country.as_str()),
+        ("Strasbourg", "France")
+    );
+    assert_eq!(m.keywords, ["Lieux|France|Strasbourg"]);
+    let text = std::fs::read_to_string(luma_project::xmp::sidecar_path(&open)).unwrap();
+    assert!(
+        text.contains("<rdf:li>Strasbourg</rdf:li>"),
+        "chaque niveau dans dc:subject"
+    );
+
+    // Un modèle (auteur, droits, lieu, mots‑clés), enregistré puis donné à deux autres
+    // photos choisies ; leur titre ne change pas.
+    s.studio().save_template("Strasbourg");
+    assert_eq!(s.studio().templates().len(), 1);
+    assert_eq!(
+        luma_project::xmp::load_templates(&dir.join("modeles.json")).len(),
+        1
+    );
+    let photos = s.studio().photos().to_vec();
+    let others: Vec<usize> = (0..photos.len())
+        .filter(|&i| photos[i] != open)
+        .take(2)
+        .collect();
+    s.studio().selected = others.iter().copied().collect();
+    s.studio().set_info("title", "Sans titre");
+    s.studio().apply_template("Strasbourg");
+    s.studio().flush_xmp();
+    for &i in &others {
+        let m = luma_studio::worker::read_meta(&photos[i]);
+        assert_eq!(m.creator, "Maxime Lestage", "{}", photos[i].display());
+        assert_eq!(m.location.city, "Strasbourg");
+        assert_eq!(m.title, "Sans titre");
+        assert_eq!(m.keywords, ["Lieux|France|Strasbourg"]);
+    }
+    s.wait();
+    s.capture("informations");
+}
+
+#[test]
 fn sync_and_auto_balance_a_selection() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("synchroniser") else {

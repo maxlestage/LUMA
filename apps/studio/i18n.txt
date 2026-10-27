@@ -3270,3 +3270,69 @@ es = Al llegar
 fr = Aucun film
 en = No film
 es = Ninguna película
+
+# ----- Informations (IPTC) -----
+
+fr = Informations
+en = Information
+es = Información
+
+fr = Titre
+en = Title
+es = Título
+
+fr = Légende
+en = Caption
+es = Leyenda
+
+fr = Droits
+en = Copyright
+es = Derechos
+
+fr = Lieu
+en = Location
+es = Lugar
+
+fr = Ville
+en = City
+es = Ciudad
+
+fr = Région
+en = State/Province
+es = Región
+
+fr = Pays
+en = Country
+es = País
+
+fr = Plusieurs valeurs
+en = Multiple values
+es = Varios valores
+
+fr = Appliquer un modèle
+en = Apply a template
+es = Aplicar una plantilla
+
+fr = Nom du modèle
+en = Template name
+es = Nombre de la plantilla
+
+fr = Enregistrer comme modèle
+en = Save as template
+es = Guardar como plantilla
+
+fr = L'auteur, les droits, le lieu et les mots-clés de la photo ouverte
+en = The creator, copyright, location and keywords of the open photo
+es = El autor, los derechos, el lugar y las palabras clave de la foto abierta
+
+fr = Modèle non enregistré : {error}
+en = Template not saved: {error}
+es = Plantilla no guardada: {error}
+
+fr = Modèle « {name} » enregistré
+en = Template “{name}” saved
+es = Plantilla «{name}» guardada
+
+fr = Modèle « {name} » appliqué à {n} photo(s)
+en = Template “{name}” applied to {n} photo(s)
+es = Plantilla «{name}» aplicada a {n} foto(s)
