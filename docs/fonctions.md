@@ -57,6 +57,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
 | Outils | Recadrage et redressement (angle libre), outil à l'écran avec proportions verrouillées (R) | ✅ |
+| | Guides de recadrage : tiers, nombre d'or, diagonales, triangles d'or, spirale d'or, grille (O pour changer, Maj+O pour tourner) | ✅ |
 | | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté | ✅ |
 | | Masques restreints à une plage de luminance (minimum, maximum, fondu) ou de couleur (teinte, largeur, fondu ; gris laissés), lue sur la photo ; zone affichée (O) | ✅ |
 | | Pinceau qui suit les bords : chaque touche ne peint que les tons proches de son centre, la zone s'arrête aux contours de la photo | ✅ |
