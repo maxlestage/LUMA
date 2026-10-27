@@ -274,9 +274,9 @@ fr = Ranger
 en = Organize
 es = Ordenar
 
-fr = Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche et renommage par lot : vos photos se retrouvent en un instant.
-en = Every folder you open joins the photo library. Ratings, flags, keywords, collections, search and batch renaming: your photos turn up in an instant.
-es = Cada carpeta que abres entra en la fototeca. Valoraciones, banderas, palabras clave, colecciones, búsqueda y renombrado por lotes: encuentras tus fotos al instante.
+fr = Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche, carte et renommage par lot : vos photos se retrouvent en un instant.
+en = Every folder you open joins the photo library. Ratings, flags, keywords, collections, search, map and batch renaming: your photos turn up in an instant.
+es = Cada carpeta que abres entra en la fototeca. Valoraciones, banderas, palabras clave, colecciones, búsqueda, mapa y renombrado por lotes: encuentras tus fotos al instante.
 
 fr = Développer
 en = Develop
@@ -298,9 +298,9 @@ fr = Partager
 en = Share
 es = Compartir
 
-fr = JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Plusieurs formats d'un coup.
-en = JPEG, PNG or 16‑bit TIFF, at the right size, with your watermark and your author details. Several formats at once.
-es = JPEG, PNG o TIFF de 16 bits, al tamaño justo, con tu marca de agua y tus datos de autor. Varios formatos a la vez.
+fr = JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Tirages au profil de l'imprimante, planches contact, livre photo et diaporama.
+en = JPEG, PNG or 16‑bit TIFF, at the right size, with your watermark and your author details. Prints in the printer's profile, contact sheets, photo book and slideshow.
+es = JPEG, PNG o TIFF de 16 bits, al tamaño justo, con tu marca de agua y tus datos de autor. Copias con el perfil de la impresora, hojas de contactos, libro de fotos y presentación.
 
 fr = Le développement
 en = Developing

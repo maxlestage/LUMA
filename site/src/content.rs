@@ -127,7 +127,7 @@ pub const STEPS: [(&str, &str, &str); 4] = [
     (
         "01",
         "Ranger",
-        "Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche et renommage par lot : vos photos se retrouvent en un instant.",
+        "Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche, carte et renommage par lot : vos photos se retrouvent en un instant.",
     ),
     (
         "02",
@@ -142,7 +142,7 @@ pub const STEPS: [(&str, &str, &str); 4] = [
     (
         "04",
         "Partager",
-        "JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Plusieurs formats d'un coup.",
+        "JPEG, PNG ou TIFF 16 bits, à la bonne taille, avec votre filigrane et vos informations d'auteur. Tirages au profil de l'imprimante, planches contact, livre photo et diaporama.",
     ),
 ];
 
