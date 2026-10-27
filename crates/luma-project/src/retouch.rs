@@ -24,6 +24,17 @@ pub enum SpotKind {
     /// Yeux rouges : les pixels d'un rouge franc du disque redeviennent sombres et
     /// neutres (la peau autour et le reflet blanc restent).
     RedEye,
+    /// Suppression : le disque rempli par des morceaux de la photo qui l'entourent (ce
+    /// qui gêne disparaît, la texture continue) ; pas de source à choisir.
+    Remove,
+}
+
+impl SpotKind {
+    /// Le tampon et le correcteur copient une source ; les yeux rouges et la suppression
+    /// travaillent sur place.
+    pub fn has_source(self) -> bool {
+        matches!(self, SpotKind::Clone | SpotKind::Heal)
+    }
 }
 
 /// Une retouche.
@@ -56,10 +67,10 @@ fn full() -> f32 {
 impl Spot {
     /// Une retouche en `center`, sa source à côté (à droite, ou à gauche près du bord
     /// droit), à deux rayons et demi.
-    /// Pour les yeux rouges, la source est le centre (elle ne sert pas).
+    /// Pour les yeux rouges et la suppression, la source est le centre (elle ne sert pas).
     pub fn new(kind: SpotKind, center: (f32, f32), radius: f32) -> Spot {
         let dx = 2.5 * radius;
-        let x = if kind == SpotKind::RedEye {
+        let x = if !kind.has_source() {
             center.0
         } else if center.0 + dx + radius <= 1.0 {
             center.0 + dx

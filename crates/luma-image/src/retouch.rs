@@ -1,4 +1,4 @@
-//! Tampon et correcteur ([`luma_project::Spot`]), appliqués juste après l'entrée, sur
+//! Tampon, correcteur, yeux rouges et suppression ([`luma_project::Spot`]), appliqués juste après l'entrée, sur
 //! l'image de travail linéaire : les réglages qui suivent (bruit, tonalité, masques)
 //! voient la photo réparée.
 //!
@@ -68,6 +68,10 @@ fn apply_one(img: &mut RgbImage, spot: &Spot) {
         return;
     }
     let d = disc(spot, w, h);
+    if spot.kind == SpotKind::Remove {
+        crate::inpaint::fill(img, d.cx, d.cy, d.r, spot.feather / 100.0, opacity);
+        return;
+    }
     let inner = d.r * (1.0 - (spot.feather / 100.0).clamp(0.0, 1.0));
     let x0 = (d.cx - d.r).floor().max(0.0) as usize;
     let y0 = (d.cy - d.r).floor().max(0.0) as usize;
@@ -269,6 +273,23 @@ fn membrane(ring: &[((f32, f32), [f32; 3])], x: f32, y: f32) -> [f32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_remove_spot_fills_from_around() {
+        // Un aplat avec une tache sombre : la suppression rend l'aplat, sans source.
+        let mut img = RgbImage::from_fn(120, 90, |x, y| {
+            if (x as f32 - 60.0).powi(2) + (y as f32 - 45.0).powi(2) < 64.0 {
+                [0.02; 3]
+            } else {
+                [0.4, 0.35, 0.3]
+            }
+        });
+        let spot = Spot::new(SpotKind::Remove, (0.5, 0.5), 10.0 / 120.0);
+        assert_eq!(spot.source, spot.center);
+        apply(&mut img, &[spot]);
+        let p = img.data[45 * 120 + 60];
+        assert!((p[0] - 0.4).abs() < 0.02 && (p[2] - 0.3).abs() < 0.02, "{p:?}");
+    }
 
     fn ramp(w: usize, h: usize) -> RgbImage {
         let mut img = RgbImage {
