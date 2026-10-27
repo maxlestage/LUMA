@@ -154,6 +154,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
 | Informations IPTC dans le XMP : titre, légende, auteur, droits, lieu (lieu, ville, région, pays) ; mots‑clés hiérarchiques (« Lieux > France > Paris », chaque niveau aussi dans `dc:subject`) ; modèles de métadonnées donnés aux photos choisies ; dans les JPEG exportés | ✅ |
 | Carte des photos géolocalisées (position GPS de l'EXIF) : groupes de photos proches, glisser, zoomer, toucher un groupe pour voir ses photos ; fond de tuiles libres gardées sur l'appareil, utilisable hors ligne | ✅ |
+| EXIF des images développées (JPEG, HEIC, AVIF, PNG, WebP, TIFF) : date de prise de vue, boîtier, objectif, réglages et position GPS lus comme pour un RAW ; les photos d'un téléphone se rangent à leur date et vont sur la carte | ✅ |
 | Recherche et filtres (`luma catalog --search`) : mots sans tenir compte des accents ; note, drapeau, libellé, dates, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers et objectifs | ✅ |
 | Collections manuelles et dynamiques (règle : note, date, boîtier, objectif, ISO, mots‑clés…), enregistrées dans le catalogue | ✅ |
 | Mots‑clés dans l'app : saisie (plusieurs à la fois, séparés par une virgule), ajout et retrait sur toutes les photos choisies, liste des mots‑clés du dossier avec leur nombre, filtre de la grille | ✅ |
