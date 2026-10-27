@@ -20,7 +20,9 @@ La fototeca profesional, paso a paso.
   un 30 % más rápidas (ARW de 24 Mpx: 385 → 270 ms), mismos archivos byte a byte.
   Después la Intensidad, igual: la etapa de color 2,7 veces más rápida cuando se ajusta
   (NEF 372 → 136 ms), mismos bytes.
-
+  Después las exportaciones TIFF y PNG de 16 bits: la imagen escrita directamente en
+  bytes, en todos los núcleos, sin segunda copia: de un 20 a un 28 % más cortas (24 Mpx:
+  372 → 299 ms) y 144 MB menos de memoria, mismos bytes.
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
   focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en
