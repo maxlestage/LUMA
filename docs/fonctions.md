@@ -42,6 +42,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Virage partiel (ombres et hautes lumières, balance ; `crs:SplitToning*` lu et écrit) | ✅ |
 | | Mélangeur de couches : chaque couche de sortie faite des trois couches de la photo (−200 à +200 %) | ✅ |
 | | Profil de boîtier mesuré sur une charte ColorChecker (« Profil depuis une charte », `luma colorchecker -o profil.xmp`), en préréglage | ✅ |
+| | Couleurs de deux boîtiers accordées d'après la même scène (« Accorder sur la photo choisie », `luma match-colors`), en préréglage | ✅ |
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Accentuation par déconvolution (case « Déconvolution », Richardson‑Lucy), sans IA | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |

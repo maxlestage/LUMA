@@ -114,6 +114,10 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Colors matched between two cameras**: the same scene shot with both your cameras,
+  even framed a little differently; select both photos, then “Match to the selected
+  photo” (Channel mixer), or `luma match-colors`. The second camera takes on the colors
+  of the first; saved as a preset, the correction applies to all its photos.
 - **Camera profile**: shoot a ColorChecker chart, crop it tightly, then “Profile from a
   chart” (Channel mixer) or `luma colorchecker chart.ARW -o profile.xmp`: LÜMA computes
   the correction that makes its 24 colors exact (from 3.8 to 0.02 color error in our

@@ -120,6 +120,11 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Colores igualados entre dos cámaras**: la misma escena fotografiada con tus dos
+  cámaras, aunque esté encuadrada algo distinto; elige las dos fotos y luego «Igualar
+  con la foto elegida» (Mezclador de canales), o `luma match-colors`. La segunda cámara
+  toma los colores de la primera; guardada como ajuste preestablecido, la corrección se
+  aplica a todas sus fotos.
 - **Perfil de cámara**: fotografía una carta ColorChecker, recórtala al justo y luego
   «Perfil desde una carta» (Mezclador de canales) o
   `luma colorchecker carta.ARW -o perfil.xmp`: LÜMA calcula la corrección que hace
