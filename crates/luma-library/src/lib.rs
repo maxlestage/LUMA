@@ -13,6 +13,7 @@
 pub mod backup;
 pub mod collections;
 pub mod fingerprint;
+pub mod import;
 pub mod map;
 pub mod query;
 pub mod stacks;
