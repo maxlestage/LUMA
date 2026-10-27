@@ -292,24 +292,28 @@ pub fn compose(layout: &Layout, pictures: &[Picture], printer: Option<&Conversio
     let (pw, ph) = layout.page_px();
     pictures
         .chunks(cells.len())
-        .map(|chunk| {
-            let mut page = Page {
-                width: pw,
-                height: ph,
-                rgb: vec![255; pw * ph * 3],
-            };
-            for (pic, cell) in chunk.iter().zip(&cells) {
-                place(&mut page, pic, cell);
-                if cell.caption > 0 && !pic.caption.is_empty() {
-                    caption(&mut page, &pic.caption, cell);
-                }
-            }
-            if let Some(c) = printer {
-                c.apply_rgb(&mut page.rgb);
-            }
-            page
-        })
+        .map(|chunk| page(pw, ph, &cells, chunk, printer))
         .collect()
+}
+
+/// Une page de `width × height` pixels : chaque photo dans sa case, son nom dessous,
+/// puis la conversion vers l'imprimante.
+pub fn page(width: usize, height: usize, cells: &[Cell], pictures: &[Picture], printer: Option<&Conversion>) -> Page {
+    let mut page = Page {
+        width,
+        height,
+        rgb: vec![255; width * height * 3],
+    };
+    for (pic, cell) in pictures.iter().zip(cells) {
+        place(&mut page, pic, cell);
+        if cell.caption > 0 && !pic.caption.is_empty() {
+            caption(&mut page, &pic.caption, cell);
+        }
+    }
+    if let Some(c) = printer {
+        c.apply_rgb(&mut page.rgb);
+    }
+    page
 }
 
 /// Pose une photo au centre de sa case (au bas de sa case quand son nom est dessous,
@@ -336,14 +340,25 @@ fn place(page: &mut Page, pic: &Picture, cell: &Cell) {
 
 /// Le nom sous la photo, centré dans sa bande, en gris foncé.
 fn caption(page: &mut Page, text: &str, cell: &Cell) {
-    let px = cell.caption as f32 * 0.55;
+    let band = Cell {
+        y: cell.y + cell.height,
+        height: cell.caption,
+        caption: 0,
+        ..*cell
+    };
+    write(page, text, &band, cell.caption as f32 * 0.55, 60);
+}
+
+/// Une ligne de texte (police de LÜMA) de `px` pixels, centrée dans cette case, de
+/// cette encre (gris, 0 noir) ; coupée si elle est trop longue.
+pub fn write(page: &mut Page, text: &str, cell: &Cell, px: f32, ink: u8) {
     let Some(mask) = crate::watermark::render_text(text, px) else {
         return;
     };
     let w = mask.width.min(cell.width);
     let x0 = cell.x + (cell.width - w) / 2;
-    let y0 = cell.y + cell.height + cell.caption.saturating_sub(mask.height) / 2;
-    const INK: f32 = 60.0;
+    let y0 = cell.y + cell.height.saturating_sub(mask.height) / 2;
+    let ink = f32::from(ink);
     for y in 0..mask.height {
         let py = y0 + y;
         if py >= page.height {
@@ -351,11 +366,11 @@ fn caption(page: &mut Page, text: &str, cell: &Cell) {
         }
         for x in 0..w {
             let a = mask.data[y * mask.width + x].clamp(0.0, 1.0);
-            if a > 0.0 {
+            if a > 0.0 && x0 + x < page.width {
                 let i = (py * page.width + x0 + x) * 3;
                 for c in 0..3 {
                     let v = f32::from(page.rgb[i + c]);
-                    page.rgb[i + c] = (v + (INK - v) * a).round() as u8;
+                    page.rgb[i + c] = (v + (ink - v) * a).round() as u8;
                 }
             }
         }

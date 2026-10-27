@@ -7,6 +7,7 @@
 //! l'écran. Pour un aperçu, la mosaïque est réduite sans dématriçage (un pixel par
 //! bloc du capteur), ce qui est bien plus rapide et aussi net à cette taille.
 
+pub mod book;
 pub mod chart;
 pub mod duplicate;
 pub mod export;
