@@ -137,7 +137,7 @@ fn texts() -> Vec<(String, String)> {
     }
 
     use luma_licence::Plan;
-    for p in Plan::ALL {
+    for p in Plan::ALL.into_iter().chain(Plan::STORE) {
         add(
             "luma-licence",
             [p.name(), p.price(), p.period(), p.note()]

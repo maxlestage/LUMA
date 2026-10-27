@@ -510,17 +510,17 @@ fr = Que se passe‑t‑il après l'essai ?
 en = What happens after the trial?
 es = ¿Qué pasa después de la prueba?
 
-fr = Pendant 14 jours, tout est ouvert. Ensuite, un abonnement LÜMA Premium permet de continuer à développer ; vos fichiers et vos réglages restent à vous dans tous les cas.
-en = For 14 days, everything is unlocked. After that, a LÜMA Premium subscription lets you keep developing; your files and your adjustments remain yours either way.
-es = Durante 14 días, todo está disponible. Después, una suscripción a LÜMA Premium te permite seguir revelando; tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
+fr = Tout est ouvert pendant l'essai : 14 jours sur Mac, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.
+en = Everything is unlocked during the trial: 14 days on Mac, one month on iPhone and iPad. After that, LÜMA Premium lets you keep developing (a subscription on Mac, a one-time purchase on iPhone and iPad); your files and your adjustments remain yours either way.
+es = Todo está disponible durante la prueba: 14 días en Mac, un mes en iPhone y iPad. Después, LÜMA Premium te permite seguir revelando (una suscripción en Mac, una compra única en iPhone y iPad); tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
 
 fr = Où acheter LÜMA ?
 en = Where can I buy LÜMA?
 es = ¿Dónde se compra LÜMA?
 
-fr = Sur Mac, uniquement sur ce site. Sur iPhone et iPad, uniquement dans l'App Store, par un abonnement à part.
-en = On Mac, only on this site. On iPhone and iPad, only on the App Store, as a separate subscription.
-es = En Mac, solo en este sitio. En iPhone y iPad, solo en el App Store, con una suscripción aparte.
+fr = Sur Mac, uniquement sur ce site, par abonnement. Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.
+en = On Mac, only on this site, by subscription. On iPhone and iPad, only in the App Store: €89.99 once and for all, after a one-month trial.
+es = En Mac, solo en este sitio, por suscripción. En iPhone y iPad, solo en la App Store: 89,99 € de una vez por todas, tras un mes de prueba.
 
 fr = Où vont mes photos exportées sur iPhone ?
 en = Where do my photos go when I export on iPhone?

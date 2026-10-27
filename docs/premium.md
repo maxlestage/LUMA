@@ -39,24 +39,25 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
   bibliothèque TLS compilée dans LÜMA).
 - **Limite** : sans base de données, le nombre d'appareils par clé n'est pas limité ; la
   clé porte le courriel de l'abonné, ce qui décourage le partage.
-- **iPhone et iPad** : vendus uniquement par l'App Store, en achats intégrés
-  (StoreKit, appelé depuis Rust : `luma_apple::store`). L'écran Premium y montre les
-  deux abonnements à leur prix App Store (dans la devise de l'acheteur), « S'abonner »
-  et « Restaurer les achats ». Chaque achat, renouvellement ou restauration est
-  enregistré dans `licence.json` : l'abonnement vaut jusqu'au dernier paiement plus une
-  période, plus 14 jours. Les clés de licence n'y comptent pas (et l'app Mac ignore
-  l'App Store).
+- **iPhone et iPad** : un mois d'essai, puis un **achat unique à vie de 89,99 €**,
+  vendu uniquement par l'App Store en achat intégré non renouvelable (StoreKit, appelé
+  depuis Rust : `luma_apple::store`). L'écran Premium y montre cet achat à son prix App
+  Store (dans la devise de l'acheteur), « Acheter » et « Restaurer les achats ». L'achat
+  (ou sa restauration) est enregistré dans `licence.json` et n'expire jamais
+  (`Plan::Lifetime`). Le partage familial est activé. Les clés de licence n'y comptent
+  pas (et l'app Mac ignore l'App Store).
 - La ligne de commande `luma` reste libre.
 
 ## Ouvrir l'App Store (iPhone et iPad, une fois)
 
-1. App Store Connect → l'app LÜMA (identifiant `app.luma.studio`) → **Abonnements** :
-   un groupe « LÜMA Premium », et deux abonnements renouvelables automatiquement :
-   - mensuel, identifiant `app.luma.studio.premium.monthly`, 1 mois, 19,99 € ;
-   - annuel, identifiant `app.luma.studio.premium.annual`, 1 an, 239,88 €.
+1. App Store Connect → l'app LÜMA (identifiant `app.luma.studio`) → **Achats
+   intégrés** : « LÜMA Premium à vie », non consommable, identifiant
+   `app.luma.studio.premium.lifetime`, 89,99 € (territoire de référence : France), en
+   vente dans tous les pays, nom et description en français, anglais et espagnol. Créé
+   par l'API App Store Connect le 27 octobre 2026 ; pour le soumettre, Apple demande
+   encore une capture de l'écran d'achat (pour la vérification).
 
-   D'autres identifiants ? Les donner à la compilation : variables
-   `LUMA_APPSTORE_MONTHLY` et `LUMA_APPSTORE_ANNUAL`.
+   Un autre identifiant ? Le donner à la compilation : variable `LUMA_APPSTORE_LIFETIME`.
 2. Accords, taxes et coordonnées bancaires : l'accord « Applications payantes » signé.
 3. Pour essayer sans payer : un compte **Sandbox** (Utilisateurs et accès → Sandbox),
    puis l'app installée par TestFlight sur un iPhone ou un iPad.

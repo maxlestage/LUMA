@@ -5677,13 +5677,18 @@ impl Studio {
         }
         ui.add_space(16.0);
         let gap = 14.0;
-        // Côte à côte, ou l'une sous l'autre sur un écran étroit (iPhone).
-        let stacked = ui.available_width() < 470.0;
+        // Côte à côte, ou l'une sous l'autre sur un écran étroit (iPhone) ; une seule
+        // formule (l'achat unique de l'App Store) prend toute la largeur.
+        let stacked = ui.available_width() < 470.0 || PLANS.len() == 1;
         let card_h = 172.0;
         let (row, _) = ui.allocate_exact_size(
             vec2(
                 ui.available_width(),
-                if stacked { 2.0 * card_h + gap } else { card_h },
+                if stacked {
+                    PLANS.len() as f32 * (card_h + gap) - gap
+                } else {
+                    card_h
+                },
             ),
             egui::Sense::hover(),
         );
@@ -5697,8 +5702,8 @@ impl Studio {
         let app_store = luma_apple::store::AVAILABLE;
         let mut chosen = None;
         let mut buy = None;
-        for (k, plan) in PLANS.into_iter().enumerate() {
-            let best = plan == luma_licence::Plan::Annual;
+        for (k, plan) in PLANS.iter().copied().enumerate() {
+            let best = plan != luma_licence::Plan::Monthly;
             let offset = if stacked {
                 vec2(0.0, k as f32 * (card_h + gap))
             } else {
@@ -5726,7 +5731,13 @@ impl Studio {
             );
             card.horizontal(|ui| {
                 ui.label(RichText::new(tr(plan.name())).size(15.0).color(theme::TEXT));
-                if best {
+                if plan == luma_licence::Plan::Lifetime {
+                    ui.label(
+                        RichText::new(tr("Une fois pour toutes"))
+                            .size(11.0)
+                            .color(theme::ACCENT),
+                    );
+                } else if best {
                     ui.label(
                         RichText::new(tr("Un seul paiement par an"))
                             .size(11.0)
@@ -5754,7 +5765,12 @@ impl Studio {
                 if card
                     .add_enabled(
                         !self.licence.busy(),
-                        egui::Button::new(tr("S'abonner")).min_size(size),
+                        egui::Button::new(if plan == luma_licence::Plan::Lifetime {
+                            tr("Acheter")
+                        } else {
+                            tr("S'abonner")
+                        })
+                        .min_size(size),
                     )
                     .clicked()
                 {
@@ -5798,7 +5814,7 @@ impl Studio {
             if matches!(access, Access::Premium { .. }) {
                 ui.label(
                     RichText::new(tr(
-                        "Pour gérer ou résilier votre abonnement : Réglages › votre nom › Abonnements.",
+                        "LÜMA Premium est à vous, pour toujours : sur vos autres iPhone et iPad, « Restaurer les achats » avec le même compte Apple.",
                     ))
                     .size(12.5)
                     .color(theme::DIM),
@@ -5806,7 +5822,7 @@ impl Studio {
             } else {
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new(tr("Déjà abonné avec ce compte Apple ?"))
+                        RichText::new(tr("Déjà acheté avec ce compte Apple ?"))
                             .size(12.5)
                             .color(theme::DIM),
                     );

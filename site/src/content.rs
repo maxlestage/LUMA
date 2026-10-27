@@ -238,11 +238,11 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Que se passe‑t‑il après l'essai ?",
-        "Pendant 14 jours, tout est ouvert. Ensuite, un abonnement LÜMA Premium permet de continuer à développer ; vos fichiers et vos réglages restent à vous dans tous les cas.",
+        "Tout est ouvert pendant l'essai : 14 jours sur Mac, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.",
     ),
     (
         "Où acheter LÜMA ?",
-        "Sur Mac, uniquement sur ce site. Sur iPhone et iPad, uniquement dans l'App Store, par un abonnement à part.",
+        "Sur Mac, uniquement sur ce site, par abonnement. Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.",
     ),
     (
         "Où vont mes photos exportées sur iPhone ?",
