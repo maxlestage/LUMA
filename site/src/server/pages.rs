@@ -217,7 +217,7 @@ fn hero(lang: Lang) -> Element {
         .child(
             div()
                 .class("hero-meta reveal")
-                .children(["RAW", t(lang, "150 films"), t(lang, "Masques"), "Mac · iPhone · iPad"].map(|s| span().text(s))),
+                .children(["RAW", t(lang, "275 films"), t(lang, "Masques"), "Mac · iPhone · iPad"].map(|s| span().text(s))),
         )
         .child(
             a().class("scroll-hint")
@@ -422,7 +422,7 @@ fn films(lang: Lang) -> Element {
         .id("films")
         .child(section_head(
             t(lang, "Films"),
-            heading(h2, t(lang, "Cent cinquante films. *Et les vôtres.*")),
+            heading(h2, t(lang, "Deux cent soixante-quinze films. *Et les vôtres.*")),
             Some(p().text(t(lang,
                 "Portra, Velvia, Kodachrome, CineStill, Tri‑X, Lomochrome, Aerochrome : des pellicules couleur, noir et blanc, cinéma et instantanées, rangées par familles et faciles à retrouver, à poser d'un geste et à doser. Et si vous scannez vos propres pellicules, LÜMA les mesure pour les reproduire.",
             ))),

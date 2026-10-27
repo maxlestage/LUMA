@@ -9,7 +9,7 @@
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
 //! luma merge <raw>… [options]       empilement, HDR ou panorama, en DNG
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
-//! luma presets [dossier]            exporte les 150 films en préréglages XMP
+//! luma presets [dossier]            exporte les 275 films en préréglages XMP
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
@@ -192,7 +192,7 @@ USAGE
       Une nouvelle paire de clés pour LÜMA Premium : la privée va sur le serveur
       (LUMA_LICENCE_SECRET, à garder secrète), la publique dans l'app (LUMA_LICENCE_PUBLIC).
   luma presets [dossier]
-      Exporte les 150 films en préréglages XMP (.xmp), rangés par famille, dans
+      Exporte les 275 films en préréglages XMP (.xmp), rangés par famille, dans
       « dossier/Préréglages LÜMA » (dossier courant par défaut).
       Mesure une pellicule : la même scène en numérique (RAW, développé avec les réglages
       neutres de LÜMA) et sur film (scan JPEG, PNG ou TIFF). Les images sont alignées
