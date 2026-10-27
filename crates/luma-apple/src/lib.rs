@@ -12,6 +12,7 @@
 //! Ce crate est le seul endroit de LÜMA où du code `unsafe` est permis : les appels à
 //! ImageIO et à CoreGraphics, chacun justifié.
 
+pub mod net;
 pub mod photos;
 pub mod store;
 pub mod tether;

@@ -1761,3 +1761,96 @@ fn selective_paste_keeps_the_framing_of_each_photo() {
         "le recadrage reste le sien"
     );
 }
+
+#[test]
+fn map_of_geotagged_photos() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("carte") else {
+        return;
+    };
+    let tiles = s.dir.join("tuiles");
+    s.studio().use_tiles_dir(tiles.clone());
+    s.studio().set_map_online(false);
+    // Trois photos placées : deux à Paris, une à Rome.
+    let photos = s.studio().photos().to_vec();
+    assert!(photos.len() >= 4);
+    for (p, gps) in photos
+        .iter()
+        .zip([[48.8584, 2.2945], [41.8902, 12.4922], [48.8606, 2.3376]])
+    {
+        let mut e = s.studio().catalog().get(p).unwrap().clone();
+        e.gps = Some(gps);
+        s.studio().catalog_mut().insert(e);
+    }
+    s.keys(&[(NONE, Key::G)]);
+    s.harness.get_by_label("Carte").click();
+    s.harness.step();
+    s.wait();
+    let Some(Some(view)) = s.studio().map_view() else {
+        panic!("la carte est montrée et cadrée");
+    };
+    // Les photos du corpus qui ont déjà une position (lue dans leur EXIF).
+    let already = photos[3..]
+        .iter()
+        .filter(|p| s.studio().catalog().get(p).is_some_and(|e| e.gps.is_some()))
+        .count();
+    let groups = s.studio().map_groups().to_vec();
+    assert_eq!(
+        groups.iter().filter(|g| g.1 == 2).count(),
+        1,
+        "Paris : {groups:?}"
+    );
+    assert_eq!(groups.iter().map(|g| g.1).sum::<usize>(), 3 + already);
+    assert_eq!(
+        s.studio().map_tiles(),
+        0,
+        "aucune tuile gardée, pas de réseau"
+    );
+
+    // Un fond de carte déjà gardé : des tuiles unies (la mer), lues sans réseau.
+    let sea = image::RgbaImage::from_pixel(256, 256, image::Rgba([170, 211, 223, 255]));
+    for (tile, _, _) in view.tiles([2400.0, 1600.0]) {
+        let file = tiles.join(tile.file());
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        sea.save_with_format(&file, image::ImageFormat::Png)
+            .unwrap();
+    }
+    s.studio().set_map_online(false);
+    s.harness.step();
+    s.wait();
+    assert!(s.studio().map_tiles() >= 4, "{}", s.studio().map_tiles());
+    s.capture("carte");
+
+    // Toucher le groupe de Paris : ses deux photos dans la grille.
+    let paris = groups.iter().find(|g| g.1 == 2).unwrap().0;
+    s.harness.event(egui::Event::PointerMoved(paris));
+    for pressed in [true, false] {
+        s.harness.event(egui::Event::PointerButton {
+            pos: paris,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: Default::default(),
+        });
+        s.harness.step();
+    }
+    s.wait();
+    assert!(s.studio().map_view().is_none(), "retour à la grille");
+    let shown: Vec<PathBuf> = s
+        .studio()
+        .visible()
+        .iter()
+        .map(|&i| photos[i].clone())
+        .collect();
+    assert_eq!(shown, [photos[0].clone(), photos[2].clone()]);
+    s.harness.event(egui::Event::PointerGone);
+    s.harness
+        .get_all_by_label("Tout afficher")
+        .next()
+        .unwrap()
+        .click();
+    for _ in 0..5 {
+        s.harness.step();
+    }
+    s.wait();
+    assert_eq!(s.studio().visible().len(), photos.len());
+}

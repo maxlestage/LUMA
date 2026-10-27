@@ -142,6 +142,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Copia de trabajo a resolución completa: idéntica al original, más rápida de abrir, dos veces y media menos memoria; «Vaciar la caché» en un clic | ✅ |
 | Palabras clave en el XMP (`dc:subject`), leídas y escritas | ✅ |
 | Información IPTC en el XMP: título, leyenda, autor, derechos, lugar (lugar, ciudad, región, país); palabras clave jerárquicas («Lugares > Francia > París», cada nivel también en `dc:subject`); plantillas de metadatos para las fotos elegidas; en los JPEG exportados | ✅ |
+| Mapa de las fotos geolocalizadas (posición GPS del EXIF): grupos de fotos cercanas, arrastrar, hacer zoom, tocar un grupo para ver sus fotos; mapa base de mosaicos libres guardados en el dispositivo, utilizable sin conexión | ✅ |
 | Búsqueda y filtros (`luma catalog --search`): palabras sin tener en cuenta los acentos; valoración, bandera, etiqueta, fechas, ISO, focal, cámara, objetivo, palabra clave; recuento de palabras clave, cámaras y objetivos | ✅ |
 | Colecciones manuales e inteligentes (regla: valoración, fecha, cámara, objetivo, ISO, palabras clave…), guardadas en el catálogo | ✅ |
 | Palabras clave en la app: escritura (varias a la vez, separadas por comas), añadidas y quitadas en todas las fotos seleccionadas, lista de palabras clave de la carpeta con su número, filtro de la cuadrícula | ✅ |

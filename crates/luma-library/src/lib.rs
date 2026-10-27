@@ -13,6 +13,7 @@
 pub mod backup;
 pub mod collections;
 pub mod fingerprint;
+pub mod map;
 pub mod query;
 pub mod stacks;
 mod store;
@@ -54,6 +55,9 @@ pub struct Entry {
     pub exposure_time: Option<f32>,
     /// En millimètres.
     pub focal_length: Option<f32>,
+    /// La position de la prise de vue : latitude et longitude, en degrés (nord et est
+    /// positifs).
+    pub gps: Option<[f64; 2]>,
     pub rating: u8,
     /// 1 : retenue, -1 : rejetée.
     pub flag: i8,
@@ -404,6 +408,7 @@ fn read_entry(path: PathBuf, size: u64, modified: u64, sidecar: u64) -> Entry {
         aperture: exif.aperture,
         exposure_time: exif.exposure_time,
         focal_length: exif.focal_length,
+        gps: exif.gps.map(|g| [g.latitude, g.longitude]),
         ..Entry::default()
     };
     if sidecar != 0 {

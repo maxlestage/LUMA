@@ -217,6 +217,11 @@ La fototeca profesional, paso a paso.
   exportados; **palabras clave jerárquicas** («Lugares > Francia > París»);
   **plantillas de metadatos** (autor, derechos, lugar, palabras clave) guardadas y
   aplicadas de una vez.
+- **Mapa** (Biblioteca, «Mapa»): las fotos de la tira donde se tomaron (posición GPS
+  del EXIF, guardada en la fototeca), agrupadas cuando están cerca; arrastrar, hacer
+  zoom con la rueda o con dos dedos, tocar un grupo para ver sus fotos. Mapa base de
+  mosaicos libres, descargados por el sistema y guardados en el dispositivo; sin
+  conexión, los ya guardados.
 
 - **Instrumentos de medida** (encima del histograma, o Mayús+J): **forma de onda**
   (la luminancia, columna por columna), **desfile RGB** (cada canal por separado) y
