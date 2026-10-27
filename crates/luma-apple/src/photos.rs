@@ -250,7 +250,9 @@ mod ios {
         DELEGATE.with(|d| *d.borrow_mut() = Some(delegate));
         // UIKit refuse sans rien dire (un message dans la console) de présenter depuis
         // un contrôleur hors de l'écran : on vérifie que le sélecteur est bien là.
-        let shown = top.presentedViewController().is_some_and(|p| p.class() == class);
+        // (Ce qui est présenté n'est pas toujours de la classe exacte du sélecteur : un
+        // conteneur du système peut l'envelopper ; tout contrôleur présenté compte.)
+        let shown = top.presentedViewController().is_some();
         let name = top.class().name().to_string_lossy().into_owned();
         if shown {
             Ok(name)
