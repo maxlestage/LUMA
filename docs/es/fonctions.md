@@ -78,6 +78,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Instantáneas, sincronización en varias fotos | ⏳ |
 | | iPhone y iPad: vista previa reducida durante un gesto (12 veces más rápida), memoria vigilada, cachés liberadas antes de que el sistema cierre la app | ✅ |
 | | Histograma, indicador de recorte (J), antes/después (`\`), zoom 1:1 | ✅ |
+| | Forma de onda, desfile RGB, vectorscopio (Mayús+J) | ✅ |
 | | Panorámica (perspectiva, cilíndrica, esférica), recorte automático reversible, DNG | ✅ |
 | | Apilamientos: media, mediana, máximo, cielo estrellado | ✅ |
 | | Combinación HDR, deformación de los límites de la panorámica | ⏳ |

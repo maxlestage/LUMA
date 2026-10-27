@@ -218,6 +218,12 @@ La fototeca profesional, paso a paso.
   **plantillas de metadatos** (autor, derechos, lugar, palabras clave) guardadas y
   aplicadas de una vez.
 
+- **Instrumentos de medida** (encima del histograma, o Mayús+J): **forma de onda**
+  (la luminancia, columna por columna), **desfile RGB** (cada canal por separado) y
+  **vectorscopio** (tono y saturación, con los objetivos de los primarios al 75 % y la
+  línea de tonos de piel), calculados sobre la vista previa en cada render, prueba en
+  pantalla incluida.
+
 ## 0.2.0 — octubre de 2026
 
 Todos los formatos de imagen, tres idiomas y la tienda.

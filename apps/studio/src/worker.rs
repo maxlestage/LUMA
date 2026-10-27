@@ -29,6 +29,8 @@ pub struct Frame {
     pub scene: Option<Arc<RgbImage>>,
     /// Les poussières trouvées sur la base, quand on les a demandées.
     pub dust: Option<Vec<luma_project::Spot>>,
+    /// L'instrument choisi (forme d'onde, parade, vectorscope), rendu sur l'aperçu.
+    pub scope: Option<luma_image::scopes::ScopeImage>,
 }
 
 pub enum Event {
@@ -149,6 +151,7 @@ struct RenderJob {
     dust_view: bool,
     /// Chercher les poussières sur la base.
     find_dust: bool,
+    scope: luma_image::scopes::Scope,
 }
 
 /// Ce qu'un rendu joint à l'image : l'écrêtage peint par‑dessus, une copie réduite de
@@ -161,6 +164,8 @@ pub struct Extras {
     pub dust_view: bool,
     /// Les poussières à chercher, jointes au rendu.
     pub find_dust: bool,
+    /// L'instrument à rendre avec l'aperçu (l'histogramme est toujours joint).
+    pub scope: luma_image::scopes::Scope,
 }
 
 /// L'épreuvage demandé : la table, la simulation de l'impression, l'alerte de gamut.
@@ -354,6 +359,7 @@ impl Worker {
             scene: extras.scene,
             dust_view: extras.dust_view,
             find_dust: extras.find_dust,
+            scope: extras.scope,
         });
     }
 
@@ -689,6 +695,7 @@ fn render_loop(
             p.table.apply_rgba(&mut rgba);
         }
         let histogram = histogram_rgba(&rgba);
+        let scope = luma_image::scopes::render(job.scope, &rgba, w, h);
         if let Some(mask) = &gamut {
             luma_color::proof::paint_alert(&mut rgba, mask);
         }
@@ -720,6 +727,7 @@ fn render_loop(
             gpu: on_gpu,
             scene,
             dust,
+            scope,
         };
         let _ = sender.send(Event::Rendered(Box::new(frame)));
         repaint();
