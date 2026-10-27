@@ -130,7 +130,9 @@ impl Licence {
             pending: None,
             key_input: String::new(),
             message: String::new(),
-            store: store::start(&Plan::ALL.map(|p| p.app_store_id())),
+            store: store::start(
+                &[Plan::Lifetime, Plan::Monthly, Plan::Annual].map(|p| p.app_store_id()),
+            ),
             products: Vec::new(),
             store_busy: false,
             restored_any: false,
@@ -341,5 +343,10 @@ pub const FEATURES: [&str; 6] = [
     },
 ];
 
-/// Les formules, dans l'ordre d'affichage.
-pub const PLANS: [Plan; 2] = Plan::ALL;
+/// Les formules, dans l'ordre d'affichage : sur iPhone et iPad, l'achat unique de
+/// l'App Store ; sur Mac, les abonnements (Stripe).
+pub const PLANS: &[Plan] = if luma_apple::store::AVAILABLE {
+    &Plan::STORE
+} else {
+    &Plan::ALL
+};

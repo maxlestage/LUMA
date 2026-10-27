@@ -5324,3 +5324,37 @@ es = Seleccionar el cielo
 fr = Un masque sur le ciel de la photo, trouvé sur la photo elle-même (clair, uni, relié au haut), ses bords sur les branches et les toits
 en = A mask on the photo's sky, found from the photo itself (bright, even, connected to the top), its edges following branches and roofs
 es = Una máscara sobre el cielo de la foto, encontrado en la propia foto (claro, uniforme, unido a la parte superior), con los bordes sobre ramas y tejados
+
+# ----- LÜMA Premium à vie (iPhone, iPad) -----
+
+fr = À vie
+en = Lifetime
+es = De por vida
+
+fr = 89,99 €
+en = €89.99
+es = 89,99 €
+
+fr = une fois
+en = once
+es = una vez
+
+fr = Un seul paiement : LÜMA Premium pour toujours, sur vos iPhone et iPad.
+en = One payment: LÜMA Premium forever, on your iPhone and iPad.
+es = Un solo pago: LÜMA Premium para siempre, en tus iPhone y iPad.
+
+fr = Une fois pour toutes
+en = Once and for all
+es = De una vez por todas
+
+fr = Acheter
+en = Buy
+es = Comprar
+
+fr = LÜMA Premium est à vous, pour toujours : sur vos autres iPhone et iPad, « Restaurer les achats » avec le même compte Apple.
+en = LÜMA Premium is yours, forever: on your other iPhones and iPads, “Restore Purchases” with the same Apple Account.
+es = LÜMA Premium es tuyo, para siempre: en tus otros iPhone y iPad, «Restaurar compras» con la misma cuenta de Apple.
+
+fr = Déjà acheté avec ce compte Apple ?
+en = Already bought with this Apple Account?
+es = ¿Ya lo compraste con esta cuenta de Apple?

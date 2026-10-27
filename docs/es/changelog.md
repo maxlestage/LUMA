@@ -385,6 +385,9 @@ La fototeca profesional, paso a paso.
   Claroscuro, Pop, Selenio, Cobre…). Cada blanco y negro tiene su propia sensibilidad
   a los colores. Todas verificadas en la carta: distintas entre sí, sin imagen
   aplastada, blanco y negro neutros, mismos renders en la GPU.
+- **iPhone y iPad: un mes de prueba, luego LÜMA Premium de por vida por 89,99 €**: una
+  sola compra en la App Store, sin suscripción, restaurable en tus otros dispositivos y
+  compartible en familia. En Mac nada cambia (14 días de prueba, luego la suscripción).
 
 ## 0.2.0 — octubre de 2026
 

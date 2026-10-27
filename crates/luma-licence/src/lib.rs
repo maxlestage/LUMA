@@ -1,4 +1,5 @@
-//! LÜMA Premium : 14 jours d'essai, puis un abonnement, au mois ou à l'an.
+//! LÜMA Premium : sur Mac, 14 jours d'essai, puis un abonnement, au mois ou à l'an ;
+//! sur iPhone et iPad, un mois d'essai, puis un achat unique, à vie ([`Plan::Lifetime`]).
 //!
 //! Le paiement passe par Stripe (liens de paiement). Après le paiement, Stripe renvoie
 //! le client sur le site de LÜMA, dont le serveur vérifie l'abonnement auprès de Stripe
@@ -30,8 +31,8 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
-/// Durée de l'essai gratuit.
-pub const TRIAL_DAYS: u64 = 14;
+/// Durée de l'essai gratuit : un mois sur iPhone et iPad, 14 jours sur Mac.
+pub const TRIAL_DAYS: u64 = if cfg!(target_os = "ios") { 30 } else { 14 };
 /// Les jours ajoutés après la fin de la période payée : le temps d'un renouvellement,
 /// ou d'un voyage sans réseau.
 pub const GRACE_DAYS: u64 = 14;
@@ -40,20 +41,27 @@ pub const RECHECK_HOURS: u64 = 24;
 
 pub const DAY: u64 = 86_400;
 
-/// Les deux formules.
+/// Les formules : les deux abonnements (Mac, par Stripe) et l'achat unique (iPhone et
+/// iPad, dans l'App Store).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Plan {
     Monthly,
     Annual,
+    /// Un seul paiement dans l'App Store, LÜMA Premium pour toujours.
+    Lifetime,
 }
 
 impl Plan {
+    /// Les abonnements (Stripe).
     pub const ALL: [Plan; 2] = [Plan::Monthly, Plan::Annual];
+    /// Ce que vend l'App Store.
+    pub const STORE: [Plan; 1] = [Plan::Lifetime];
 
     pub fn name(self) -> &'static str {
         match self {
             Plan::Monthly => "Mensuel",
             Plan::Annual => "Annuel",
+            Plan::Lifetime => "À vie",
         }
     }
 
@@ -62,6 +70,7 @@ impl Plan {
         match self {
             Plan::Monthly => "19,99 €",
             Plan::Annual => "239,88 €",
+            Plan::Lifetime => "89,99 €",
         }
     }
 
@@ -69,6 +78,7 @@ impl Plan {
         match self {
             Plan::Monthly => "par mois",
             Plan::Annual => "par an",
+            Plan::Lifetime => "une fois",
         }
     }
 
@@ -77,6 +87,7 @@ impl Plan {
         match self {
             Plan::Monthly => "Sans engagement, résiliable à tout moment.",
             Plan::Annual => "Soit 19,99 € par mois, en un seul paiement.",
+            Plan::Lifetime => "Un seul paiement : LÜMA Premium pour toujours, sur vos iPhone et iPad.",
         }
     }
 
@@ -85,6 +96,7 @@ impl Plan {
         let url = match self {
             Plan::Monthly => option_env!("LUMA_CHECKOUT_MONTHLY"),
             Plan::Annual => option_env!("LUMA_CHECKOUT_ANNUAL"),
+            Plan::Lifetime => None,
         };
         url.filter(|u| u.starts_with("https://"))
     }
@@ -94,12 +106,15 @@ impl Plan {
         match self {
             Plan::Monthly => option_env!("LUMA_APPSTORE_MONTHLY").unwrap_or("app.luma.studio.premium.monthly"),
             Plan::Annual => option_env!("LUMA_APPSTORE_ANNUAL").unwrap_or("app.luma.studio.premium.annual"),
+            Plan::Lifetime => option_env!("LUMA_APPSTORE_LIFETIME").unwrap_or("app.luma.studio.premium.lifetime"),
         }
     }
 
     /// La formule d'un produit de l'App Store.
     pub fn from_app_store_id(id: &str) -> Option<Plan> {
-        Plan::ALL.into_iter().find(|p| p.app_store_id() == id)
+        [Plan::Monthly, Plan::Annual, Plan::Lifetime]
+            .into_iter()
+            .find(|p| p.app_store_id() == id)
     }
 
     /// La durée d'une période payée, en secondes (un mois de 31 jours, une année de
@@ -108,6 +123,8 @@ impl Plan {
         match self {
             Plan::Monthly => 31 * DAY,
             Plan::Annual => 366 * DAY,
+            // Payé une fois pour toutes : aucune fin.
+            Plan::Lifetime => u64::MAX / 2,
         }
     }
 
@@ -270,7 +287,7 @@ pub fn record_store(state: &mut State, product: &str, date: u64) -> bool {
     let Some(plan) = Plan::from_app_store_id(product) else {
         return false;
     };
-    let until = date + plan.period_secs() + GRACE_DAYS * DAY;
+    let until = date.saturating_add(plan.period_secs()).saturating_add(GRACE_DAYS * DAY);
     if state.store.as_ref().is_some_and(|s| s.until >= until) {
         return false;
     }
@@ -460,6 +477,31 @@ pub fn form_encode(form: &[(&str, &str)]) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    /// L'achat unique de l'App Store ouvre LÜMA Premium pour toujours ; un
+    /// abonnement acheté avant ne le raccourcit pas.
+    #[test]
+    fn lifetime_purchase_never_ends() {
+        let mut s = State::new(1_000_000);
+        assert!(record_store(&mut s, Plan::Lifetime.app_store_id(), 2_000_000));
+        let far = 2_000_000 + 100 * 366 * DAY;
+        assert!(matches!(
+            s.access_with(far, None, false),
+            Access::Premium {
+                plan: Some(Plan::Lifetime),
+                ..
+            }
+        ));
+        assert!(!record_store(&mut s, Plan::Monthly.app_store_id(), 3_000_000));
+        assert_eq!(
+            Plan::from_app_store_id("app.luma.studio.premium.lifetime"),
+            Some(Plan::Lifetime)
+        );
+        assert_eq!(Plan::Lifetime.checkout_url(), None);
+        let back = State::from_json(&s.to_json()).unwrap();
+        assert_eq!(back, s);
+    }
+
     use super::*;
     use std::cell::RefCell;
 
