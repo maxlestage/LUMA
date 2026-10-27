@@ -19,6 +19,7 @@ pub mod matching;
 pub mod pano;
 pub mod stack;
 pub mod stars;
+pub mod warp;
 
 use std::path::{Path, PathBuf};
 
@@ -60,6 +61,14 @@ impl Merged {
             skipped,
             exposure: 0.0,
         }
+    }
+
+    /// Étire les bords irréguliers (d'un panorama) pour remplir le rectangle, au lieu de
+    /// les rogner ; le rognage proposé devient ce qui reste à enlever (presque rien).
+    pub fn warp_edges(&mut self) {
+        let (image, covered) = warp::boundary_warp(&self.image, &self.covered);
+        self.crop = autocrop::auto_crop(&covered, image.width, image.height);
+        (self.image, self.covered) = (image, covered);
     }
 
     /// Ramène l'image sous 1 (le plus clair des pixels, à un dix‑millième près, devient
