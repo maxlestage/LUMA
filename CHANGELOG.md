@@ -125,6 +125,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Redressement guidé** (Géométrie, Transformation) : glissez le long de deux à
+  quatre arêtes qui doivent être droites (un mur, un poteau, l'horizon) ; LÜMA règle
+  aussitôt la perspective et la rotation. Une seule ligne ne fait que tourner la photo.
 - **Couleurs accordées entre deux boîtiers** : la même scène photographiée par vos deux
   boîtiers, même cadrée un peu autrement ; choisissez les deux photos, puis « Accorder
   sur la photo choisie » (Mélangeur de couches), ou `luma match-colors`. Le second
