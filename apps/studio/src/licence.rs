@@ -331,7 +331,7 @@ pub const FEATURES: [&str; 6] = [
     "Le développement RAW complet, sur le GPU",
     "100 films, vos préréglages, et vos pellicules mesurées",
     "Masques, films empilés, recadrage et géométrie",
-    "Empilements, ciel étoilé, panoramas en DNG",
+    "Empilements, HDR, ciel étoilé, panoramas en DNG",
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
     if cfg!(target_os = "ios") {
         "Sur iPhone et iPad, avec toutes les mises à jour"
