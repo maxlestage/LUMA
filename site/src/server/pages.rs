@@ -422,9 +422,9 @@ fn films(lang: Lang) -> Element {
         .id("films")
         .child(section_head(
             t(lang, "Films"),
-            heading(h2, t(lang, "Cent films. *Et les vôtres.*")),
+            heading(h2, t(lang, "Cent cinquante films. *Et les vôtres.*")),
             Some(p().text(t(lang,
-                "Portra, Velvia, Kodachrome, CineStill, Tri‑X : des pellicules couleur, noir et blanc, cinéma et instantanées, à poser d'un geste et à doser. Et si vous scannez vos propres pellicules, LÜMA les mesure pour les reproduire.",
+                "Portra, Velvia, Kodachrome, CineStill, Tri‑X, Lomochrome, Aerochrome : des pellicules couleur, noir et blanc, cinéma et instantanées, rangées par familles et faciles à retrouver, à poser d'un geste et à doser. Et si vous scannez vos propres pellicules, LÜMA les mesure pour les reproduire.",
             ))),
         ))
         .child(div().class("film-grid").children(FILMS.iter().enumerate().map(

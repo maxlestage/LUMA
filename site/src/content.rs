@@ -147,7 +147,7 @@ pub const STEPS: [(&str, &str, &str); 4] = [
 ];
 
 /// Quelques films, pour la section Films : (nom, famille, filtre CSS de l'aperçu).
-pub const FILMS: [(&str, &str, &str); 8] = [
+pub const FILMS: [(&str, &str, &str); 12] = [
     (
         "Portra 400",
         "Couleur",
@@ -176,6 +176,26 @@ pub const FILMS: [(&str, &str, &str); 8] = [
         "Couleur",
         "hue-rotate(10deg) saturate(1.15) contrast(1.04)",
     ),
+    (
+        "Lomochrome Purple",
+        "Couleur",
+        "hue-rotate(-70deg) saturate(1.2) contrast(1.05)",
+    ),
+    (
+        "Aerochrome",
+        "Couleur",
+        "hue-rotate(160deg) saturate(1.5) contrast(1.1)",
+    ),
+    (
+        "Néon",
+        "Cinéma",
+        "hue-rotate(-30deg) saturate(1.6) contrast(1.25) brightness(.9)",
+    ),
+    (
+        "Pastel",
+        "Créatif",
+        "saturate(.75) brightness(1.15) contrast(.8)",
+    ),
 ];
 
 /// Vos photos restent chez vous : (titre, texte).
@@ -199,7 +219,7 @@ pub const PRIVACY: [(&str, &str); 4] = [
 ];
 
 /// Les questions fréquentes : (question, réponse).
-pub const FAQ: [(&str, &str); 7] = [
+pub const FAQ: [(&str, &str); 8] = [
     (
         "Quels appareils photo sont pris en charge ?",
         "735 boîtiers de 20 marques, dont Canon, Nikon, Sony, Fujifilm, Panasonic, Olympus et Leica, tous les fichiers DNG et l'iPhone ProRAW, ainsi que les JPEG, HEIC, PNG et TIFF. La liste complète est dans « Boîtiers pris en charge », en bas de page.",
@@ -225,6 +245,10 @@ pub const FAQ: [(&str, &str); 7] = [
         "Sur Mac, uniquement sur ce site. Sur iPhone et iPad, uniquement dans l'App Store, par un abonnement à part.",
     ),
     (
+        "Où vont mes photos exportées sur iPhone ?",
+        "Dans la Pellicule de l'app Photos, telles quelles, avec leurs informations de prise de vue et leur profil de couleur ; une copie reste aussi dans l'app Fichiers.",
+    ),
+    (
         "Et Windows, Linux ou Android ?",
         "Ils viendront après les appareils Apple, avec le même moteur : une photo aura le même rendu partout.",
     ),
@@ -243,7 +267,7 @@ pub const APPLE: [(&str, &str); 4] = [
     ),
     (
         "Le même moteur, *dans ta poche*.",
-        "Vos ProRAW sur iPhone, réglés du bout du pouce : l'image suit le geste, et retrouve toute sa netteté dès que vous lâchez.",
+        "Vos ProRAW sur iPhone, réglés du bout du pouce : l'image suit le geste, retrouve toute sa netteté dès que vous lâchez, et l'export va droit dans la Pellicule.",
     ),
     (
         "Les masques, *au crayon*.",

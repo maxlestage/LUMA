@@ -350,13 +350,13 @@ fr = Films
 en = Films
 es = Películas
 
-fr = Cent films. *Et les vôtres.*
-en = A hundred films. *And yours.*
-es = Cien películas. *Y las tuyas.*
+fr = Cent cinquante films. *Et les vôtres.*
+en = A hundred and fifty films. *And yours.*
+es = Ciento cincuenta películas. *Y las tuyas.*
 
-fr = Portra, Velvia, Kodachrome, CineStill, Tri‑X : des pellicules couleur, noir et blanc, cinéma et instantanées, à poser d'un geste et à doser. Et si vous scannez vos propres pellicules, LÜMA les mesure pour les reproduire.
-en = Portra, Velvia, Kodachrome, CineStill, Tri‑X: color, black‑and‑white, cinema and instant films, applied in one move and dialed in to taste. And if you scan your own film, LÜMA measures it to reproduce it.
-es = Portra, Velvia, Kodachrome, CineStill, Tri‑X: películas en color, en blanco y negro, de cine e instantáneas, que se aplican con un gesto y se dosifican a tu gusto. Y si escaneas tus propios carretes, LÜMA los mide para reproducirlos.
+fr = Portra, Velvia, Kodachrome, CineStill, Tri‑X, Lomochrome, Aerochrome : des pellicules couleur, noir et blanc, cinéma et instantanées, rangées par familles et faciles à retrouver, à poser d'un geste et à doser. Et si vous scannez vos propres pellicules, LÜMA les mesure pour les reproduire.
+en = Portra, Velvia, Kodachrome, CineStill, Tri‑X, Lomochrome, Aerochrome: color, black‑and‑white, cinema and instant films, sorted into families and easy to find, applied in one move and dialed in to taste. And if you scan your own film, LÜMA measures it to reproduce it.
+es = Portra, Velvia, Kodachrome, CineStill, Tri‑X, Lomochrome, Aerochrome: películas en color, en blanco y negro, de cine e instantáneas, ordenadas por familias y fáciles de encontrar, que se aplican con un gesto y se dosifican a tu gusto. Y si escaneas tus propios carretes, LÜMA los mide para reproducirlos.
 
 fr = Couleur
 en = Color
@@ -374,6 +374,10 @@ fr = Noir et blanc
 en = Black & white
 es = Blanco y negro
 
+fr = Créatif
+en = Creative
+es = Creativo
+
 fr = Instantané
 en = Instant
 es = Instantánea
@@ -390,9 +394,9 @@ fr = Des couleurs fidèles sur les écrans des Mac, des iPhone et des iPad, et d
 en = Faithful color on Mac, iPhone and iPad displays, and brilliant highlights on XDR displays.
 es = Colores fieles en las pantallas de Mac, iPhone y iPad, y altas luces brillantes en las pantallas XDR.
 
-fr = Vos ProRAW sur iPhone, réglés du bout du pouce : l'image suit le geste, et retrouve toute sa netteté dès que vous lâchez.
-en = Your ProRAW photos on iPhone, adjusted with your thumb: the image follows the gesture and regains full sharpness the moment you let go.
-es = Tus ProRAW en el iPhone, ajustados con el pulgar: la imagen sigue el gesto y recupera toda su nitidez en cuanto sueltas.
+fr = Vos ProRAW sur iPhone, réglés du bout du pouce : l'image suit le geste, retrouve toute sa netteté dès que vous lâchez, et l'export va droit dans la Pellicule.
+en = Your ProRAW photos on iPhone, adjusted with your thumb: the image follows the gesture, regains full sharpness the moment you let go, and exports go straight to your photo library.
+es = Tus ProRAW en el iPhone, ajustados con el pulgar: la imagen sigue el gesto, recupera toda su nitidez en cuanto sueltas, y la exportación va directa a la fototeca.
 
 fr = Sur iPad, l'Apple Pencil peint les masques à même la photo. Et d'un appareil à l'autre, une photo garde le même rendu.
 en = On iPad, Apple Pencil paints masks right on the photo. And from one device to another, a photo looks the same.
@@ -517,6 +521,14 @@ es = ¿Dónde se compra LÜMA?
 fr = Sur Mac, uniquement sur ce site. Sur iPhone et iPad, uniquement dans l'App Store, par un abonnement à part.
 en = On Mac, only on this site. On iPhone and iPad, only on the App Store, as a separate subscription.
 es = En Mac, solo en este sitio. En iPhone y iPad, solo en el App Store, con una suscripción aparte.
+
+fr = Où vont mes photos exportées sur iPhone ?
+en = Where do my photos go when I export on iPhone?
+es = ¿Adónde van mis fotos exportadas en el iPhone?
+
+fr = Dans la Pellicule de l'app Photos, telles quelles, avec leurs informations de prise de vue et leur profil de couleur ; une copie reste aussi dans l'app Fichiers.
+en = Into your library in the Photos app, as is, with their shooting information and colour profile; a copy also stays in the Files app.
+es = A la fototeca de la app Fotos, tal cual, con su información de toma y su perfil de color; una copia queda también en la app Archivos.
 
 fr = Et Windows, Linux ou Android ?
 en = What about Windows, Linux or Android?
