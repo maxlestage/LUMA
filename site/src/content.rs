@@ -132,7 +132,7 @@ pub const STEPS: [(&str, &str, &str); 4] = [
     (
         "02",
         "Développer",
-        "Lumière, couleur, courbes, détails (bruit par ondelettes, netteté par déconvolution), corrections d'objectif : chaque réglage s'affiche aussitôt, mesuré par la forme d'onde et le vectorscope, et l'original reste intact.",
+        "Lumière, couleur, courbes, détails (bruit par ondelettes, netteté par déconvolution), hautes lumières reconstruites, corrections d'objectif : chaque réglage s'affiche aussitôt, mesuré par la forme d'onde et le vectorscope, et l'original reste intact.",
     ),
     (
         "03",
