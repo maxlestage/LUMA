@@ -15,7 +15,9 @@ La fototeca profesional, paso a paso.
   calculada de ocho en ocho píxeles: de 1,8 a 1,9 veces más rápida (NEF 160 → 85 ms),
   archivos idénticos byte a byte. Después el color (perfil y Saturación), igual: tres
   veces más rápido (NEF 147 → 48 ms). Después la codificación JPEG, otro 13 a 15 % más
-  corta (24 Mpx: 200 → 175 ms), mismos bytes.
+  corta (24 Mpx: 200 → 175 ms), mismos bytes. Después las correcciones de objetivo
+  grabadas por la cámara (Sony, Fujifilm, Olympus, Panasonic), ocho píxeles a la vez:
+  un 30 % más rápidas (ARW de 24 Mpx: 385 → 270 ms), mismos archivos byte a byte.
 
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y

@@ -14,7 +14,10 @@ La photothèque professionnelle, étape par étape.
   de 2,4. Puis l'étape de rendu, calculée huit pixels à la fois : 1,8 à 1,9 fois plus
   rapide (NEF 160 → 85 ms), mêmes fichiers octet pour octet. Puis la couleur (profil
   et Saturation), de même : trois fois plus rapide (NEF 147 → 48 ms). Puis le codage
-  des JPEG, encore 13 à 15 % plus court (24 Mpx : 200 → 175 ms), mêmes octets.
+  des JPEG, encore 13 à 15 % plus court (24 Mpx : 200 → 175 ms), mêmes octets. Puis
+  les corrections d'objectif enregistrées par le boîtier (Sony, Fujifilm, Olympus,
+  Panasonic), huit pixels à la fois : 30 % plus rapides (ARW 24 Mpx : 385 → 270 ms),
+  mêmes fichiers octet pour octet.
 
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
