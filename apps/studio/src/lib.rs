@@ -16,6 +16,7 @@ pub mod style;
 pub mod tiles;
 pub mod widgets;
 pub mod worker;
+pub mod workspaces;
 
 pub use app::Studio;
 
