@@ -85,7 +85,7 @@ USAGE
       (partagé avec l'app) ; --delete le retire.
   luma xmp <raw|f.xmp|f.json> [--set nom=valeur]… [-o f.xmp]
   luma bench <raw> [--size N] [--runs N]
-  luma merge <raw>… [--stack mean|median|max|stars|hdr | --pano perspective|cylindrical|spherical]
+  luma merge <raw>… [--stack mean|median|max|stars|hdr|focus | --pano perspective|cylindrical|spherical]
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
@@ -1136,7 +1136,7 @@ fn bench(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
-/// `luma merge` : empilement (bruit, médiane, filé, étoiles), HDR ou panorama, en DNG.
+/// `luma merge` : empilement (bruit, médiane, filé, étoiles, mise au point), HDR ou panorama, en DNG.
 fn merge(args: Vec<String>) -> Result<(), String> {
     use luma_merge::{Projection, StackMode};
     let mut paths = Vec::new();
@@ -1154,7 +1154,12 @@ fn merge(args: Vec<String>) -> Result<(), String> {
                     "max" | "maximum" => StackMode::Maximum,
                     "stars" | "etoiles" => StackMode::Stars,
                     "hdr" => StackMode::Hdr,
-                    v => return Err(format!("empilement inconnu « {v} » (mean, median, max, stars, hdr)")),
+                    "focus" | "mise-au-point" => StackMode::Focus,
+                    v => {
+                        return Err(format!(
+                            "empilement inconnu « {v} » (mean, median, max, stars, hdr, focus)"
+                        ));
+                    }
                 })
             }
             "--pano" => {
@@ -1195,7 +1200,7 @@ fn merge(args: Vec<String>) -> Result<(), String> {
     };
     eprintln!();
     let template = luma_raw::RawPhoto::open(&paths[paths.len() / 2]).map_err(|e| e.to_string())?;
-    let out = out.unwrap_or_else(|| luma_merge::output_path(&paths[0], &suffix.replace('é', "e")));
+    let out = out.unwrap_or_else(|| luma_merge::output_path(&paths[0], &suffix.replace('é', "e").replace(' ', "-")));
     merged.save(&out, &template, crop).map_err(|e| e.to_string())?;
     println!(
         "{} ({} × {}, {} photo(s){}) en {:.1} s",
