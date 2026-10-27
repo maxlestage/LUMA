@@ -1139,6 +1139,22 @@ fr = Tourner
 en = Rotate
 es = Girar
 
+fr = Redresser automatiquement
+en = Auto straighten
+es = Enderezar automáticamente
+
+fr = Lit l'horizon et les verticales de la photo (Maj+R)
+en = Reads the photo's horizon and verticals (Shift+R)
+es = Lee el horizonte y las verticales de la foto (Mayús+R)
+
+fr = Redressement automatique : {angle}°
+en = Auto straighten: {angle}°
+es = Enderezado automático: {angle}°
+
+fr = Pas de ligne assez sûre pour redresser la photo.
+en = No line clear enough to straighten the photo.
+es = No hay ninguna línea lo bastante clara para enderezar la foto.
+
 fr = O : guide suivant, Maj+O : tourner
 en = O: next overlay, Shift+O: rotate
 es = O: siguiente guía, Mayús+O: girar

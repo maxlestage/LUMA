@@ -2234,6 +2234,8 @@ impl Studio {
                     action = Some("reject");
                 } else if i.consume_key(Modifiers::NONE, Key::U) {
                     action = Some("unflag");
+                } else if i.consume_key(Modifiers::SHIFT, Key::R) {
+                    action = Some("auto_level");
                 } else if i.consume_key(Modifiers::NONE, Key::R) {
                     action = Some("crop");
                 } else if i.consume_key(Modifiers::NONE, Key::Enter) {
@@ -2451,6 +2453,7 @@ impl Studio {
             // Pendant le recadrage, O change de guide de composition.
             "mask_overlay" if self.crop_tool.is_some() => self.crop_guide = self.crop_guide.next(),
             "guide_turn" => self.crop_turn = (self.crop_turn + 1) % 4,
+            "auto_level" => self.auto_level(),
             "mask_overlay" => self.show_mask = !self.show_mask,
             "eyedropper" => self.eyedropper = !self.eyedropper && self.photo.is_some(),
             "targeting" => {
@@ -5728,6 +5731,43 @@ impl Studio {
         .inner
     }
 
+    /// Redresse la photo d'après ses lignes (l'horizon, les verticales), lues sur une
+    /// copie de 1024 px sans recadrage ; rien si aucune ligne n'est assez sûre.
+    pub fn auto_level(&mut self) {
+        let Some(photo) = self.photo.clone() else {
+            return;
+        };
+        let settings = Settings {
+            crop: Crop::default(),
+            ..self.settings.clone()
+        };
+        let mut timings = luma_core::Timings::default();
+        let found = photo
+            .base(
+                &settings,
+                Size::Fit(1024),
+                &luma_core::Cancel::new(),
+                &mut timings,
+            )
+            .ok()
+            .and_then(|base| luma_image::horizon::angle(&base.image));
+        match found {
+            Some(a) => {
+                self.settings.crop.angle = (a * 10.0).round() / 10.0;
+                let label = trf(
+                    "Redressement automatique : {angle}°",
+                    &[("angle", &format_value(self.settings.crop.angle, 1, true))],
+                );
+                self.status = label.clone();
+                self.commit(label);
+                self.touch();
+            }
+            None => {
+                self.status = tr("Pas de ligne assez sûre pour redresser la photo.").into();
+            }
+        }
+    }
+
     /// Demande au prochain rendu de chercher les poussières du capteur.
     pub fn find_dust(&mut self) {
         if self.photo.is_some() {
@@ -7040,6 +7080,13 @@ impl Studio {
                     let c = widgets::slider(ui, &angle, &mut self.settings.crop.angle);
                     if c.changed {
                         self.touch();
+                    }
+                    if ui
+                        .button(tr("Redresser automatiquement"))
+                        .on_hover_text(tr("Lit l'horizon et les verticales de la photo (Maj+R)"))
+                        .clicked()
+                    {
+                        self.act("auto_level");
                     }
                     if c.committed {
                         commits.push(trf(

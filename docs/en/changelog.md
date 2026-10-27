@@ -108,6 +108,9 @@ The professional photo library, step by step.
   LÜMA picks the part of the photo that replaces it. Healing keeps its texture and
   takes the light from the edge of the area; clone makes an exact copy. Area and
   source move with the mouse; size, feather, opacity. Saved in the XMP.
+- **Auto straighten** (Shift+R, or “Auto straighten” in cropping): LÜMA reads the
+  photo's horizon and verticals and levels it; when in doubt (a close-up made of
+  vanishing lines), it leaves it alone.
 - **Crop overlays**: thirds, golden ratio, diagonals, golden triangles, golden spiral
   and grid; O switches to the next overlay while cropping, Shift+O rotates the spiral
   and the triangles.

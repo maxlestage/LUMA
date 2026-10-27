@@ -998,6 +998,35 @@ fn crop_guides() {
 }
 
 #[test]
+fn auto_straighten() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("redresser") else {
+        return;
+    };
+    let (lake, bowl) = (
+        s.dir.join("IMG_1361.DNG"),
+        s.dir.join("Canon_EOS_R5_CRAW_ISO_100_nocrop_dual.CR3"),
+    );
+    if !lake.exists() || !bowl.exists() {
+        return;
+    }
+    // Le lac : son horizon penche un peu ; Maj+R le redresse.
+    s.studio().open_path(&lake);
+    s.wait();
+    s.keys(&[(Modifiers::SHIFT, Key::R)]);
+    s.wait();
+    let a = s.studio().settings.crop.angle;
+    assert!((a + 2.3).abs() < 0.3, "lac : {a}");
+    s.capture("redresser");
+    // La corbeille sur la table, vue de près : des lignes de fuite, pas d'horizon.
+    s.studio().open_path(&bowl);
+    s.wait();
+    s.keys(&[(Modifiers::SHIFT, Key::R)]);
+    s.wait();
+    assert_eq!(s.studio().settings.crop.angle, 0.0);
+}
+
+#[test]
 fn iphone_layout() {
     let _gpu = one_at_a_time();
     // Un iPhone en portrait (points), écran Retina ×3.
