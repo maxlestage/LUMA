@@ -121,6 +121,10 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Fusion HDR** (Fusion, « HDR », ou `luma merge --stack hdr`) : des poses de
+  bracketing, même à main levée, deviennent un seul DNG où les ombres et le ciel
+  gardent leur détail. LÜMA mesure lui-même l'écart d'exposition entre les poses, et ce
+  qui a bougé de l'une à l'autre (feuillage, passants) ne laisse pas de fantôme.
 - **Hautes lumières reconstruites** : la case « Reconstruire les hautes lumières »
   (Lumière, sous la Tonalité) rend à un canal saturé par le capteur la couleur de ses
   voisins ; un ciel brûlé redevient orangé, une serviette blanche retrouve sa texture.
