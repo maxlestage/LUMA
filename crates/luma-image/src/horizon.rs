@@ -20,9 +20,20 @@ const STEP: f32 = 0.1;
 /// La tolérance autour de la direction du gradient, en degrés.
 const SPREAD: f32 = 3.0;
 
-/// L'inclinaison des lignes de `img` (non recadrée), en degrés, à mettre dans
-/// `Crop::angle` pour la redresser ; `None` sans ligne assez longue.
-pub fn angle(img: &RgbImage) -> Option<f32> {
+/// Les accumulateurs de la transformée de Hough d'une copie réduite de la photo.
+struct Hough {
+    diag: f32,
+    bins: usize,
+    rhos: usize,
+    /// Le nombre de votes d'une longue droite (12 % du petit côté).
+    least: u32,
+    horizontal: Vec<u32>,
+    vertical: Vec<u32>,
+}
+
+/// Les droites presque horizontales et presque verticales de `img`, votées par ses
+/// pixels de contour ; `None` sans aucune longue droite.
+fn hough(img: &RgbImage) -> Option<Hough> {
     let (w, h) = RgbImage::fit(img.width, img.height, 1024);
     if w < 32 || h < 32 {
         return None;
@@ -45,7 +56,9 @@ pub fn angle(img: &RgbImage) -> Option<f32> {
                     - 2.0 * at(x, y - 1)
                     - at(x + 1, y - 1);
                 let m = (gx * gx + gy * gy).sqrt();
-                (m > 0.12).then_some((x as f32, y as f32, gx, gy))
+                // Les coordonnées partent du centre : les échos d'une droite verticale
+                // sous des angles voisins restent à la même distance.
+                (m > 0.12).then_some((x as f32 - w as f32 / 2.0, y as f32 - h as f32 / 2.0, gx, gy))
             })
         })
         .collect();
@@ -92,6 +105,28 @@ pub fn angle(img: &RgbImage) -> Option<f32> {
     if longest < least {
         return None;
     }
+    Some(Hough {
+        diag,
+        bins,
+        rhos,
+        least,
+        horizontal,
+        vertical,
+    })
+}
+
+/// L'inclinaison des lignes de `img` (non recadrée), en degrés, à mettre dans
+/// `Crop::angle` pour la redresser ; `None` sans ligne assez longue.
+pub fn angle(img: &RgbImage) -> Option<f32> {
+    let Hough {
+        diag,
+        bins,
+        rhos,
+        least,
+        horizontal,
+        vertical,
+        ..
+    } = hough(img)?;
     // Pour chaque angle, la concentration des votes des longues droites : la somme des
     // carrés des cases d'au moins `least` votes, sur une plage de distances. Au bon
     // angle, les pixels d'une droite tombent dans quelques cases ; à côté, ils
@@ -122,7 +157,7 @@ pub fn angle(img: &RgbImage) -> Option<f32> {
     let horizon = peak(&concentration(&horizontal, 0..rhos));
     // Les verticales, à gauche et à droite du centre : en plongée ou en contre‑plongée,
     // elles convergent et penchent en sens contraires ; leur moyenne en ôte l'effet.
-    let middle = (diag + w as f32 / 2.0).round() as usize;
+    let middle = diag.round() as usize;
     let left = peak(&concentration(&vertical, 0..middle));
     let right = peak(&concentration(&vertical, middle..rhos));
     match (left, right, horizon) {
@@ -136,6 +171,83 @@ pub fn angle(img: &RgbImage) -> Option<f32> {
         (_, _, Some((h, _))) if h.abs() <= 5.0 => Some(h),
         _ => None,
     }
+}
+
+/// Une longue droite presque verticale : sa pente (dx / dy), sa position à mi‑hauteur
+/// (en demi‑diagonales depuis le centre) et sa longueur (en votes).
+#[derive(Clone, Copy, Debug)]
+pub struct Vertical {
+    pub slope: f32,
+    pub x: f32,
+    pub votes: u32,
+}
+
+/// Les longues droites presque verticales de `img` (au plus 16, les plus longues),
+/// chacune une seule fois : autour d'une droite gardée, les échos voisins (±3,5°,
+/// ±12 px) sont écartés.
+pub fn verticals(img: &RgbImage) -> Vec<Vertical> {
+    let Some(hg) = hough(img) else {
+        return Vec::new();
+    };
+    let mut cells: Vec<(u32, usize, usize)> = hg
+        .vertical
+        .iter()
+        .enumerate()
+        .filter(|&(_, &v)| v >= hg.least)
+        .map(|(i, &v)| (v, i / hg.rhos, i % hg.rhos))
+        .collect();
+    cells.sort_by_key(|c| std::cmp::Reverse(c.0));
+    let mut kept: Vec<(u32, usize, usize)> = Vec::new();
+    for c in cells {
+        if kept.len() >= 16 {
+            break;
+        }
+        let near = |k: &(u32, usize, usize)| k.1.abs_diff(c.1) <= 35 && k.2.abs_diff(c.2) <= 12;
+        if !kept.iter().any(near) {
+            kept.push(c);
+        }
+    }
+    let half = hg.diag / 2.0;
+    kept.into_iter()
+        .map(|(votes, b, r)| {
+            let (s, c) = (b as f32 * STEP - RANGE).to_radians().sin_cos();
+            // x cos θ + y sin θ = ρ, à mi‑hauteur (y = 0) : x = ρ / cos θ.
+            let rho = r as f32 - hg.diag;
+            Vertical {
+                slope: -s / c,
+                x: rho / c / half,
+                votes,
+            }
+        })
+        .collect()
+}
+
+/// La Verticale (−100 à +100) de la Transformation qui rend parallèles les verticales
+/// de `img` : leur pente varie avec leur position, et cette variation dit où elles se
+/// rejoignent (le point de fuite), donc de combien l'appareil visait vers le haut ou le
+/// bas. `None` s'il n'y a pas de longues verticales des deux côtés.
+pub fn auto_vertical(img: &RgbImage) -> Option<f32> {
+    let lines = verticals(img);
+    let left = lines.iter().any(|l| l.x < -0.05);
+    let right = lines.iter().any(|l| l.x > 0.05);
+    if lines.len() < 2 || !left || !right {
+        return None;
+    }
+    // La pente en fonction de la position : b = b0 + s·x, moindres carrés pondérés par
+    // la longueur. Le point de fuite est à y = −1/s.
+    let total: f32 = lines.iter().map(|l| l.votes as f32).sum();
+    let mean = |f: &dyn Fn(&Vertical) -> f32| lines.iter().map(|l| f(l) * l.votes as f32).sum::<f32>() / total;
+    let (mx, mb) = (mean(&|l| l.x), mean(&|l| l.slope));
+    let var = mean(&|l| (l.x - mx).powi(2));
+    if var.sqrt() < 0.1 {
+        return None;
+    }
+    let s = mean(&|l| (l.x - mx) * (l.slope - mb)) / var;
+    // tan(visée) = focale × s ; la Verticale compte 25° pour 100, et la corrige en
+    // sens contraire.
+    let pitch = (crate::lens::FOCAL * s).atan().to_degrees();
+    let v = (-pitch / 25.0 * 100.0).clamp(-100.0, 100.0);
+    (v.abs() >= 1.0).then_some(v).or(Some(0.0))
 }
 
 #[cfg(test)]
@@ -197,6 +309,49 @@ mod tests {
         let level = crate::geometry::crop(&img, &crop).unwrap();
         let again = angle(&level).unwrap();
         assert!(again.abs() < 0.2, "après redressement : {again}");
+    }
+
+    /// Une façade : des arêtes verticales régulières sur un ciel, vue telle quelle.
+    fn facade(w: usize, h: usize) -> RgbImage {
+        RgbImage::from_fn(w, h, |x, y| {
+            let u = x as f32 / w as f32 * 9.0;
+            let column = (u.fract() - 0.5).abs() < 0.18;
+            let soft = |d: f32| (0.5 + d).clamp(0.0, 1.0);
+            let edge = soft(((u.fract() - 0.5).abs() - 0.18) * w as f32 / 9.0);
+            let l = if y < h / 8 {
+                0.8
+            } else {
+                0.2 + 0.5 * (1.0 - edge) * f32::from(column as u8).max(1.0 - edge)
+            };
+            let n = noise(x, y) * 0.01;
+            [l + n, l + n, l + n]
+        })
+    }
+
+    #[test]
+    fn converging_verticals_give_the_vertical_correction() {
+        let straight = facade(1200, 900);
+        // Des verticales parallèles : rien à corriger.
+        let v0 = auto_vertical(&straight).expect("des verticales");
+        assert!(v0.abs() < 3.0, "façade droite : {v0}");
+        for tilt in [-40.0f32, 30.0] {
+            // La même façade vue en visant vers le haut ou vers le bas.
+            let t = luma_project::Transform {
+                vertical: tilt,
+                ..luma_project::Transform::default()
+            };
+            let seen = crate::lens::correct(&straight, &luma_project::Lens::default(), &t, (0.0, 0.0)).unwrap();
+            let v = auto_vertical(&seen).expect("des verticales");
+            assert!((v + tilt).abs() < 6.0, "visée {tilt} : correction {v}");
+            // Corrigée de cette valeur, la façade retrouve des verticales parallèles.
+            let fixed = luma_project::Transform {
+                vertical: v,
+                ..luma_project::Transform::default()
+            };
+            let back = crate::lens::correct(&seen, &luma_project::Lens::default(), &fixed, (0.0, 0.0)).unwrap();
+            let again = auto_vertical(&back).unwrap_or(0.0);
+            assert!(again.abs() < 4.0, "après correction de {v} : {again}");
+        }
     }
 
     #[test]

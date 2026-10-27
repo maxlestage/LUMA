@@ -110,6 +110,9 @@ The professional photo library, step by step.
   LÜMA picks the part of the photo that replaces it. Healing keeps its texture and
   takes the light from the edge of the area; clone makes an exact copy. Area and
   source move with the mouse; size, feather, opacity. Saved in the XMP.
+- **Auto verticals** (Shift+V, or the Transform button): a building shot while aiming
+  upwards gets straight walls back; LÜMA measures where its verticals meet and sets the
+  Vertical accordingly.
 - **Auto straighten** (Shift+R, or “Auto straighten” in cropping): LÜMA reads the
   photo's horizon and verticals and levels it; when in doubt (a close-up made of
   vanishing lines), it leaves it alone.

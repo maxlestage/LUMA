@@ -21,7 +21,7 @@ fn smoothstep(e0: f32, e1: f32, x: f32) -> f32 {
 }
 
 /// La focale supposée, en demi‑diagonales (environ un 35 mm sur plein format).
-const FOCAL: f32 = 1.25;
+pub(crate) const FOCAL: f32 = 1.25;
 
 type M3 = [[f32; 3]; 3];
 

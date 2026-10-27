@@ -1143,6 +1143,22 @@ fr = Redresser automatiquement
 en = Auto straighten
 es = Enderezar automáticamente
 
+fr = Verticales automatiques
+en = Auto verticals
+es = Verticales automáticas
+
+fr = Rend parallèles les verticales d'un bâtiment photographié en visant vers le haut (Maj+V)
+en = Makes the verticals of a building shot while aiming upwards parallel (Shift+V)
+es = Vuelve paralelas las verticales de un edificio fotografiado apuntando hacia arriba (Mayús+V)
+
+fr = Verticales automatiques : {value}
+en = Auto verticals: {value}
+es = Verticales automáticas: {value}
+
+fr = Pas de verticales assez nettes des deux côtés de la photo.
+en = No verticals clear enough on both sides of the photo.
+es = No hay verticales lo bastante claras a ambos lados de la foto.
+
 fr = Lit l'horizon et les verticales de la photo (Maj+R)
 en = Reads the photo's horizon and verticals (Shift+R)
 es = Lee el horizonte y las verticales de la foto (Mayús+R)
