@@ -556,6 +556,14 @@ pub struct Studio {
     prints: HashMap<PathBuf, u64>,
     /// La vue des doublons : leurs groupes, à la place du film.
     duplicates: Option<Vec<Vec<PathBuf>>>,
+    /// La carte des photos géolocalisées, à la place de la grille : sa vue (cadrée sur
+    /// les photos à la première image).
+    map: Option<Option<luma_library::map::View>>,
+    /// Les photos d'un lieu de la carte, à la place du film.
+    place: Option<Vec<PathBuf>>,
+    tiles: crate::tiles::Tiles,
+    /// Les groupes de photos dessinés sur la carte : leur place et leur nombre.
+    map_groups: Vec<(egui::Pos2, usize)>,
     stacks: Vec<luma_library::stacks::Stack>,
     /// La pile de chaque photo (sa place dans `stacks`).
     stack_of: HashMap<PathBuf, usize>,
@@ -824,6 +832,10 @@ impl Studio {
             stacking: true,
             prints: HashMap::new(),
             duplicates: None,
+            map: None,
+            place: None,
+            tiles: Default::default(),
+            map_groups: Vec::new(),
             stacks: Vec::new(),
             stack_of: HashMap::new(),
             unfolded: Default::default(),
@@ -962,6 +974,10 @@ impl Studio {
         self.flush_xmp();
         self.current = None;
         self.selected.clear();
+        self.place = None;
+        if self.map.is_some() {
+            self.map = Some(None);
+        }
         self.folder = photos;
         for p in &self.folder {
             if !self.thumbs.contains_key(p) {
@@ -1002,6 +1018,11 @@ impl Studio {
     /// Le catalogue, en lecture.
     pub fn catalog(&self) -> &luma_library::Catalog {
         &self.catalog
+    }
+
+    /// Le catalogue, à modifier (les essais).
+    pub fn catalog_mut(&mut self) -> &mut luma_library::Catalog {
+        &mut self.catalog
     }
 
     /// Une mise à jour du catalogue est‑elle en cours ?
@@ -1300,6 +1321,12 @@ impl Studio {
     }
 
     pub fn visible(&self) -> Vec<usize> {
+        if let Some(place) = &self.place {
+            return place
+                .iter()
+                .filter_map(|p| self.folder.iter().position(|f| f == p))
+                .collect();
+        }
         if let Some(groups) = &self.duplicates {
             // Groupe par groupe, les doublons côte à côte.
             return groups
@@ -1396,6 +1423,60 @@ impl Studio {
     /// Revient au film entier.
     pub fn hide_duplicates(&mut self) {
         self.duplicates = None;
+        self.place = None;
+    }
+
+    /// La position GPS des photos du film qui passent le filtre, par rang.
+    fn placed(&self) -> Vec<(usize, [f64; 2])> {
+        self.visible()
+            .into_iter()
+            .filter_map(|i| Some((i, self.catalog.get(&self.folder[i])?.gps?)))
+            .collect()
+    }
+
+    /// Montre la carte (cadrée sur les photos) ou revient à la grille.
+    pub fn toggle_map(&mut self) {
+        self.map = match self.map {
+            Some(_) => None,
+            None => {
+                self.place = None;
+                self.duplicates = None;
+                Some(None)
+            }
+        };
+    }
+
+    /// La carte est‑elle montrée ? Et sa vue.
+    pub fn map_view(&self) -> Option<Option<luma_library::map::View>> {
+        self.map
+    }
+
+    /// Les groupes de photos de la carte, tels que dessinés : leur place à l'écran et
+    /// leur nombre de photos.
+    pub fn map_groups(&self) -> &[(egui::Pos2, usize)] {
+        &self.map_groups
+    }
+
+    /// Garde les tuiles du fond de carte dans ce dossier (les essais).
+    pub fn use_tiles_dir(&mut self, dir: PathBuf) {
+        self.tiles.use_dir(dir);
+    }
+
+    /// Permet ou non le téléchargement du fond de carte.
+    pub fn set_map_online(&mut self, online: bool) {
+        self.tiles.set_online(online);
+    }
+
+    /// Les tuiles du fond de carte prêtes à dessiner.
+    pub fn map_tiles(&self) -> usize {
+        self.tiles.ready()
+    }
+
+    /// Montre dans la grille les photos d'un lieu de la carte.
+    pub fn show_place(&mut self, photos: Vec<PathBuf>) {
+        self.status = trf("{n} photos à cet endroit", &[("n", &photos.len())]);
+        self.place = Some(photos);
+        self.map = None;
     }
 
     /// Les photos choisies, sauf celle ouverte (la source d'une synchronisation).
@@ -1696,6 +1777,7 @@ impl Studio {
             && self.folder.iter().all(|p| self.thumbs.contains_key(p))
             && self.shown == self.generation
             && self.texture.is_some()
+            && !self.tiles.is_loading()
     }
 
     fn select(&mut self, index: usize) {
@@ -3998,13 +4080,56 @@ impl Studio {
 
     /// La scène : la photo (ou la grille de la Bibliothèque), sans cadre.
     fn stage(&mut self, ui: &mut Ui, rect: Rect) {
+        // La Bibliothèque : la barre de la vue (grille ou carte) au‑dessus.
+        let rect = if self.module == Module::Library && !self.folder.is_empty() {
+            let bar = rect.with_max_y(rect.min.y + 34.0);
+            ui.scope_builder(
+                egui::UiBuilder::new()
+                    .max_rect(bar.shrink2(vec2(14.0, 4.0)))
+                    .layout(egui::Layout::right_to_left(egui::Align::Center)),
+                |ui| self.view_bar(ui),
+            );
+            rect.with_min_y(bar.max.y)
+        } else {
+            rect
+        };
         ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
             ui.set_clip_rect(rect);
             match self.module {
                 Module::Develop => self.viewer(ui),
+                Module::Library if self.map.is_some() => self.map(ui),
                 Module::Library => self.grid(ui),
             }
         });
+    }
+
+    /// Grille ou carte ; revenir au film entier après un lieu ou des doublons.
+    fn view_bar(&mut self, ui: &mut Ui) {
+        let map = self.map.is_some();
+        if ui
+            .selectable_label(map, tr("Carte"))
+            .on_hover_text(tr(
+                "Les photos du film à l'endroit de leur prise de vue (position GPS)",
+            ))
+            .clicked()
+            && !map
+        {
+            self.toggle_map();
+        }
+        if ui.selectable_label(!map, tr("Grille")).clicked() && map {
+            self.toggle_map();
+        }
+        if map {
+            ui.add_space(10.0);
+            if ui.button(tr("Cadrer sur les photos")).clicked() {
+                self.map = Some(None);
+            }
+        } else if self.place.is_some() {
+            ui.add_space(10.0);
+            if ui.button(tr("Tout afficher")).clicked() {
+                self.hide_duplicates();
+            }
+        }
     }
 
     fn set_tool(&mut self, tool: Tool) {
@@ -5108,7 +5233,7 @@ impl Studio {
         );
         ui.add_space(14.0);
         ui.horizontal_wrapped(|ui| {
-            if self.duplicates.is_some() {
+            if self.duplicates.is_some() || self.place.is_some() {
                 if ui.button(tr("Tout afficher")).clicked() {
                     self.hide_duplicates();
                 }
@@ -5122,6 +5247,28 @@ impl Studio {
                 self.show_duplicates();
             }
         });
+        if self.map.is_some() {
+            let placed = self.placed().len();
+            let missing = self.visible().len() - placed;
+            ui.label(
+                RichText::new(trf(
+                    "{n} photos sur la carte, {m} sans position",
+                    &[("n", &placed), ("m", &missing)],
+                ))
+                .size(11.5)
+                .color(theme::DIM),
+            );
+            let mut online = self.tiles.online;
+            if ui
+                .checkbox(&mut online, tr("Fond de carte en ligne"))
+                .on_hover_text(tr(
+                    "Télécharge les tuiles libres de la carte et les garde sur l'appareil ; sinon, celles déjà gardées",
+                ))
+                .changed()
+            {
+                self.tiles.set_online(online);
+            }
+        }
         let mut stacking = self.stacking;
         if ui
             .checkbox(&mut stacking, tr("Empiler les rafales et les séries (S)"))
@@ -5653,6 +5800,155 @@ impl Studio {
     }
 
     /// Bibliothèque, au centre : la grille des vignettes.
+    /// La carte : le fond de tuiles libres, les photos posées à l'endroit de leur prise
+    /// de vue, regroupées quand elles sont trop proches. Glisser pour se déplacer, la
+    /// molette ou deux doigts pour zoomer, toucher un groupe pour voir ses photos.
+    fn map(&mut self, ui: &mut Ui) {
+        use luma_library::map::{self, View};
+        let rect = ui.max_rect();
+        let size = [f64::from(rect.width()), f64::from(rect.height())];
+        let placed = self.placed();
+        let painter = ui.painter().clone();
+        painter.rect_filled(rect, 0.0, Color32::from_gray(0x1a));
+        if placed.is_empty() {
+            self.map_groups.clear();
+            centered_text(
+                &painter,
+                rect.center() - vec2(0.0, 20.0),
+                rect.width() - 40.0,
+                tr("Aucune photo de ce film n'a de position GPS.").into(),
+            );
+            return;
+        }
+        let mut view = self
+            .map
+            .flatten()
+            .unwrap_or_else(|| View::fit(placed.iter().map(|p| p.1), size));
+        let ctx = ui.ctx().clone();
+        let response = ui.interact(
+            rect,
+            ui.scope_id().with("carte"),
+            egui::Sense::click_and_drag(),
+        );
+        let local = |p: egui::Pos2| [f64::from(p.x - rect.min.x), f64::from(p.y - rect.min.y)];
+        if response.dragged() {
+            let d = response.drag_delta();
+            view.pan([f64::from(d.x), f64::from(d.y)]);
+        }
+        if response.hovered() || response.dragged() {
+            let (scroll, pinch) = ui.input(|i| (i.smooth_scroll_delta.y, i.zoom_delta()));
+            let factor = f64::from(pinch) * (f64::from(scroll) / 240.0).exp2();
+            if (factor - 1.0).abs() > 1e-4 {
+                let at = ui
+                    .input(|i| i.pointer.hover_pos())
+                    .map_or([size[0] / 2.0, size[1] / 2.0], local);
+                view.zoom_at(factor, at, size);
+            }
+        }
+        if response.double_clicked()
+            && let Some(p) = response.interact_pointer_pos()
+        {
+            view.zoom_at(2.0, local(p), size);
+        }
+
+        // Le fond : les tuiles prêtes, un quadrillage sous celles qui manquent.
+        self.tiles.receive(&ctx);
+        let to_rect = |at: [f64; 2], side: f64| {
+            Rect::from_min_size(
+                rect.min + vec2(at[0] as f32, at[1] as f32),
+                vec2(side as f32, side as f32),
+            )
+        };
+        for (tile, at, side) in view.tiles(size) {
+            let r = to_rect(at, side);
+            match self.tiles.get(&ctx, tile) {
+                Some(t) => {
+                    painter.image(
+                        t.id(),
+                        r,
+                        Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                        // Un peu assombri : la carte reste derrière les photos.
+                        Color32::from_gray(0xd8),
+                    );
+                }
+                None => {
+                    painter.rect_stroke(
+                        r,
+                        0.0,
+                        egui::Stroke::new(1.0, Color32::from_gray(0x2c)),
+                        egui::StrokeKind::Inside,
+                    );
+                }
+            }
+        }
+
+        // Les photos, en groupes : la vignette de la première et leur nombre.
+        let points: Vec<[f64; 2]> = placed.iter().map(|p| p.1).collect();
+        let groups = map::clusters(&points, &view, size, 56.0);
+        let mut chosen = None;
+        self.map_groups.clear();
+        let click = response
+            .clicked()
+            .then(|| response.interact_pointer_pos())
+            .flatten();
+        for group in &groups {
+            let center = rect.min + vec2(group.at[0] as f32, group.at[1] as f32);
+            let r = Rect::from_center_size(center, vec2(44.0, 44.0));
+            painter.rect_filled(r.expand(2.0), 5.0, Color32::WHITE);
+            let first = &self.folder[placed[group.members[0]].0];
+            match self.thumbs.get(first) {
+                Some(t) => {
+                    let [w, h] = t.size();
+                    // Le carré du milieu de la vignette.
+                    let (w, h) = (w as f32, h as f32);
+                    let side = w.min(h);
+                    let uv = Rect::from_center_size(pos2(0.5, 0.5), vec2(side / w, side / h));
+                    painter.image(t.id(), r, uv, Color32::WHITE);
+                }
+                None => {
+                    painter.rect_filled(r, 3.0, Color32::from_gray(0x44));
+                }
+            }
+            let n = group.members.len();
+            self.map_groups.push((center, n));
+            if n > 1 {
+                let text = n.to_string();
+                let galley =
+                    painter.layout_no_wrap(text, egui::FontId::proportional(11.0), Color32::WHITE);
+                let chip = Rect::from_min_size(
+                    pos2(r.max.x - galley.size().x / 2.0 - 4.0, r.min.y - 10.0),
+                    galley.size(),
+                )
+                .expand2(vec2(5.0, 1.5));
+                painter.rect_filled(chip, 8.0, theme::ACCENT);
+                painter.galley(chip.min + vec2(5.0, 1.5), galley, Color32::WHITE);
+            }
+            if let Some(p) = click
+                && r.expand(6.0).contains(p)
+            {
+                chosen = Some(group.members.clone());
+            }
+        }
+        // Le crédit des tuiles libres, lisible sur tous les fonds.
+        let credit = painter.layout_no_wrap(
+            map::ATTRIBUTION.to_owned(),
+            egui::FontId::proportional(10.5),
+            Color32::from_gray(0xe0),
+        );
+        let chip = Rect::from_min_size(rect.max - credit.size() - vec2(10.0, 7.0), credit.size())
+            .expand2(vec2(5.0, 2.0));
+        painter.rect_filled(chip, 4.0, Color32::from_black_alpha(150));
+        painter.galley(chip.min + vec2(5.0, 2.0), credit, Color32::from_gray(0xe0));
+        self.map = Some(Some(view));
+        if let Some(members) = chosen {
+            let photos = members
+                .into_iter()
+                .map(|k| self.folder[placed[k].0].clone())
+                .collect();
+            self.show_place(photos);
+        }
+    }
+
     fn grid(&mut self, ui: &mut Ui) {
         let visible = self.visible();
         if visible.is_empty() {

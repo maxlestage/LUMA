@@ -223,6 +223,11 @@ La photothèque professionnelle, étape par étape.
   dans le XMP et les JPEG exportés ; **mots‑clés hiérarchiques** (« Lieux > France >
   Paris ») ; **modèles de métadonnées** (auteur, droits, lieu, mots‑clés) enregistrés
   et donnés d'un coup.
+- **Carte** (Bibliothèque, « Carte ») : les photos du film à l'endroit de leur prise
+  de vue (position GPS de l'EXIF, gardée dans la photothèque), regroupées quand elles
+  sont proches ; glisser, zoomer à la molette ou à deux doigts, toucher un groupe pour
+  voir ses photos. Fond de tuiles libres, téléchargées par le système et gardées sur
+  l'appareil ; hors ligne, celles déjà gardées.
 
 ## 0.2.0 — octobre 2026
 

@@ -137,6 +137,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
 | IPTC information in the XMP: title, caption, creator, copyright, location (sublocation, city, state, country); hierarchical keywords (“Places > France > Paris”, each level also in `dc:subject`); metadata templates given to the selected photos; in exported JPEGs | ✅ |
+| Map of geotagged photos (GPS position from the EXIF): groups of nearby photos, drag, zoom, tap a group to see its photos; open tile base map kept on the device, usable offline | ✅ |
 | Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates, ISO, focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
 | Manual and smart collections (rule: rating, date, camera, lens, ISO, keywords…), saved in the catalogue | ✅ |
 | Keywords in the app: entry (several at once, separated by commas), added to and removed from every selected photo, the folder's keywords with their count, grid filter | ✅ |
