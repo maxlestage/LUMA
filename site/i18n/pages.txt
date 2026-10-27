@@ -282,9 +282,9 @@ fr = Développer
 en = Develop
 es = Revelar
 
-fr = Lumière, couleur, courbes, détails (bruit par ondelettes, netteté par déconvolution), corrections d'objectif : chaque réglage s'affiche aussitôt, mesuré par la forme d'onde et le vectorscope, et l'original reste intact.
-en = Light, color, curves, detail (wavelet noise reduction, deconvolution sharpening), lens corrections: every adjustment shows up right away, measured by the waveform and vectorscope, and the original stays untouched.
-es = Luz, color, curvas, detalle (ruido por ondículas, enfoque por deconvolución), correcciones de objetivo: cada ajuste se ve al instante, medido por la forma de onda y el vectorscopio, y el original queda intacto.
+fr = Lumière, couleur, courbes, détails (bruit par ondelettes, netteté par déconvolution), hautes lumières reconstruites, corrections d'objectif : chaque réglage s'affiche aussitôt, mesuré par la forme d'onde et le vectorscope, et l'original reste intact.
+en = Light, color, curves, detail (wavelet noise reduction, deconvolution sharpening), highlight reconstruction, lens corrections: every adjustment shows up right away, measured by the waveform and vectorscope, and the original stays untouched.
+es = Luz, color, curvas, detalle (ruido por ondículas, enfoque por deconvolución), altas luces reconstruidas, correcciones de objetivo: cada ajuste se ve al instante, medido por la forma de onda y el vectorscopio, y el original queda intacto.
 
 fr = Affiner
 en = Refine
