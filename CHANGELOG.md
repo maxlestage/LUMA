@@ -117,6 +117,9 @@ La photothèque professionnelle, étape par étape.
   la texture et prend la lumière du bord de la zone ; le tampon en fait une copie
   exacte. Zone et source se déplacent à la souris ; taille, contour progressif,
   opacité. Enregistrés dans le XMP.
+- **Verticales automatiques** (Maj+V, ou le bouton de la Transformation) : un
+  bâtiment photographié en visant vers le haut retrouve des murs droits ; LÜMA
+  mesure où ses verticales se rejoignent et règle la Verticale en conséquence.
 - **Redressement automatique** (Maj+R, ou « Redresser automatiquement » dans le
   recadrage) : LÜMA lit l'horizon et les verticales de la photo et la remet d'aplomb ;
   dans le doute (une photo de près, toute en lignes de fuite), il ne touche à rien.
