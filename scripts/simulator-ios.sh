@@ -61,35 +61,30 @@ else
   sleep 6
   shot apres-importer
 
-  # Dans le sélecteur : la première photo, puis « Ajouter ».
-  idb ui describe-all --udid "$udid" --json > "$out/ecran.json" || true
-  tap_label() {
-    python3 - "$out/ecran.json" "$@" <<'PY' || return 1
-import json, sys
-items = json.load(open(sys.argv[1]))
-wanted = [w.lower() for w in sys.argv[2:]]
-for it in items:
-    label = (it.get("AXLabel") or "").lower()
-    if any(w in label for w in wanted):
-        f = it["frame"]
-        print(f'{f["x"] + f["width"] / 2:.0f} {f["y"] + f["height"] / 2:.0f}')
-        sys.exit(0)
-sys.exit(1)
-PY
-  }
-  if pos=$(tap_label "photo," "photo"); then
-    echo "→ toucher la première photo ($pos)"
-    idb ui tap --udid "$udid" $pos
-    sleep 2
-    shot photo-choisie
-    idb ui describe-all --udid "$udid" --json > "$out/ecran.json" || true
-    if pos=$(tap_label "ajouter" "add"); then
-      echo "→ toucher « Ajouter » ($pos)"
-      idb ui tap --udid "$udid" $pos
-    fi
-  fi
+  # Dans le sélecteur (grille de trois colonnes sous le bandeau) : deux photos de la
+  # deuxième rangée, puis la coche en haut à droite. Positions en fractions de l'écran.
+  read -r pw ph < <(sips -g pixelWidth -g pixelHeight "$out/02-apres-importer.png" | awk '/pixelWidth/ {w=$2} /pixelHeight/ {h=$2} END {print w, h}')
+  scale=3
+  tap_at() { idb ui tap --udid "$udid" "$(python3 -c "print(round($pw / $scale * $1))")" "$(python3 -c "print(round($ph / $scale * $2))")"; }
+  echo "→ choisir deux photos et valider"
+  tap_at 0.17 0.56
+  sleep 1
+  tap_at 0.50 0.56
+  sleep 1
+  shot photos-choisies
+  tap_at 0.90 0.12
   sleep 10
   shot apres-import
+  # La photo importée, puis chaque outil de la barre du bas.
+  bar=$(sed -n 's/^barre des outils : \([0-9]*\) \([0-9]*\) \([0-9]*\).*/\1 \2 \3/p' "$journal" | tail -1)
+  if [ -n "$bar" ]; then
+    read -r bx by bw <<<"$bar"
+    for i in 1 3 5 6 7; do
+      idb ui tap --udid "$udid" "$(python3 -c "print(round($bx + $bw * ($i + 0.5) / 8))")" "$by"
+      sleep 4
+      shot "outil-$i"
+    done
+  fi
 fi
 
 cp "$journal" "$out/journal.txt" 2>/dev/null || true

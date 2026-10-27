@@ -2697,6 +2697,15 @@ impl Studio {
                 pos2(full.max.x - m, full.max.y - m),
             );
             self.stage(ui, stage);
+            static BAR: std::sync::Once = std::sync::Once::new();
+            BAR.call_once(|| {
+                crate::journal(&format!(
+                    "barre des outils : {:.0} {:.0} {:.0} (gauche, milieu, largeur en points)",
+                    bar.min.x + 12.0,
+                    bar.center().y,
+                    bar.width() - 24.0
+                ))
+            });
             self.island(ui, bar, |s, ui| s.rail(ui, true));
             self.island(ui, sheet, |s, ui| s.inspector(ui));
         } else {
