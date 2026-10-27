@@ -168,6 +168,29 @@ fn before_after_and_clipping() {
     s.capture("avant");
 }
 
+/// Maj+J : forme d'onde, parade RVB, vectorscope, puis retour à l'histogramme ; chaque
+/// instrument arrive avec l'aperçu.
+#[test]
+fn scopes_waveform_parade_vectorscope() {
+    use luma_image::scopes::Scope;
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("instruments") else {
+        return;
+    };
+    assert_eq!(s.studio().scope(), (Scope::Histogram, false));
+    for (scope, name) in [
+        (Scope::Waveform, "forme-d-onde"),
+        (Scope::Parade, "parade"),
+        (Scope::Vectorscope, "vectorscope"),
+    ] {
+        s.keys(&[(Modifiers::SHIFT, Key::J)]);
+        assert_eq!(s.studio().scope(), (scope, true));
+        s.capture(name);
+    }
+    s.keys(&[(Modifiers::SHIFT, Key::J)]);
+    assert_eq!(s.studio().scope(), (Scope::Histogram, false));
+}
+
 #[test]
 fn library_ratings_and_flags() {
     let _gpu = one_at_a_time();

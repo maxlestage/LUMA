@@ -983,6 +983,46 @@ fr = Clic ou J : afficher l'écrêtage
 en = Click or J: show clipping
 es = Clic o J: mostrar recorte
 
+fr = Forme d'onde
+en = Waveform
+es = Forma de onda
+
+fr = Parade RVB
+en = RGB Parade
+es = Desfile RGB
+
+fr = Vectorscope
+en = Vectorscope
+es = Vectorscopio
+
+fr = Maj+J : instrument suivant
+en = Shift+J: next scope
+es = Mayús+J: siguiente instrumento
+
+fr = R|vectorscope
+en = R
+es = R
+
+fr = J|vectorscope
+en = Y
+es = Am
+
+fr = V|vectorscope
+en = G
+es = V
+
+fr = C|vectorscope
+en = C
+es = C
+
+fr = B|vectorscope
+en = B
+es = Az
+
+fr = M|vectorscope
+en = M
+es = M
+
 fr = Base
 en = Basic
 es = Básicos

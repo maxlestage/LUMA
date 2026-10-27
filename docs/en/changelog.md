@@ -208,6 +208,11 @@ The professional photo library, step by step.
   exported JPEGs; **hierarchical keywords** (“Places > France > Paris”); **metadata
   templates** (creator, copyright, location, keywords) saved and applied in one go.
 
+- **Scopes** (above the histogram, or Shift+J): **waveform** (luminance, column by
+  column), **RGB parade** (each channel on its own) and **vectorscope** (hue and
+  saturation, with the 75% primary targets and the skin‑tone line), computed on the
+  preview at every render, soft proofing included.
+
 ## 0.2.0 — October 2026
 
 Every image format, three languages, and the store.
