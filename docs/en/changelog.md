@@ -122,6 +122,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Liquify** (Retouch): Push, Bloat and Pucker with a brush, with its size and
+  strength; to straighten a line, refine a shape or fix a fold. Every stroke is kept in
+  the XMP and can be undone. No AI.
 - **Select sky** (Masks, Masking): one click and the sky becomes a mask, clouds
   included, following the edges of trees and roofs; a lake reflecting it stays out.
   No AI: only the colours and texture of the photo.

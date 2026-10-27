@@ -129,6 +129,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Licuar** (Retoque): Empujar, Inflar y Desinflar con un pincel, con su tamaño y su
+  fuerza; para enderezar una línea, afinar una forma o corregir un pliegue. Cada trazo
+  se guarda en el XMP y se puede deshacer. Sin IA.
 - **Seleccionar el cielo** (Máscaras, Enmascarado): un clic y el cielo se convierte
   en una máscara, nubes incluidas, siguiendo los bordes de árboles y tejados; un lago
   que lo refleja queda fuera. Sin IA: solo los colores y la textura de la foto.
