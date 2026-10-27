@@ -126,6 +126,11 @@ pub struct Local {
     pub tint: f32,
     pub saturation: f32,
     pub clarity: f32,
+    /// Texture : le détail fin (peau, feuillage) adouci ou relevé, sans toucher aux
+    /// contours ni aux grandes formes.
+    pub texture: f32,
+    /// Correction du voile dans la zone (positif : le retire ; négatif : en ajoute).
+    pub dehaze: f32,
     /// Moiré : les couleurs parasites d'un motif fin (tissu, grille) adoucies.
     pub moire: f32,
     /// Frange : les liserés colorés le long des contours nets (aberration chromatique
@@ -151,6 +156,8 @@ impl Local {
             &mut self.tint,
             &mut self.saturation,
             &mut self.clarity,
+            &mut self.texture,
+            &mut self.dehaze,
         ] {
             fix(v, 100.0);
         }
