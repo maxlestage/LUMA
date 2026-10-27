@@ -4544,3 +4544,13 @@ es = Bicromía
 fr = Deux couleurs seulement : ombres bleu nuit, lumières ambrées.
 en = Two colours only: midnight-blue shadows, amber highlights.
 es = Solo dos colores: sombras azul noche, luces ámbar.
+
+# ----- Recherche dans les films -----
+
+fr = Rechercher un film
+en = Search films
+es = Buscar una película
+
+fr = Aucun film ne correspond.
+en = No film matches.
+es = Ninguna película coincide.

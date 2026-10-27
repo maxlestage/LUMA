@@ -320,6 +320,8 @@ The professional photo library, step by step.
   Instax Wide, Impossible Project, Instamatic) and creative (Pastel, Autumn, Winter,
   Spring, Mist, Backlight, Duotone). All checked on the chart like the others:
   distinct, no crushed image, neutral black and white, same renders on the GPU.
+- **Search films** (Films tool): by name or description, ignoring accents and case;
+  only the matching films remain, in their opened families.
 
 ## 0.2.0 — October 2026
 

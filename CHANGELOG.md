@@ -346,6 +346,9 @@ La photothèque professionnelle, étape par étape.
   Printemps, Brume, Contre-jour, Bichromie). Tous vérifiés sur la mire comme les
   autres : distincts, sans image écrasée, noir et blanc neutres, mêmes rendus sur le
   GPU.
+- **Rechercher un film** (outil Films) : par nom ou par description (« Kodak »,
+  « chaud », « noir et blanc »), sans accents ni majuscules ; seuls les films trouvés
+  restent, dans leurs familles ouvertes.
 
 ## 0.2.0 — octobre 2026
 
