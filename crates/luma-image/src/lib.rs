@@ -23,6 +23,7 @@ pub mod curve;
 pub mod detail;
 pub mod dust;
 pub mod effects;
+pub mod enlarge;
 pub mod geometry;
 pub mod highlights;
 pub mod horizon;
