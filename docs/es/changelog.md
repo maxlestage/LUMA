@@ -321,6 +321,9 @@ La fototeca profesional, paso a paso.
   la app Fotos tal cual (EXIF, IPTC y perfil de color conservados; iOS pide permiso la
   primera vez), y también queda en LÜMA/ (app Archivos). La ventana Exportar cabe en la
   pantalla del iPhone, cada ajuste bajo su título.
+- **Películas en familias plegables**: color, blanco y negro, cine, instantáneas, mis
+  ajustes, mis películas; cada título indica cuántas películas tiene la familia, y al
+  principio solo se abre la de la película aplicada.
 
 ## 0.2.0 — octubre de 2026
 

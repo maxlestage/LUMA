@@ -6749,7 +6749,6 @@ impl Studio {
             ui.add_space(6.0);
         }
         let mut choose = None;
-        let width = ((ui.available_width() - 10.0) / 2.0).floor();
         let mut sections: Vec<(&str, Vec<usize>)> = presets::Group::ALL
             .iter()
             .map(|&g| {
@@ -6776,81 +6775,100 @@ impl Studio {
             sections.splice(0..0, own);
         }
         let mut export = None;
-        for (title, items) in sections {
-            sub_title(ui, tr(title));
-            if title == "Mes préréglages" {
-                self.my_presets(ui);
-            }
-            if title == "Mes pellicules" {
-                self.my_films(ui, &photo);
-            }
-            for row in items.chunks(2) {
-                ui.horizontal(|ui| {
-                    for &k in row {
-                        let (rect, r) = ui.allocate_exact_size(
-                            vec2(width, width * 0.72 + 20.0),
-                            egui::Sense::click(),
-                        );
-                        let image = Rect::from_min_size(rect.min, vec2(width, width * 0.72));
-                        let p = ui.painter();
-                        match &self.previews[k] {
-                            Some(t) => {
-                                let [w, h] = t.size();
-                                p.rect_filled(image, 10.0, Color32::from_gray(0x10));
-                                p.image(
-                                    t.id(),
-                                    fit(image, w, h),
-                                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                                    Color32::WHITE,
+        // Chaque famille se plie et se déplie (son titre dit combien elle compte de
+        // films) ; au départ, seule celle du film appliqué est ouverte, sinon la première.
+        let active = self.preset.as_ref().map(|p| p.0);
+        let first = sections.iter().position(|(_, items)| !items.is_empty());
+        for (n, (title, items)) in sections.into_iter().enumerate() {
+            let open = match active {
+                Some(k) => items.contains(&k),
+                None => Some(n) == first,
+            };
+            let header = RichText::new(format!("{} ({})", tr(title), items.len())).strong();
+            egui::CollapsingHeader::new(header)
+                .id_salt(("famille", title))
+                .default_open(open)
+                .show(ui, |ui| {
+                    let width = ((ui.available_width() - 10.0) / 2.0).floor();
+                    if title == "Mes préréglages" {
+                        self.my_presets(ui);
+                    }
+                    if title == "Mes pellicules" {
+                        self.my_films(ui, &photo);
+                    }
+                    for row in items.chunks(2) {
+                        ui.horizontal(|ui| {
+                            for &k in row {
+                                let (rect, r) = ui.allocate_exact_size(
+                                    vec2(width, width * 0.72 + 20.0),
+                                    egui::Sense::click(),
                                 );
-                            }
-                            None => {
-                                p.rect_filled(image, 10.0, theme::SECTION);
-                            }
-                        }
-                        let active = self.preset.as_ref().is_some_and(|x| x.0 == k);
-                        if active {
-                            p.rect_stroke(
-                                image.expand(2.0),
-                                11.0,
-                                egui::Stroke::new(2.0, theme::ACCENT),
-                                egui::StrokeKind::Outside,
-                            );
-                        } else if r.hovered() {
-                            p.rect_stroke(
-                                image,
-                                10.0,
-                                egui::Stroke::new(1.0, theme::TEXT),
-                                egui::StrokeKind::Outside,
-                            );
-                        }
-                        p.text(
-                            pos2(rect.min.x + 2.0, image.max.y + 4.0),
-                            egui::Align2::LEFT_TOP,
-                            self.film_name(k),
-                            egui::FontId::proportional(12.0),
-                            if active { theme::ACCENT } else { theme::TEXT },
-                        );
-                        let hint = match self.film(k) {
-                            Film::Builtin(p) => tr(p.description),
-                            Film::Lut(_) => tr("Pellicule mesurée ou LUT 3D importée (.cube)."),
-                            Film::Mine(..) => tr("Mon préréglage."),
-                        };
-                        let r =
-                            r.on_hover_text(format!("{hint}\n{}", tr("Clic droit : exporter.")));
-                        r.context_menu(|ui| {
-                            if ui.button(tr("Exporter ce préréglage…")).clicked() {
-                                export = Some(k);
-                                ui.close();
+                                let image =
+                                    Rect::from_min_size(rect.min, vec2(width, width * 0.72));
+                                let p = ui.painter();
+                                match &self.previews[k] {
+                                    Some(t) => {
+                                        let [w, h] = t.size();
+                                        p.rect_filled(image, 10.0, Color32::from_gray(0x10));
+                                        p.image(
+                                            t.id(),
+                                            fit(image, w, h),
+                                            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                                            Color32::WHITE,
+                                        );
+                                    }
+                                    None => {
+                                        p.rect_filled(image, 10.0, theme::SECTION);
+                                    }
+                                }
+                                let active = self.preset.as_ref().is_some_and(|x| x.0 == k);
+                                if active {
+                                    p.rect_stroke(
+                                        image.expand(2.0),
+                                        11.0,
+                                        egui::Stroke::new(2.0, theme::ACCENT),
+                                        egui::StrokeKind::Outside,
+                                    );
+                                } else if r.hovered() {
+                                    p.rect_stroke(
+                                        image,
+                                        10.0,
+                                        egui::Stroke::new(1.0, theme::TEXT),
+                                        egui::StrokeKind::Outside,
+                                    );
+                                }
+                                p.text(
+                                    pos2(rect.min.x + 2.0, image.max.y + 4.0),
+                                    egui::Align2::LEFT_TOP,
+                                    self.film_name(k),
+                                    egui::FontId::proportional(12.0),
+                                    if active { theme::ACCENT } else { theme::TEXT },
+                                );
+                                let hint = match self.film(k) {
+                                    Film::Builtin(p) => tr(p.description),
+                                    Film::Lut(_) => {
+                                        tr("Pellicule mesurée ou LUT 3D importée (.cube).")
+                                    }
+                                    Film::Mine(..) => tr("Mon préréglage."),
+                                };
+                                let r = r.on_hover_text(format!(
+                                    "{hint}\n{}",
+                                    tr("Clic droit : exporter.")
+                                ));
+                                r.context_menu(|ui| {
+                                    if ui.button(tr("Exporter ce préréglage…")).clicked() {
+                                        export = Some(k);
+                                        ui.close();
+                                    }
+                                });
+                                if r.clicked() {
+                                    choose = Some(k);
+                                }
                             }
                         });
-                        if r.clicked() {
-                            choose = Some(k);
-                        }
+                        ui.add_space(4.0);
                     }
                 });
-                ui.add_space(4.0);
-            }
         }
         if let Some(k) = choose {
             self.choose_film(k);
