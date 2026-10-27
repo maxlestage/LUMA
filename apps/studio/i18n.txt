@@ -4594,3 +4594,11 @@ es = Deformar los bordes
 fr = Les bords irréguliers du panorama sont étirés pour remplir le rectangle, au lieu d'être rognés
 en = The panorama's ragged edges are stretched to fill the rectangle instead of being cropped
 es = Los bordes irregulares de la panorámica se estiran para llenar el rectángulo en lugar de recortarse
+
+fr = Supprimer|retouche
+en = Remove
+es = Eliminar
+
+fr = Un cercle sur ce qui gêne (fil, passant, déchet) : la photo autour le remplace, texture comprise
+en = A circle over what is in the way (wire, passer-by, litter): the surrounding photo replaces it, texture included
+es = Un círculo sobre lo que molesta (cable, transeúnte, basura): la foto de alrededor lo sustituye, textura incluida

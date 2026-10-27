@@ -4463,13 +4463,14 @@ impl Studio {
                     self.selected_mask = None;
                 }
             }
-            "retouch" | "retouch_heal" | "retouch_clone" | "retouch_red_eye"
+            "retouch" | "retouch_heal" | "retouch_clone" | "retouch_red_eye" | "retouch_remove"
                 if self.photo.is_some() =>
             {
                 use luma_project::SpotKind;
                 let kind = match action {
                     "retouch_clone" => SpotKind::Clone,
                     "retouch_red_eye" => SpotKind::RedEye,
+                    "retouch_remove" => SpotKind::Remove,
                     "retouch_heal" => SpotKind::Heal,
                     _ => self.retouch.unwrap_or(SpotKind::Heal),
                 };
@@ -9123,7 +9124,8 @@ impl Studio {
             .open(open.then_some(true))
             .default_open(false)
             .show(ui, |ui| {
-                ui.horizontal(|ui| {
+                // Quatre outils : à la ligne si le panneau est étroit.
+                ui.horizontal_wrapped(|ui| {
                     for (kind, label, hint, action) in [
                         (
                             SpotKind::Heal,
@@ -9142,6 +9144,12 @@ impl Studio {
                             tr("Yeux rouges"),
                             tr("Un cercle sur chaque œil : la pupille rouge redevient noire"),
                             "retouch_red_eye",
+                        ),
+                        (
+                            SpotKind::Remove,
+                            tr("Supprimer|retouche"),
+                            tr("Un cercle sur ce qui gêne (fil, passant, déchet) : la photo autour le remplace, texture comprise"),
+                            "retouch_remove",
                         ),
                     ] {
                         if ui
@@ -9192,6 +9200,7 @@ impl Studio {
                         SpotKind::Heal => tr("Correcteur"),
                         SpotKind::Clone => tr("Tampon"),
                         SpotKind::RedEye => tr("Yeux rouges"),
+                        SpotKind::Remove => tr("Supprimer|retouche"),
                     };
                     let text = RichText::new(format!("{}. {name}", i + 1)).size(12.0);
                     if ui.selectable_label(selected == Some(i), text).clicked() {
@@ -9213,8 +9222,9 @@ impl Studio {
                 let scene = self.scene_map.clone();
                 let mut delete = false;
                 let s = &mut self.settings.spots[i];
-                // Les yeux rouges n'ont pas de source : ni choix du type, ni nouvelle source.
-                let red_eye = s.kind == SpotKind::RedEye;
+                // Les yeux rouges et la suppression n'ont pas de source : ni choix du type,
+                // ni nouvelle source.
+                let red_eye = !s.kind.has_source();
                 ui.horizontal(|ui| {
                     if red_eye {
                         return;
