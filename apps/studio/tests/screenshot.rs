@@ -286,6 +286,45 @@ fn compare_two_to_four_photos() {
 }
 
 #[test]
+fn bursts_are_stacked() {
+    let _gpu = one_at_a_time();
+    // Trois prises du même boîtier dans la même seconde : le RAW Sony et deux copies.
+    let Some(mut s) = Session::open_prepared("piles", [1440.0, 900.0], 1.0, |dir| {
+        for n in ["_DSC0010.ARW", "_DSC0011.ARW"] {
+            std::fs::copy(dir.join("_DSC0009.ARW"), dir.join(n)).unwrap();
+        }
+    }) else {
+        return;
+    };
+    s.keys(&[(NONE, Key::G)]);
+    let all = s.studio().photos().len();
+    let stacks = s.studio().stacks().to_vec();
+    assert_eq!(stacks.len(), 1, "{stacks:?}");
+    assert_eq!(stacks[0].kind, luma_library::stacks::Kind::Burst);
+    assert_eq!(stacks[0].photos.len(), 3);
+    // Repliée : la première seule dans la grille.
+    assert_eq!(s.studio().visible().len(), all - 2);
+    s.capture("piles");
+    // S déplie la pile de la photo ouverte, puis la replie.
+    let cover = stacks[0].photos[0].clone();
+    let i = s
+        .studio()
+        .photos()
+        .iter()
+        .position(|p| *p == cover)
+        .unwrap();
+    s.studio().set_current(i);
+    s.wait();
+    s.keys(&[(NONE, Key::S)]);
+    assert_eq!(s.studio().visible().len(), all);
+    s.keys(&[(NONE, Key::S)]);
+    assert_eq!(s.studio().visible().len(), all - 2);
+    // Sans empilement, tout se voit.
+    s.studio().set_stacking(false);
+    assert_eq!(s.studio().visible().len(), all);
+}
+
+#[test]
 fn library_keywords() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("mots-cles") else {
