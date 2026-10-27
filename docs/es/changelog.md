@@ -258,13 +258,20 @@ La fototeca profesional, paso a paso.
   de la página; páginas convertidas al **perfil de la impresora** (el de la prueba en
   pantalla, con compensación del punto negro), para imprimir sin la gestión de color
   del controlador.
-- **Libro de fotos** («Libro y presentación…», `luma book`): un PDF con su portada (la
+- **Libro de fotos** («Libro, presentación, galería…», `luma book`): un PDF con su portada (la
   primera foto, el título y el subtítulo) y luego páginas de una, dos o cuatro fotos
   elegidas según su orientación; formatos 20 × 20, 30 × 30, A4, 21 × 28, A3.
 - **Presentación**: a pantalla completa en la app (la foto sola, avanza por sí misma,
   Espacio para pausar, Esc para salir) y **exportada** (`luma slideshow`): una carpeta
   autónoma, index.html y las fotos, para abrir en cualquier navegador o publicar
   (fundido, flechas, deslizamiento del dedo, pantalla completa).
+- **Galería web** («Libro, presentación, galería…», `luma gallery`): una carpeta
+  estática para publicar tal cual, la cuadrícula de miniaturas y cada foto en grande con
+  un clic (flechas, deslizamiento del dedo, Esc), con título, descripción y pies de foto.
+- **JPEG optimizado para la web**: crominancia 4:2:0 y tablas de Huffman calculadas para
+  cada imagen, de un 9 a un 29 % más ligero en las fotos de prueba, con una diferencia
+  apenas medible; en el ajuste Web, la ventana de exportación («Optimizado para la web»)
+  y `--web`.
 
 ## 0.2.0 — octubre de 2026
 
