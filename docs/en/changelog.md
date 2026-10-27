@@ -10,7 +10,8 @@ The professional photo library, step by step.
   buffers instead of six new images, so full-resolution sharpening is almost twice as
   fast (NEF 0.64 → 0.36 s), without changing a pixel. Then JPEG writing, on every
   core: 2.3 to 2.6 times faster, byte-for-byte identical files; a full-resolution 24 MP
-  export in 1.8 s instead of 2.4.
+  export in 1.8 s instead of 2.4. Then the tone rendering step, computed eight pixels
+  at a time: 1.8 to 1.9 times faster (NEF 160 → 85 ms), byte-for-byte identical files.
 
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length

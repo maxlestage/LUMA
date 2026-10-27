@@ -2989,11 +2989,15 @@ fr = Comparaison · {zoom} · molette ou double clic : zoom · glisser : déplac
 en = Compare · {zoom} · scroll or double-click: zoom · drag: move · L: loupe · click: open · Esc to leave
 es = Comparación · {zoom} · rueda o doble clic: zoom · arrastrar: mover · L: lupa · clic: abrir · Esc para salir
 
-# L'iPhone : la barre d'outils nommée, le menu « ••• ».
+fr = {n} photo(s) n'ont pas pu être importée(s).
+en = {n} photo(s) could not be imported.
+es = No se pudieron importar {n} foto(s).
 
-fr = Cadre
+fr = Cadrage
 en = Crop
 es = Encuadre
+
+# L'iPhone : le menu « ••• ».
 
 fr = Copier les réglages
 en = Copy settings
