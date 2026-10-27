@@ -183,7 +183,8 @@ USAGE
       sur n'importe quelle photo, lui donne le rendu de cette pellicule.
 
 RÉGLAGES (--set)
-  exposure contrast highlights shadows whites blacks texture clarity dehaze vibrance
+  exposure contrast highlights highlights.reconstruction=on|off shadows whites blacks
+  texture clarity dehaze vibrance
   saturation temperature tint curve.highlights|lights|darks|shadows
   hsl.hue|saturation|luminance.<red|orange|yellow|green|aqua|blue|purple|magenta>
   grading.<shadows|midtones|highlights|global>.<hue|saturation|luminance>
