@@ -1103,6 +1103,18 @@ fr = Moiré
 en = Moiré
 es = Muaré
 
+fr = Mélangeur de couches
+en = Channel mixer
+es = Mezclador de canales
+
+fr = Mélangeur de couches réinitialisé
+en = Channel mixer reset
+es = Mezclador de canales restablecido
+
+fr = Mélangeur, couche {out} : {source} {value} %
+en = Mixer, {out} channel: {source} {value}%
+es = Mezclador, canal {out}: {source} {value} %
+
 fr = Frange
 en = Defringe
 es = Desflecado

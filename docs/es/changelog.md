@@ -114,6 +114,9 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Mezclador de canales** (herramienta Color): cada canal rojo, verde o azul hecho de
+  una mezcla de los tres canales de la foto, de −200 a +200 %; guardado en el XMP y
+  en los ajustes preestablecidos, sin ralentizar el renderizado.
 - **Muaré y desflecado con el pincel**: dos controles más en cada máscara. «Muaré»
   suaviza los colores parásitos de un tejido o una rejilla, «Desflecado» quita los
   bordes coloreados a lo largo de los contornos; la luminosidad no cambia.

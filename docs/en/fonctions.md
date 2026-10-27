@@ -38,6 +38,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Black & white mix (±3 EV, `crs:GrayMixer*`) | ✅ |
 | | Targeted adjustment tool (T): drag on a colour in the photo to adjust that colour's hue, saturation or luminance | ✅ |
 | Color Grading | Shadows, midtones, highlights, global; blending, balance | ✅ |
+| | Split toning (shadows and highlights, balance; `crs:SplitToning*` read and written) | ✅ |
+| | Channel mixer: each output channel made from the photo's three channels (−200 to +200%) | ✅ |
 | Detail | Sharpening: amount, radius, detail, masking | ✅ |
 | | Luminance and colour noise reduction | ✅ |
 | | Advanced noise reduction (non-local means, wavelets), without AI | ⏳ |

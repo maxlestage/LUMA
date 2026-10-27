@@ -76,7 +76,10 @@ pub fn paste(target: &Settings, source: &Settings, groups: &[Group]) -> Settings
             Group::Grading => s.color_grading = source.color_grading.clone(),
             Group::Detail => s.detail = source.detail.clone(),
             Group::Effects => s.effects = source.effects.clone(),
-            Group::Calibration => s.calibration = source.calibration.clone(),
+            Group::Calibration => {
+                s.calibration = source.calibration.clone();
+                s.channel_mixer = source.channel_mixer;
+            }
             Group::Look => {
                 s.profile = source.profile;
                 s.lut = source.lut.clone();

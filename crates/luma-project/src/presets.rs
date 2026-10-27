@@ -277,6 +277,7 @@ pub fn summary(s: &Settings) -> Summary {
         || own.hsl != d.hsl
         || own.color_grading != d.color_grading
         || own.calibration != d.calibration
+        || own.channel_mixer != d.channel_mixer
     {
         panels.push("Couleur");
     }
