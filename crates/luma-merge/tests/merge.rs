@@ -349,3 +349,53 @@ fn hdr_merges_brackets_without_ghosts() {
     let (got, want) = (at(&merged.image, k), at(&truth, 1.0));
     assert!((got / want).log2().abs() < 0.3, "fantôme : {got} au lieu de {want}");
 }
+
+#[test]
+fn focus_stack_keeps_the_sharp_part_of_each_pose() {
+    let scene = scene(900);
+    let (w, h) = (scene.width - 60, scene.height - 60);
+    // Le flou de mise au point : une gaussienne, de moins en moins forte près du plan net.
+    let soft = {
+        let planes: Vec<luma_core::Plane> = (0..3)
+            .map(|c| luma_core::Plane::from_rgb(&scene, move |p| p[c]).blur(2.5))
+            .collect();
+        RgbImage::from_fn(scene.width, scene.height, |x, y| {
+            let i = y * scene.width + x;
+            [planes[0].data[i], planes[1].data[i], planes[2].data[i]]
+        })
+    };
+    // Cinq poses, nettes chacune sur une bande (de gauche à droite, chevauchant celle de
+    // la voisine), un peu décalées les unes des autres.
+    let poses = [
+        (0usize, 30.0, 30.0),
+        (1, 28.0, 32.0),
+        (2, 33.0, 29.0),
+        (3, 31.0, 27.0),
+        (4, 29.0, 31.0),
+    ];
+    let frames: Vec<Arc<RgbImage>> = poses
+        .iter()
+        .map(|&(band, dx, dy)| {
+            let mixed = RgbImage::from_fn(scene.width, scene.height, |x, y| {
+                let centre = (band as f32 + 0.5) / 5.0 * scene.width as f32;
+                let d = (x as f32 - centre).abs() / (scene.width as f32 / 10.0);
+                let t = (d - 0.8).clamp(0.0, 1.0);
+                let (a, b) = (scene.data[y * scene.width + x], soft.data[y * scene.width + x]);
+                [0, 1, 2].map(|c| a[c] + (b[c] - a[c]) * t)
+            });
+            Arc::new(view(&mixed, w, h, &Homography::translation(dx, dy), 0.005, band as u64))
+        })
+        .collect();
+    let truth = view(&scene, w, h, &Homography::translation(33.0, 29.0), 0.0, 0);
+    let merged = stack_images(frames.clone(), StackMode::Focus, true).unwrap();
+    assert_eq!(merged.used, 5);
+    let single = rms(&frames[2], &truth, 40);
+    let stacked = rms(&merged.image, &truth, 40);
+    let blurred = rms(
+        &view(&soft, w, h, &Homography::translation(33.0, 29.0), 0.0, 0),
+        &truth,
+        40,
+    );
+    eprintln!("écart à la scène nette : flou {blurred:.4}, une pose {single:.4}, empilement {stacked:.4}");
+    assert!(stacked < single * 0.5, "{stacked} / {single}");
+}
