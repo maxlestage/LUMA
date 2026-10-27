@@ -976,6 +976,28 @@ fn channel_mixer() {
 }
 
 #[test]
+fn crop_guides() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("guides") else {
+        return;
+    };
+    s.keys(&[(NONE, Key::R)]);
+    assert_eq!(s.studio().crop_guide, luma_studio::crop::Guide::Thirds);
+    // O : le guide suivant, jusqu'à la spirale ; Maj+O la tourne.
+    for _ in 0..4 {
+        s.keys(&[(NONE, Key::O)]);
+    }
+    assert_eq!(s.studio().crop_guide, luma_studio::crop::Guide::Spiral);
+    s.keys(&[(Modifiers::SHIFT, Key::O)]);
+    assert_eq!(s.studio().crop_turn, 1);
+    s.wait();
+    s.capture("recadrage-spirale");
+    // Hors du recadrage, O montre toujours la zone d'un masque.
+    s.keys(&[(NONE, Key::Escape)]);
+    assert_eq!(s.studio().crop_guide, luma_studio::crop::Guide::Spiral);
+}
+
+#[test]
 fn iphone_layout() {
     let _gpu = one_at_a_time();
     // Un iPhone en portrait (points), écran Retina ×3.

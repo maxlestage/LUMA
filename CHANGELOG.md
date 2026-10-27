@@ -116,6 +116,9 @@ La photothèque professionnelle, étape par étape.
   la texture et prend la lumière du bord de la zone ; le tampon en fait une copie
   exacte. Zone et source se déplacent à la souris ; taille, contour progressif,
   opacité. Enregistrés dans le XMP.
+- **Guides de recadrage** : tiers, nombre d'or, diagonales, triangles d'or, spirale
+  d'or et grille ; O passe au guide suivant pendant le recadrage, Maj+O tourne la
+  spirale et les triangles.
 - **Mélangeur de couches** (outil Couleur) : chaque couche rouge, verte ou bleue faite
   d'un mélange des trois couches de la photo, de −200 à +200 % ; enregistré dans le
   XMP et dans les préréglages, sans ralentir le rendu.
