@@ -1854,3 +1854,49 @@ fn map_of_geotagged_photos() {
     s.wait();
     assert_eq!(s.studio().visible().len(), photos.len());
 }
+
+#[test]
+fn print_layout_and_pdf() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("imprimer") else {
+        return;
+    };
+    let dir = s.dir.clone();
+    // Trois photos choisies, sur une planche contact de deux par page, au profil d'un
+    // écran plus terne que le sRGB (une « imprimante »).
+    s.studio().selected = [0, 1, 2].into_iter().collect();
+    let icc = dir.join("Terne.icc");
+    std::fs::write(&icc, dull_profile()).unwrap();
+    s.studio().load_proof_profile(&icc);
+    s.wait();
+    s.harness
+        .get_all_by_label("Imprimer…")
+        .next()
+        .unwrap()
+        .click();
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    s.harness.get_by_label("Planche contact").click();
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    let l = &s.studio().print_layout;
+    assert_eq!((l.columns, l.rows, l.captions), (4, 5, true));
+    s.capture("imprimer");
+    {
+        let l = &mut s.studio().print_layout;
+        (l.columns, l.rows, l.dpi) = (2, 1, 100);
+        l.paper = luma_render::print::paper("13x18").unwrap();
+    }
+    let pdf = dir.join("Tirage.pdf");
+    s.studio().print_pdf(pdf.clone());
+    s.wait();
+    let bytes = std::fs::read(&pdf).expect("le PDF est écrit");
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(bytes.starts_with(b"%PDF-1.4"));
+    assert!(text.contains("/Count 2"), "trois photos, deux par page");
+    assert!(text.contains("/MediaBox [0 0 360.00 504.00]"));
+    // 13 × 18 cm (127 × 177,8 mm) à 100 ppp : 500 × 700 pixels par page.
+    assert!(text.contains("/Width 500 /Height 700"));
+}

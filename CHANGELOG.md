@@ -251,6 +251,12 @@ La photothèque professionnelle, étape par étape.
   sont proches ; glisser, zoomer à la molette ou à deux doigts, toucher un groupe pour
   voir ses photos. Fond de tuiles libres, téléchargées par le système et gardées sur
   l'appareil ; hors ligne, celles déjà gardées.
+- **Impression** (« Imprimer… » sur les photos choisies, `luma print`) : un PDF à la
+  taille exacte du papier (A4, A3, A3+, 10 × 15 cm…), portrait ou paysage, marges, une
+  photo par page ou une **planche contact** (grille, nom sous chaque photo), photos
+  entières ou remplissant leur case, accentuation pour papier mat ou brillant, aperçu
+  de la page ; les pages converties vers le **profil de l'imprimante** (celui de
+  l'épreuvage, noir compensé), à imprimer sans gestion des couleurs du pilote.
 
 ## 0.2.0 — octobre 2026
 

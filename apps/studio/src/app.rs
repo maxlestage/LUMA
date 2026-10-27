@@ -455,6 +455,13 @@ struct Compare {
     loupe: bool,
 }
 
+/// Un PDF d'impression en cours de fabrication, en arrière‑plan.
+struct Printing {
+    done: std::sync::mpsc::Receiver<Result<(PathBuf, usize), String>>,
+    placed: Arc<std::sync::atomic::AtomicUsize>,
+    total: usize,
+}
+
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
 /// table qui en découle. Une vue, pas un réglage : rien n'est écrit dans le XMP.
 #[derive(Default)]
@@ -527,6 +534,13 @@ pub struct Studio {
     /// La fenêtre « Renommer », son modèle (gardé d'une fois sur l'autre) et l'aperçu
     /// des nouveaux noms pour ce modèle.
     rename_open: bool,
+    print_open: bool,
+    /// La mise en page de l'impression (gardée d'une fois sur l'autre).
+    pub print_layout: luma_render::print::Layout,
+    /// Convertir les pages vers le profil de l'imprimante (celui de l'épreuvage).
+    pub print_convert: bool,
+    /// Le PDF en cours : son résultat, les photos posées, leur nombre.
+    printing: Option<Printing>,
     rename_template: String,
     /// Le nom du prochain instantané, en cours de saisie.
     snapshot_name: String,
@@ -847,6 +861,10 @@ impl Studio {
             clipboard: None,
             paste_open: false,
             rename_open: false,
+            print_open: false,
+            print_layout: Default::default(),
+            print_convert: true,
+            printing: None,
             rename_template: "{date}_{séquence}".into(),
             snapshot_name: String::new(),
             rename_preview: None,
@@ -1614,6 +1632,372 @@ impl Studio {
         Ok(plan.photos.len())
     }
 
+    /// La conversion vers l'imprimante : le profil de l'épreuvage, son intention.
+    fn print_conversion(&self) -> Result<Option<luma_color::proof::Conversion>, String> {
+        let Some(profile) = self
+            .proofing
+            .profile
+            .as_ref()
+            .filter(|_| self.print_convert)
+        else {
+            return Ok(None);
+        };
+        let intent = if self.proofing.relative {
+            luma_color::profile::Intent::Relative
+        } else {
+            luma_color::profile::Intent::Perceptual
+        };
+        luma_color::proof::Conversion::new(profile, intent)
+            .map(Some)
+            .map_err(|e| tr(e.0).to_owned())
+    }
+
+    /// Met en page les photos choisies (sinon la photo ouverte) et écrit le PDF dans
+    /// `out`, en arrière‑plan : page par page, chaque photo développée avec ses
+    /// réglages à la taille de sa case.
+    pub fn print_pdf(&mut self, out: PathBuf) {
+        use luma_render::print;
+        self.flush_xmp();
+        let photos = self.rename_targets();
+        let layout = self.print_layout.clone();
+        let cells = layout.cells();
+        if photos.is_empty() || cells.is_empty() {
+            self.status = tr("Les marges ne laissent plus de place sur le papier.").into();
+            return;
+        }
+        let printer = match self.print_conversion() {
+            Ok(c) => c,
+            Err(e) => {
+                self.status = e;
+                return;
+            }
+        };
+        let (send, done) = std::sync::mpsc::channel();
+        let placed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = placed.clone();
+        let total = photos.len();
+        let job = move || -> Result<(PathBuf, usize), String> {
+            let mut pages = Vec::new();
+            for chunk in photos.chunks(cells.len()) {
+                let mut pictures = Vec::with_capacity(chunk.len());
+                for (path, cell) in chunk.iter().zip(&cells) {
+                    let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+                    let settings = crate::worker::read_sidecar(path)
+                        .unwrap_or_else(|| photo.default_settings());
+                    pictures.push(print::develop(
+                        &photo,
+                        &settings,
+                        &layout,
+                        cell,
+                        file_name(path),
+                    )?);
+                    counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }
+                for page in print::compose(&layout, &pictures, printer.as_ref()) {
+                    pages.push(print::encode(&page)?);
+                }
+            }
+            std::fs::write(&out, print::pdf_of(&layout, &pages)).map_err(|e| e.to_string())?;
+            Ok((out, pages.len()))
+        };
+        std::thread::spawn(move || {
+            let _ = send.send(job());
+        });
+        self.printing = Some(Printing {
+            done,
+            placed,
+            total,
+        });
+    }
+
+    /// Le PDF est‑il prêt ? (Regardé cinq fois par seconde tant qu'il ne l'est pas.)
+    fn poll_printing(&mut self, ctx: &egui::Context) {
+        let Some(p) = &self.printing else {
+            return;
+        };
+        ctx.request_repaint_after(std::time::Duration::from_millis(200));
+        match p.done.try_recv() {
+            Ok(Ok((path, pages))) => {
+                self.status = trf(
+                    "PDF prêt : {pages} page(s), {file}",
+                    &[("pages", &pages), ("file", &path.display())],
+                );
+                self.printing = None;
+                self.print_open = false;
+            }
+            Ok(Err(e)) => {
+                self.status = trf("Impression impossible : {error}", &[("error", &e)]);
+                self.printing = None;
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.printing = None,
+        }
+    }
+
+    /// La fenêtre « Imprimer » : le papier, la disposition, le profil de l'imprimante,
+    /// l'aperçu de la première page.
+    fn print_window(&mut self, ctx: &egui::Context) {
+        use luma_render::print::{PAPERS, Paper};
+        let mut open = self.print_open;
+        let mut go = false;
+        let photos = self.rename_targets();
+        let n = photos.len();
+        let paper_label = |p: &Paper| -> String {
+            match p.name {
+                "Letter" => tr("Lettre US").to_owned(),
+                name if name.starts_with(|c: char| c.is_ascii_digit()) => {
+                    format!("{} cm", name.replace('x', " × "))
+                }
+                name => format!("{name} ({:.0} × {:.0} mm)", p.width, p.height),
+            }
+        };
+        egui::Window::new(trf("Imprimer {n} photos", &[("n", &n)]))
+            .id(egui::Id::unique("fenetre-imprimer"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_width(420.0);
+                let l = &mut self.print_layout;
+                egui::Grid::new("imprimer")
+                    .num_columns(2)
+                    .spacing([10.0, 6.0])
+                    .show(ui, |ui| {
+                        ui.label(RichText::new(tr("Papier")).color(theme::DIM));
+                        egui::ComboBox::from_id_salt("papier")
+                            .selected_text(paper_label(&l.paper))
+                            .show_ui(ui, |ui| {
+                                for p in PAPERS {
+                                    ui.selectable_value(&mut l.paper, p, paper_label(&p));
+                                }
+                            });
+                        ui.end_row();
+                        ui.label(RichText::new(tr("Orientation")).color(theme::DIM));
+                        ui.horizontal(|ui| {
+                            ui.selectable_value(&mut l.landscape, false, tr("Portrait"));
+                            ui.selectable_value(&mut l.landscape, true, tr("Paysage"));
+                        });
+                        ui.end_row();
+                        ui.label(RichText::new(tr("Disposition")).color(theme::DIM));
+                        ui.horizontal(|ui| {
+                            if ui
+                                .selectable_label(l.per_page() == 1, tr("Une photo par page"))
+                                .clicked()
+                            {
+                                (l.columns, l.rows, l.captions) = (1, 1, false);
+                            }
+                            if ui
+                                .selectable_label(l.per_page() > 1, tr("Planche contact"))
+                                .clicked()
+                                && l.per_page() == 1
+                            {
+                                (l.columns, l.rows, l.gap, l.captions) = (4, 5, 4.0, true);
+                            }
+                        });
+                        ui.end_row();
+                        ui.label(RichText::new(tr("Grille")).color(theme::DIM));
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut l.columns).range(1..=10));
+                            ui.label("×");
+                            ui.add(egui::DragValue::new(&mut l.rows).range(1..=10));
+                            ui.label(RichText::new(tr("colonnes × lignes")).color(theme::DIM));
+                        });
+                        ui.end_row();
+                        ui.label(RichText::new(tr("Marges")).color(theme::DIM));
+                        ui.add(
+                            egui::Slider::new(&mut l.margin, 0.0..=40.0)
+                                .suffix(" mm")
+                                .step_by(1.0),
+                        );
+                        ui.end_row();
+                        if l.per_page() > 1 {
+                            ui.label(RichText::new(tr("Écart")).color(theme::DIM));
+                            ui.add(
+                                egui::Slider::new(&mut l.gap, 0.0..=20.0)
+                                    .suffix(" mm")
+                                    .step_by(0.5),
+                            );
+                            ui.end_row();
+                        }
+                        ui.label(RichText::new(tr("Résolution")).color(theme::DIM));
+                        egui::ComboBox::from_id_salt("resolution")
+                            .selected_text(trf("{dpi} ppp", &[("dpi", &l.dpi)]))
+                            .show_ui(ui, |ui| {
+                                for dpi in [150, 240, 300, 360, 600] {
+                                    ui.selectable_value(
+                                        &mut l.dpi,
+                                        dpi,
+                                        trf("{dpi} ppp", &[("dpi", &dpi)]),
+                                    );
+                                }
+                            });
+                        ui.end_row();
+                        ui.label(RichText::new(tr("Accentuation")).color(theme::DIM));
+                        let medium = l.sharpen.map(|s| s.medium);
+                        egui::ComboBox::from_id_salt("accentuation")
+                            .selected_text(match medium {
+                                None => tr("Aucune"),
+                                Some(luma_render::export::Medium::Glossy) => tr("Papier brillant"),
+                                Some(_) => tr("Papier mat"),
+                            })
+                            .show_ui(ui, |ui| {
+                                use luma_render::export::{Medium, OutputSharpen, Strength};
+                                let sharpen = |medium| {
+                                    Some(OutputSharpen {
+                                        medium,
+                                        strength: Strength::Standard,
+                                    })
+                                };
+                                ui.selectable_value(&mut l.sharpen, None, tr("Aucune"));
+                                ui.selectable_value(
+                                    &mut l.sharpen,
+                                    sharpen(Medium::Matte),
+                                    tr("Papier mat"),
+                                );
+                                ui.selectable_value(
+                                    &mut l.sharpen,
+                                    sharpen(Medium::Glossy),
+                                    tr("Papier brillant"),
+                                );
+                            });
+                        ui.end_row();
+                    });
+                ui.checkbox(&mut l.captions, tr("Le nom de chaque photo dessous"));
+                ui.checkbox(
+                    &mut l.fill,
+                    tr("Remplir les cases (photos recadrées au centre)"),
+                );
+                let (pages, (w, h)) = (l.pages(n), l.page_mm());
+                let layout = l.clone();
+                ui.add_space(6.0);
+                // Le profil de l'imprimante : celui de l'épreuvage.
+                ui.horizontal(|ui| {
+                    if self.proofing.profile.is_some() {
+                        ui.checkbox(
+                            &mut self.print_convert,
+                            tr("Convertir vers le profil de l'imprimante"),
+                        )
+                        .on_hover_text(tr("Imprimez alors sans gestion des couleurs du pilote"));
+                        ui.label(
+                            RichText::new(self.proofing.description.clone()).color(theme::DIM),
+                        );
+                    } else {
+                        ui.label(
+                            RichText::new(tr(
+                                "Sans profil d'imprimante : les pages restent en sRGB.",
+                            ))
+                            .color(theme::DIM),
+                        );
+                    }
+                });
+                if !TOUCH
+                    && ui.small_button(tr("Choisir un profil ICC…")).clicked()
+                    && let Some(path) = crate::dialogs::pick_icc()
+                {
+                    self.load_proof_profile(&path);
+                }
+                ui.add_space(8.0);
+                self.print_preview(ui, &layout, &photos);
+                ui.label(
+                    RichText::new(trf(
+                        "{pages} page(s) de {w} × {h} mm",
+                        &[
+                            ("pages", &pages),
+                            ("w", &format!("{w:.0}")),
+                            ("h", &format!("{h:.0}")),
+                        ],
+                    ))
+                    .size(11.0)
+                    .color(theme::DIM),
+                );
+                ui.add_space(6.0);
+                match &self.printing {
+                    Some(p) => {
+                        let done = p.placed.load(std::sync::atomic::Ordering::Relaxed);
+                        ui.add(
+                            egui::ProgressBar::new(done as f32 / p.total.max(1) as f32).text(trf(
+                                "Mise en page : {done} sur {n}",
+                                &[("done", &done), ("n", &p.total)],
+                            )),
+                        );
+                    }
+                    None => {
+                        go = ui
+                            .add_enabled(pages > 0, egui::Button::new(tr("Créer le PDF…")))
+                            .clicked();
+                    }
+                }
+            });
+        if go && let Some(out) = crate::dialogs::save_pdf(&format!("{}.pdf", tr("Tirage"))) {
+            self.print_pdf(out);
+        }
+        self.print_open = open;
+    }
+
+    /// La première page en petit : le papier, les cases, les vignettes des photos.
+    fn print_preview(&self, ui: &mut Ui, layout: &luma_render::print::Layout, photos: &[PathBuf]) {
+        let (pw, ph) = layout.page_px();
+        let scale = (200.0 / pw.max(ph) as f32).min(1.0);
+        let size = vec2(pw as f32 * scale, ph as f32 * scale);
+        let (rect, _) =
+            ui.allocate_exact_size(vec2(ui.available_width(), size.y), egui::Sense::hover());
+        let page = Rect::from_center_size(rect.center(), size);
+        let painter = ui.painter_at(rect);
+        painter.rect_filled(
+            page.translate(vec2(2.0, 3.0)),
+            2.0,
+            Color32::from_black_alpha(90),
+        );
+        painter.rect_filled(page, 2.0, Color32::from_gray(0xf4));
+        for (cell, path) in layout.cells().iter().zip(photos) {
+            let r = Rect::from_min_size(
+                page.min + vec2(cell.x as f32, cell.y as f32) * scale,
+                vec2(cell.width as f32, cell.height as f32) * scale,
+            );
+            match self.thumbs.get(path) {
+                Some(t) => {
+                    let [w, h] = t.size();
+                    let (tw, th) = layout.target(cell, w, h);
+                    let shown = Rect::from_center_size(
+                        r.center(),
+                        vec2(tw.min(cell.width) as f32, th.min(cell.height) as f32) * scale,
+                    );
+                    // Remplie : le milieu de la vignette.
+                    let uv = Rect::from_center_size(
+                        pos2(0.5, 0.5),
+                        vec2(
+                            (cell.width as f32 / tw as f32).min(1.0),
+                            (cell.height as f32 / th as f32).min(1.0),
+                        ),
+                    );
+                    let shown = if cell.caption > 0 {
+                        shown.translate(vec2(0.0, r.max.y - shown.max.y))
+                    } else {
+                        shown
+                    };
+                    painter.image(t.id(), shown, uv, Color32::WHITE);
+                }
+                None => {
+                    painter.rect_filled(r, 0.0, Color32::from_gray(0xc8));
+                }
+            }
+            if cell.caption > 0 {
+                let band = Rect::from_min_size(
+                    pos2(
+                        r.min.x + r.width() * 0.25,
+                        r.max.y + cell.caption as f32 * scale * 0.35,
+                    ),
+                    vec2(
+                        r.width() * 0.5,
+                        (cell.caption as f32 * scale * 0.3).max(1.0),
+                    ),
+                );
+                painter.rect_filled(band, 0.0, Color32::from_gray(0x99));
+            }
+        }
+    }
+
     /// La fenêtre « Renommer » : le modèle, ses repères, les premiers noms obtenus.
     fn rename_window(&mut self, ctx: &egui::Context) {
         let mut open = self.rename_open;
@@ -1823,6 +2207,13 @@ impl Studio {
             {
                 self.rename_open = true;
             }
+            if ui
+                .small_button(tr("Imprimer…"))
+                .on_hover_text(tr("Mise en page pour l'imprimante : une photo par page ou une planche contact, en PDF"))
+                .clicked()
+            {
+                self.print_open = true;
+            }
         });
         ui.add_space(6.0);
     }
@@ -2016,6 +2407,7 @@ impl Studio {
             && self.shown == self.generation
             && self.texture.is_some()
             && !self.tiles.is_loading()
+            && self.printing.is_none()
     }
 
     fn select(&mut self, index: usize) {
@@ -3682,6 +4074,10 @@ impl Studio {
         }
         if self.rename_open && allowed {
             self.rename_window(&ctx);
+        }
+        self.poll_printing(&ctx);
+        if self.print_open && allowed {
+            self.print_window(&ctx);
         }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
@@ -5996,6 +6392,13 @@ impl Studio {
                 .clicked()
             {
                 self.rename_open = true;
+            }
+            if ui
+                .small_button(tr("Imprimer…"))
+                .on_hover_text(tr("Mise en page pour l'imprimante : une photo par page ou une planche contact, en PDF"))
+                .clicked()
+            {
+                self.print_open = true;
             }
         });
         let meta = self.current_meta();
