@@ -116,6 +116,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Guided upright** (Geometry, Transform): drag along two to four edges that should
+  be straight (a wall, a pole, the horizon); LÜMA sets the perspective and rotation
+  right away. A single line only rotates the photo.
 - **Colors matched between two cameras**: the same scene shot with both your cameras,
   even framed a little differently; select both photos, then “Match to the selected
   photo” (Channel mixer), or `luma match-colors`. The second camera takes on the colors

@@ -55,7 +55,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Case « Corrections du boîtier » : cochée par défaut, enregistrée dans le XMP (`crs:LensProfileEnable`) ; décochée, la photo revient telle que l'objectif l'a donnée, et les curseurs de distorsion et de vignetage prennent le relais | ✅ |
 | | Aberration chromatique longitudinale, corrections des autres marques (Canon, Nikon, Pentax…) | ⏳ |
 | Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
-| | Redressement automatique, guidé | ⏳ |
+| | Redressement automatique (Maj+R, Maj+V) et guidé : deux à quatre lignes tracées sur la photo règlent la perspective et la rotation | ✅ |
 | Effets | Vignetage après recadrage (gain, milieu, arrondi, contour progressif, hautes lumières) | ✅ |
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
