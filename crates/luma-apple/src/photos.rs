@@ -114,6 +114,7 @@ mod ios {
         PHPickerConfiguration, PHPickerConfigurationAssetRepresentationMode, PHPickerFilter, PHPickerResult,
     };
     use objc2_ui_kit::{UIApplication, UIView, UIViewController, UIWindow, UIWindowScene};
+    use std::sync::atomic::AtomicBool;
 
     use super::{CHOSEN, FAILED, IMPORTED, VIEW, free_name};
 
@@ -172,6 +173,8 @@ mod ios {
         picker: Retained<AnyObject>,
         since: std::time::Instant,
         rescued: bool,
+        /// « À l'écran » déjà dit.
+        told: bool,
         top: Retained<UIViewController>,
     }
 
@@ -293,28 +296,45 @@ mod ios {
         let name = top.class().name().to_string_lossy().into_owned();
         // SAFETY: `picker` est un UIViewController neuf ; `top` un contrôleur de l'app,
         // sur le fil principal.
-        unsafe {
-            let _: () =
-                msg_send![&top, presentViewController: &*picker, animated: true, completion: None::<&Block<dyn Fn()>>];
-        }
-        // iOS peut refuser sans rien dire ; on ne le sait qu'un peu plus tard (la
-        // présentation n'est pas immédiate) : voir `watch`.
+        present(&top, &picker);
+        // iOS peut refuser sans rien dire ; il ne confirme qu'une fois le sélecteur à
+        // l'écran (Photos tourne à part et prend parfois plus d'une seconde) : voir
+        // `watch`.
         PENDING.with(|p| {
             *p.borrow_mut() = Some(Pending {
                 picker,
                 since: std::time::Instant::now(),
                 rescued: false,
+                told: false,
                 top,
             })
         });
         Ok(name)
     }
 
-    /// Le sélecteur est‑il dans une fenêtre (donc à l'écran, ou en train d'y venir) ?
-    fn on_screen(picker: &AnyObject) -> bool {
-        // SAFETY: `viewIfLoaded` d'un UIViewController, sur le fil principal.
-        let view: Option<Retained<UIView>> = unsafe { msg_send![picker, viewIfLoaded] };
-        view.is_some_and(|v| v.window().is_some())
+    /// Vrai quand iOS a confirmé que le sélecteur est à l'écran (bloc de fin de la
+    /// présentation).
+    static SHOWN: AtomicBool = AtomicBool::new(false);
+
+    /// Présente `picker` depuis `from` ; `SHOWN` passe à vrai quand il est à l'écran.
+    fn present(from: &UIViewController, picker: &AnyObject) {
+        SHOWN.store(false, Ordering::Release);
+        let done = RcBlock::new(|| SHOWN.store(true, Ordering::Release));
+        // SAFETY: `picker` est un UIViewController qui n'est présenté nulle part ;
+        // `from` un contrôleur de l'app, sur le fil principal ; le bloc ne capture rien.
+        unsafe {
+            let _: () = msg_send![from, presentViewController: picker, animated: true, completion: &*done];
+        }
+    }
+
+    /// Le sélecteur est‑il en route vers l'écran (présentation commencée) ?
+    fn under_way(picker: &AnyObject) -> bool {
+        // SAFETY: propriétés d'un UIViewController, sur le fil principal.
+        unsafe {
+            let presenting: Option<Retained<UIViewController>> = msg_send![picker, presentingViewController];
+            let being: bool = msg_send![picker, isBeingPresented];
+            presenting.is_some() || being
+        }
     }
 
     pub fn pending() -> bool {
@@ -326,7 +346,20 @@ mod ios {
         PENDING.with(|p| {
             let mut p = p.borrow_mut();
             let pending = p.as_mut()?;
-            if pending.since.elapsed() < std::time::Duration::from_millis(600) || on_screen(&pending.picker) {
+            if SHOWN.load(Ordering::Acquire) {
+                if pending.told {
+                    return None;
+                }
+                pending.told = true;
+                return Some(if pending.rescued {
+                    "Photos à l'écran (fenêtre de secours)"
+                } else {
+                    "Photos à l'écran"
+                });
+            }
+            // Pas encore confirmé : on laisse à iOS le temps de lancer Photos, et on
+            // ne touche à rien tant que la présentation est en route.
+            if pending.since.elapsed() < std::time::Duration::from_secs(5) || under_way(&pending.picker) {
                 return None;
             }
             if pending.rescued {
@@ -340,14 +373,10 @@ mod ios {
                 return Some("Photos ne s'affiche pas");
             }
             let fallback = presenter(mtm, &pending.top)?;
-            // SAFETY: le sélecteur n'est présenté nulle part (il n'a pas de fenêtre) ;
-            // la fenêtre de secours vient d'être mise à l'écran.
-            unsafe {
-                let _: () = msg_send![&fallback, presentViewController: &*pending.picker, animated: true, completion: None::<&Block<dyn Fn()>>];
-            }
+            present(&fallback, &pending.picker);
             pending.rescued = true;
             pending.since = std::time::Instant::now();
-            Some("Photos présenté depuis une fenêtre de secours")
+            Some("Photos refusé par la fenêtre de LÜMA : fenêtre de secours")
         })
     }
 
