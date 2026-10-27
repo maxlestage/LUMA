@@ -43,6 +43,7 @@ target/release/luma film-lut photo.ARW scan.tif -o MaPortra.cube       # mesure 
 target/release/luma develop photo.ARW --lut MaPortra.cube:80 -o p.jpg   # ce film, à 80 %
 target/release/luma catalog ~/Photos --list                             # la photothèque, par date de prise de vue
 target/release/luma rename ~/Photos/*.ARW --name "{date}_{séquence}" -n  # renommage par lot (aperçu)
+target/release/luma print ~/Photos/*.ARW --grid 4x5 --captions -o planche.pdf  # planche contact
 target/release/luma presets ~/Desktop                                   # les 100 films en préréglages XMP
 ```
 

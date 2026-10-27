@@ -212,6 +212,65 @@ impl Proof {
     }
 }
 
+/// La conversion d'une image sRGB vers les valeurs d'une imprimante RVB (son profil,
+/// une intention de rendu) : ce que l'on envoie au pilote quand c'est LÜMA qui gère la
+/// couleur. Comme l'épreuvage, une table 3D calculée une fois. En colorimétrique
+/// relative, le noir de l'image va au noir le plus profond de l'encre (compensation du
+/// point noir) : les ombres ne se bouchent pas.
+#[derive(Clone, Debug)]
+pub struct Conversion(Proof);
+
+const RGB_ONLY: Error = Error("seuls les profils d'imprimante RVB sont pris en charge");
+
+impl Conversion {
+    pub fn new(profile: &Profile, intent: Intent) -> Result<Self, Error> {
+        if profile.space != crate::profile::Space::Rgb {
+            return Err(RGB_ONLY);
+        }
+        if !profile.writes() || !profile.reads() {
+            return Err(NOT_BOTH_WAYS);
+        }
+        let to_pcs = mul(&bradford(SRGB.white, D50), &rgb_to_xyz(&SRGB));
+        let device = |xyz: Vec3, intent: Intent| profile.from_pcs(xyz, intent).ok_or(NOT_BOTH_WAYS);
+        let black = profile
+            .to_pcs(&device([0.0; 3], Intent::Relative)?, Intent::Relative)
+            .ok_or(NOT_BOTH_WAYS)?;
+        let g = (GRID - 1) as f32;
+        let mut table = Vec::with_capacity(GRID * GRID * GRID);
+        for r in 0..GRID {
+            for gr in 0..GRID {
+                for b in 0..GRID {
+                    let rgb = [r, gr, b].map(|v| srgb_decode(v as f32 / g));
+                    let mut xyz = apply(&to_pcs, rgb);
+                    if intent == Intent::Relative {
+                        xyz = [0, 1, 2].map(|i| black[i] + xyz[i] * (PCS_WHITE[i] - black[i]) / PCS_WHITE[i]);
+                    }
+                    let v = device(xyz, intent)?;
+                    table.push([v[0], v[1], v[2], 0.0].map(|c| c.clamp(0.0, 1.0)));
+                }
+            }
+        }
+        Ok(Conversion(Proof { table }))
+    }
+
+    /// Une couleur sRGB (codée, de 0 à 1) en valeurs de l'imprimante.
+    pub fn apply(&self, rgb: Vec3) -> Vec3 {
+        self.0.apply(rgb)
+    }
+
+    /// Convertit sur place une image RVB 8 bits en sRGB.
+    pub fn apply_rgb(&self, rgb: &mut [u8]) {
+        let cell = Proof::cells();
+        Proof::each_pixel(rgb, 3, |p| {
+            let [(r, fr), (g, fg), (b, fb)] = [0, 1, 2].map(|c| cell[usize::from(p[c])]);
+            let v = self.0.trilinear([r, g, b], [fr, fg, fb]);
+            for c in 0..3 {
+                p[c] = (v[c] * 255.0).round().clamp(0.0, 255.0) as u8;
+            }
+        });
+    }
+}
+
 /// Peint en [`ALERT`] les pixels hors gamut d'une image RGBA.
 pub fn paint_alert(rgba: &mut [u8], mask: &[bool]) {
     for (p, out) in rgba.as_chunks_mut::<4>().0.iter_mut().zip(mask) {
@@ -252,6 +311,47 @@ mod tests {
                 "{rgba:?}"
             );
         }
+    }
+
+    #[test]
+    fn conversion_to_a_printer_profile() {
+        // Vers le sRGB : rien ne change, ni en perceptuel ni en relatif.
+        let srgb = Profile::parse(&icc::profile(OutputSpace::Srgb)).unwrap();
+        for intent in [Intent::Perceptual, Intent::Relative] {
+            let c = Conversion::new(&srgb, intent).unwrap();
+            let mut rgb = vec![10, 128, 250, 255, 0, 0, 0, 0, 0];
+            c.apply_rgb(&mut rgb);
+            assert!(
+                rgb.iter()
+                    .zip([10, 128, 250, 255, 0, 0, 0, 0, 0])
+                    .all(|(a, b)| a.abs_diff(b) <= 1),
+                "{rgb:?}"
+            );
+        }
+        // Vers un espace plus large : le rouge du sRGB n'y est plus pur.
+        let p3 = Profile::parse(&icc::profile(OutputSpace::DisplayP3)).unwrap();
+        let red = Conversion::new(&p3, Intent::Relative).unwrap().apply([1.0, 0.0, 0.0]);
+        assert!(
+            (red[0] - 0.917).abs() < 0.01 && (red[1] - 0.200).abs() < 0.02 && (red[2] - 0.139).abs() < 0.02,
+            "{red:?}"
+        );
+        // Un écran terne : le noir reste noir, le blanc blanc.
+        let dull = Conversion::new(&dull_screen(), Intent::Relative).unwrap();
+        for (c, want) in [([0.0; 3], 0.0), ([1.0; 3], 1.0)] {
+            let v = dull.apply(c);
+            assert!(v.iter().all(|x| (x - want).abs() < 4e-3), "{c:?} → {v:?}");
+        }
+    }
+
+    #[test]
+    fn a_cmyk_printer_is_refused() {
+        let bytes = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/profils/CGATS001Compat-v2-micro.icc"
+        ))
+        .unwrap();
+        let cmyk = Profile::parse(&bytes).unwrap();
+        assert_eq!(Conversion::new(&cmyk, Intent::Perceptual).unwrap_err(), RGB_ONLY);
     }
 
     #[test]
