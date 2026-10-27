@@ -6289,6 +6289,20 @@ impl Studio {
                 {
                     commits.push(label);
                 }
+                let reference = self.match_reference();
+                if ui
+                    .add_enabled(
+                        reference.is_some(),
+                        egui::Button::new(tr("Accorder sur la photo choisie")),
+                    )
+                    .on_hover_text(tr(
+                        "Deux photos de la même scène, prises par deux boîtiers : choisissez aussi celle de référence dans le film, et cette photo en prend les couleurs.",
+                    ))
+                    .clicked()
+                    && let Some(label) = reference.and_then(|r| self.match_colors_to(&r))
+                {
+                    commits.push(label);
+                }
                 let out = self.mixer_tab.min(2);
                 let mixer = &mut self.settings.channel_mixer;
                 let row = match out {
@@ -6608,6 +6622,79 @@ impl Studio {
         );
         self.status = label.clone();
         Some(label)
+    }
+
+    /// La photo de référence pour accorder les couleurs : l'autre photo choisie dans le
+    /// film, quand il y en a exactement deux (celle affichée et elle).
+    fn match_reference(&self) -> Option<PathBuf> {
+        let current = self.current?;
+        let others: Vec<usize> = self
+            .selected
+            .iter()
+            .copied()
+            .filter(|&i| i != current)
+            .collect();
+        match others.as_slice() {
+            [one] if self.selected.contains(&current) || self.selected.len() == 1 => {
+                self.folder.get(*one).cloned()
+            }
+            _ => None,
+        }
+    }
+
+    /// Accorde les couleurs de la photo affichée sur celles de `reference` (la même
+    /// scène, un autre boîtier) : la correction va dans le mélangeur. Rend le libellé de
+    /// l'historique, ou `None` (raison dans la barre d'état).
+    pub fn match_colors_to(&mut self, reference: &Path) -> Option<String> {
+        let photo = self.photo.clone()?;
+        let develop = |p: &Photo, s: &Settings| {
+            let mut t = luma_core::Timings::default();
+            p.base(s, Size::Fit(1600), &luma_core::Cancel::new(), &mut t)
+                .ok()
+        };
+        let colour_only = |s: &Settings| Settings {
+            white_balance: s.white_balance,
+            crop: s.crop,
+            transform: s.transform.clone(),
+            lens: s.lens.clone(),
+            ..Settings::default()
+        };
+        let other = Photo::open(reference).ok()?;
+        let reference_settings = crate::worker::read_sidecar(reference).unwrap_or_default();
+        let (Some(a), Some(b)) = (
+            develop(&other, &colour_only(&reference_settings)),
+            develop(&photo, &colour_only(&self.settings)),
+        ) else {
+            return None;
+        };
+        match luma_merge::matching::match_colors(&a.image, &b.image) {
+            Ok(m) => {
+                let row = |r: usize| m.matrix[r].map(|v| (v * 100.0).clamp(-200.0, 200.0));
+                self.settings.channel_mixer = luma_project::ChannelMixer {
+                    red: row(0),
+                    green: row(1),
+                    blue: row(2),
+                };
+                let label = trf(
+                    "Couleurs accordées : écart de {before} à {after}",
+                    &[
+                        ("before", &format_value(m.before, 1, false)),
+                        ("after", &format_value(m.after, 1, false)),
+                    ],
+                );
+                self.status = label.clone();
+                Some(label)
+            }
+            Err(e) => {
+                // La raison seule, sans le « décodage impossible » général.
+                let reason = match e {
+                    luma_core::Error::Decode(why) => why,
+                    other => other.to_string(),
+                };
+                self.status = trf("Couleurs non accordées : {error}", &[("error", &reason)]);
+                None
+            }
+        }
     }
 
     /// Enregistre le look des réglages actuels comme préréglage.
