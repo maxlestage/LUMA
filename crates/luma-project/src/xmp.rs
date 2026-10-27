@@ -1203,6 +1203,7 @@ mod tests {
                 ..crate::Spot::new(crate::SpotKind::Clone, (0.95, 0.8), 0.03)
             },
             crate::Spot::new(crate::SpotKind::RedEye, (0.5, 0.45), 0.01),
+            crate::Spot::new(crate::SpotKind::Remove, (0.2, 0.7), 0.03),
         ];
         s.lens.remove_ca = true;
         s.lens.camera = false;
