@@ -30,7 +30,11 @@ pub fn place(
     scene: Option<&luma_core::RgbImage>,
 ) -> Spot {
     let mut spot = Spot::new(kind, center, radius);
-    if let Some(source) = scene.and_then(|s| luma_image::retouch::find_source(s, center, radius)) {
+    // Les yeux rouges n'ont pas de source.
+    if kind != SpotKind::RedEye
+        && let Some(source) =
+            scene.and_then(|s| luma_image::retouch::find_source(s, center, radius))
+    {
         spot.source = source;
     }
     spot
@@ -72,7 +76,10 @@ pub fn edit(
         for i in order {
             let s = &spots[i];
             let r = (s.radius * rect.width()).max(6.0);
-            if Some(i) == selected && p.distance(to_screen(s.source)) < r {
+            if Some(i) == selected
+                && s.kind != SpotKind::RedEye
+                && p.distance(to_screen(s.source)) < r
+            {
                 return Some(Grip::Source(i));
             }
             if p.distance(to_screen(s.center)) < r {
@@ -147,14 +154,18 @@ pub fn edit(
         if Some(i) == *selected {
             painter.circle_stroke(c, r + 1.0, Stroke::new(3.0, Color32::from_black_alpha(110)));
             painter.circle_stroke(c, r, Stroke::new(1.5, white));
-            painter.add(egui::Shape::dashed_line(
-                &circle(src, r),
-                Stroke::new(1.2, white),
-                5.0,
-                4.0,
-            ));
+            // Les yeux rouges n'ont pas de source.
+            let sourced = s.kind != SpotKind::RedEye;
+            if sourced {
+                painter.add(egui::Shape::dashed_line(
+                    &circle(src, r),
+                    Stroke::new(1.2, white),
+                    5.0,
+                    4.0,
+                ));
+            }
             let dir = (c - src).normalized();
-            if (c - src).length() > 2.0 * r {
+            if sourced && (c - src).length() > 2.0 * r {
                 painter.line_segment([src + dir * r, c - dir * r], Stroke::new(1.0, dim));
             }
             painter.circle_filled(c, 2.5, white);

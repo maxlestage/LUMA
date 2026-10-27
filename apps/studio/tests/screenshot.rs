@@ -749,6 +749,14 @@ fn retouch_spots() {
         "la copie réduite pour les sources"
     );
     assert!(heal.source != heal.center);
+    // Les yeux rouges n'ont pas de source à chercher.
+    let eye = luma_studio::retouching::place(
+        luma_project::SpotKind::RedEye,
+        (0.4, 0.4),
+        0.01,
+        st.scene_map(),
+    );
+    assert_eq!(eye.source, eye.center);
     st.settings.spots = vec![
         heal,
         luma_project::Spot {

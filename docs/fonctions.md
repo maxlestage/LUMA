@@ -63,7 +63,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Correcteur et tampon (Q) : un clic, la source trouvée d'elle-même, zone et source déplaçables ; taille, contour progressif, opacité | ✅ |
 | | Taches de capteur : vue des taches (les poussières en points sombres), « Retirer les poussières » d'un clic | ✅ |
-| | Yeux rouges, suppression | ⏳ |
+| | Yeux rouges : un cercle sur l'œil, la pupille rouge redevient noire, la peau reste | ✅ |
+| | Suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |
 | | Instantanés, synchronisation sur plusieurs photos | ⏳ |

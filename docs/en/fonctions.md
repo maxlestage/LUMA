@@ -62,7 +62,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing and clone (Q): one click, the source found on its own, area and source movable; size, feather, opacity | ✅ |
 | | Sensor spots: spot view (dust as dark dots), “Remove dust” in one click | ✅ |
-| | Red eye, remove | ⏳ |
+| | Red eye: a circle on the eye, the red pupil turns black again, the skin stays | ✅ |
+| | Remove | ⏳ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
 | | Snapshots, sync across multiple photos | ⏳ |

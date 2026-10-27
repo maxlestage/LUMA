@@ -2217,10 +2217,13 @@ impl Studio {
                     self.selected_mask = None;
                 }
             }
-            "retouch" | "retouch_heal" | "retouch_clone" if self.photo.is_some() => {
+            "retouch" | "retouch_heal" | "retouch_clone" | "retouch_red_eye"
+                if self.photo.is_some() =>
+            {
                 use luma_project::SpotKind;
                 let kind = match action {
                     "retouch_clone" => SpotKind::Clone,
+                    "retouch_red_eye" => SpotKind::RedEye,
                     "retouch_heal" => SpotKind::Heal,
                     _ => self.retouch.unwrap_or(SpotKind::Heal),
                 };
@@ -5448,6 +5451,12 @@ impl Studio {
                             tr("Une copie exacte d'une autre partie de la photo"),
                             "retouch_clone",
                         ),
+                        (
+                            SpotKind::RedEye,
+                            tr("Yeux rouges"),
+                            tr("Un cercle sur chaque œil : la pupille rouge redevient noire"),
+                            "retouch_red_eye",
+                        ),
                     ] {
                         if ui
                             .selectable_label(self.retouch == Some(kind), label)
@@ -5496,6 +5505,7 @@ impl Studio {
                     let name = match s.kind {
                         SpotKind::Heal => tr("Correcteur"),
                         SpotKind::Clone => tr("Tampon"),
+                        SpotKind::RedEye => tr("Yeux rouges"),
                     };
                     let text = RichText::new(format!("{}. {name}", i + 1)).size(12.0);
                     if ui.selectable_label(selected == Some(i), text).clicked() {
@@ -5517,7 +5527,12 @@ impl Studio {
                 let scene = self.scene_map.clone();
                 let mut delete = false;
                 let s = &mut self.settings.spots[i];
+                // Les yeux rouges n'ont pas de source : ni choix du type, ni nouvelle source.
+                let red_eye = s.kind == SpotKind::RedEye;
                 ui.horizontal(|ui| {
+                    if red_eye {
+                        return;
+                    }
                     for (kind, label) in [
                         (SpotKind::Heal, tr("Correcteur")),
                         (SpotKind::Clone, tr("Tampon")),
@@ -5546,7 +5561,8 @@ impl Studio {
                     commits.push(tr("Retouche réglée").into());
                 }
                 ui.horizontal(|ui| {
-                    if ui
+                    if !red_eye
+                        && ui
                         .button(tr("Nouvelle source"))
                         .on_hover_text(tr("Chercher une autre partie de la photo qui convient"))
                         .clicked()
