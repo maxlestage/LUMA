@@ -8086,6 +8086,7 @@ impl Studio {
 
     fn filmstrip(&mut self, ui: &mut Ui) {
         let mut clicked = None;
+        let mut chosen = None;
         let thumb_h = (ui.available_height() - 4.0).clamp(36.0, 84.0);
         egui::ScrollArea::horizontal()
             .id_salt("film")
@@ -8152,14 +8153,25 @@ impl Studio {
                                 egui::StrokeKind::Outside,
                             );
                         }
-                        if r.on_hover_text(file_name(path)).clicked() {
+                        if TOUCH && r.long_touched() {
+                            chosen = Some(i);
+                        } else if r.on_hover_text(file_name(path)).clicked() {
                             clicked = Some(i);
                         }
                         ui.add_space(8.0);
                     }
                 });
             });
-        if let Some(i) = clicked {
+        if let Some(i) = chosen {
+            // Toucher longuement : ajouter à la sélection (ou en retirer), comme dans
+            // la grille.
+            if !self.selected.remove(&i) {
+                self.selected.insert(i);
+                if let Some(c) = self.current {
+                    self.selected.insert(c);
+                }
+            }
+        } else if let Some(i) = clicked {
             self.click_photo(i, ui);
         }
     }
