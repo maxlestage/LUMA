@@ -156,13 +156,10 @@ pub struct SliderSpec {
 }
 
 /// Un curseur de réglage : libellé, piste fine, valeur modifiable.
-/// Un écran tactile sans souris (iPhone, iPad).
-const TOUCH: bool = cfg!(target_os = "ios");
-
 pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
     let mut change = Change::default();
     // Au doigt, des rangées plus hautes : plus faciles à viser et à faire défiler.
-    let height = if TOUCH { 34.0 } else { 22.0 };
+    let height = if crate::touch() { 34.0 } else { 22.0 };
     let label_w = 112.0;
     let value_w = 52.0;
     let width = ui.available_width();
@@ -217,7 +214,7 @@ pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
         ui.scope_id().with((spec.label, "piste")),
         Sense::click_and_drag(),
     );
-    if TOUCH {
+    if crate::touch() {
         touch_track(
             ui,
             &track,
@@ -246,7 +243,7 @@ pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
             change.changed = true;
         }
     }
-    if !TOUCH && (track.drag_stopped() || track.clicked()) {
+    if !crate::touch() && (track.drag_stopped() || track.clicked()) {
         change.committed = true;
     }
     if label.double_clicked() || track.double_clicked() {
@@ -305,7 +302,7 @@ pub fn slider(ui: &mut Ui, spec: &SliderSpec, value: &mut f32) -> Change {
 
     // Au doigt, la valeur est seulement affichée : un glissé dessus fait défiler le
     // panneau au lieu de la changer.
-    if TOUCH {
+    if crate::touch() {
         ui.painter().rect_filled(value_rect, 6.0, theme::SECTION);
         ui.painter().text(
             value_rect.center(),
@@ -448,11 +445,11 @@ pub fn color_wheel(
     // franc dessus) : un glissé commencé ailleurs fait défiler le panneau.
     let a = hue.to_radians();
     let knob = center + vec2(a.cos(), -a.sin()) * radius * (*saturation / 100.0);
-    let grabbed = !TOUCH
+    let grabbed = !crate::touch()
         || ui
             .input(|i| i.pointer.press_origin())
             .is_some_and(|o| o.distance(knob) < 28.0);
-    if TOUCH && response.dragged() && !grabbed {
+    if crate::touch() && response.dragged() && !grabbed {
         ui.scroll_with_delta(vec2(0.0, response.drag_delta().y));
     } else if (response.dragged() || response.clicked())
         && let Some(p) = response.interact_pointer_pos()
