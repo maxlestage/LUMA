@@ -4,6 +4,11 @@
 
 The professional photo library, step by step.
 
+- **LÜMA for Linux**: the same engine and the same rendering as on Mac, with the same
+  subscription. An archive that installs without a password (`./install.sh`, with its
+  launcher in the applications menu and RAW files opening through “Open With”), or a
+  `.deb` package for Debian and Ubuntu; x86_64, Ubuntu 22.04, Debian 12, Fedora 36 or
+  later, with a Vulkan graphics driver. The `luma` command line is included.
 - **Faster**: colour noise reduction (on by default) is three times faster without
   changing a single pixel; full-resolution export takes 25 to 30% less time, and the
   preview with heavy adjustments is about 25% more responsive. Then the blurs: two
