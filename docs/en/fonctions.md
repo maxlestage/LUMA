@@ -65,6 +65,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Auto verticals (Shift+V): the vanishing point of the verticals measured, the Transform's Vertical set to make them parallel | ✅ |
 | | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
 | | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
+| | “Sky” mask (“Select sky”): sky and clouds found on the photo, edges followed, reflections in water left out; no AI | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
 | | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
 | | Mask area shown (O) in red, green, blue, white or white on black, opacity from 10 to 100% | ✅ |

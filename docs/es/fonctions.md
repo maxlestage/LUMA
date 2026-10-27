@@ -66,6 +66,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Verticales automáticas (Mayús+V): se mide el punto de fuga de las verticales y se ajusta la Vertical de la Transformación para volverlas paralelas | ✅ |
 | | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad | ✅ |
 | | Máscaras restringidas a un rango de luminancia (mínimo, máximo, suavizado) o de color (tono, anchura, suavizado; grises excluidos), leído sobre la foto; zona visible (O) | ✅ |
+| | Máscara «Cielo» («Seleccionar el cielo»): cielo y nubes encontrados en la foto, bordes seguidos, reflejos en el agua excluidos; sin IA | ✅ |
 | | Pincel que sigue los bordes: cada toque solo pinta los tonos cercanos a su centro, la zona se detiene en los contornos de la foto | ✅ |
 | | Combinaciones de máscaras: añadir, restar, intersecar otras formas (cada una invertible) | ✅ |
 | | Zona de la máscara mostrada (O) en rojo, verde, azul, blanco o blanco sobre negro, opacidad del 10 al 100 % | ✅ |
