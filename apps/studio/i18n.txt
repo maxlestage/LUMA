@@ -5321,6 +5321,54 @@ fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
 
+fr = Fluidité
+en = Liquify
+es = Licuar
+
+fr = Pousser
+en = Push
+es = Empujar
+
+fr = Gonfler
+en = Bloat
+es = Inflar
+
+fr = Dégonfler
+en = Pucker
+es = Desinflar
+
+fr = Glissez : la photo suit le pinceau
+en = Drag: the photo follows the brush
+es = Arrastre: la foto sigue al pincel
+
+fr = Cliquez ou glissez : la zone grandit depuis son centre
+en = Click or drag: the area grows from its centre
+es = Haga clic o arrastre: la zona crece desde su centro
+
+fr = Cliquez ou glissez : la zone se resserre vers son centre
+en = Click or drag: the area shrinks towards its centre
+es = Haga clic o arrastre: la zona se encoge hacia su centro
+
+fr = Effacer|fluidité
+en = Clear
+es = Borrar
+
+fr = Retire les {n} coups de pinceau de la fluidité
+en = Removes the {n} liquify brush strokes
+es = Quita los {n} trazos de pincel de licuado
+
+fr = Force
+en = Strength
+es = Fuerza
+
+fr = Fluidité effacée
+en = Liquify cleared
+es = Licuado borrado
+
+fr = Fluidité : glissez sur la photo, Échap pour quitter
+en = Liquify: drag on the photo, Esc to leave
+es = Licuar: arrastre sobre la foto, Esc para salir
+
 fr = Un masque sur le ciel de la photo, trouvé sur la photo elle-même (clair, uni, relié au haut), ses bords sur les branches et les toits
 en = A mask on the photo's sky, found from the photo itself (bright, even, connected to the top), its edges following branches and roofs
 es = Una máscara sobre el cielo de la foto, encontrado en la propia foto (claro, uniforme, unido a la parte superior), con los bordes sobre ramas y tejados

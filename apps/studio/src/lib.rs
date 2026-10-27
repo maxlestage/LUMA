@@ -10,6 +10,7 @@ pub mod i18n;
 pub mod icons;
 pub mod keys;
 pub mod licence;
+pub mod liquifying;
 pub mod masking;
 pub mod retouching;
 pub mod style;
