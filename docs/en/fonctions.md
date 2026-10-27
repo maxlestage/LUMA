@@ -57,6 +57,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Calibration | Shadows tint, hue and saturation of the primaries | ✅ |
 | Tools | Crop and straighten (free angle), on-screen tool with locked aspect ratio (R) | ✅ |
 | | Crop overlays: thirds, golden ratio, diagonals, golden triangles, golden spiral, grid (O to switch, Shift+O to rotate) | ✅ |
+| | Auto straighten (Shift+R): horizon and verticals read with a Hough transform; nothing when in doubt (close-up, vanishing lines) | ✅ |
 | | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
 | | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
