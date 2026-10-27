@@ -360,6 +360,9 @@ The professional photo library, step by step.
   Pop, Selenium, Copper…). Each black-and-white film has its own colour sensitivity.
   All checked on the chart: distinct from one another, no crushed image, neutral black
   and white, same renders on the GPU.
+- **iPhone and iPad: a one-month trial, then LÜMA Premium for life at €89.99**: a single
+  App Store purchase, no subscription, restorable on your other devices and shareable
+  with your family. Nothing changes on Mac (14-day trial, then the subscription).
 
 ## 0.2.0 — October 2026
 

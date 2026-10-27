@@ -389,6 +389,10 @@ La photothèque professionnelle, étape par étape.
   Clair-obscur, Pop, Sélénium, Cuivre…). Chaque noir et blanc a sa sensibilité aux
   couleurs. Tous vérifiés sur la mire : distincts deux à deux, sans image écrasée, noir
   et blanc neutres, mêmes rendus sur le GPU.
+- **iPhone et iPad : un mois d'essai, puis LÜMA Premium à vie pour 89,99 €** : un seul
+  achat dans l'App Store, sans abonnement, restaurable sur vos autres appareils et
+  partageable en famille. Sur Mac, rien ne change (14 jours d'essai, puis
+  l'abonnement).
 
 ## 0.2.0 — octobre 2026
 
