@@ -335,6 +335,17 @@ La photothèque professionnelle, étape par étape.
 - **Films rangés en familles qui se plient** : pellicules couleur, noir et blanc,
   cinéma, instantanés, mes préréglages, mes pellicules ; chaque titre dit combien la
   famille compte de films, et seule celle du film appliqué s'ouvre d'abord.
+- **150 films** : 50 de plus. Pellicules couleur (Kodacolor 200, Portra 160VC et
+  400VC, Ektachrome 64, Fujicolor 100 Industrial, Superia Venus 800, Sensia 100, Precisa
+  100, Agfa Portrait 160, Konica VX 200, E100VS, Phoenix 200, Lomochrome Purple et
+  Metropolis, Aerochrome), cinéma (EXR 200T, Eterna 400T, F-64D, XTR 250, Super 16,
+  70 mm, Néon, Épouvante, Romance, Documentaire, Été indien, Thriller urbain), noir et
+  blanc (Delta 400, Kentmere 400, SFX 200, Fomapan 100, RPX 25, Pancro 400, CHS 100 II,
+  T-Max P3200, Pan 400, Verichrome Pan), instantanés (Polaroid i-Type, Spectra et 669,
+  Instax Wide, Impossible Project, Instamatic) et créatifs (Pastel, Automne, Hiver,
+  Printemps, Brume, Contre-jour, Bichromie). Tous vérifiés sur la mire comme les
+  autres : distincts, sans image écrasée, noir et blanc neutres, mêmes rendus sur le
+  GPU.
 
 ## 0.2.0 — octobre 2026
 

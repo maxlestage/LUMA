@@ -331,6 +331,16 @@ La fototeca profesional, paso a paso.
 - **Películas en familias plegables**: color, blanco y negro, cine, instantáneas, mis
   ajustes, mis películas; cada título indica cuántas películas tiene la familia, y al
   principio solo se abre la de la película aplicada.
+- **150 películas**: 50 más. Color (Kodacolor 200, Portra 160VC y 400VC, Ektachrome
+  64, Fujicolor 100 Industrial, Superia Venus 800, Sensia 100, Precisa 100, Agfa
+  Portrait 160, Konica VX 200, E100VS, Phoenix 200, Lomochrome Purple y Metropolis,
+  Aerochrome), cine (EXR 200T, Eterna 400T, F-64D, XTR 250, Super 16, 70 mm, Neón,
+  Terror, Romance, Documental, Veranillo de San Martín, Thriller urbano), blanco y negro
+  (Delta 400, Kentmere 400, SFX 200, Fomapan 100, RPX 25, Pancro 400, CHS 100 II, T-Max
+  P3200, Pan 400, Verichrome Pan), instantáneas (Polaroid i-Type, Spectra y 669, Instax
+  Wide, Impossible Project, Instamatic) y creativos (Pastel, Otoño, Invierno, Primavera,
+  Bruma, Contraluz, Bicromía). Todas verificadas en la carta como las demás:
+  distintas, sin imagen aplastada, blanco y negro neutros, mismos renders en la GPU.
 
 ## 0.2.0 — octubre de 2026
 

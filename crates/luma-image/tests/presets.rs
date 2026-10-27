@@ -1,4 +1,4 @@
-//! Les 100 films vérifiés par la machine, pas à l'œil : chacun est rendu sur une mire
+//! Les 150 films vérifiés par la machine, pas à l'œil : chacun est rendu sur une mire
 //! (les 24 couleurs d'une charte, une rampe de gris, des tons chair et des couleurs
 //! saturées), puis mesuré en OKLab (ΔE ×100, perceptuel).
 //!
@@ -7,7 +7,7 @@
 //! - aucun n'écrase l'image (ni presque tout noir, ni presque tout blanc) ;
 //! - les noir et blanc donnent des gris neutres ;
 //!
-//! La planche‑contact de la mire (le rendu neutre puis les 100 films, dans l'ordre, dix
+//! La planche‑contact de la mire (le rendu neutre puis les 150 films, dans l'ordre, dix
 //! par ligne) est écrite dans `target/planche-films.png` ; la CI la publie.
 
 use luma_color::{self as lc, OkLab};

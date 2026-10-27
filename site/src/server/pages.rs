@@ -217,7 +217,7 @@ fn hero(lang: Lang) -> Element {
         .child(
             div()
                 .class("hero-meta reveal")
-                .children(["RAW", t(lang, "100 films"), t(lang, "Masques"), "Mac · iPhone · iPad"].map(|s| span().text(s))),
+                .children(["RAW", t(lang, "150 films"), t(lang, "Masques"), "Mac · iPhone · iPad"].map(|s| span().text(s))),
         )
         .child(
             a().class("scroll-hint")
