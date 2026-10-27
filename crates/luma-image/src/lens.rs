@@ -11,7 +11,7 @@
 
 use luma_color::luminance;
 use luma_core::{Plane, RgbImage};
-use luma_project::{Lens, Transform};
+use luma_project::{Crop, Lens, Transform};
 use rayon::prelude::*;
 
 #[inline]
@@ -203,6 +203,50 @@ pub fn guided(guides: &[Guide], start: &Transform) -> Transform {
     t
 }
 
+/// Le recadrage qui retire les bords vides laissés par la Transformation (et la
+/// Distorsion) d'une photo de `w × h` : le plus grand cadre centré, aux proportions de la
+/// photo et penché de `angle` degrés comme le recadrage, dont tout le pourtour tombe
+/// dans la photo d'origine (recherche par dichotomie sur sa taille).
+pub fn filled_crop(lens: &Lens, t: &Transform, w: usize, h: usize, angle: f32) -> Crop {
+    let (cx, cy) = (w as f32 / 2.0, h as f32 / 2.0);
+    let hd = (cx * cx + cy * cy).sqrt();
+    let mapping = Mapping::new(lens, t);
+    let (sin, cos) = angle.to_radians().sin_cos();
+    let inside = |x: f32, y: f32| {
+        mapping.map((x - cx) / hd, (y - cy) / hd).is_some_and(|(sx, sy)| {
+            let (px, py) = (sx * hd + cx, sy * hd + cy);
+            px >= 0.0 && py >= 0.0 && px <= w as f32 && py <= h as f32
+        })
+    };
+    // Le pourtour du cadre de taille relative `k`, penché autour du centre.
+    let fits = |k: f32| {
+        let (hw, hh) = (k * cx, k * cy);
+        (0..=64).all(|i| {
+            let u = i as f32 / 64.0 * 2.0 - 1.0;
+            [(u * hw, -hh), (u * hw, hh), (-hw, u * hh), (hw, u * hh)]
+                .iter()
+                .all(|&(dx, dy)| inside(cx + dx * cos - dy * sin, cy + dx * sin + dy * cos))
+        })
+    };
+    let k = if fits(1.0) {
+        1.0
+    } else {
+        let (mut lo, mut hi) = (0.05f32, 1.0f32);
+        for _ in 0..30 {
+            let mid = (lo + hi) / 2.0;
+            if fits(mid) { lo = mid } else { hi = mid }
+        }
+        lo
+    };
+    Crop {
+        left: 0.5 - k / 2.0,
+        top: 0.5 - k / 2.0,
+        right: 0.5 + k / 2.0,
+        bottom: 0.5 + k / 2.0,
+        angle,
+    }
+}
+
 /// Corrige la géométrie et le vignetage de l'objectif. `ca` : l'échelle relative des
 /// couches rouge et bleue (voir [`estimate_ca`]), `(0, 0)` pour ne rien corriger.
 /// `None` s'il n'y a rien à faire.
@@ -360,6 +404,47 @@ mod tests {
             b: m.map(b.0, b.1).unwrap(),
             vertical,
         }
+    }
+
+    #[test]
+    fn the_filled_crop_leaves_no_empty_border() {
+        let (w, h) = (300, 200);
+        let img = RgbImage::from_fn(w, h, |_, _| [0.5; 3]);
+        let t = Transform {
+            vertical: -40.0,
+            horizontal: 15.0,
+            rotate: 3.0,
+            ..Transform::default()
+        };
+        let lens = Lens {
+            distortion: 30.0,
+            ..Lens::default()
+        };
+        let corrected = correct(&img, &lens, &t, (0.0, 0.0)).unwrap();
+        // Sans recadrage, des bords vides (noirs).
+        assert!(corrected.data.iter().any(|p| p[1] == 0.0));
+        let c = filled_crop(&lens, &t, w, h, 0.0);
+        assert!(c.right - c.left < 0.95 && c.right - c.left > 0.4, "{c:?}");
+        let cropped = crate::geometry::crop(&corrected, &c).unwrap();
+        let empty = cropped.data.iter().filter(|p| p[1] < 0.25).count();
+        assert_eq!(empty, 0, "{c:?}");
+        // Le plus grand : un peu plus grand, il en retrouve.
+        let bigger = Crop {
+            left: c.left - 0.02,
+            top: c.top - 0.02,
+            right: c.right + 0.02,
+            bottom: c.bottom + 0.02,
+            angle: 0.0,
+        };
+        let more = crate::geometry::crop(&corrected, &bigger).unwrap();
+        assert!(more.data.iter().any(|p| p[1] < 0.25));
+        // Rien à rogner sans Transformation ; un recadrage penché reste penché.
+        assert!(filled_crop(&Lens::default(), &Transform::default(), w, h, 0.0).is_identity());
+        let tilted = filled_crop(&Lens::default(), &Transform::default(), w, h, 4.0);
+        assert_eq!(tilted.angle, 4.0);
+        assert!(tilted.right - tilted.left < 1.0);
+        let turned = crate::geometry::crop(&img, &tilted).unwrap();
+        assert!(turned.data.iter().all(|p| p[1] > 0.25));
     }
 
     #[test]
