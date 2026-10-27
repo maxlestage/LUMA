@@ -95,6 +95,7 @@ pub struct ColorStage {
     profile_chroma: f32,
     mono: bool,
     simple: bool,
+    chroma_only: bool,
     vibrance: f32,
     skin_hue: f32,
     /// Centres des bandes (radians, croissants) et réglages TSL de chaque bande.
@@ -191,8 +192,10 @@ impl ColorStage {
             hsl,
             grading,
             simple: false,
+            chroma_only: false,
         };
         stage.simple = stage.is_simple();
+        stage.chroma_only = stage.is_chroma_only();
         Some(stage)
     }
 
@@ -227,27 +230,69 @@ impl ColorStage {
         self.vibrance == 0.0 && self.grading.is_none() && !self.mono && self.hsl.iter().all(|b| *b == [0.0; 3])
     }
 
-    /// [`Self::apply`] sur `px` (au plus [`crate::LANES`] pixels), en colonnes pour le
-    /// cas simple (le profil et la Saturation) : trois fois plus vite, mêmes bits. Les
-    /// autres réglages, et un bloc incomplet, passent pixel par pixel.
+    /// Seuls le profil, la Saturation et la Vibrance agissent : le chroma change, la
+    /// teinte non (pas de mélangeur, d'étalonnage ni de noir et blanc).
+    fn is_chroma_only(&self) -> bool {
+        self.grading.is_none() && !self.mono && self.hsl.iter().all(|b| *b == [0.0; 3])
+    }
+
+    /// Le gain de chroma de la Vibrance et de la Saturation, pour un pixel de chroma `c0`
+    /// et de teinte `h` : le calcul de [`Self::apply`], dans le même ordre.
+    #[inline]
+    fn chroma_gain(&self, a: f32, b: f32) -> f32 {
+        let c0 = (a * a + b * b).sqrt();
+        let mut c = c0;
+        if self.vibrance != 0.0 {
+            let h = color::fast_atan2(b, a);
+            let mut d = h - self.skin_hue;
+            if d > std::f32::consts::PI {
+                d -= std::f32::consts::TAU;
+            } else if d < -std::f32::consts::PI {
+                d += std::f32::consts::TAU;
+            }
+            let skin = (1.0 - (d / 0.8).powi(2)).max(0.0).powi(2);
+            let w = (1.0 - smoothstep(0.0, 0.2, c)) * (1.0 - 0.6 * skin);
+            c *= 1.0 + self.vibrance * w;
+        }
+        c *= (1.0 + self.saturation) * self.profile_chroma;
+        if c0 > 1e-9 { c / c0 } else { 0.0 }
+    }
+
+    /// [`Self::apply`] sur `px` (au plus [`crate::LANES`] pixels), en colonnes quand seul
+    /// le chroma change (le profil, la Saturation, la Vibrance) : plusieurs fois plus
+    /// vite, mêmes bits. Les autres réglages, et un bloc incomplet, passent pixel par
+    /// pixel.
     pub fn apply_lanes(&self, px: &mut [Vec3]) {
         const N: usize = crate::LANES;
-        if !self.simple || px.len() < N {
+        if !(self.simple || self.chroma_only) || px.len() < N {
             for p in px.iter_mut() {
                 *p = self.apply(*p);
             }
             return;
         }
         let ([to_lms, from_lms, lms_to_lab, lab_to_lms], white) = self.ok.parts();
-        let k = (1.0 + self.saturation) * self.profile_chroma;
         let c = crate::columns(px);
+        // Vers OKLab, huit pixels à la fois (les calculs de `OkLab::from_rgb`).
+        let mut lab = [[0.0f32; 3]; N];
+        for (i, out) in lab.iter_mut().enumerate() {
+            let lms = color::apply(&to_lms, [c[0][i], c[1][i], c[2][i]]);
+            let v = color::apply(&lms_to_lab, lms.map(color::fast_cbrt));
+            *out = [v[0], v[1] - v[0] * white.0, v[2] - v[0] * white.1];
+        }
+        // Le gain de chroma de chacun.
+        let mut k = [0.0f32; N];
+        if self.simple {
+            k = [(1.0 + self.saturation) * self.profile_chroma; N];
+        } else {
+            for (g, [_, a, b]) in k.iter_mut().zip(&lab) {
+                *g = self.chroma_gain(*a, *b);
+            }
+        }
+        // Et retour (les calculs de `OkLab::to_rgb`).
         let mut out = [[0.0f32; N]; 3];
         for i in 0..N {
-            // Les calculs de `OkLab::from_rgb` puis `to_rgb`, dans le même ordre.
-            let lms = color::apply(&to_lms, [c[0][i], c[1][i], c[2][i]]);
-            let lab = color::apply(&lms_to_lab, lms.map(color::fast_cbrt));
-            let (l, a, b) = (lab[0], lab[1] - lab[0] * white.0, lab[2] - lab[0] * white.1);
-            let q = color::apply(&lab_to_lms, [l, a * k + l * white.0, b * k + l * white.1]);
+            let [l, a, b] = lab[i];
+            let q = color::apply(&lab_to_lms, [l, a * k[i] + l * white.0, b * k[i] + l * white.1]);
             let rgb = color::apply(&from_lms, q.map(|v| v * v * v));
             for ch in 0..3 {
                 out[ch][i] = rgb[ch];
@@ -408,6 +453,17 @@ mod tests {
             },
             Settings {
                 vibrance: 40.0,
+                ..Settings::default()
+            },
+            Settings {
+                profile: luma_project::Profile::Vivid,
+                vibrance: -70.0,
+                saturation: 25.0,
+                ..Settings::default()
+            },
+            Settings {
+                profile: luma_project::Profile::Monochrome,
+                vibrance: 30.0,
                 ..Settings::default()
             },
         ];
