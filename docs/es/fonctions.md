@@ -56,6 +56,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Aberración cromática longitudinal, correcciones de otras marcas (Canon, Nikon, Pentax…) | ⏳ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
 | | Enderezamiento automático (Mayús+R, Mayús+V) y guiado: de dos a cuatro líneas trazadas en la foto ajustan la perspectiva y la rotación | ✅ |
+| | Bordes vacíos recortados: el mayor encuadre centrado, con las proporciones de la foto, sin bordes vacíos tras la Transformación o la Distorsión | ✅ |
 | Efectos | Viñeta tras el recorte (cantidad, punto medio, redondez, desvanecimiento, altas luces) | ✅ |
 | | Grano (cantidad, tamaño, aspereza), idéntico en todos los tamaños | ✅ |
 | Calibración | Matiz de las sombras, tono y saturación de los primarios | ✅ |

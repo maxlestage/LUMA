@@ -56,6 +56,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Aberration chromatique longitudinale, corrections des autres marques (Canon, Nikon, Pentax…) | ⏳ |
 | Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
 | | Redressement automatique (Maj+R, Maj+V) et guidé : deux à quatre lignes tracées sur la photo règlent la perspective et la rotation | ✅ |
+| | Bords vides rognés : le plus grand cadre centré, aux proportions de la photo, sans bord vide après la Transformation ou la Distorsion | ✅ |
 | Effets | Vignetage après recadrage (gain, milieu, arrondi, contour progressif, hautes lumières) | ✅ |
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |

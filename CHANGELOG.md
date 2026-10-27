@@ -125,6 +125,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Bords vides rognés** (Géométrie, Transformation) : après une perspective, une
+  rotation ou une correction de distorsion, un clic recadre au plus grand cadre sans
+  coin noir, aux proportions de la photo.
 - **Redressement guidé** (Géométrie, Transformation) : glissez le long de deux à
   quatre arêtes qui doivent être droites (un mur, un poteau, l'horizon) ; LÜMA règle
   aussitôt la perspective et la rotation. Une seule ligne ne fait que tourner la photo.
