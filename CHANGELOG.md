@@ -183,6 +183,10 @@ La photothèque professionnelle, étape par étape.
   de deux secondes d'écart se replient derrière la première (« Rafale ×5 »,
   « Série ×3 ») ; S les déplie, « Fusionner la série » ouvre l'outil Fusion avec les
   photos d'une série d'exposition.
+- **Doublons** (« Chercher les doublons ») : la même image dans plusieurs fichiers,
+  copiée, exportée à une autre taille ou recompressée, retrouvée par son empreinte et
+  montrée groupe par groupe. **En lot** : avec plusieurs photos choisies, la note, le
+  drapeau et le libellé vont à toutes.
 
 ## 0.2.0 — octobre 2026
 
