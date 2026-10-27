@@ -259,6 +259,11 @@ The professional photo library, step by step.
 - **JPEG optimized for the web**: 4:2:0 chroma and Huffman tables computed for each
   image, 9 to 29% lighter on the test photos, for a barely measurable difference; in the
   Web preset, the export window (“Optimized for the web”) and `--web`.
+- **Import from a card** (“Import a card…” in the Library, `luma import`): the mounted
+  card is found on its own; the photos are sorted by capture date, renamed if you
+  wish, also copied to a second disk; each copy is read back and compared with the
+  original, the RAW, its JPEG and its XMP keep the same name, a photo already imported
+  is skipped, the card is never modified.
 
 ## 0.2.0 — October 2026
 
