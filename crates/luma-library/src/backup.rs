@@ -120,6 +120,52 @@ impl Catalog {
         }
         moves.len()
     }
+
+    /// Sur iPhone et iPad, le dossier de l'app (`…/Containers/Data/Application/<id>`)
+    /// change de nom quand l'app est mise à jour : les photos d'avant sont suivies
+    /// jusqu'au dossier d'aujourd'hui, `home`, avec leurs notes et leurs collections.
+    /// Celles d'un ancien dossier qu'on ne retrouve pas en sortent : ce dossier n'existe
+    /// plus, elles ne reviendront pas (et la liste des dossiers n'en montre pas deux
+    /// du même nom). Rend le nombre de photos suivies.
+    pub fn follow_container(&mut self, home: &Path) -> usize {
+        let Some(own) = container(home) else {
+            return 0;
+        };
+        let mut moves = Vec::new();
+        let mut gone = Vec::new();
+        for e in self.missing() {
+            let Some(old) = container(&e.path) else {
+                continue;
+            };
+            if old == own {
+                continue;
+            }
+            let new = home.join(e.path.strip_prefix(&old).unwrap_or(&e.path));
+            if new.is_file() {
+                moves.push((e.path.clone(), new));
+            } else {
+                gone.push(e.path.clone());
+            }
+        }
+        for (a, b) in &moves {
+            self.rename(a, b);
+        }
+        for p in gone {
+            self.entries.remove(&p);
+        }
+        moves.len()
+    }
+}
+
+/// Le dossier d'une app d'iPhone ou d'iPad qui contient `path`
+/// (`…/Containers/Data/Application/<id>`), s'il y en a un.
+fn container(path: &Path) -> Option<PathBuf> {
+    let parts: Vec<_> = path.components().collect();
+    let i = parts.windows(3).position(|w| {
+        w[0].as_os_str() == "Containers" && w[1].as_os_str() == "Data" && w[2].as_os_str() == "Application"
+    })?;
+    parts.get(i + 3)?;
+    Some(parts[..i + 4].iter().collect())
 }
 
 #[cfg(test)]
@@ -162,6 +208,39 @@ mod tests {
         assert_eq!(std::fs::read(&file).unwrap(), b"v1");
         // Le catalogue remplacé est dans les sauvegardes (datée de maintenant).
         assert!(list(&file).iter().any(|p| std::fs::read(p).unwrap() == b"v2"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Une mise à jour de l'app sur iPhone : son dossier change de nom ; les photos de
+    /// Documents sont suivies, celles qui ont disparu sortent, le reste ne bouge pas.
+    #[test]
+    fn photos_follow_the_app_container() {
+        let dir = temp("conteneur");
+        let apps = dir.join("var/mobile/Containers/Data/Application");
+        let (old, new) = (apps.join("AAAA-1111"), apps.join("BBBB-2222"));
+        std::fs::create_dir_all(old.join("Documents")).unwrap();
+        for f in ["a.png", "b.png"] {
+            std::fs::write(old.join("Documents").join(f), b"\x89PNG\r\n\x1a\n").unwrap();
+        }
+        let elsewhere = dir.join("Photos");
+        std::fs::create_dir_all(&elsewhere).unwrap();
+        std::fs::write(elsewhere.join("c.png"), b"\x89PNG\r\n\x1a\n").unwrap();
+        let mut cat = Catalog::default();
+        cat.add_folder(&old.join("Documents"), false);
+        cat.add_folder(&elsewhere, false);
+        // La mise à jour : le dossier de l'app est renommé, une photo a disparu, une
+        // photo d'ailleurs est débranchée (elle doit rester).
+        std::fs::rename(&old, &new).unwrap();
+        std::fs::remove_file(new.join("Documents/b.png")).unwrap();
+        std::fs::rename(elsewhere.join("c.png"), dir.join("c.png")).unwrap();
+        assert_eq!(cat.follow_container(&dir.join("ailleurs")), 0);
+        assert_eq!(cat.follow_container(&new), 1);
+        assert!(cat.get(&new.join("Documents/a.png")).is_some());
+        assert!(cat.get(&old.join("Documents/b.png")).is_none());
+        assert!(cat.get(&elsewhere.join("c.png")).is_some());
+        assert_eq!(cat.len(), 2);
+        assert_eq!(container(&new.join("Documents/a.png")), Some(new.clone()));
+        assert_eq!(container(&apps), None);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

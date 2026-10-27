@@ -1187,6 +1187,15 @@ impl Studio {
     /// La photothèque de ce fichier (les tests en prennent une à eux).
     pub fn use_catalog(&mut self, path: PathBuf) {
         self.catalog = luma_library::Catalog::load(&path);
+        // iPhone, iPad : après une mise à jour, le dossier de l'app a changé de nom ; ses
+        // photos le suivent (sans quoi « Documents » apparaît deux fois).
+        if let Some(home) = std::env::var_os("HOME") {
+            let before = self.catalog.len();
+            let followed = self.catalog.follow_container(Path::new(&home));
+            if followed > 0 || self.catalog.len() != before {
+                let _ = self.catalog.save(&path);
+            }
+        }
         self.catalog_path = Some(path);
         self.refresh_catalog_lists();
     }
@@ -3481,6 +3490,10 @@ impl Studio {
                         ui.close();
                     }
                 }
+                if ui.button(tr("Livre, diaporama, galerie…")).clicked() {
+                    self.outputs_open = true;
+                    ui.close();
+                }
                 ui.separator();
                 let current = crate::i18n::lang();
                 ui.label(RichText::new(tr("Langue")).small().color(theme::DIM));
@@ -5762,12 +5775,17 @@ impl Studio {
     fn stage(&mut self, ui: &mut Ui, rect: Rect) {
         // La Bibliothèque : la barre de la vue (grille ou carte) au‑dessus.
         let rect = if self.module == Module::Library && !self.folder.is_empty() {
-            let bar = rect.with_max_y(rect.min.y + 34.0);
+            // Aussi haute que ses boutons (plus hauts au doigt), aux marges de la grille.
+            let pad = if self.compact { 8.0 } else { 14.0 };
+            let bar = rect.with_max_y(rect.min.y + ui.spacing().interact_size.y + 8.0);
             ui.scope_builder(
                 egui::UiBuilder::new()
-                    .max_rect(bar.shrink2(vec2(14.0, 4.0)))
+                    .max_rect(bar.shrink2(vec2(pad, 4.0)))
                     .layout(egui::Layout::right_to_left(egui::Align::Center)),
-                |ui| self.view_bar(ui),
+                |ui| {
+                    ui.set_clip_rect(bar);
+                    self.view_bar(ui)
+                },
             );
             rect.with_min_y(bar.max.y)
         } else {
@@ -5811,8 +5829,10 @@ impl Studio {
             }
         }
         ui.add_space(16.0);
-        if ui
-            .button(tr("Livre, diaporama, galerie…"))
+        // Sur un écran étroit, il est dans « ••• » : la barre tient sur une ligne.
+        if !self.compact
+            && ui
+                .button(tr("Livre, diaporama, galerie…"))
             .on_hover_text(tr(
                 "Un diaporama (dans l'app ou exporté), un livre photo en PDF et une galerie web",
             ))
@@ -7339,6 +7359,12 @@ impl Studio {
     /// L'histogramme, ou l'instrument choisi à sa place (forme d'onde, parade RVB,
     /// vectorscope), avec le sélecteur au‑dessus (Maj+J : le suivant).
     fn scopes(&mut self, ui: &mut Ui, height: f32) {
+        // Sur iPhone, la place manque : l'histogramme seul, plus bas.
+        if self.compact {
+            widgets::histogram_sized(ui, &self.histogram, &mut self.clipping, 52.0)
+                .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
+            return;
+        }
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             for s in Scope::ALL {
@@ -7863,8 +7889,17 @@ impl Studio {
             }
             return;
         }
-        // Deux colonnes au moins sur un écran étroit (iPhone en portrait).
-        let cell = ((ui.available_width() - 14.0) / 2.0 - 10.0).clamp(120.0, 210.0);
+        // Les marges des îlots, pour que la grille tombe dans leur alignement ; deux
+        // colonnes au moins sur un écran étroit (iPhone en portrait).
+        let (pad, gap) = if self.compact {
+            (8.0, 8.0)
+        } else {
+            (14.0, 10.0)
+        };
+        let width = ui.available_width() - 2.0 * pad;
+        let target = if self.compact { 160.0 } else { 200.0 };
+        let cols = ((width + gap) / (target + gap)).floor().max(2.0) as usize;
+        let cell = ((width - gap * (cols - 1) as f32) / cols as f32).max(60.0);
         let mut clicked = None;
         let mut open = None;
         let mut chosen = None;
@@ -7872,35 +7907,45 @@ impl Studio {
             .id_salt("grille")
             .auto_shrink(false)
             .show(ui, |ui| {
-                ui.add_space(14.0);
+                // Tout est placé au point près : l'espacement des éléments (plus grand au
+                // doigt) ne s'ajoute pas aux marges.
+                ui.spacing_mut().item_spacing = vec2(0.0, gap);
+                ui.add_space(gap);
                 // Sur iPhone et iPad, ajouter des photos se fait d'ici aussi.
                 if luma_apple::photos::AVAILABLE {
-                    ui.horizontal(|ui| {
-                        ui.add_space(14.0);
-                        let button = egui::Button::new(
-                            RichText::new(format!("+  {}", tr("Importer des photos")))
-                                .size(15.0)
-                                .color(theme::BACKGROUND),
-                        )
-                        .fill(theme::ACCENT)
-                        .corner_radius(20.0)
-                        .min_size(vec2(ui.available_width() - 14.0, 40.0));
-                        if ui.add(button).clicked() {
-                            self.act("open");
-                        }
-                    });
-                    ui.add_space(12.0);
+                    let (row, _) = ui.allocate_exact_size(
+                        vec2(ui.available_width(), 44.0),
+                        egui::Sense::hover(),
+                    );
+                    let place = Rect::from_min_size(row.min + vec2(pad, 0.0), vec2(width, 44.0));
+                    let button = egui::Button::new(
+                        RichText::new(format!("+  {}", tr("Importer des photos")))
+                            .size(15.0)
+                            .color(theme::BACKGROUND),
+                    )
+                    .fill(theme::ACCENT)
+                    .corner_radius(22.0);
+                    if ui.put(place, button).clicked() {
+                        self.act("open");
+                    }
                 }
-                let cols = ((ui.available_width() - 14.0) / (cell + 10.0))
-                    .floor()
-                    .max(1.0) as usize;
                 for row in visible.chunks(cols) {
-                    ui.horizontal(|ui| {
-                        ui.add_space(14.0);
-                        for &i in row {
+                    let (line, _) = ui.allocate_exact_size(
+                        vec2(ui.available_width(), cell),
+                        egui::Sense::hover(),
+                    );
+                    {
+                        for (k, &i) in row.iter().enumerate() {
                             let path = &self.folder[i];
-                            let (rect, r) =
-                                ui.allocate_exact_size(vec2(cell, cell), egui::Sense::click());
+                            let rect = Rect::from_min_size(
+                                line.min + vec2(pad + k as f32 * (cell + gap), 0.0),
+                                vec2(cell, cell),
+                            );
+                            let r = ui.interact(
+                                rect,
+                                ui.scope_id().with(("case", i)),
+                                egui::Sense::click(),
+                            );
                             let current = Some(i) == self.current;
                             let painter = ui.painter();
                             painter.rect_filled(
@@ -7912,7 +7957,12 @@ impl Studio {
                                     theme::SECTION
                                 },
                             );
-                            let area = rect.shrink2(vec2(12.0, 12.0)).with_max_y(rect.max.y - 30.0);
+                            // Le nom en haut, les étoiles et le drapeau en bas, la photo entre
+                            // les deux : rien ne se chevauche.
+                            let area = Rect::from_min_max(
+                                rect.min + vec2(8.0, 24.0),
+                                rect.max - vec2(8.0, 26.0),
+                            );
                             match self.thumbs.get(path) {
                                 Some(t) => {
                                     let [w, h] = t.size();
@@ -7961,7 +8011,7 @@ impl Studio {
                                     theme::TEXT,
                                 );
                                 let chip = Rect::from_min_size(
-                                    pos2(rect.max.x - 12.0 - galley.size().x, rect.min.y + 22.0),
+                                    pos2(rect.max.x - 14.0 - galley.size().x, rect.min.y + 30.0),
                                     galley.size(),
                                 )
                                 .expand2(vec2(5.0, 2.0));
@@ -7976,13 +8026,16 @@ impl Studio {
                                 }
                                 painter.galley(chip.min + vec2(5.0, 2.0), galley, theme::TEXT);
                             }
-                            painter.with_clip_rect(rect.shrink(6.0)).text(
-                                pos2(rect.min.x + 12.0, rect.min.y + 6.0),
-                                egui::Align2::LEFT_TOP,
-                                file_name(path),
-                                egui::FontId::proportional(10.5),
-                                theme::DIM,
-                            );
+                            // Le nom, coupé avant la pastille du libellé.
+                            painter
+                                .with_clip_rect(rect.shrink(4.0).with_max_x(rect.max.x - 20.0))
+                                .text(
+                                    pos2(rect.min.x + 10.0, rect.min.y + 12.0),
+                                    egui::Align2::LEFT_CENTER,
+                                    file_name(path),
+                                    egui::FontId::proportional(10.5),
+                                    theme::DIM,
+                                );
                             if meta.flag == Flag::Reject {
                                 painter.rect_filled(rect, 4.0, Color32::from_black_alpha(120));
                             }
@@ -8001,11 +8054,10 @@ impl Studio {
                             } else if r.clicked() {
                                 clicked = Some(i);
                             }
-                            ui.add_space(10.0);
                         }
-                    });
-                    ui.add_space(10.0);
+                    }
                 }
+                ui.add_space(gap);
             });
         if let Some(i) = chosen {
             // Toucher longuement : ajouter à la sélection (ou en retirer), comme ⌘‑clic.
