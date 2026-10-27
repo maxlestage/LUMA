@@ -26,6 +26,8 @@ pub enum Icon {
     Star,
     /// Annuler : la flèche qui revient en arrière.
     Undo,
+    /// Ajouter (importer des photos) : le signe plus.
+    Add,
 }
 
 fn p(r: Rect, x: f32, y: f32) -> Pos2 {
@@ -157,6 +159,10 @@ pub fn paint(painter: &Painter, icon: Icon, rect: Rect, color: Color32) {
                 vec![p(r, 0.36, 0.24), p(r, 0.5, 0.1), p(r, 0.64, 0.24)],
                 s,
             ));
+        }
+        Icon::Add => {
+            painter.line_segment([p(r, 0.5, 0.2), p(r, 0.5, 0.8)], s);
+            painter.line_segment([p(r, 0.2, 0.5), p(r, 0.8, 0.5)], s);
         }
         Icon::Undo => {
             // Un arc ouvert vers la gauche, et sa pointe en haut à gauche.
