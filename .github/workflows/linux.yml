@@ -1,0 +1,82 @@
+# LÜMA pour Linux, à chaque push sur master et à chaque pull request :
+#
+# - fabrication de l'app (x86_64) sur Ubuntu 22.04 : elle tourne aussi sur les
+#   systèmes plus récents et sur les autres distributions de la même époque (glibc
+#   2.35 et plus) ;
+# - archive .tar.gz (installation sans mot de passe) et paquet .deb, publiés en
+#   artefact ;
+# - essai : l'app lancée sur un écran virtuel avec un vrai RAW, rendu sur le
+#   processeur graphique logiciel de Mesa (Vulkan), et sa capture d'écran.
+
+name: Linux
+
+on:
+  push:
+    branches: [master]
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  pull_request:
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  app:
+    name: Fabriquer et lancer LÜMA pour Linux
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Paquets
+        env:
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+          LUMA_LICENCE_PUBLIC: ${{ vars.LUMA_LICENCE_PUBLIC }}
+          LUMA_LICENCE_SERVER: ${{ vars.LUMA_LICENCE_SERVER }}
+          LUMA_BILLING_PORTAL: ${{ vars.LUMA_BILLING_PORTAL }}
+        run: scripts/bundle-linux.sh
+
+      - name: Corpus de RAW (cache)
+        uses: actions/cache@v4
+        with:
+          path: tests/raw-corpus
+          key: raw-corpus-${{ hashFiles('scripts/fetch-corpus.sh') }}
+      - name: Corpus de RAW (téléchargement)
+        run: scripts/fetch-corpus.sh
+
+      - name: Lancer l'app installée (écran virtuel, Vulkan logiciel)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ./target/linux/LUMA-linux-amd64.deb xvfb imagemagick
+          Xvfb :9 -screen 0 1600x1000x24 &
+          sleep 2
+          DISPLAY=:9 luma-studio tests/raw-corpus/_DSC0009.ARW > app.log 2>&1 &
+          app=$!
+          for _ in $(seq 60); do
+            grep -q "interface créée" app.log && break
+            sleep 1
+          done
+          sleep 20
+          DISPLAY=:9 import -window root target/linux/capture-linux.png
+          kill -0 $app || { cat app.log; echo "l'app s'est arrêtée"; exit 1; }
+          kill $app
+          cat app.log
+          grep -q "interface créée" app.log
+          luma --help > /dev/null
+
+      - name: Publier les paquets
+        uses: actions/upload-artifact@v4
+        with:
+          name: LUMA-linux
+          path: |
+            target/linux/LUMA-linux-*.tar.gz
+            target/linux/LUMA-linux-amd64.deb
+      - name: Publier la capture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-linux
+          path: target/linux/capture-linux.png

@@ -875,6 +875,10 @@ fr = Sur Mac, avec toutes les mises à jour
 en = On Mac, with every update
 es = En Mac, con todas las actualizaciones
 
+fr = Sur Linux, avec toutes les mises à jour
+en = On Linux, with every update
+es = En Linux, con todas las actualizaciones
+
 fr = Mensuel
 en = Monthly
 es = Mensual
