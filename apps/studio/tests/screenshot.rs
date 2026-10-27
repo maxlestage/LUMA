@@ -1227,6 +1227,60 @@ fn iphone_welcome_is_bare() {
     s.capture("iphone-accueil");
 }
 
+/// Sur iPhone et iPad, sans photo : un vrai toucher du doigt sur « Importer des photos »
+/// (appui, relâché et doigt levé, tous dans la même image de l'interface comme sur un
+/// appareil) demande l'import. Sur l'écran d'un iPhone Pro Max et sur un iPad.
+#[test]
+fn a_tap_on_import_photos_imports() {
+    let _gpu = one_at_a_time();
+    for (name, size) in [
+        ("iphone-importer", [440.0, 956.0]),
+        ("ipad-importer", [1032.0, 1376.0]),
+    ] {
+        let Some(mut s) = Session::open_sized(name, size, 3.0) else {
+            return;
+        };
+        let empty = s.dir.join("vide");
+        std::fs::create_dir_all(&empty).unwrap();
+        s.studio().photos_button = true;
+        s.studio().open_path(&empty);
+        for _ in 0..10 {
+            s.harness.step();
+        }
+        let button = s.harness.get_by_label("Importer des photos").rect();
+        let at = button.center();
+        for one_frame in [true, false] {
+            let asked = s.studio().import_asks;
+            s.harness.event(egui::Event::PointerMoved(at));
+            s.harness.event(egui::Event::PointerButton {
+                pos: at,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: Default::default(),
+            });
+            if !one_frame {
+                s.harness.step();
+            }
+            s.harness.event(egui::Event::PointerButton {
+                pos: at,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: Default::default(),
+            });
+            s.harness.event(egui::Event::PointerGone);
+            for _ in 0..3 {
+                s.harness.step();
+            }
+            assert_eq!(
+                s.studio().import_asks,
+                asked + 1,
+                "{name} : toucher en {at:?} ({one_frame})"
+            );
+        }
+        s.capture(name);
+    }
+}
+
 #[test]
 fn films_and_merge_tools() {
     let _gpu = one_at_a_time();
