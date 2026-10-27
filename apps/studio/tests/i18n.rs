@@ -219,7 +219,10 @@ fn every_text_has_its_letters_in_the_font() {
     // La police de l'app n'a pas tous les caractères (le trait d'union insécable, par
     // exemple) : un caractère qui manque s'afficherait en carré vide.
     let ctx = egui::Context::default();
-    let _ = ctx.run_ui(egui::RawInput::default(), |_| {});
+    // Une image pour charger les polices ; ses textures ne vont nulle part.
+    ctx.run_ui(egui::RawInput::default(), |_| {})
+        .textures_delta
+        .clear();
     let catalog = i18n::catalog();
     let font = egui::FontId::proportional(14.0);
     let mut missing: Vec<String> = Vec::new();
