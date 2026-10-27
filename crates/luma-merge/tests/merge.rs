@@ -399,3 +399,62 @@ fn focus_stack_keeps_the_sharp_part_of_each_pose() {
     eprintln!("écart à la scène nette : flou {blurred:.4}, une pose {single:.4}, empilement {stacked:.4}");
     assert!(stacked < single * 0.5, "{stacked} / {single}");
 }
+
+#[test]
+fn colors_of_a_second_camera_are_matched_to_the_first() {
+    let scene = scene(900);
+    // Un peu de couleur franche, pour que la dérive se voie.
+    let scene = RgbImage {
+        width: scene.width,
+        height: scene.height,
+        data: scene
+            .data
+            .iter()
+            .enumerate()
+            .map(|(i, p)| {
+                let t = (i % scene.width) as f32 / scene.width as f32;
+                [p[0] * (0.6 + 0.8 * t), p[1], p[2] * (1.4 - 0.8 * t)]
+            })
+            .collect(),
+    };
+    let (w, h) = (scene.width - 60, scene.height - 60);
+    let reference = view(&scene, w, h, &Homography::translation(30.0, 30.0), 0.005, 1);
+    // Le second boîtier : d'autres couleurs (lignes de somme 1), une autre exposition, un
+    // autre cadrage, et un passant qui n'était pas là.
+    let drift = [[0.88, 0.17, -0.05], [0.07, 0.83, 0.10], [-0.03, 0.14, 0.89]];
+    let shifted = RgbImage {
+        width: scene.width,
+        height: scene.height,
+        data: scene
+            .data
+            .iter()
+            .map(|p| luma_color::apply(&drift, *p).map(|v| v * 0.7))
+            .collect(),
+    };
+    let mut other = view(&shifted, w, h, &Homography::similarity(1.0, 0.01, 24.0, 35.0), 0.005, 2);
+    for y in 100..180 {
+        for x in 200..260 {
+            other.data[y * w + x] = [0.5, 0.1, 0.1];
+        }
+    }
+    let m = luma_merge::matching::match_colors(&reference, &other).unwrap();
+    eprintln!(
+        "écart entre les boîtiers : {:.2} → {:.2} ΔE ({} points)",
+        m.before, m.after, m.samples
+    );
+    // Ce qui reste est le bruit des deux prises, pas la couleur.
+    assert!(m.before > 2.0 && m.after < m.before * 0.3, "{m:?}");
+    for row in m.matrix {
+        assert!((row.iter().sum::<f32>() - 1.0).abs() < 1e-4);
+    }
+    // La correction défait la dérive : matrice × dérive ≈ identité.
+    let back = luma_color::mul(&m.matrix, &drift);
+    for (r, row) in back.iter().enumerate() {
+        for (c, v) in row.iter().enumerate() {
+            assert!((v - if r == c { 1.0 } else { 0.0 }).abs() < 0.01, "{back:?}");
+        }
+    }
+    // Deux scènes différentes : refusé.
+    let elsewhere = RgbImage::from_fn(w, h, |x, y| [((x * y) % 7) as f32 / 10.0; 3]);
+    assert!(luma_merge::matching::match_colors(&reference, &elsewhere).is_err());
+}

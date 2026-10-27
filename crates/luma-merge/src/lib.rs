@@ -15,6 +15,7 @@ pub mod features;
 pub mod film;
 pub mod frames;
 pub mod geometry;
+pub mod matching;
 pub mod pano;
 pub mod stack;
 pub mod stars;
