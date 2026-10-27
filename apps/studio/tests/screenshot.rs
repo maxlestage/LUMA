@@ -1163,6 +1163,28 @@ fn retouch_spots() {
     s.wait();
     s.capture("retouche");
     assert_eq!(s.studio().settings.spots.len(), 2);
+    // Supprimer : le bouton de l'outil, puis une retouche sans source.
+    // Le premier « Supprimer » est l'outil ; l'autre efface la retouche choisie.
+    s.harness
+        .get_all_by_label("Supprimer")
+        .next()
+        .unwrap()
+        .click();
+    s.wait();
+    assert_eq!(s.studio().retouch, Some(luma_project::SpotKind::Remove));
+    let st = s.studio();
+    let gone = luma_studio::retouching::place(
+        luma_project::SpotKind::Remove,
+        (0.42, 0.62),
+        0.02,
+        st.scene_map(),
+    );
+    assert_eq!(gone.source, gone.center);
+    st.settings.spots.push(gone);
+    st.selected_spot = Some(2);
+    s.wait();
+    assert!(s.studio().has_image());
+    s.capture("retouche-supprimer");
 }
 
 #[test]
