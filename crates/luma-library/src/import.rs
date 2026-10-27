@@ -1,0 +1,366 @@
+//! L'import depuis une carte mémoire (ou tout dossier) : les photos sont copiées dans la
+//! photothèque, rangées en sous‑dossiers d'après leur date de prise de vue, renommées
+//! si on le veut, et copiées aussi sur un second disque. La carte n'est jamais
+//! modifiée.
+//!
+//! Chaque copie est vérifiée : écrite à côté sous un nom provisoire, relue et comparée
+//! octet pour octet à l'original, puis renommée. Une photo déjà importée (même nom, même
+//! taille à sa place) est sautée ; un nom déjà pris par un autre fichier reçoit `-2`,
+//! `-3`… Le RAW et le JPEG d'une même prise, et leur XMP, gardent un même nom.
+
+use std::collections::{BTreeMap, HashSet};
+use std::io::Read;
+use std::path::{Path, PathBuf};
+
+use crate::Entry;
+
+/// Les cartes mémoire montées : les volumes qui ont un dossier `DCIM` (la norme des
+/// appareils photo). Sur Mac `/Volumes/…`, ailleurs `/media/…` et `/run/media/…`.
+pub fn cards() -> Vec<PathBuf> {
+    let mut roots = vec![PathBuf::from("/Volumes")];
+    if let Some(user) = std::env::var_os("USER") {
+        roots.push(Path::new("/media").join(&user));
+        roots.push(Path::new("/run/media").join(&user));
+    }
+    roots.push(PathBuf::from("/media"));
+    let mut out: Vec<PathBuf> = roots
+        .iter()
+        .filter_map(|r| std::fs::read_dir(r).ok())
+        .flat_map(|d| d.flatten().map(|e| e.path()))
+        .filter(|v| v.join("DCIM").is_dir())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Les photos d'un dossier et de ses sous‑dossiers (les fichiers cachés exceptés).
+pub fn photos(source: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let mut stack = vec![source.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for e in entries.flatten() {
+            let path = e.path();
+            if e.file_name().to_string_lossy().starts_with('.') {
+                continue;
+            }
+            if path.is_dir() {
+                stack.push(path);
+            } else if luma_raw::is_photo(&path) {
+                out.push(path);
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Où et comment importer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Options {
+    /// Le dossier de la photothèque.
+    pub dest: PathBuf,
+    /// Les sous‑dossiers, d'après la date de prise de vue : `{année}`, `{mois}`,
+    /// `{jour}` (par exemple « {année}/{année}-{mois}-{jour} ») ; vide : tout dans `dest`.
+    pub folders: String,
+    /// Le second disque, où chaque photo est copiée aussi (même rangement).
+    pub backup: Option<PathBuf>,
+}
+
+/// Une photo à copier.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Item {
+    pub source: PathBuf,
+    pub target: PathBuf,
+    pub backup: Option<PathBuf>,
+    /// Le XMP de la photo sur la carte, s'il y en a un.
+    pub sidecar: Option<PathBuf>,
+    pub size: u64,
+}
+
+/// Le plan de l'import : les photos à copier, celles déjà importées.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Plan {
+    pub items: Vec<Item>,
+    pub skipped: Vec<PathBuf>,
+}
+
+impl Plan {
+    pub fn bytes(&self) -> u64 {
+        self.items.iter().map(|i| i.size).sum()
+    }
+}
+
+/// Le sous‑dossier d'une photo prise à cette date (`AAAA-MM-JJ…`).
+pub fn folder(template: &str, date: &str) -> PathBuf {
+    let part = |r: std::ops::Range<usize>, default: &str| date.get(r).unwrap_or(default).to_owned();
+    let text = template
+        .replace("{année}", &part(0..4, "0000"))
+        .replace("{annee}", &part(0..4, "0000"))
+        .replace("{mois}", &part(5..7, "00"))
+        .replace("{jour}", &part(8..10, "00"));
+    text.split('/')
+        .map(|s| s.trim().replace(['\\', ':'], "-"))
+        .filter(|s| !s.is_empty() && s != "." && s != "..")
+        .collect()
+}
+
+/// Le plan : les photos (lues dans leurs en‑têtes, `entries`) dans l'ordre de prise de
+/// vue, leur place, et leur nom donné par `name` (le nouveau nom sans extension, pour la
+/// photo et le rang de sa prise ; `None` : son nom d'origine).
+pub fn plan(entries: &[Entry], o: &Options, name: impl Fn(&Entry, usize) -> Option<String>) -> Plan {
+    let mut sorted: Vec<&Entry> = entries.iter().collect();
+    sorted.sort_by(|a, b| (&a.date, &a.path).cmp(&(&b.date, &b.path)));
+    // Les prises : même dossier, même nom sans extension (le RAW et son JPEG).
+    let shot = |e: &Entry| {
+        (
+            e.path.parent().map(Path::to_path_buf),
+            e.path.file_stem().map(|s| s.to_os_string()),
+        )
+    };
+    let mut shots: BTreeMap<(Option<PathBuf>, Option<std::ffi::OsString>), String> = BTreeMap::new();
+    let mut taken: HashSet<PathBuf> = HashSet::new();
+    let mut plan = Plan::default();
+    for e in sorted {
+        let key = shot(e);
+        let n = shots.len() + 1;
+        let stem = match shots.get(&key) {
+            Some(s) => s.clone(),
+            None => {
+                let original = e
+                    .path
+                    .file_stem()
+                    .map_or_else(String::new, |s| s.to_string_lossy().into_owned());
+                let s = name(e, n).filter(|s| !s.trim().is_empty()).unwrap_or(original);
+                shots.insert(key, s.clone());
+                s
+            }
+        };
+        let ext = e
+            .path
+            .extension()
+            .map_or_else(String::new, |x| format!(".{}", x.to_string_lossy()));
+        let dir = o.dest.join(folder(&o.folders, &e.date));
+        let size = std::fs::metadata(&e.path).map_or(e.size, |m| m.len());
+        let mut target = dir.join(format!("{stem}{ext}"));
+        // Déjà là, de la même taille : déjà importée.
+        if std::fs::metadata(&target).is_ok_and(|m| m.len() == size) && !taken.contains(&target) {
+            plan.skipped.push(e.path.clone());
+            continue;
+        }
+        let mut k = 2;
+        while target.exists() || taken.contains(&target) {
+            target = dir.join(format!("{stem}-{k}{ext}"));
+            k += 1;
+        }
+        taken.insert(target.clone());
+        let backup = o.backup.as_ref().map(|b| {
+            let rel = target.strip_prefix(&o.dest).unwrap_or(&target);
+            b.join(rel)
+        });
+        let side = luma_project::xmp::sidecar_path(&e.path);
+        plan.items.push(Item {
+            source: e.path.clone(),
+            target,
+            backup,
+            sidecar: side.is_file().then_some(side),
+            size,
+        });
+    }
+    plan
+}
+
+/// Les deux fichiers sont‑ils identiques, octet pour octet ?
+fn same(a: &Path, b: &Path) -> std::io::Result<bool> {
+    let (mut fa, mut fb) = (std::fs::File::open(a)?, std::fs::File::open(b)?);
+    if fa.metadata()?.len() != fb.metadata()?.len() {
+        return Ok(false);
+    }
+    let (mut ba, mut bb) = (vec![0u8; 1 << 20], vec![0u8; 1 << 20]);
+    loop {
+        let n = fa.read(&mut ba)?;
+        if n == 0 {
+            return Ok(true);
+        }
+        fb.read_exact(&mut bb[..n])?;
+        if ba[..n] != bb[..n] {
+            return Ok(false);
+        }
+    }
+}
+
+/// Copie `from` en `to`, vérifiée : sous un nom provisoire, relue, puis renommée.
+pub fn copy_verified(from: &Path, to: &Path) -> Result<(), String> {
+    let err = |e: std::io::Error| format!("{} : {e}", to.display());
+    if let Some(dir) = to.parent() {
+        std::fs::create_dir_all(dir).map_err(err)?;
+    }
+    let tmp = to.with_file_name(format!(
+        ".{}.luma-import",
+        to.file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+    ));
+    std::fs::copy(from, &tmp).map_err(err)?;
+    if !same(from, &tmp).map_err(err)? {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(format!("{} : la copie ne correspond pas à l'original", to.display()));
+    }
+    std::fs::rename(&tmp, to).map_err(err)
+}
+
+/// Le XMP d'une photo copiée : à côté d'elle, sous son nouveau nom.
+fn sidecar_target(photo: &Path) -> PathBuf {
+    photo.with_extension("xmp")
+}
+
+/// Ce que l'import a fait.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Report {
+    pub copied: usize,
+    pub bytes: u64,
+}
+
+/// Copie les photos du plan (et leur XMP), sur la photothèque puis sur le second
+/// disque ; `progress` reçoit le nombre de photos copiées. S'arrête à la première
+/// erreur : les photos déjà copiées restent, la carte n'est jamais touchée.
+pub fn run(plan: &Plan, progress: impl Fn(usize)) -> Result<Report, String> {
+    let mut report = Report::default();
+    for item in &plan.items {
+        for to in std::iter::once(&item.target).chain(item.backup.as_ref()) {
+            copy_verified(&item.source, to)?;
+            if let Some(x) = &item.sidecar {
+                copy_verified(x, &sidecar_target(to))?;
+            }
+        }
+        report.copied += 1;
+        report.bytes += item.size;
+        progress(report.copied);
+    }
+    Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dir(name: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("luma-import-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    fn entry(path: &Path, date: &str) -> Entry {
+        Entry {
+            path: path.to_path_buf(),
+            date: date.into(),
+            size: std::fs::metadata(path).map_or(0, |m| m.len()),
+            ..Entry::default()
+        }
+    }
+
+    #[test]
+    fn folders_from_the_date() {
+        assert_eq!(
+            folder("{année}/{année}-{mois}-{jour}", "2026-10-27T10:00:00"),
+            Path::new("2026/2026-10-27")
+        );
+        assert_eq!(folder("", "2026-10-27T10:00:00"), PathBuf::new());
+        assert_eq!(
+            folder("../{annee}/./x:y", "2024-01-02"),
+            Path::new("2024/x-y"),
+            "jamais hors de la photothèque"
+        );
+    }
+
+    #[test]
+    fn a_card_imported_twice_and_to_a_second_disk() {
+        let root = dir("carte");
+        let card = root.join("CARTE/DCIM/100CANON");
+        std::fs::create_dir_all(&card).unwrap();
+        std::fs::write(card.join("IMG_0001.CR3"), b"raw un").unwrap();
+        std::fs::write(card.join("IMG_0001.JPG"), b"jpeg un").unwrap();
+        std::fs::write(card.join("IMG_0001.xmp"), b"<x:xmpmeta/>").unwrap();
+        std::fs::write(card.join("IMG_0002.CR3"), b"raw deux, plus long").unwrap();
+        std::fs::write(card.join(".cache.CR3"), b"cache").unwrap();
+        std::fs::write(card.join("notes.txt"), b"texte").unwrap();
+        let found = photos(&root.join("CARTE"));
+        assert_eq!(found.len(), 3, "{found:?}");
+        let entries = vec![
+            entry(&card.join("IMG_0002.CR3"), "2026-10-27T12:00:00"),
+            entry(&card.join("IMG_0001.CR3"), "2026-10-26T09:00:00"),
+            entry(&card.join("IMG_0001.JPG"), "2026-10-26T09:00:00"),
+        ];
+        let o = Options {
+            dest: root.join("Photos"),
+            folders: "{année}/{année}-{mois}-{jour}".into(),
+            backup: Some(root.join("Second")),
+        };
+        // Renommées dans l'ordre de prise de vue ; le RAW et son JPEG ensemble.
+        let name = |e: &Entry, n: usize| Some(format!("{}_{n:03}", &e.date[..10]));
+        let p = plan(&entries, &o, name);
+        let targets: Vec<String> = p
+            .items
+            .iter()
+            .map(|i| i.target.strip_prefix(&o.dest).unwrap().display().to_string())
+            .collect();
+        assert_eq!(
+            targets,
+            [
+                "2026/2026-10-26/2026-10-26_001.CR3",
+                "2026/2026-10-26/2026-10-26_001.JPG",
+                "2026/2026-10-27/2026-10-27_002.CR3",
+            ]
+        );
+        assert!(p.items[0].sidecar.is_some() && p.items[2].sidecar.is_none());
+        let seen = std::cell::Cell::new(0);
+        let r = run(&p, |n| seen.set(n)).unwrap();
+        assert_eq!((r.copied, seen.get()), (3, 3));
+        for base in [&o.dest, o.backup.as_ref().unwrap()] {
+            let raw = base.join("2026/2026-10-26/2026-10-26_001.CR3");
+            assert_eq!(std::fs::read(&raw).unwrap(), b"raw un");
+            assert!(raw.with_extension("xmp").is_file(), "le XMP suit");
+        }
+        // La carte n'a pas bougé.
+        assert!(card.join("IMG_0001.CR3").is_file() && card.join("IMG_0002.CR3").is_file());
+        // Une seconde fois : rien de nouveau.
+        let again = plan(&entries, &o, name);
+        assert!(again.items.is_empty() && again.skipped.len() == 3, "{again:?}");
+        // Une autre photo du même nom : elle ne remplace rien.
+        std::fs::write(card.join("IMG_0002.CR3"), b"une autre photo").unwrap();
+        let other = plan(
+            &[entry(&card.join("IMG_0002.CR3"), "2026-10-27T12:00:00")],
+            &o,
+            |_, _| None,
+        );
+        assert!(other.items[0].target.ends_with("2026/2026-10-27/IMG_0002.CR3"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_name_already_taken_gets_a_number() {
+        let root = dir("pris");
+        std::fs::create_dir_all(root.join("Photos")).unwrap();
+        std::fs::write(root.join("Photos/A.NEF"), b"autre contenu, autre taille").unwrap();
+        std::fs::write(root.join("A.NEF"), b"nouvelle").unwrap();
+        let o = Options {
+            dest: root.join("Photos"),
+            folders: String::new(),
+            backup: None,
+        };
+        let p = plan(&[entry(&root.join("A.NEF"), "2026-01-01T00:00:00")], &o, |_, _| None);
+        assert_eq!(p.items[0].target, root.join("Photos/A-2.NEF"));
+        run(&p, |_| {}).unwrap();
+        assert_eq!(
+            std::fs::read(root.join("Photos/A.NEF")).unwrap(),
+            b"autre contenu, autre taille"
+        );
+        // Aucun fichier provisoire ne reste.
+        let left: Vec<_> = std::fs::read_dir(root.join("Photos")).unwrap().flatten().collect();
+        assert_eq!(left.len(), 2);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+}
