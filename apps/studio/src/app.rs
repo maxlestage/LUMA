@@ -9255,6 +9255,22 @@ impl Studio {
                     sub_title(ui, tr("Tonalité"));
                     let l = self.fields(ui, &TONE);
                     keep(l, &mut commits);
+                    if ui
+                        .checkbox(
+                            &mut self.settings.highlight_reconstruction,
+                            tr("Reconstruire les hautes lumières"),
+                        )
+                        .on_hover_text(tr(
+                            "Un canal saturé par le capteur reprend la couleur de ses voisins : ciels, peaux et tissus clairs retrouvent teinte et texture",
+                        ))
+                        .changed()
+                    {
+                        commits.push(if self.settings.highlight_reconstruction {
+                            tr("Hautes lumières reconstruites").into()
+                        } else {
+                            tr("Hautes lumières telles que mesurées").into()
+                        });
+                    }
                     sub_title(ui, tr("Présence"));
                     let l = self.fields(ui, &PRESENCE);
                     keep(l, &mut commits);
