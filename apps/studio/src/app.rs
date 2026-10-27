@@ -4171,6 +4171,12 @@ impl Studio {
                         if o.format == Format::Jpeg {
                             ui.label(tr("Qualité"));
                             ui.add(egui::Slider::new(&mut o.quality, 1..=100));
+                            ui.end_row();
+                            ui.label("");
+                            ui.checkbox(&mut o.web, tr("Allégé pour le web"))
+                                .on_hover_text(tr(
+                                    "Couleur à demi-résolution (4:2:0) et codage calculé pour chaque image : de 9 à 29 % plus léger, que tout navigateur lit",
+                                ));
                         } else {
                             ui.label(tr("Profondeur"));
                             ui.horizontal(|ui| {
