@@ -605,6 +605,11 @@ pub struct Studio {
     keys_note: Option<String>,
     /// Les panneaux masqués (Tab) : la photo prend toute la place.
     pub hide_panels: bool,
+    /// Les espaces de travail enregistrés (après ceux de toujours), leur fichier, et le
+    /// nom du prochain à enregistrer.
+    pub workspaces: Vec<crate::workspaces::Workspace>,
+    workspaces_path: Option<PathBuf>,
+    workspace_name: String,
     /// La galerie web.
     pub gallery: luma_render::gallery::Gallery,
     /// Le livre photo.
@@ -946,6 +951,11 @@ impl Studio {
             keys_listening: None,
             keys_note: None,
             hide_panels: false,
+            workspaces: crate::dialogs::app_dir()
+                .map(|d| crate::workspaces::load(&d.join("Espaces de travail.txt")))
+                .unwrap_or_default(),
+            workspaces_path: None,
+            workspace_name: String::new(),
             gallery: Default::default(),
             book: Default::default(),
             rename_template: "{date}_{séquence}".into(),
@@ -3506,6 +3516,43 @@ impl Studio {
             }
             if !TOUCH {
                 ui.separator();
+                ui.label(RichText::new(tr("Espaces de travail")).small().color(theme::DIM));
+                let builtin = crate::workspaces::builtin().len();
+                let mut chosen = None;
+                let mut removed = None;
+                for (k, w) in self.all_workspaces().iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        let key = if k < 9 { format!("  Cmd+{}", k + 1) } else { String::new() };
+                        if ui.button(format!("{}{key}", tr(&w.name))).clicked() {
+                            chosen = Some(k);
+                        }
+                        if k >= builtin && ui.small_button(tr("Retirer")).clicked() {
+                            removed = Some(w.name.clone());
+                        }
+                    });
+                }
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.workspace_name)
+                            .hint_text(tr("Nom"))
+                            .desired_width(110.0),
+                    );
+                    if ui
+                        .add_enabled(!self.workspace_name.trim().is_empty(), egui::Button::new(tr("Enregistrer l'espace actuel")))
+                        .clicked()
+                    {
+                        let name = std::mem::take(&mut self.workspace_name);
+                        self.save_workspace(&name);
+                    }
+                });
+                if let Some(k) = chosen {
+                    self.use_workspace(k);
+                    ui.close();
+                }
+                if let Some(n) = removed {
+                    self.remove_workspace(&n);
+                }
+                ui.separator();
                 ui.label(RichText::new(tr("Clavier")).small().color(theme::DIM));
                 if ui.button(tr("Raccourcis clavier…")).clicked() {
                     self.keys_open = true;
@@ -3530,8 +3577,8 @@ impl Studio {
             }
         });
         menu.response
-            .on_hover_text(tr("Langue, clavier et cache"))
-            .accessible_name(tr("Langue, clavier et cache"));
+            .on_hover_text(tr("Langue, espaces de travail, clavier et cache"))
+            .accessible_name(tr("Langue, espaces de travail, clavier et cache"));
         if clear {
             self.clear_cache();
         }
@@ -3962,6 +4009,65 @@ impl Studio {
         lost
     }
 
+    /// Tous les espaces de travail : ceux de toujours, puis ceux enregistrés.
+    pub fn all_workspaces(&self) -> Vec<crate::workspaces::Workspace> {
+        let mut all = crate::workspaces::builtin();
+        all.extend(self.workspaces.iter().cloned());
+        all
+    }
+
+    /// Passe à l'espace de travail de rang `k` (de 0).
+    pub fn use_workspace(&mut self, k: usize) {
+        let Some(w) = self.all_workspaces().into_iter().nth(k) else {
+            return;
+        };
+        self.culling = false;
+        self.playing = None;
+        self.map = None;
+        self.set_tool(w.tool);
+        self.hide_panels = !w.panels;
+        self.status = trf("Espace de travail : {name}", &[("name", &tr(&w.name))]);
+    }
+
+    fn workspaces_file(&self) -> Option<PathBuf> {
+        self.workspaces_path
+            .clone()
+            .or_else(|| Some(crate::dialogs::app_dir()?.join("Espaces de travail.txt")))
+    }
+
+    /// Lit les espaces de travail de ce fichier, et les y garde (les essais).
+    pub fn use_workspaces_file(&mut self, path: PathBuf) {
+        self.workspaces = crate::workspaces::load(&path);
+        self.workspaces_path = Some(path);
+    }
+
+    /// Enregistre l'outil et les panneaux du moment sous ce nom.
+    pub fn save_workspace(&mut self, name: &str) {
+        let name = name.trim();
+        if name.is_empty() {
+            return;
+        }
+        let w = crate::workspaces::Workspace {
+            name: name.to_owned(),
+            tool: self.tool,
+            panels: !self.hide_panels,
+        };
+        crate::workspaces::put(&mut self.workspaces, w);
+        if let Some(f) = self.workspaces_file()
+            && let Err(e) = crate::workspaces::save(&f, &self.workspaces)
+        {
+            self.status = e.to_string();
+        }
+    }
+
+    /// Retire un espace enregistré.
+    pub fn remove_workspace(&mut self, name: &str) {
+        self.workspaces.retain(|w| w.name != name);
+        if let Some(f) = self.workspaces_file() {
+            let _ = crate::workspaces::save(&f, &self.workspaces);
+        }
+    }
+
     /// Ouvre la fenêtre des raccourcis clavier.
     pub fn open_shortcuts(&mut self) {
         self.keys_open = true;
@@ -4180,6 +4286,15 @@ impl Studio {
                 self.playing = None;
             }
             "panels" => self.hide_panels = !self.hide_panels,
+            a if a.starts_with("workspace") => {
+                if let Some(k) = a["workspace".len()..]
+                    .parse::<usize>()
+                    .ok()
+                    .and_then(|k| k.checked_sub(1))
+                {
+                    self.use_workspace(k);
+                }
+            }
             "slideshow_pause" => {
                 if let Some(p) = &mut self.playing {
                     p.paused = !p.paused;
