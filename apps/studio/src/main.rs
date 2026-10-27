@@ -36,11 +36,11 @@ fn main() -> eframe::Result {
             .then(luma_studio::dialogs::documents)
             .flatten()
     });
-    journal("démarrage");
+    luma_studio::journal("démarrage");
     // La langue : LUMA_LANG, le choix fait dans l'app, ou celle du système.
     let lang = luma_studio::i18n::startup();
     luma_studio::i18n::set_lang(lang);
-    journal(&format!("langue : {}", lang.code()));
+    luma_studio::journal(&format!("langue : {}", lang.code()));
     // HEIC, AVIF… : le décodeur d'images du système (ImageIO sur Mac, iPhone et iPad).
     luma_apple::install();
     let mut viewport = egui::ViewportBuilder::default()
@@ -62,7 +62,7 @@ fn main() -> eframe::Result {
     // défaut de wgpu (que le Metal du simulateur iOS, par exemple, n'atteint pas).
     let mut setup = eframe::egui_wgpu::WgpuSetupCreateNew::without_display_handle();
     setup.device_descriptor = std::sync::Arc::new(|adapter| {
-        journal(&format!(
+        luma_studio::journal(&format!(
             "GPU : {} ({:?})",
             adapter.get_info().name,
             adapter.get_info().backend
@@ -85,7 +85,7 @@ fn main() -> eframe::Result {
         "LÜMA",
         options,
         Box::new(move |cc| {
-            journal("interface créée");
+            luma_studio::journal("interface créée");
             let mut studio = Studio::new(&cc.egui_ctx);
             if let Some(path) = &arg {
                 studio.open_path(path);
@@ -93,24 +93,6 @@ fn main() -> eframe::Result {
             Ok(Box::new(App(studio)))
         }),
     );
-    journal(&format!("fin : {result:?}"));
+    luma_studio::journal(&format!("fin : {result:?}"));
     result
-}
-
-/// Le journal de démarrage : sur la sortie d'erreur, et sur iPhone et iPad dans
-/// `Documents/LÜMA-journal.txt` (lisible dans l'app Fichiers).
-fn journal(message: &str) {
-    eprintln!("LÜMA : {message}");
-    if cfg!(target_os = "ios")
-        && let Some(dir) = luma_studio::dialogs::documents()
-    {
-        use std::io::Write;
-        if let Ok(mut f) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(dir.join("LÜMA-journal.txt"))
-        {
-            let _ = writeln!(f, "{message}");
-        }
-    }
 }

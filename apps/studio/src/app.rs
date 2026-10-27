@@ -537,6 +537,7 @@ pub struct Studio {
     memory_check: f64,
     /// Les photos importées depuis Photos déjà vues (voir `watch_imports`).
     imports_seen: usize,
+    imports_failed: usize,
     /// Les vignettes libérées faute de mémoire : redemandées quand elles réapparaissent.
     evicted: std::collections::HashSet<PathBuf>,
     /// Les vignettes affichées sans image pendant cette image de l'interface.
@@ -755,6 +756,7 @@ impl Studio {
             thumbs: HashMap::new(),
             memory_check: 0.0,
             imports_seen: 0,
+            imports_failed: 0,
             evicted: Default::default(),
             shown_missing: Default::default(),
             // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
@@ -1697,8 +1699,18 @@ impl Studio {
         if !luma_apple::photos::AVAILABLE {
             return;
         }
+        let failed = luma_apple::photos::failed();
+        if failed != self.imports_failed {
+            crate::journal(&format!("import : {failed} échec(s)"));
+            self.imports_failed = failed;
+            self.status = trf(
+                "{n} photo(s) n'ont pas pu être importée(s).",
+                &[("n", &failed)],
+            );
+        }
         let count = luma_apple::photos::imported();
         if count != self.imports_seen {
+            crate::journal(&format!("import : {count} photo(s) copiée(s)"));
             let new = count - self.imports_seen;
             self.imports_seen = count;
             let current = self.current_path().map(Path::to_path_buf);
@@ -2206,6 +2218,7 @@ impl Studio {
                     let opened = crate::dialogs::documents()
                         .ok_or("dossier Documents introuvable")
                         .and_then(luma_apple::photos::pick);
+                    crate::journal(&format!("importer : {opened:?}"));
                     if let Err(why) = opened {
                         self.status = trf("Photos ne s'ouvre pas ({why}).", &[("why", &why)]);
                     }
@@ -4921,7 +4934,18 @@ impl Studio {
         )
         .fill(theme::ACCENT)
         .corner_radius(24.0);
-        if ui.put(rect, button).clicked() {
+        let r = ui.put(rect, button);
+        // Pour les essais sur simulateur : où toucher (en points), une fois.
+        static SHOWN: std::sync::Once = std::sync::Once::new();
+        SHOWN.call_once(|| {
+            crate::journal(&format!(
+                "bouton importer : centre {:.0} {:.0} (points)",
+                rect.center().x,
+                rect.center().y
+            ))
+        });
+        if r.clicked() {
+            crate::journal("bouton importer : touché");
             self.act("open");
         }
     }

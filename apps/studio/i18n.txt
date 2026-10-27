@@ -2988,3 +2988,7 @@ es = Elija al menos dos fotos para comparar
 fr = Comparaison · {zoom} · molette ou double clic : zoom · glisser : déplacer · L : loupe · clic : ouvrir · Échap pour sortir
 en = Compare · {zoom} · scroll or double-click: zoom · drag: move · L: loupe · click: open · Esc to leave
 es = Comparación · {zoom} · rueda o doble clic: zoom · arrastrar: mover · L: lupa · clic: abrir · Esc para salir
+
+fr = {n} photo(s) n'ont pas pu être importée(s).
+en = {n} photo(s) could not be imported.
+es = No se pudieron importar {n} foto(s).

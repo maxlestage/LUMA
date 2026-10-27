@@ -11,11 +11,23 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static IMPORTED: AtomicUsize = AtomicUsize::new(0);
+static CHOSEN: AtomicUsize = AtomicUsize::new(0);
+static FAILED: AtomicUsize = AtomicUsize::new(0);
 
 /// Le nombre de photos copiées depuis le lancement : quand il change, de nouvelles
 /// photos sont dans le dossier d'import.
 pub fn imported() -> usize {
     IMPORTED.load(Ordering::Acquire)
+}
+
+/// Le nombre de photos choisies dans le sélecteur depuis le lancement (copiées ou non).
+pub fn chosen() -> usize {
+    CHOSEN.load(Ordering::Acquire)
+}
+
+/// Le nombre de photos choisies qui n'ont pas pu être copiées.
+pub fn failed() -> usize {
+    FAILED.load(Ordering::Acquire)
 }
 
 /// Ouvre le sélecteur de Photos ; les photos choisies arrivent dans `dest`. À appeler sur
@@ -70,7 +82,7 @@ mod ios {
     };
     use objc2_ui_kit::{UIApplication, UIViewController, UIWindowScene};
 
-    use super::{IMPORTED, free_name};
+    use super::{CHOSEN, FAILED, IMPORTED, free_name};
 
     struct Ivars {
         dest: PathBuf,
@@ -97,6 +109,7 @@ mod ios {
                 let _: () = unsafe {
                     msg_send![picker, dismissViewControllerAnimated: true, completion: None::<&Block<dyn Fn()>>]
                 };
+                CHOSEN.fetch_add(results.count(), Ordering::Release);
                 for result in results {
                     load(&result, self.ivars().dest.clone());
                 }
@@ -122,16 +135,14 @@ mod ios {
         // Le système donne un fichier temporaire, effacé après ce bloc : on le copie ici.
         let copy = RcBlock::new(move |url: *mut NSURL, _error: *mut NSError| {
             // SAFETY: `url` est nul ou un NSURL valide pendant l'appel du bloc.
-            let Some(url) = (unsafe { url.as_ref() }) else {
-                return;
-            };
-            let (Some(path), Some(name)) = (url.path(), url.lastPathComponent()) else {
-                return;
-            };
-            let target = free_name(&dest, &name.to_string());
-            if std::fs::create_dir_all(&dest).is_ok() && std::fs::copy(path.to_string(), &target).is_ok() {
-                IMPORTED.fetch_add(1, Ordering::Release);
-            }
+            let copied = (unsafe { url.as_ref() })
+                .and_then(|url| Some((url.path()?, url.lastPathComponent()?)))
+                .is_some_and(|(path, name)| {
+                    let target = free_name(&dest, &name.to_string());
+                    std::fs::create_dir_all(&dest).is_ok() && std::fs::copy(path.to_string(), &target).is_ok()
+                });
+            let counter = if copied { &IMPORTED } else { &FAILED };
+            counter.fetch_add(1, Ordering::Release);
         });
         // SAFETY: le bloc ne capture que des valeurs `'static` et peut être appelé sur
         // n'importe quel fil ; le progrès rendu n'est pas utilisé.
