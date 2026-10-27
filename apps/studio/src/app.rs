@@ -648,6 +648,8 @@ pub struct Studio {
     last_request: Option<Request>,
     render_ms: f32,
     render_gpu: bool,
+    /// Les aperçus notés dans le journal (iPhone et iPad).
+    renders_logged: u32,
     pub before: bool,
     clipping: bool,
     proofing: Proofing,
@@ -991,6 +993,7 @@ impl Studio {
             last_request: None,
             render_ms: 0.0,
             render_gpu: false,
+            renders_logged: 0,
             before: false,
             clipping: false,
             proofing: Proofing::default(),
@@ -3212,6 +3215,20 @@ impl Studio {
                     self.shown = frame.generation;
                     self.render_ms = frame.millis;
                     self.render_gpu = frame.gpu;
+                    // Sur iPhone et iPad, la durée des aperçus dans le journal : les 30
+                    // premiers, puis un sur vingt.
+                    if TOUCH {
+                        self.renders_logged += 1;
+                        if self.renders_logged <= 30 || self.renders_logged.is_multiple_of(20) {
+                            crate::journal(&format!(
+                                "aperçu {} × {} en {:.0} ms ({})",
+                                frame.size[0],
+                                frame.size[1],
+                                frame.millis,
+                                if frame.gpu { "GPU" } else { "processeur" }
+                            ));
+                        }
+                    }
                     self.histogram = frame.histogram;
                     match &frame.scope {
                         Some(s) => {

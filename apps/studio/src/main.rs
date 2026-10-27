@@ -3,11 +3,74 @@
 
 use luma_studio::Studio;
 
-struct App(Studio);
+struct App(Studio, Frames);
+
+/// Sur iPhone et iPad, toutes les cinq secondes où l'écran s'est redessiné, une ligne du
+/// journal : combien d'images, la plus lente (le temps du processeur pour la dessiner),
+/// et ce qui a demandé les redessins (le fichier et la ligne du code). De quoi savoir,
+/// depuis l'appareil lui‑même, ce qui ralentit ou ce qui use la batterie.
+struct Frames {
+    since: std::time::Instant,
+    count: u32,
+    slowest: f32,
+    causes: std::collections::BTreeMap<String, u32>,
+    /// Les lignes écrites (le journal ne grossit pas sans fin).
+    lines: u32,
+}
+
+impl Frames {
+    fn new() -> Frames {
+        Frames {
+            since: std::time::Instant::now(),
+            count: 0,
+            slowest: 0.0,
+            causes: Default::default(),
+            lines: 0,
+        }
+    }
+
+    fn record(&mut self, ctx: &egui::Context, cpu: Option<f32>) {
+        if !cfg!(target_os = "ios") || self.lines >= 400 {
+            return;
+        }
+        self.count += 1;
+        self.slowest = self.slowest.max(cpu.unwrap_or(0.0) * 1000.0);
+        for c in ctx.repaint_causes() {
+            let file = c.file.rsplit('/').next().unwrap_or(c.file);
+            *self.causes.entry(format!("{file}:{}", c.line)).or_default() += 1;
+        }
+        if self.since.elapsed().as_secs_f32() < 5.0 {
+            return;
+        }
+        let mut causes: Vec<(String, u32)> = std::mem::take(&mut self.causes).into_iter().collect();
+        causes.sort_by_key(|c| std::cmp::Reverse(c.1));
+        let causes: Vec<String> = causes
+            .iter()
+            .take(4)
+            .map(|(c, n)| format!("{c} ×{n}"))
+            .collect();
+        luma_studio::journal(&format!(
+            "images : {} en {:.0} s, la plus lente {:.0} ms ; redessins demandés par {}",
+            self.count,
+            self.since.elapsed().as_secs_f32(),
+            self.slowest,
+            if causes.is_empty() {
+                "l'utilisateur".to_owned()
+            } else {
+                causes.join(", ")
+            }
+        ));
+        self.lines += 1;
+        self.since = std::time::Instant::now();
+        self.count = 0;
+        self.slowest = 0.0;
+    }
+}
 
 impl eframe::App for App {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.0.ui(ui);
+        self.1.record(ui.ctx(), frame.info().cpu_usage);
     }
 
     fn on_exit(&mut self) {
@@ -101,7 +164,7 @@ fn main() -> eframe::Result {
             if let Some(path) = &arg {
                 studio.open_path(path);
             }
-            Ok(Box::new(App(studio)))
+            Ok(Box::new(App(studio, Frames::new())))
         }),
     );
     luma_studio::journal(&format!("fin : {result:?}"));
