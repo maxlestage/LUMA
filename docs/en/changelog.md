@@ -297,6 +297,10 @@ The professional photo library, step by step.
   screen's size (it was made for the safe area, then stretched 11% vertically); the
   bottom of the panels shows (Snapshots, below the history), a finger scrolls the panel
   and hits what it aims at. The top bar holds its 40‑point buttons.
+- **iPhone and iPad: exports go to your photo library**: every exported image is added
+  to the Photos app as is (EXIF, IPTC and colour profile kept; iOS asks for permission
+  the first time), and also stays in LÜMA/ (Files app). The Export window fits the
+  iPhone screen, each setting under its title.
 
 ## 0.2.0 — October 2026
 

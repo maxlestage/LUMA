@@ -4228,3 +4228,17 @@ es = Perfil de carta: error de color de {before} a {after}
 fr = Pas une charte recadrée au plus juste (écart de couleur {error}) : mélangeur inchangé
 en = Not a tightly cropped chart (color error {error}): mixer unchanged
 es = No es una carta recortada al justo (error de color {error}): mezclador sin cambios
+
+# ----- Export vers la Pellicule (iPhone, iPad) -----
+
+fr = La Pellicule de Photos, et LÜMA/ à côté de l'original (app Fichiers)
+en = The Photos library, and LÜMA/ next to the original (Files app)
+es = La fototeca de Fotos, y LÜMA/ junto al original (app Archivos)
+
+fr = Photos a refusé l'export : autorisez LÜMA à ajouter des photos (Réglages › LÜMA › Photos). Le fichier est dans LÜMA/, app Fichiers.
+en = Photos refused the export: allow LÜMA to add photos (Settings › LÜMA › Photos). The file is in LÜMA/, Files app.
+es = Fotos rechazó la exportación: permite que LÜMA añada fotos (Ajustes › LÜMA › Fotos). El archivo está en LÜMA/, app Archivos.
+
+fr = {n} photo(s) ajoutée(s) à la Pellicule.
+en = {n} photo(s) added to your library.
+es = {n} foto(s) añadida(s) a la fototeca.
