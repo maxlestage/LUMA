@@ -4574,3 +4574,15 @@ es = {n} línea(s) de 4: arrastra a lo largo de una arista vertical u horizontal
 fr = Effacer les lignes
 en = Clear the lines
 es = Borrar las líneas
+
+fr = Rogner les bords vides
+en = Crop empty edges
+es = Recortar los bordes vacíos
+
+fr = Recadre au plus grand cadre sans bord vide, aux proportions de la photo (un recadrage ordinaire, modifiable ensuite)
+en = Crops to the largest frame with no empty edge, in the photo's proportions (an ordinary crop, editable afterwards)
+es = Recorta al mayor encuadre sin bordes vacíos, con las proporciones de la foto (un recorte normal, editable después)
+
+fr = Bords vides rognés
+en = Empty edges cropped
+es = Bordes vacíos recortados
