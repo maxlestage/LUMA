@@ -341,6 +341,9 @@ La fototeca profesional, paso a paso.
   Wide, Impossible Project, Instamatic) y creativos (Pastel, Otoño, Invierno, Primavera,
   Bruma, Contraluz, Bicromía). Todas verificadas en la carta como las demás:
   distintas, sin imagen aplastada, blanco y negro neutros, mismos renders en la GPU.
+- **Buscar una película** (herramienta Películas): por nombre o descripción, sin tener
+  en cuenta acentos ni mayúsculas; solo quedan las películas encontradas, en sus
+  familias abiertas.
 
 ## 0.2.0 — octubre de 2026
 
