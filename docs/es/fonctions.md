@@ -41,6 +41,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Gradación de color | Sombras, medios tonos, altas luces, global; fusión, equilibrio | ✅ |
 | | Virado parcial (sombras y altas luces, equilibrio; `crs:SplitToning*` leído y escrito) | ✅ |
 | | Mezclador de canales: cada canal de salida hecho de los tres canales de la foto (−200 a +200 %) | ✅ |
+| | Perfil de cámara medido en una carta ColorChecker («Perfil desde una carta», `luma colorchecker -o perfil.xmp`), como ajuste preestablecido | ✅ |
 | Detalle | Enfoque: cantidad, radio, detalle, máscara | ✅ |
 | | Enfoque por deconvolución (casilla «Deconvolución», Richardson-Lucy), sin IA | ✅ |
 | | Reducción de ruido de luminancia y de color | ✅ |
