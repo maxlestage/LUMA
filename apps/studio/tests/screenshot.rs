@@ -1580,6 +1580,11 @@ fn hdr_merge_is_offered() {
     s.harness
         .get_by_label("Bracketing : ombres et ciel détaillés, sans fantômes");
     s.capture("fusion-hdr");
+    // Et l'empilement de mise au point.
+    s.harness.get_by_label("Mise au point").click();
+    s.wait();
+    assert_eq!(s.studio().stack_mode, luma_merge::StackMode::Focus);
+    s.capture("fusion-mise-au-point");
 }
 
 #[test]

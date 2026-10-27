@@ -114,6 +114,7 @@ fn texts() -> Vec<(String, String)> {
             StackMode::Maximum,
             StackMode::Stars,
             StackMode::Hdr,
+            StackMode::Focus,
         ]
         .map(|m| m.name().to_owned())
         .to_vec(),

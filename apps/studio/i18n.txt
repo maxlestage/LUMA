@@ -4200,3 +4200,15 @@ es = Fusión HDR
 fr = Bracketing : ombres et ciel détaillés, sans fantômes
 en = Bracketing: detailed shadows and sky, no ghosts
 es = Horquillado: sombras y cielo con detalle, sin fantasmas
+
+fr = Mise au point
+en = Focus
+es = Enfoque
+
+fr = Empilement de mise au point
+en = Focus stacking
+es = Apilado de enfoque
+
+fr = Tout net, du premier plan au fond
+en = All sharp, from foreground to background
+es = Todo nítido, del primer plano al fondo

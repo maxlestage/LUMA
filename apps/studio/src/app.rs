@@ -6939,6 +6939,7 @@ impl Studio {
                     S::Hdr,
                     tr("Bracketing : ombres et ciel détaillés, sans fantômes"),
                 ),
+                (S::Focus, tr("Tout net, du premier plan au fond")),
             ] {
                 ui.horizontal(|ui| {
                     ui.radio_value(
@@ -6950,10 +6951,12 @@ impl Studio {
                 });
             }
             ui.add_space(4.0);
-            // Les étoiles et le HDR s'alignent toujours.
+            // Les étoiles, le HDR et la mise au point s'alignent toujours.
             let stars = matches!(
                 self.stack_mode,
-                luma_merge::StackMode::Stars | luma_merge::StackMode::Hdr
+                luma_merge::StackMode::Stars
+                    | luma_merge::StackMode::Hdr
+                    | luma_merge::StackMode::Focus
             );
             ui.add_enabled_ui(!stars, |ui| {
                 let mut align = self.stack_align || stars;
