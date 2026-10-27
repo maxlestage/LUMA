@@ -125,69 +125,112 @@ fn qtables(quality: u8) -> [[u8; 64]; 2] {
     [STD_LUMA_QTABLE, STD_CHROMA_QTABLE].map(|t| t.map(|v| ((u32::from(v) * scale + 50) / 100).clamp(1, 255) as u8))
 }
 
-/// Un flux de bits sans échappement (ajouté à l'assemblage).
+/// Un flux de bits sans échappement (ajouté à l'assemblage) : les bits s'accumulent
+/// dans un mot de 64 bits et partent par 32.
 #[derive(Default)]
 struct Bits {
     bytes: Vec<u8>,
-    acc: u32,
-    n: u8,
+    acc: u64,
+    /// Les bits en attente, à droite de `acc` (moins de 32).
+    n: u32,
 }
 
 impl Bits {
+    /// Ajoute les `size` bits de poids faible de `bits` (déjà masqués), au plus 32.
     #[inline]
-    fn put(&mut self, bits: u16, size: u8) {
-        if size == 0 {
-            return;
-        }
+    fn put(&mut self, bits: u32, size: u32) {
+        self.acc = (self.acc << size) | u64::from(bits);
         self.n += size;
-        self.acc |= u32::from(bits) << (32 - u32::from(self.n));
-        while self.n >= 8 {
-            self.bytes.push((self.acc >> 24) as u8);
-            self.n -= 8;
-            self.acc <<= 8;
+        if self.n >= 32 {
+            self.n -= 32;
+            self.bytes
+                .extend_from_slice(&((self.acc >> self.n) as u32).to_be_bytes());
         }
     }
 
     #[inline]
     fn huff(&mut self, symbol: u8, table: &Huff) {
         let (size, code) = table[usize::from(symbol)];
-        self.put(code, size);
+        self.put(u32::from(code), u32::from(size));
+    }
+
+    /// Un symbole et les bits de sa valeur, d'un coup (au plus 16 + 11 bits).
+    #[inline]
+    fn huff_value(&mut self, symbol: u8, table: &Huff, value: u16, size: u8) {
+        let (len, code) = table[usize::from(symbol)];
+        self.put(
+            (u32::from(code) << size) | u32::from(value),
+            u32::from(len) + u32::from(size),
+        );
+    }
+
+    /// Les bits en attente : leur valeur et leur nombre.
+    fn pending(&self) -> (u32, u32) {
+        ((self.acc & ((1u64 << self.n) - 1)) as u32, self.n)
     }
 }
 
 /// Le flux final : chaque octet 0xFF est suivi d'un 0x00.
 struct Stuffed {
     out: Vec<u8>,
-    acc: u32,
-    n: u8,
+    acc: u64,
+    n: u32,
+}
+
+/// Un des quatre octets du mot vaut‑il 0xFF ?
+#[inline]
+fn has_ff(w: u32) -> bool {
+    ((w & 0x7F7F_7F7F) + 0x0101_0101) & w & 0x8080_8080 != 0
 }
 
 impl Stuffed {
+    fn push(&mut self, byte: u8) {
+        self.out.push(byte);
+        if byte == 0xFF {
+            self.out.push(0);
+        }
+    }
+
     #[inline]
-    fn put(&mut self, bits: u16, size: u8) {
+    fn put(&mut self, bits: u32, size: u32) {
         if size == 0 {
             return;
         }
+        self.acc = (self.acc << size) | u64::from(bits);
         self.n += size;
-        self.acc |= u32::from(bits) << (32 - u32::from(self.n));
-        while self.n >= 8 {
-            let byte = (self.acc >> 24) as u8;
-            self.out.push(byte);
-            if byte == 0xFF {
-                self.out.push(0);
+        if self.n >= 32 {
+            self.n -= 32;
+            let w = (self.acc >> self.n) as u32;
+            if has_ff(w) {
+                for b in w.to_be_bytes() {
+                    self.push(b);
+                }
+            } else {
+                self.out.extend_from_slice(&w.to_be_bytes());
             }
-            self.n -= 8;
-            self.acc <<= 8;
         }
     }
 
     fn append(&mut self, b: &Bits) {
-        for &byte in &b.bytes {
-            self.put(u16::from(byte), 8);
+        let (words, rest) = b.bytes.as_chunks::<4>();
+        for w in words {
+            self.put(u32::from_be_bytes(*w), 32);
         }
-        if b.n > 0 {
-            self.put((b.acc >> (32 - u32::from(b.n))) as u16, b.n);
+        for &byte in rest {
+            self.put(u32::from(byte), 8);
         }
+        let (bits, n) = b.pending();
+        self.put(bits, n);
+    }
+
+    /// Les octets complets en attente ; un octet incomplet est laissé (comme avant).
+    fn finish(mut self) -> Vec<u8> {
+        while self.n >= 8 {
+            self.n -= 8;
+            let byte = (self.acc >> self.n) as u8;
+            self.push(byte);
+        }
+        self.out
     }
 }
 
@@ -203,8 +246,7 @@ fn coefficient(c: i32) -> (u8, u16) {
 /// Code un bloc quantifié ; rend son coefficient continu, la prédiction du suivant.
 fn write_block(w: &mut Bits, block: &[i32; 64], prev: i32, dc: &Huff, ac: &Huff) -> i32 {
     let (size, value) = coefficient(block[0] - prev);
-    w.huff(size, dc);
-    w.put(value, size);
+    w.huff_value(size, dc, value, size);
     let mut zeros = 0u8;
     for &k in &UNZIGZAG[1..] {
         let c = block[usize::from(k)];
@@ -216,8 +258,7 @@ fn write_block(w: &mut Bits, block: &[i32; 64], prev: i32, dc: &Huff, ac: &Huff)
                 zeros -= 16;
             }
             let (size, value) = coefficient(c);
-            w.huff((zeros << 4) | size, ac);
-            w.put(value, size);
+            w.huff_value((zeros << 4) | size, ac, value, size);
             zeros = 0;
         }
     }
@@ -317,14 +358,27 @@ fn ycbcr(p: &[u8]) -> (u8, u8, u8) {
 /// bord répètent le dernier.
 fn blocks(rgb: &[u8], w: usize, h: usize, bx: usize, by: usize, q: &[[u8; 64]; 2]) -> [[i32; 64]; 3] {
     let mut samples = [[0u8; 64]; 3];
-    for y in 0..8 {
-        let row = (by * 8 + y).min(h - 1) * w;
-        for x in 0..8 {
-            let px = (bx * 8 + x).min(w - 1);
-            let (yc, cb, cr) = ycbcr(&rgb[(row + px) * 3..]);
-            samples[0][y * 8 + x] = yc;
-            samples[1][y * 8 + x] = cb;
-            samples[2][y * 8 + x] = cr;
+    if bx * 8 + 8 <= w && by * 8 + 8 <= h {
+        // À l'intérieur de l'image : huit pixels d'une ligne à la suite, sans bord.
+        for y in 0..8 {
+            let start = ((by * 8 + y) * w + bx * 8) * 3;
+            for (x, p) in rgb[start..start + 24].as_chunks::<3>().0.iter().enumerate() {
+                let (yc, cb, cr) = ycbcr(p);
+                samples[0][y * 8 + x] = yc;
+                samples[1][y * 8 + x] = cb;
+                samples[2][y * 8 + x] = cr;
+            }
+        }
+    } else {
+        for y in 0..8 {
+            let row = (by * 8 + y).min(h - 1) * w;
+            for x in 0..8 {
+                let px = (bx * 8 + x).min(w - 1);
+                let (yc, cb, cr) = ycbcr(&rgb[(row + px) * 3..]);
+                samples[0][y * 8 + x] = yc;
+                samples[1][y * 8 + x] = cb;
+                samples[2][y * 8 + x] = cr;
+            }
         }
     }
     let mut out = [[0i32; 64]; 3];
@@ -449,7 +503,7 @@ pub fn encode(
     }
     // Le bourrage final : sept bits à 1 (un octet incomplet est laissé, comme avant).
     s.put(0x7F, 7);
-    out.extend_from_slice(&s.out);
+    out.extend_from_slice(&s.finish());
     out.extend_from_slice(&[0xFF, EOI]);
     Ok(out)
 }
@@ -488,7 +542,7 @@ impl Sink for Writer<'_> {
 
     #[inline]
     fn bits(&mut self, bits: u16, size: u8) {
-        self.bits.put(bits, size);
+        self.bits.put(u32::from(bits), u32::from(size));
     }
 }
 
@@ -730,7 +784,7 @@ pub fn encode_web(
         s.append(r);
     }
     s.put(0x7F, 7);
-    out.extend_from_slice(&s.out);
+    out.extend_from_slice(&s.finish());
     out.extend_from_slice(&[0xFF, EOI]);
     Ok(out)
 }
