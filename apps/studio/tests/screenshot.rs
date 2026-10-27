@@ -1623,6 +1623,32 @@ fn sky_mask() {
 }
 
 #[test]
+fn mask_texture_and_dehaze() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("masque-texture-voile") else {
+        return;
+    };
+    // Maj+M : un dégradé radial.
+    s.keys(&[(Modifiers::SHIFT, Key::M)]);
+    s.wait();
+    // Les deux curseurs du masque, à côté de la Clarté.
+    assert!(s.harness.query_all_by_label("Texture").next().is_some());
+    assert!(
+        s.harness
+            .query_all_by_label("Correction du voile")
+            .next()
+            .is_some()
+    );
+    let st = s.studio();
+    assert_eq!(st.settings.masks.len(), 1);
+    st.settings.masks[0].local.texture = -60.0;
+    st.settings.masks[0].local.dehaze = 50.0;
+    s.wait();
+    assert!(s.studio().has_image());
+    s.capture("masque-texture-voile");
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {
