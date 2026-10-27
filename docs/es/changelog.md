@@ -264,6 +264,10 @@ La fototeca profesional, paso a paso.
   mosaicos libres, descargados por el sistema y guardados en el dispositivo; sin
   conexión, los ya guardados.
 
+- **Las fotos del teléfono en su fecha y en el mapa**: el EXIF de las imágenes
+  reveladas (JPEG, HEIC, AVIF, PNG, WebP, TIFF) se lee como el de un RAW: fecha de la
+  toma, cámara, objetivo, ajustes, posición GPS. Las fotos que ya están en la fototeca
+  se vuelven a leer una vez.
 - **Instrumentos de medida** (encima del histograma, o Mayús+J): **forma de onda**
   (la luminancia, columna por columna), **desfile RGB** (cada canal por separado) y
   **vectorscopio** (tono y saturación, con los objetivos de los primarios al 75 % y la

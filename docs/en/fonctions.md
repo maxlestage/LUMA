@@ -153,6 +153,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
 | IPTC information in the XMP: title, caption, creator, copyright, location (sublocation, city, state, country); hierarchical keywords (“Places > France > Paris”, each level also in `dc:subject`); metadata templates given to the selected photos; in exported JPEGs | ✅ |
 | Map of geotagged photos (GPS position from the EXIF): groups of nearby photos, drag, zoom, tap a group to see its photos; open tile base map kept on the device, usable offline | ✅ |
+| EXIF of developed images (JPEG, HEIC, AVIF, PNG, WebP, TIFF): capture date, camera, lens, settings and GPS position read as for a RAW; a phone's photos are sorted by their date and appear on the map | ✅ |
 | Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates, ISO, focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
 | Manual and smart collections (rule: rating, date, camera, lens, ISO, keywords…), saved in the catalogue | ✅ |
 | Keywords in the app: entry (several at once, separated by commas), added to and removed from every selected photo, the folder's keywords with their count, grid filter | ✅ |
