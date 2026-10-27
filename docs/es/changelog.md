@@ -114,6 +114,9 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Muaré y desflecado con el pincel**: dos controles más en cada máscara. «Muaré»
+  suaviza los colores parásitos de un tejido o una rejilla, «Desflecado» quita los
+  bordes coloreados a lo largo de los contornos; la luminosidad no cambia.
 - **Ojos rojos**: un círculo en cada ojo, y la pupila roja vuelve a ser negra; la piel
   de alrededor y el reflejo blanco del ojo no cambian.
 - **Manchas del sensor**: «Ver las manchas» hace resaltar el polvo del sensor como

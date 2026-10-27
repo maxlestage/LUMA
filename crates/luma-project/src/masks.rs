@@ -108,7 +108,8 @@ pub struct Dab {
     pub erase: bool,
 }
 
-/// Les curseurs d'un masque (plages : exposition ±4, le reste ±100).
+/// Les curseurs d'un masque (plages : exposition ±4, moiré et frange 0 à 100, le reste
+/// ±100).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Local {
@@ -122,6 +123,11 @@ pub struct Local {
     pub tint: f32,
     pub saturation: f32,
     pub clarity: f32,
+    /// Moiré : les couleurs parasites d'un motif fin (tissu, grille) adoucies.
+    pub moire: f32,
+    /// Frange : les liserés colorés le long des contours nets (aberration chromatique
+    /// locale) désaturés.
+    pub defringe: f32,
 }
 
 impl Local {
@@ -144,6 +150,9 @@ impl Local {
             &mut self.clarity,
         ] {
             fix(v, 100.0);
+        }
+        for v in [&mut self.moire, &mut self.defringe] {
+            *v = if v.is_finite() { v.clamp(0.0, 100.0) } else { 0.0 };
         }
     }
 }
