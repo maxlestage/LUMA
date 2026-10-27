@@ -192,6 +192,18 @@ fn default_sharpening_stays_on_the_gpu() {
     assert!(gpu.can_finish(&s, 100, 100, 1.0), "accentuation à 100 % sur le GPU");
 }
 
+/// La déconvolution reste au processeur, sauf là où l'accentuation ne se fait pas
+/// (aperçu réduit) : le GPU garde alors la main.
+#[test]
+fn deconvolution_goes_to_the_processor() {
+    let _gpu = one_at_a_time();
+    let Some(gpu) = Gpu::any() else { return };
+    let mut s = Settings::default();
+    s.detail.sharpen_deconvolution = true;
+    assert!(!gpu.can_finish(&s, 100, 100, 1.0));
+    assert!(gpu.can_finish(&s, 100, 100, 0.3));
+}
+
 /// Plusieurs bases (la photo, les films de masques qui ont la leur) restent sur le GPU :
 /// en alternant, chaque rendu part bien de sa base.
 #[test]
