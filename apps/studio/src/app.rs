@@ -1503,10 +1503,8 @@ impl Studio {
         luma_render::rename::apply(&plan)?;
         for m in &plan.photos {
             self.catalog.rename(&m.from, &m.to);
-            for map in [&mut self.thumbs] {
-                if let Some(t) = map.remove(&m.from) {
-                    map.insert(m.to.clone(), t);
-                }
+            if let Some(t) = self.thumbs.remove(&m.from) {
+                self.thumbs.insert(m.to.clone(), t);
             }
             if let Some(v) = self.meta.remove(&m.from) {
                 self.meta.insert(m.to.clone(), v);
