@@ -26,6 +26,7 @@ pub mod effects;
 pub mod geometry;
 pub mod highlights;
 pub mod horizon;
+pub mod inpaint;
 pub mod lens;
 pub mod local;
 pub mod retouch;
