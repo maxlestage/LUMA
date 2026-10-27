@@ -253,3 +253,99 @@ fn raw_files_merge_into_a_dng_that_develops() {
     eprintln!("écart DNG / original : {diff:.4}");
     assert!(diff < 0.02, "{diff}");
 }
+
+/// L'écart moyen (en IL) à la vérité `truth`, sur les pixels dont la vérité (somme des
+/// canaux) est entre `lo` et `hi` ; `img` est multipliée par `k`.
+fn log_rms(img: &RgbImage, k: f32, truth: &RgbImage, lo: f32, hi: f32, margin: usize) -> f32 {
+    let l = |p: [f32; 3]| p[0] + 2.0 * p[1] + p[2];
+    let mut sum = 0.0f64;
+    let mut n = 0usize;
+    for y in margin..img.height - margin {
+        for x in margin..img.width - margin {
+            let i = y * img.width + x;
+            let t = l(truth.data[i]);
+            if (lo..hi).contains(&t) {
+                sum += f64::from(((l(img.data[i]) * k).max(1e-4) / t).log2().powi(2));
+                n += 1;
+            }
+        }
+    }
+    assert!(n > 500, "trop peu de pixels entre {lo} et {hi} : {n}");
+    (sum / n as f64).sqrt() as f32
+}
+
+#[test]
+fn hdr_merges_brackets_without_ghosts() {
+    // Une scène de grande dynamique : des ombres à 1 % de la saturation jusqu'à quatre
+    // fois la saturation (ce que la pose la plus sombre enregistre encore).
+    let base = scene(900);
+    let radiance = RgbImage {
+        width: base.width,
+        height: base.height,
+        data: base.data.iter().map(|p| p.map(|v| v * v * 4.0)).collect(),
+    };
+    let (w, h) = (base.width - 60, base.height - 60);
+    // +2, −2 et 0 IL, en désordre, chacune un peu décalée (à main levée).
+    let poses = [(4.0f32, 27.0, 31.0), (0.25, 30.0, 30.0), (1.0, 32.0, 28.0)];
+    let clip = |img: RgbImage| RgbImage {
+        width: img.width,
+        height: img.height,
+        data: img.data.iter().map(|p| p.map(|v| v.min(1.0))).collect(),
+    };
+    let mut frames: Vec<Arc<RgbImage>> = poses
+        .iter()
+        .enumerate()
+        .map(|(i, &(e, dx, dy))| {
+            let exposed = RgbImage {
+                width: radiance.width,
+                height: radiance.height,
+                data: radiance.data.iter().map(|p| p.map(|v| v * e)).collect(),
+            };
+            Arc::new(clip(view(
+                &exposed,
+                w,
+                h,
+                &Homography::translation(dx, dy),
+                0.02,
+                i as u64,
+            )))
+        })
+        .collect();
+    // Un passant clair dans la pose la plus exposée seulement.
+    let mut ghost = (*frames[0]).clone();
+    for y in 200..260 {
+        for x in 300..340 {
+            ghost.data[y * w + x] = [0.9; 3];
+        }
+    }
+    frames[0] = Arc::new(ghost);
+    let truth = view(&radiance, w, h, &Homography::translation(32.0, 28.0), 0.0, 0);
+    let merged = stack_images(frames.clone(), StackMode::Hdr, true).unwrap();
+    assert_eq!(merged.used, 3);
+    assert!(merged.exposure > 0.5, "ramenée sous le blanc : {} IL", merged.exposure);
+    let k = merged.exposure.exp2();
+    // Les lumières que la référence (0 IL) sature, et les ombres qu'elle noie dans le
+    // bruit mais que la pose à +2 IL voit encore.
+    let (lights, shadows) = ((4.4, 16.0), (0.02, 0.08));
+    let single = (
+        log_rms(&frames[2], 1.0, &truth, lights.0, lights.1, 40),
+        log_rms(&frames[2], 1.0, &truth, shadows.0, shadows.1, 40),
+    );
+    let fused = (
+        log_rms(&merged.image, k, &truth, lights.0, lights.1, 40),
+        log_rms(&merged.image, k, &truth, shadows.0, shadows.1, 40),
+    );
+    eprintln!(
+        "écart à la scène (IL) : lumières {:.3} → {:.3}, ombres {:.3} → {:.3}",
+        single.0, fused.0, single.1, fused.1
+    );
+    assert!(fused.0 < single.0 * 0.3, "lumières {fused:?} / {single:?}");
+    assert!(fused.1 < single.1 * 0.6, "ombres {fused:?} / {single:?}");
+    // La référence est l'exposition médiane ; le passant n'y est pas, il ne reste pas.
+    let at = |img: &RgbImage, k: f32| {
+        let p = img.data[230 * w + 320];
+        (p[0] + 2.0 * p[1] + p[2]) * k
+    };
+    let (got, want) = (at(&merged.image, k), at(&truth, 1.0));
+    assert!((got / want).log2().abs() < 0.3, "fantôme : {got} au lieu de {want}");
+}
