@@ -303,6 +303,10 @@ La fototeca profesional, paso a paso.
   cada imagen, de un 9 a un 29 % más ligero en las fotos de prueba, con una diferencia
   apenas medible; en el ajuste Web, la ventana de exportación («Optimizado para la web»)
   y `--web`.
+- **Vídeo básico** (`luma video`): una película de LÜMA («Portra 400», «Tri-X 400»…),
+  un ajuste XMP o unos ajustes aplicados a cada imagen de un vídeo corto en Motion JPEG
+  (el formato AVI de muchas cámaras), guardado de nuevo en el mismo formato: mismo
+  tamaño, misma cadencia, el sonido copiado tal cual. Leído y escrito en Rust puro.
 - **Importación desde una tarjeta** («Importar una tarjeta…» en la Fototeca, `luma
   import`): la tarjeta montada se encuentra sola; las fotos se ordenan por fecha de
   toma, se renombran si se quiere y se copian también en un segundo disco; cada copia
