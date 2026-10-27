@@ -28,6 +28,16 @@ La photothèque professionnelle, étape par étape.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
+- **Fiabilité** : relecture complète du code. Plus de hautes lumières rendues noires
+  quand les Blancs montent fort ; plus de plantage sur un fichier HEIC, ICC ou DNG
+  malformé, une image d'un pixel de large, une retouche hors de la photo, un recadrage
+  à proportions verrouillées tiré au plus petit, un panorama démesuré. Un export n'écrase
+  plus jamais une photo originale ; l'import ne remplace plus un XMP de la photothèque ni
+  un fichier du second disque, et garde le XMP de chaque photo d'une prise ; restaurer la
+  plus ancienne sauvegarde du catalogue fonctionne, et un catalogue illisible est gardé
+  dans les sauvegardes. Dans l'app, l'aperçu de la photo d'avant ne recouvre plus celle
+  qu'on ouvre, les masques à bord adouci s'affichent comme ils s'exportent, et un GPU qui
+  ne répond plus laisse le processeur finir l'aperçu.
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
