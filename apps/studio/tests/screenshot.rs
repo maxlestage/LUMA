@@ -191,6 +191,33 @@ fn scopes_waveform_parade_vectorscope() {
     assert_eq!(s.studio().scope(), (Scope::Histogram, false));
 }
 
+/// La mesure au point : le pointeur sur la photo donne la couleur de l'aperçu à cet
+/// endroit (sans l'écrêtage peint par‑dessus), hors de la photo plus rien.
+#[test]
+fn point_measurement() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("mesure") else {
+        return;
+    };
+    assert_eq!(s.studio().measured(), None);
+    s.keys(&[(NONE, Key::J)]);
+    let center = egui::pos2(720.0, 450.0);
+    s.harness.hover_at(center);
+    s.harness.step();
+    s.harness.step();
+    let rgb = s.studio().measured().expect("une couleur sous le pointeur");
+    s.keys(&[(NONE, Key::J)]);
+    s.harness.hover_at(center);
+    s.harness.step();
+    s.harness.step();
+    assert_eq!(s.studio().measured(), Some(rgb));
+    s.capture("mesure");
+    s.harness.hover_at(egui::pos2(2.0, 450.0));
+    s.harness.step();
+    s.harness.step();
+    assert_eq!(s.studio().measured(), None);
+}
+
 #[test]
 fn library_ratings_and_flags() {
     let _gpu = one_at_a_time();

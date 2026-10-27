@@ -223,6 +223,11 @@ La fototeca profesional, paso a paso.
   **vectorscopio** (tono y saturación, con los objetivos de los primarios al 75 % y la
   línea de tonos de piel), calculados sobre la vista previa en cada render, prueba en
   pantalla incluida.
+- **Medición puntual**: bajo el histograma, los valores RGB (sRGB, de 0 a 255) y Lab
+  del punto bajo el puntero, leídos sobre los colores reales aunque se muestre el
+  recorte. **Recorte por canal**: en la foto y en la esquina del histograma, el color
+  indica qué canales están quemados (rojo, amarillo para rojo y verde…, blanco para
+  los tres).
 
 ## 0.2.0 — octubre de 2026
 

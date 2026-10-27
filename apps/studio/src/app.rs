@@ -545,6 +545,10 @@ pub struct Studio {
     /// L'instrument affiché à la place de l'histogramme (Maj+J), et son image.
     scope: Scope,
     scope_texture: Option<TextureHandle>,
+    /// La mesure au point : l'aperçu affiché (sans l'écrêtage peint) et l'endroit
+    /// survolé de la photo (0 à 1), s'il y en a un.
+    probe_image: ([usize; 2], Vec<u8>),
+    probe: Option<[f32; 2]>,
     generation: u64,
     shown: u64,
     last_request: Option<Request>,
@@ -738,6 +742,20 @@ fn pick_map(size: [usize; 2], rgba: &[u8]) -> ([usize; 2], Vec<u8>) {
     ([sw, sh], out)
 }
 
+/// La couleur d'un point (coordonnées 0 à 1) de l'aperçu affiché, en sRGB 8 bits.
+fn probe_color((size, rgba): &([usize; 2], Vec<u8>), nx: f32, ny: f32) -> Option<[u8; 3]> {
+    let [w, h] = *size;
+    if w == 0 || h == 0 || rgba.len() < w * h * 4 {
+        return None;
+    }
+    if !(0.0..1.0).contains(&nx) || !(0.0..1.0).contains(&ny) {
+        return None;
+    }
+    let (x, y) = ((nx * w as f32) as usize, (ny * h as f32) as usize);
+    let i = (y.min(h - 1) * w + x.min(w - 1)) * 4;
+    Some([rgba[i], rgba[i + 1], rgba[i + 2]])
+}
+
 /// La couleur moyenne autour d'un point (coordonnées 0 à 1) de la copie réduite.
 fn pick_color((size, rgba): &([usize; 2], Vec<u8>), nx: f32, ny: f32) -> Option<[u8; 3]> {
     let [w, h] = *size;
@@ -776,6 +794,12 @@ impl Studio {
     /// L'histogramme du dernier rendu (rouge, vert, bleu).
     pub fn histogram(&self) -> [[u32; 256]; 3] {
         self.histogram
+    }
+
+    /// La mesure au point : la couleur sous le pointeur, s'il survole la photo.
+    pub fn measured(&self) -> Option<[u8; 3]> {
+        self.probe
+            .and_then(|[x, y]| probe_color(&self.probe_image, x, y))
     }
 
     /// L'instrument affiché, et s'il est rendu (son image arrivée avec l'aperçu).
@@ -826,6 +850,8 @@ impl Studio {
             histogram: [[0; 256]; 3],
             scope: Scope::default(),
             scope_texture: None,
+            probe_image: ([0, 0], Vec::new()),
+            probe: None,
             generation: 0,
             shown: 0,
             last_request: None,
@@ -1836,6 +1862,12 @@ impl Studio {
                             self.texture =
                                 Some(ctx.load_texture("photo", image, TextureOptions::LINEAR))
                         }
+                    }
+                    // La mesure au point (Mac, iPad) : l'aperçu gardé tel quel, sans
+                    // copie ; sur iPhone, où elle ne s'affiche pas, rien de gardé.
+                    if !self.compact {
+                        let frame = *frame;
+                        self.probe_image = (frame.size, frame.clean.unwrap_or(frame.rgba));
                     }
                 }
                 Event::Glimpse { path, size, rgba } => {
@@ -5460,6 +5492,30 @@ impl Studio {
                     .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
             }
         }
+        // La mesure au point : sous le pointeur, en RVB (0 à 255, sRGB) et en Lab.
+        let measured = self
+            .probe
+            .and_then(|[x, y]| probe_color(&self.probe_image, x, y));
+        ui.add_space(2.0);
+        let line = match measured {
+            Some(rgb) => {
+                let [l, a, b] = luma_color::profile::srgb8_to_lab(rgb);
+                format!(
+                    "{} {:>3}  {} {:>3}  {} {:>3}   L {:.0}  a {:.0}  b {:.0}",
+                    tr("R|mesure"),
+                    rgb[0],
+                    tr("V|mesure"),
+                    rgb[1],
+                    tr("B|mesure"),
+                    rgb[2],
+                    l,
+                    a,
+                    b
+                )
+            }
+            None => tr("Survolez la photo : RVB et Lab du point").to_owned(),
+        };
+        ui.label(RichText::new(line).size(10.5).monospace().color(theme::DIM));
     }
 
     /// Bibliothèque, à droite : la note, le drapeau et les informations de la photo.
@@ -6119,6 +6175,7 @@ impl Studio {
         }
         let pressed = ui.input(|i| i.pointer.any_down());
         self.request_render(rect.width().max(rect.height()) * ppp, pressed);
+        self.probe = None;
         let painter = ui.painter_at(rect);
         let Some(t) = &self.texture else {
             // L'accueil : le logo, et ce qu'on peut faire.
@@ -6252,6 +6309,12 @@ impl Studio {
                 egui::Sense::click()
             };
             let r = ui.interact(target, ui.scope_id().with("photo"), sense);
+            self.probe = r.hover_pos().map(|p| {
+                [
+                    (p.x - target.min.x) / target.width(),
+                    (p.y - target.min.y) / target.height(),
+                ]
+            });
             if self.targeting && !self.eyedropper {
                 self.target_drag(ui, &r, target);
             } else if self.eyedropper {

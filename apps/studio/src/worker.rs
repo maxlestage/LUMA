@@ -31,6 +31,9 @@ pub struct Frame {
     pub dust: Option<Vec<luma_project::Spot>>,
     /// L'instrument choisi (forme d'onde, parade, vectorscope), rendu sur l'aperçu.
     pub scope: Option<luma_image::scopes::ScopeImage>,
+    /// L'aperçu sans ce qu'on a peint dessus (écrêtage, alerte de gamut), quand on y a
+    /// peint quelque chose : la mesure au point y lit les vraies couleurs.
+    pub clean: Option<Vec<u8>>,
 }
 
 pub enum Event {
@@ -215,15 +218,25 @@ pub fn write_meta(raw: &Path, meta: &xmp::Meta) -> Result<(), String> {
     }
 }
 
-/// RGB 8 bits → RGBA, avec en option l'indicateur d'écrêtage (touche J) :
-/// rouge où un canal est blanc pur, bleu où tout est noir.
+/// La couleur de l'indicateur d'écrêtage (touche J) pour un pixel, couche par couche :
+/// les couches brûlées gardent leur couleur (rouge seul, jaune pour rouge et vert…,
+/// blanc quand les trois le sont) ; bleu où tout est noir.
+pub fn clip_color(p: [u8; 3]) -> Option<[u8; 3]> {
+    if p.contains(&255) {
+        Some(p.map(|v| if v == 255 { 255 } else { 0 }))
+    } else if p == [0, 0, 0] {
+        Some([40, 90, 255])
+    } else {
+        None
+    }
+}
+
+/// RGB 8 bits → RGBA, avec en option l'indicateur d'écrêtage ([`clip_color`]).
 pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
     let mut out = Vec::with_capacity(rgb.len() / 3 * 4);
     for p in rgb.as_chunks::<3>().0 {
-        let px = if clipping && p.contains(&255) {
-            [255, 40, 40]
-        } else if clipping && *p == [0, 0, 0] {
-            [40, 90, 255]
+        let px = if clipping {
+            clip_color(*p).unwrap_or(*p)
         } else {
             *p
         };
@@ -696,6 +709,7 @@ fn render_loop(
         }
         let histogram = histogram_rgba(&rgba);
         let scope = luma_image::scopes::render(job.scope, &rgba, w, h);
+        let clean = (gamut.is_some() || job.clipping || job.dust_view).then(|| rgba.clone());
         if let Some(mask) = &gamut {
             luma_color::proof::paint_alert(&mut rgba, mask);
         }
@@ -728,6 +742,7 @@ fn render_loop(
             scene,
             dust,
             scope,
+            clean,
         };
         let _ = sender.send(Event::Rendered(Box::new(frame)));
         repaint();
@@ -748,10 +763,8 @@ pub fn histogram_rgba(rgba: &[u8]) -> [[u32; 256]; 3] {
 /// L'indicateur d'écrêtage sur une image RGBA (voir [`to_rgba`]).
 pub fn clip_overlay(rgba: &mut [u8]) {
     for p in rgba.as_chunks_mut::<4>().0 {
-        if p[..3].contains(&255) {
-            p[..3].copy_from_slice(&[255, 40, 40]);
-        } else if p[..3] == [0, 0, 0] {
-            p[..3].copy_from_slice(&[40, 90, 255]);
+        if let Some(c) = clip_color([p[0], p[1], p[2]]) {
+            p[..3].copy_from_slice(&c);
         }
     }
 }
@@ -895,9 +908,14 @@ mod tests {
         let rgb = [255, 10, 10, 0, 0, 0, 100, 100, 100];
         assert_eq!(to_rgba(&rgb, false)[..4], [255, 10, 10, 255]);
         let c = to_rgba(&rgb, true);
-        assert_eq!(c[..4], [255, 40, 40, 255]);
+        assert_eq!(c[..4], [255, 0, 0, 255]);
         assert_eq!(c[4..8], [40, 90, 255, 255]);
         assert_eq!(c[8..12], [100, 100, 100, 255]);
+        // Couche par couche : rouge et vert brûlés en jaune, les trois en blanc.
+        assert_eq!(clip_color([255, 255, 30]), Some([255, 255, 0]));
+        assert_eq!(clip_color([40, 255, 255]), Some([0, 255, 255]));
+        assert_eq!(clip_color([255; 3]), Some([255; 3]));
+        assert_eq!(clip_color([1, 0, 0]), None);
     }
 
     #[test]

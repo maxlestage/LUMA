@@ -634,6 +634,18 @@ pub fn xyz_to_lab(v: Vec3) -> Vec3 {
     [116.0 * fy - 16.0, 500.0 * (fx - fy), 200.0 * (fy - fz)]
 }
 
+/// Le Lab (D50) d'une couleur sRGB 8 bits, celui que mesure la pipette de l'app : la
+/// matrice sRGB → XYZ adaptée à D50 par Bradford, comme dans les profils ICC.
+pub fn srgb8_to_lab(rgb: [u8; 3]) -> Vec3 {
+    const SRGB_TO_D50: Mat3 = [
+        [0.436_074_7, 0.385_064_9, 0.143_080_4],
+        [0.222_504_5, 0.716_878_6, 0.060_616_9],
+        [0.013_932_2, 0.097_104_5, 0.714_173_3],
+    ];
+    let linear = rgb.map(|v| crate::srgb_decode(f32::from(v) / 255.0));
+    xyz_to_lab(apply(&SRGB_TO_D50, linear))
+}
+
 pub fn lab_to_xyz(lab: Vec3) -> Vec3 {
     let fy = (lab[0] + 16.0) / 116.0;
     let f = [fy + lab[1] / 500.0, fy, fy - lab[2] / 200.0];
@@ -905,6 +917,19 @@ mod tests {
         }
         let w = xyz_to_lab(PCS_WHITE);
         assert!((w[0] - 100.0).abs() < 1e-3 && w[1].abs() < 1e-3 && w[2].abs() < 1e-3);
+    }
+
+    /// Le blanc sRGB vaut L 100, le gris moyen (119) L 50, tous deux neutres ; le rouge
+    /// pur a les valeurs de référence (L 54,3, a 80,8, b 69,9 sous D50).
+    #[test]
+    fn srgb_to_lab_reference_values() {
+        let near = |a: Vec3, b: Vec3, tol: f32| (0..3).all(|i| (a[i] - b[i]).abs() < tol);
+        assert!(near(srgb8_to_lab([255; 3]), [100.0, 0.0, 0.0], 0.05));
+        let gray = srgb8_to_lab([119; 3]);
+        assert!((gray[0] - 50.0).abs() < 0.5 && gray[1].abs() < 0.05 && gray[2].abs() < 0.05);
+        let red = srgb8_to_lab([255, 0, 0]);
+        assert!(near(red, [54.29, 80.81, 69.89], 0.3), "{red:?}");
+        assert_eq!(srgb8_to_lab([0; 3])[0], 0.0);
     }
 
     #[test]

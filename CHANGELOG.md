@@ -227,6 +227,11 @@ La photothèque professionnelle, étape par étape.
   (la luminance, colonne par colonne), **parade RVB** (chaque couche à part) et
   **vectorscope** (teinte et saturation, avec les cibles des primaires à 75 % et la
   ligne des tons chair), calculés sur l'aperçu à chaque rendu, épreuvage compris.
+- **Mesure au point** : sous l'histogramme, le RVB (sRGB, 0 à 255) et le Lab du point
+  que survole le pointeur, lus sur les vraies couleurs même quand l'écrêtage est
+  affiché. **Écrêtage couche par couche** : sur la photo comme dans le coin de
+  l'histogramme, la couleur dit quelles couches sont brûlées (rouge, jaune pour rouge
+  et vert…, blanc pour les trois).
 
 ## 0.2.0 — octobre 2026
 

@@ -433,7 +433,16 @@ pub fn histogram_sized(
         }
     }
     let shadows = (0..3).any(|c| h[c][0] as f32 > total as f32 * 0.002);
-    let highlights = (0..3).any(|c| h[c][255] as f32 > total as f32 * 0.002);
+    // Les couches brûlées, chacune de sa couleur (rouge et vert : jaune ; les trois :
+    // blanc), comme l'indicateur sur la photo.
+    let burnt = [0, 1, 2].map(|c| h[c][255] as f32 > total as f32 * 0.002);
+    let highlights = burnt.contains(&true);
+    let burnt_color = if highlights {
+        let [r, g, b] = burnt.map(|on| if on { 255 } else { 40 });
+        Color32::from_rgb(r, g, b)
+    } else {
+        Color32::from_rgb(255, 60, 60)
+    };
     let corner = |p: Pos2, lit: bool, color: Color32| {
         let fill = if lit || *clipping {
             color
@@ -458,7 +467,7 @@ pub fn histogram_sized(
     corner(
         pos2(rect.max.x - 4.0, rect.min.y + 4.0),
         highlights,
-        Color32::from_rgb(255, 60, 60),
+        burnt_color,
     );
     painter.rect_stroke(
         rect,
