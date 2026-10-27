@@ -82,6 +82,7 @@ const BRAND_SVG: &str = include_str!("../../public/assets/marque.svg");
 
 const IRIS_SVG: &str = r##"<svg class="loader-iris" viewBox="-50 -50 100 100"><defs><linearGradient id="spec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b3d"/><stop offset=".35" stop-color="#ffcf4a"/><stop offset=".65" stop-color="#4af2c8"/><stop offset="1" stop-color="#8b7bff"/></linearGradient></defs><circle r="46" fill="none" stroke="url(#spec)" stroke-width="1.2"/><g class="blades"><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/></g></svg>"##;
 
+const LINUX_SVG: &str = r#"<svg class="linux-logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>"#;
 const APPLE_SVG: &str = r#"<svg class="apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM13.9 4.9c.7-.9 1.2-2 1-3.2-1 .1-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>"#;
 
 // ----- Cadre --------------------------------------------------------------------------
@@ -196,7 +197,7 @@ fn hero(lang: Lang) -> Element {
                 .child(
                     p().class("eyebrow reveal")
                         .child(span().class("dot"))
-                        .child(text(format!(" {}", t(lang, "Éditeur photo · Mac, iPhone et iPad")))),
+                        .child(text(format!(" {}", t(lang, "Éditeur photo · Mac, iPhone, iPad et Linux")))),
                 )
                 .child(h1().class("hero-title").attr("aria-label", "LÜMA").child(title))
                 .child(heading(p, t(lang, "La lumière, *développée*.")).class("hero-sub reveal"))
@@ -217,7 +218,7 @@ fn hero(lang: Lang) -> Element {
         .child(
             div()
                 .class("hero-meta reveal")
-                .children(["RAW", t(lang, "275 films"), t(lang, "Masques"), "Mac · iPhone · iPad"].map(|s| span().text(s))),
+                .children(["RAW", t(lang, "275 films"), t(lang, "Masques"), "Mac · iPhone · iPad · Linux"].map(|s| span().text(s))),
         )
         .child(
             a().class("scroll-hint")
@@ -380,7 +381,7 @@ fn platforms(lang: Lang) -> Element {
             t(lang, "Ordre de sortie"),
             heading(h2, t(lang, "Apple en premier. *Les autres suivent*, sur le même cœur.")),
             Some(p().text(t(lang,
-                "Windows, Linux et Android suivront, avec le même moteur : une photo aura le même rendu partout.",
+                "Linux est déjà là ; Windows et Android suivront, avec le même moteur : une photo aura le même rendu partout.",
             ))),
         ))
         .child(div().class("platform-grid").children(PLATFORMS.iter().map(
@@ -830,20 +831,46 @@ fn pricing(lang: Lang) -> Element {
             "LÜMA Premium",
             heading(h2, t(lang, "Quatorze jours pour *essayer*, puis à vous de choisir.")),
             Some(p().class("lede").text(t(lang,
-                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store.",
+                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac et Linux, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.",
             ))),
         ))
         .children(downloads_open().then(|| {
+            // Une colonne par système : le bouton, puis ce qu'il faut savoir.
             div()
                 .class("download reveal")
                 .child(
-                    a().class("btn magnetic")
-                        .href(link("/download/LUMA-macos.zip"))
-                        .attr("download", "")
-                        .child(span().html(APPLE_SVG))
-                        .child(span().text(t(lang, "Télécharger pour Mac"))),
+                    div()
+                        .class("download-option")
+                        .child(
+                            a().class("btn magnetic")
+                                .href(link("/download/LUMA-macos.zip"))
+                                .attr("download", "")
+                                .child(span().html(APPLE_SVG))
+                                .child(span().text(t(lang, "Télécharger pour Mac"))),
+                        )
+                        .child(p().class("download-note").text(download_note(lang))),
                 )
-                .child(p().class("download-note").text(download_note(lang)))
+                .child(
+                    div()
+                        .class("download-option")
+                        .child(
+                            a().class("btn btn-ghost magnetic")
+                                .href(link("/download/LUMA-linux-x86_64.tar.gz"))
+                                .attr("download", "")
+                                .child(span().html(LINUX_SVG))
+                                .child(span().text(t(lang, "Télécharger pour Linux"))),
+                        )
+                        .child(
+                            p().class("download-note")
+                                .text(t(lang, "Linux x86_64 (Ubuntu 22.04, Debian 12, Fedora 36 ou plus récent) : l'archive s'installe sans mot de passe avec install.sh ; il faut un pilote graphique Vulkan."))
+                                .child(text(" "))
+                                .child(
+                                    a().href(link("/download/LUMA-linux-amd64.deb"))
+                                        .attr("download", "")
+                                        .text(t(lang, "Paquet .deb (Debian, Ubuntu)")),
+                                ),
+                        ),
+                )
         }))
         .child(
             div()
@@ -902,7 +929,7 @@ fn site_footer(here: Here) -> Element {
                         )
                         .child(p().class("footer-tagline").text(t(
                             lang,
-                            "L'éditeur photo qui développe la lumière. Pour Mac, iPhone et iPad.",
+                            "L'éditeur photo qui développe la lumière. Pour Mac, iPhone, iPad et Linux.",
                         )))
                         .child(
                             div()
@@ -928,6 +955,17 @@ fn site_footer(here: Here) -> Element {
                                                 .child(strong().text("Mac")),
                                         )
                                 })
+                                .children(downloads_open().then(|| {
+                                    a().class("store")
+                                        .href(link("/download/LUMA-linux-x86_64.tar.gz"))
+                                        .attr("download", "")
+                                        .child(span().html(LINUX_SVG))
+                                        .child(
+                                            span()
+                                                .child(small().text(t(lang, "Télécharger pour")))
+                                                .child(strong().text("Linux")),
+                                        )
+                                }))
                                 .child(
                                     span()
                                         .class("store store-soon")
@@ -1023,6 +1061,7 @@ pub fn licence(
                 .child(h2().text(t(lang, "Pas encore l'app ?")))
                 .child(div().class("hero-cta")
                     .children(downloads_open().then(|| a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac")))))
+                    .children(downloads_open().then(|| a().class("btn btn-ghost").href(link("/download/LUMA-linux-x86_64.tar.gz")).attr("download", "").child(span().text(t(lang, "Télécharger pour Linux")))))
                     .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement"))))))),
         Err(e) => div()
             .child(h1().text(t(lang, "Clé de licence")))

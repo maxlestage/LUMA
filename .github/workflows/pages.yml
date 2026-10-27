@@ -2,6 +2,8 @@
 #
 # - mac-app : LÜMA.app universelle (Apple Silicon et Intel), publiée avec le site sous
 #   /download/LUMA-macos.zip (14 jours d'essai, puis LÜMA Premium) ;
+# - linux-app : LÜMA pour Linux, sous /download/LUMA-linux-x86_64.tar.gz et
+#   /download/LUMA-linux-amd64.deb ;
 # - build : vérifications (fmt, clippy serveur et WebAssembly, tests), bundle du
 #   navigateur, puis export statique du site par le serveur Paquets lui-même, liens
 #   sous /<dépôt> ;
@@ -70,10 +72,34 @@ jobs:
           name: telechargement-mac
           path: target/macos/LUMA-macos.zip
 
+  linux-app:
+    name: LÜMA pour Linux à télécharger
+    if: ${{ !github.event.repository.private && vars.LUMA_DOWNLOADS == '1' }}
+    # Le plus ancien Ubuntu de GitHub : l'app tourne sur glibc 2.35 et plus.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Archive et paquet .deb
+        env:
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+          LUMA_LICENCE_PUBLIC: ${{ vars.LUMA_LICENCE_PUBLIC }}
+          LUMA_LICENCE_SERVER: ${{ vars.LUMA_LICENCE_SERVER }}
+          LUMA_BILLING_PORTAL: ${{ vars.LUMA_BILLING_PORTAL }}
+        run: scripts/bundle-linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telechargement-linux
+          path: |
+            target/linux/LUMA-linux-x86_64.tar.gz
+            target/linux/LUMA-linux-amd64.deb
+
   build:
     name: Vérifier et construire le site
-    needs: mac-app
-    if: ${{ always() && !github.event.repository.private && (needs.mac-app.result == 'success' || needs.mac-app.result == 'skipped') }}
+    needs: [mac-app, linux-app]
+    if: ${{ always() && !github.event.repository.private && (needs.mac-app.result == 'success' || needs.mac-app.result == 'skipped') && (needs.linux-app.result == 'success' || needs.linux-app.result == 'skipped') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -128,9 +154,17 @@ jobs:
         with:
           name: telechargement-mac
           path: site/dist/download
-      - name: Téléchargement présent
+      - uses: actions/download-artifact@v4
         if: vars.LUMA_DOWNLOADS == '1'
-        run: test -s dist/download/LUMA-macos.zip
+        with:
+          name: telechargement-linux
+          path: site/dist/download
+      - name: Téléchargements présents
+        if: vars.LUMA_DOWNLOADS == '1'
+        run: |
+          test -s dist/download/LUMA-macos.zip
+          test -s dist/download/LUMA-linux-x86_64.tar.gz
+          test -s dist/download/LUMA-linux-amd64.deb
 
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'
