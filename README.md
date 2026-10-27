@@ -44,6 +44,8 @@ target/release/luma develop photo.ARW --lut MaPortra.cube:80 -o p.jpg   # ce fil
 target/release/luma catalog ~/Photos --list                             # la photothèque, par date de prise de vue
 target/release/luma rename ~/Photos/*.ARW --name "{date}_{séquence}" -n  # renommage par lot (aperçu)
 target/release/luma print ~/Photos/*.ARW --grid 4x5 --captions -o planche.pdf  # planche contact
+target/release/luma book ~/Photos/Islande/*.ARW --title "Islande" -o livre.pdf  # livre photo
+target/release/luma slideshow ~/Photos/Islande/*.ARW -o ~/Sites/islande     # diaporama autonome
 target/release/luma presets ~/Desktop                                   # les 100 films en préréglages XMP
 ```
 

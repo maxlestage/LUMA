@@ -107,6 +107,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Alerte de gamut : les couleurs que l'imprimante ne saura pas rendre, en bleu sur l'aperçu (aller et retour en colorimétrique relative, écart au‑delà de ΔE 3) | ✅ |
 | Simulation du papier (ton et luminosité, colorimétrie absolue) et de l'encre noire (son vrai noir) ; sans elles, compensation du point noir | ✅ |
 | Impression (« Imprimer… », `luma print`) : PDF à la taille exacte du papier (A4, A3, A3+, A5, Lettre US, 10 × 15 à 20 × 30 cm, ou sur mesure), portrait ou paysage, marges, une photo par page ou planche contact (grille, écart, nom sous chaque photo), photos entières ou remplissant leur case, résolution, accentuation pour papier mat ou brillant ; pages converties vers le profil RVB de l'imprimante (celui de l'épreuvage, noir compensé) | ✅ |
+| Livre photo en PDF (« Livre et diaporama… », `luma book`) : couverture (première photo, titre, sous‑titre), pages d'une, deux ou quatre photos selon leur orientation, formats 20 × 20, 30 × 30, A4, 21 × 28, A3 ; diaporama en plein écran dans l'app (avance seule, pause, flèches) et diaporama exporté (`luma slideshow`) : un dossier autonome, index.html et JPEG, fondu, clavier, glissement du doigt | ✅ |
 
 ## Export
 
