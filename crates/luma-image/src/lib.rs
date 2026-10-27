@@ -140,7 +140,10 @@ pub fn base_key(s: &Settings) -> Settings {
 pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<()> {
     let adapted = t.time("blancs et noirs", || adaptive_ends(img, s));
     let s = &adapted;
-    t.time("rendu", || render_stage(img, s));
+    t.time("rendu", || {
+        let render = RenderStage::new(s);
+        img.data.par_chunks_mut(LANES).for_each(|c| render.apply_lanes(c));
+    });
     cancel.check()?;
     t.time("couleur", || {
         if let Some(stage) = color::ColorStage::new(s) {
@@ -388,22 +391,57 @@ pub fn highlight_rolloff(s: &Settings) -> f32 {
     }
 }
 
-fn render_stage(img: &mut RgbImage, s: &Settings) {
-    let filmic = tone_table(s);
-    let rolloff = highlight_rolloff(s);
-    let luts = tone_luts(s);
-    let encode = EncodeLut::new(lc::srgb_encode);
-    let decode = Lut::from_fn(lc::srgb_decode);
-    img.data.par_iter_mut().for_each(|p| {
+/// Le nombre de pixels traités ensemble par les étapes écrites « en colonnes » : huit
+/// valeurs de chaque canal côte à côte, que le compilateur calcule avec les instructions
+/// vectorielles du processeur. Les mêmes opérations, dans le même ordre, que pixel par
+/// pixel : les mêmes bits.
+const LANES: usize = 8;
+
+/// Les trois canaux de `px` (au plus [`LANES`] pixels) en colonnes.
+#[inline]
+fn columns(px: &[[f32; 3]]) -> [[f32; LANES]; 3] {
+    let mut c = [[0.0; LANES]; 3];
+    for (k, p) in px.iter().enumerate() {
+        for ch in 0..3 {
+            c[ch][k] = p[ch];
+        }
+    }
+    c
+}
+
+/// L'étape de rendu : la courbe filmique, le roulement des hautes lumières et les
+/// courbes des tonalités.
+struct RenderStage {
+    filmic: curve::FilmicTable,
+    rolloff: f32,
+    luts: Option<[Lut; 3]>,
+    encode: EncodeLut,
+    decode: Lut,
+}
+
+impl RenderStage {
+    fn new(s: &Settings) -> RenderStage {
+        RenderStage {
+            filmic: tone_table(s),
+            rolloff: highlight_rolloff(s),
+            luts: tone_luts(s),
+            encode: EncodeLut::new(lc::srgb_encode),
+            decode: Lut::from_fn(lc::srgb_decode),
+        }
+    }
+
+    /// Un pixel.
+    #[inline]
+    fn apply(&self, p: [f32; 3]) -> [f32; 3] {
         // Norme entre la luminance et le maximum : les teintes restent, les couleurs
         // vives ne s'écrasent pas.
         let mx = p[0].max(p[1]).max(p[2]);
-        let n = (0.5 * mx + 0.5 * luminance(*p)).max(1e-7);
-        let f = filmic.get(n);
+        let n = (0.5 * mx + 0.5 * luminance(p)).max(1e-7);
+        let f = self.filmic.get(n);
         let r = f / n;
         let mut c = [p[0] * r, p[1] * r, p[2] * r];
         // Vers le blanc : les hautes lumières se désaturent comme sur un film.
-        let t = smoothstep(0.72, 1.0, f) * rolloff;
+        let t = smoothstep(0.72, 1.0, f) * self.rolloff;
         c = [c[0] + (f - c[0]) * t, c[1] + (f - c[1]) * t, c[2] + (f - c[2]) * t];
         // Aucun canal au‑dessus de 1 : on rapproche du gris plutôt que d'écrêter.
         let over = c[0].max(c[1]).max(c[2]);
@@ -411,15 +449,53 @@ fn render_stage(img: &mut RgbImage, s: &Settings) {
             let k = (1.0 - f) / (over - f);
             c = [f + (c[0] - f) * k, f + (c[1] - f) * k, f + (c[2] - f) * k];
         }
-        if let Some(luts) = &luts {
+        if let Some(luts) = &self.luts {
             for (v, lut) in c.iter_mut().zip(luts) {
                 if *v >= 0.0 {
-                    *v = decode.get(lut.get(encode.get(*v)));
+                    *v = self.decode.get(lut.get(self.encode.get(*v)));
                 }
             }
         }
-        *p = c;
-    });
+        c
+    }
+
+    /// [`Self::apply`] sur `px` (au plus [`LANES`] pixels), en colonnes : deux fois plus
+    /// vite. Les courbes des tonalités (des tables) et un bloc incomplet passent pixel
+    /// par pixel.
+    fn apply_lanes(&self, px: &mut [[f32; 3]]) {
+        if px.len() < LANES || self.luts.is_some() {
+            for p in px.iter_mut() {
+                *p = self.apply(*p);
+            }
+            return;
+        }
+        let [mut r, mut g, mut b] = columns(px);
+        let mut n = [0.0f32; LANES];
+        for k in 0..LANES {
+            let mx = r[k].max(g[k]).max(b[k]);
+            n[k] = (0.5 * mx + 0.5 * luminance([r[k], g[k], b[k]])).max(1e-7);
+        }
+        // La lecture de la table : la seule partie qui reste pixel par pixel.
+        let f = n.map(|v| self.filmic.get(v));
+        for k in 0..LANES {
+            let f = f[k];
+            let ratio = f / n[k];
+            let mut c = [r[k] * ratio, g[k] * ratio, b[k] * ratio];
+            let t = smoothstep(0.72, 1.0, f) * self.rolloff;
+            c = [c[0] + (f - c[0]) * t, c[1] + (f - c[1]) * t, c[2] + (f - c[2]) * t];
+            let over = c[0].max(c[1]).max(c[2]);
+            // Les deux branches calculées, l'une choisie : pas de saut, mêmes valeurs.
+            let s = (1.0 - f) / (over - f);
+            let pulled = [f + (c[0] - f) * s, f + (c[1] - f) * s, f + (c[2] - f) * s];
+            let pull = over > 1.0 && over > f;
+            r[k] = if pull { pulled[0] } else { c[0] };
+            g[k] = if pull { pulled[1] } else { c[1] };
+            b[k] = if pull { pulled[2] } else { c[2] };
+        }
+        for (k, p) in px.iter_mut().enumerate() {
+            *p = [r[k], g[k], b[k]];
+        }
+    }
 }
 
 /// Un pixel converti vers l'espace de sortie, linéaire, dans le gamut (0 à 1).
@@ -609,6 +685,54 @@ mod tests {
     }
 
     use super::*;
+
+    /// Le rendu en colonnes donne exactement les bits du rendu pixel par pixel, pour
+    /// des pixels de toutes sortes (noirs, négatifs, au‑delà du blanc, couleurs vives)
+    /// et plusieurs réglages, blocs incomplets compris.
+    #[test]
+    fn render_lanes_match_pixel_by_pixel() {
+        let pixels: Vec<[f32; 3]> = (0..1003)
+            .map(|i| {
+                let t = i as f32 / 97.0;
+                [
+                    (t * 1.7).sin().abs() * 3.0 - 0.05,
+                    (t * 0.9).cos().abs() * 1.2,
+                    ((t * 2.3).sin() * 0.5 + 0.5).powi(3) * 6.0,
+                ]
+            })
+            .chain([[0.0; 3], [-0.1, 0.0, 0.2], [8.0, 8.0, 8.0], [1e-9, 0.0, 0.0]])
+            .collect();
+        let mut settings = vec![Settings::default()];
+        for (contrast, whites, profile) in [
+            (60.0, -40.0, luma_project::Profile::Color),
+            (-30.0, 50.0, luma_project::Profile::Original),
+            (0.0, 0.0, luma_project::Profile::Monochrome),
+        ] {
+            settings.push(Settings {
+                contrast,
+                whites,
+                profile,
+                ..Settings::default()
+            });
+        }
+        let mut curve = Settings::default();
+        curve.tone_curve.red = vec![(0.0, 0.0), (64.0, 80.0), (255.0, 255.0)];
+        settings.push(curve);
+        for s in &settings {
+            let stage = RenderStage::new(s);
+            let one: Vec<[f32; 3]> = pixels.iter().map(|p| stage.apply(*p)).collect();
+            let mut lanes = pixels.clone();
+            lanes.chunks_mut(LANES).for_each(|c| stage.apply_lanes(c));
+            for (k, (a, b)) in one.iter().zip(&lanes).enumerate() {
+                assert!(
+                    a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits()),
+                    "pixel {k} {:?} : {a:?} contre {b:?} ({:?})",
+                    pixels[k],
+                    s.profile
+                );
+            }
+        }
+    }
 
     fn gray_input() -> Input {
         Input {
