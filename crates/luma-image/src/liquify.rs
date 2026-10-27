@@ -251,7 +251,7 @@ mod tests {
         // Loin du pinceau, rien ne bouge, au bit près.
         for (i, (a, b)) in img.data.iter().zip(&before.data).enumerate() {
             let (px, py) = ((i % w) as f32, (i / w) as f32);
-            if px > 160.0 || py < 25.0 || py > 95.0 {
+            if px > 160.0 || !(25.0..=95.0).contains(&py) {
                 assert_eq!(a, b, "pixel {px}, {py} changé");
             }
         }
