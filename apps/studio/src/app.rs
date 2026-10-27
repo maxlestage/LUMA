@@ -6641,6 +6641,23 @@ impl Studio {
         Some(label)
     }
 
+    /// Le recadrage qui retire les bords vides de la Transformation, aux dimensions de la
+    /// photo entière (celles du rendu en cours si la photo n'est pas recadrée).
+    pub fn fill_crop(&mut self) {
+        let (w, h) = self
+            .photo
+            .as_ref()
+            .map(|p| p.full_size())
+            .unwrap_or((self.image_size[0], self.image_size[1]));
+        self.settings.crop = luma_image::lens::filled_crop(
+            &self.settings.lens,
+            &self.settings.transform,
+            w.max(1),
+            h.max(1),
+            self.settings.crop.angle,
+        );
+    }
+
     /// Les lignes du redressement guidé sur `target` (la photo affichée sans
     /// Transformation, `iw × ih` pixels) : on en trace une en glissant, chacune redresse
     /// aussitôt la photo. Rend le libellé de l'historique quand une ligne est ajoutée.
@@ -10329,6 +10346,20 @@ impl Studio {
                             self.touch();
                         }
                     });
+                    let empty = !self.settings.transform.is_identity() || self.settings.lens.distortion != 0.0;
+                    if ui
+                        .add_enabled(
+                            empty && self.image_size[0] > 0,
+                            egui::Button::new(tr("Rogner les bords vides")),
+                        )
+                        .on_hover_text(tr(
+                            "Recadre au plus grand cadre sans bord vide, aux proportions de la photo (un recadrage ordinaire, modifiable ensuite)",
+                        ))
+                        .clicked()
+                    {
+                        self.fill_crop();
+                        commits.push(tr("Bords vides rognés").into());
+                    }
                     if self.guiding {
                         ui.label(
                             RichText::new(trf(
