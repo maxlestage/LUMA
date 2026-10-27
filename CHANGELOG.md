@@ -304,6 +304,10 @@ La photothèque professionnelle, étape par étape.
   chaque image, de 9 à 29 % plus léger sur les photos d'essai, pour un écart à peine
   mesurable ; dans le préréglage Web, la fenêtre d'export (« Allégé pour le web ») et
   `--web`.
+- **Vidéo de base** (`luma video`) : un film de LÜMA (« Portra 400 », « Tri-X 400 »…),
+  un préréglage XMP ou des réglages appliqués à chaque image d'une vidéo courte en
+  Motion JPEG (le format AVI de nombreux appareils photo), réenregistrée au même format :
+  même taille, même rythme, le son recopié tel quel. Lu et écrit en Rust pur.
 - **Import depuis une carte** (« Importer une carte… » dans la Photothèque, `luma
   import`) : la carte montée est trouvée seule ; les photos sont rangées par date de
   prise de vue, renommées si on le veut, copiées aussi sur un second disque ; chaque
