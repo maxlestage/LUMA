@@ -212,6 +212,10 @@ The professional photo library, step by step.
   column), **RGB parade** (each channel on its own) and **vectorscope** (hue and
   saturation, with the 75% primary targets and the skin‑tone line), computed on the
   preview at every render, soft proofing included.
+- **Point measurement**: below the histogram, the RGB (sRGB, 0 to 255) and Lab values
+  under the pointer, read from the true colours even while clipping is shown.
+  **Per‑channel clipping**: on the photo and in the histogram corner, the colour tells
+  which channels are blown (red, yellow for red and green…, white for all three).
 
 ## 0.2.0 — October 2026
 

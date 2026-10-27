@@ -78,6 +78,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | iPhone and iPad: smaller preview during a gesture (12 times faster), memory watched, caches freed before the system closes the app | ✅ |
 | | Histogram, clipping indicator (J), before/after (`\`), 1:1 zoom | ✅ |
 | | Waveform, RGB parade, vectorscope (Shift+J) | ✅ |
+| | Point measurement (RGB, Lab), per‑channel clipping | ✅ |
 | | Panorama (perspective, cylindrical, spherical), reversible auto crop, DNG | ✅ |
 | | Stacks: mean, median, maximum, starry sky | ✅ |
 | | HDR merge, panorama boundary warp | ⏳ |
