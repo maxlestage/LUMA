@@ -88,7 +88,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Apilamientos: media, mediana, máximo, cielo estrellado | ✅ |
 | | Fusión HDR: tomas en horquillado alineadas, sin fantasmas, en DNG (`luma merge --stack hdr`) | ✅ |
 | | Apilado de enfoque: cada toma alineada con su vecina, lo más nítido de cada una (`luma merge --stack focus`) | ✅ |
-| | Deformación de los bordes del panorama | ⏳ |
+| | Deformación de los bordes del panorama: los bordes irregulares se estiran para llenar el rectángulo en lugar de recortarse («Deformar los bordes», `luma merge --warp`) | ✅ |
 | | 150 ajustes preestablecidos con cantidad: películas en color, cine, blanco y negro, instantáneas; todos medidos sobre una carta de prueba en cada ejecución de las pruebas (distintos, sin imágenes empastadas, renderizados idénticos en la GPU) | ✅ |
 | | Ajustes preestablecidos del usuario (guardar, importar `.xmp`), exportación uno a uno o por carpeta en formato XMP | ✅ |
 | | Foto editada señalada bajo la foto y en las miniaturas (película, cantidad, paneles ajustados) | ✅ |

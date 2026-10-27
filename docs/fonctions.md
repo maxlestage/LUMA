@@ -88,7 +88,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Empilements : moyenne, médiane, maximum, ciel étoilé | ✅ |
 | | Fusion HDR : poses de bracketing alignées, sans fantômes, en DNG (`luma merge --stack hdr`) | ✅ |
 | | Empilement de mise au point : chaque pose alignée sur sa voisine, le plus net de chacune (`luma merge --stack focus`) | ✅ |
-| | Déformation des bords du panorama | ⏳ |
+| | Déformation des bords du panorama : les bords irréguliers étirés pour remplir le rectangle au lieu d'être rognés (« Déformer les bords », `luma merge --warp`) | ✅ |
 | | 150 préréglages avec intensité : pellicules couleur, cinéma, noir et blanc, instantanés ; tous mesurés sur une mire à chaque test (distincts, sans image écrasée, rendus identiques sur le GPU) | ✅ |
 | | Préréglages utilisateur (enregistrer, importer des `.xmp`), export à l'unité ou en dossier au format XMP | ✅ |
 | | Photo modifiée signalée sous la photo et sur les vignettes (film, intensité, panneaux retouchés) | ✅ |

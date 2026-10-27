@@ -116,6 +116,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Panorama edges warped** (Merge, Panorama, “Warp the edges”, or
+  `luma merge --pano … --warp`): instead of cropping a panorama's ragged edges, LÜMA
+  gently stretches them to fill the whole rectangle; the whole scene is kept.
 - **Empty edges cropped** (Geometry, Transform): after a perspective, rotation or
   distortion correction, one click crops to the largest frame with no black corner, in
   the photo's proportions.
