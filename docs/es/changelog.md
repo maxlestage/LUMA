@@ -124,6 +124,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Eliminar** (Retoque, junto al corrector): un círculo sobre lo que molesta, un
+  cable, un transeúnte, basura, y LÜMA lo sustituye por trozos de la foto de alrededor,
+  textura y grano incluidos. Sin IA: solo la propia foto.
 - **Bordes de la panorámica deformados** (Fusión, Panorámica, «Deformar los bordes», o
   `luma merge --pano … --warp`): en lugar de recortar los bordes irregulares de una
   panorámica, LÜMA los estira suavemente para llenar todo el rectángulo; se conserva
