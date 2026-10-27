@@ -122,6 +122,10 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Empilement de mise au point** (Fusion, « Mise au point », ou
+  `luma merge --stack focus`) : des poses dont la mise au point avance, en macro ou en
+  paysage, deviennent une seule photo nette du premier plan au fond. Chaque pose est
+  alignée sur sa voisine, et LÜMA prend à chacune ce qu'elle a de plus net.
 - **Fusion HDR** (Fusion, « HDR », ou `luma merge --stack hdr`) : des poses de
   bracketing, même à main levée, deviennent un seul DNG où les ombres et le ciel
   gardent leur détail. LÜMA mesure lui-même l'écart d'exposition entre les poses, et ce

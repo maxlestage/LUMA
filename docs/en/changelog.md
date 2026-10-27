@@ -114,6 +114,10 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Focus stacking** (Merge, “Focus”, or `luma merge --stack focus`): shots whose focus
+  moves forward, in macro or landscape, become a single photo sharp from foreground to
+  background. Each shot is aligned to its neighbor, and LÜMA takes the sharpest part of
+  each.
 - **HDR merge** (Merge, “HDR”, or `luma merge --stack hdr`): bracketed shots, even
   handheld, become a single DNG where shadows and sky keep their detail. LÜMA measures
   the exposure difference between shots itself, and whatever moved from one to the next

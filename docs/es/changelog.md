@@ -120,6 +120,10 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Apilado de enfoque** (Fusión, «Enfoque», o `luma merge --stack focus`): las tomas
+  cuyo enfoque avanza, en macro o en paisaje, se convierten en una sola foto nítida del
+  primer plano al fondo. Cada toma se alinea con su vecina, y LÜMA toma lo más nítido de
+  cada una.
 - **Fusión HDR** (Fusión, «HDR», o `luma merge --stack hdr`): las tomas en
   horquillado, incluso a pulso, se convierten en un único DNG donde las sombras y el
   cielo conservan su detalle. LÜMA mide por sí mismo la diferencia de exposición entre
