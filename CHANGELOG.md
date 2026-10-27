@@ -116,6 +116,9 @@ La photothèque professionnelle, étape par étape.
   la texture et prend la lumière du bord de la zone ; le tampon en fait une copie
   exacte. Zone et source se déplacent à la souris ; taille, contour progressif,
   opacité. Enregistrés dans le XMP.
+- **Moiré et frange au pinceau** : deux curseurs de plus dans chaque masque. « Moiré »
+  adoucit les couleurs parasites d'un tissu ou d'une grille, « Frange » retire les
+  liserés colorés le long des contours ; la luminosité ne bouge pas.
 - **Yeux rouges** : un cercle sur chaque œil, et la pupille rouge redevient noire ; la
   peau autour et le reflet blanc de l'œil ne changent pas.
 - **Taches de capteur** : « Voir les taches » fait ressortir les poussières du capteur

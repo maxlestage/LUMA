@@ -64,6 +64,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Correcteur et tampon (Q) : un clic, la source trouvée d'elle-même, zone et source déplaçables ; taille, contour progressif, opacité | ✅ |
 | | Taches de capteur : vue des taches (les poussières en points sombres), « Retirer les poussières » d'un clic | ✅ |
 | | Yeux rouges : un cercle sur l'œil, la pupille rouge redevient noire, la peau reste | ✅ |
+| | Moiré et frange (aberration chromatique locale) au pinceau, dans chaque masque | ✅ |
 | | Suppression | ⏳ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |

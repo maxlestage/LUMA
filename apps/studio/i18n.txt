@@ -1099,6 +1099,14 @@ fr = Clarté
 en = Clarity
 es = Claridad
 
+fr = Moiré
+en = Moiré
+es = Muaré
+
+fr = Frange
+en = Defringe
+es = Desflecado
+
 fr = Correction du voile
 en = Dehaze
 es = Neblina
