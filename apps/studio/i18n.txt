@@ -2996,3 +2996,17 @@ es = No se pudieron importar {n} foto(s).
 fr = Cadrage
 en = Crop
 es = Encuadre
+
+# L'iPhone : le menu « ••• ».
+
+fr = Copier les réglages
+en = Copy settings
+es = Copiar ajustes
+
+fr = Réinitialiser la photo
+en = Reset photo
+es = Restablecer la foto
+
+fr = Plus
+en = More
+es = Más
