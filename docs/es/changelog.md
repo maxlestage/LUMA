@@ -122,6 +122,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Bordes vacíos recortados** (Geometría, Transformación): tras una perspectiva, una
+  rotación o una corrección de distorsión, un clic recorta al mayor encuadre sin
+  esquinas negras, con las proporciones de la foto.
 - **Enderezado guiado** (Geometría, Transformación): arrastra a lo largo de dos a
   cuatro aristas que deberían ser rectas (una pared, un poste, el horizonte); LÜMA
   ajusta al momento la perspectiva y la rotación. Una sola línea solo gira la foto.
