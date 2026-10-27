@@ -110,6 +110,9 @@ The professional photo library, step by step.
   LÜMA picks the part of the photo that replaces it. Healing keeps its texture and
   takes the light from the edge of the area; clone makes an exact copy. Area and
   source move with the mouse; size, feather, opacity. Saved in the XMP.
+- **Directional demosaicing**: each pixel's green follows edges instead of crossing
+  them; branches, hair and fine textures no longer show beading or zipper artefacts
+  (4 dB better in our tests). Working copies are rebuilt once.
 - **Auto verticals** (Shift+V, or the Transform button): a building shot while aiming
   upwards gets straight walls back; LÜMA measures where its verticals meet and sets the
   Vertical accordingly.

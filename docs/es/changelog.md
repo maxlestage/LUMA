@@ -115,6 +115,10 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Interpolación cromática direccional**: el verde de cada píxel sigue los contornos
+  en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
+  efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
+  una vez.
 - **Verticales automáticas** (Mayús+V, o el botón de la Transformación): un edificio
   fotografiado apuntando hacia arriba recupera sus paredes rectas; LÜMA mide dónde se
   juntan sus verticales y ajusta la Vertical en consecuencia.
