@@ -1,5 +1,8 @@
-# LÜMA pour iPhone et iPad, envoyée à App Store Connect (TestFlight, puis l'App Store),
-# à la demande : onglet Actions › App Store › Run workflow. Aucun Mac à soi n'est
+# LÜMA pour iPhone et iPad, envoyée à App Store Connect (TestFlight, puis l'App Store) :
+# d'elle-même à chaque push sur master qui change l'app (son code, le moteur, les
+# fichiers d'iOS), ou à la demande (onglet Actions › App Store › Run workflow). Un envoi
+# à la fois : un push pendant un envoi attend son tour, et seul le plus récent part
+# (les pushes intermédiaires sont compris dedans). Aucun Mac à soi n'est
 # nécessaire : le runner macOS crée le certificat et le profil par l'API App Store
 # Connect, signe l'app et l'envoie (scripts/release-ios.sh).
 #
@@ -14,6 +17,24 @@ name: App Store
 
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
+    # Ce qui change l'app sur iPhone et iPad ; pas la documentation ni le site.
+    paths:
+      - "apps/studio/**"
+      - "crates/**"
+      - "vendor/**"
+      - "packaging/ios/**"
+      - "scripts/release-ios.sh"
+      - "scripts/bundle-ios.sh"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/app-store.yml"
+
+# Jamais deux envois en même temps ; un envoi commencé n'est pas interrompu.
+concurrency:
+  group: app-store
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
