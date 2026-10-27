@@ -29,7 +29,7 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 13] = [
+const META_KEYS: [&str; 14] = [
     "luma:Snapshots",
     "xmp:Rating",
     "xmp:Label",
@@ -43,6 +43,7 @@ const META_KEYS: [&str; 13] = [
     "luma:FilmAmount",
     "luma:NoiseWavelets",
     "luma:Deconvolution",
+    "luma:HighlightReconstruction",
 ];
 const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
 
@@ -669,6 +670,11 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     s.detail.luminance_nr_wavelets = values.meta.get("luma:NoiseWavelets").is_some_and(|v| v == "True");
     // L'accentuation par déconvolution.
     s.detail.sharpen_deconvolution = values.meta.get("luma:Deconvolution").is_some_and(|v| v == "True");
+    // Les hautes lumières reconstruites.
+    s.highlight_reconstruction = values
+        .meta
+        .get("luma:HighlightReconstruction")
+        .is_some_and(|v| v == "True");
     Ok(s.clamped())
 }
 
@@ -882,6 +888,9 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     }
     if s.detail.sharpen_deconvolution {
         out.push_str("    luma:Deconvolution=\"True\"\n");
+    }
+    if s.highlight_reconstruction {
+        out.push_str("    luma:HighlightReconstruction=\"True\"\n");
     }
     for (key, look) in [("Lut", &s.lut), ("Film", &s.film)] {
         if let Some(l) = look {
@@ -1217,6 +1226,20 @@ mod tests {
         // Sans l'étiquette, les corrections du boîtier restent actives.
         let without = text.replace("crs:LensProfileEnable=\"0\"", "");
         assert!(read(&without).unwrap().lens.camera);
+    }
+
+    #[test]
+    fn highlight_reconstruction_round_trip() {
+        let s = Settings {
+            highlight_reconstruction: true,
+            ..Settings::default()
+        };
+        let text = write(&s);
+        assert!(text.contains("luma:HighlightReconstruction=\"True\""), "{text}");
+        assert!(read(&text).unwrap().highlight_reconstruction);
+        // Un choix de rendu : il va dans les préréglages.
+        assert!(write_preset("Ciels", "LÜMA", &s).contains("HighlightReconstruction"));
+        assert!(!write(&Settings::default()).contains("HighlightReconstruction"));
     }
 
     #[test]

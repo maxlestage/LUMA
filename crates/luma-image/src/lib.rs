@@ -24,6 +24,7 @@ pub mod detail;
 pub mod dust;
 pub mod effects;
 pub mod geometry;
+pub mod highlights;
 pub mod horizon;
 pub mod lens;
 pub mod local;
@@ -76,6 +77,12 @@ pub fn develop(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: 
 /// ne dépend que des réglages gardés par [`base_key`], et peut être gardé en cache
 /// pendant qu'on règle le contraste, les couleurs ou les effets.
 pub fn develop_base(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
+    // Les hautes lumières reconstruites, sur une copie de la source (qui reste en cache
+    // telle quelle) ; rien à faire pour une image déjà développée.
+    let rebuilt = (s.highlight_reconstruction && !input.rendered)
+        .then(|| t.time("hautes lumières", || highlights::reconstruct(cam)))
+        .flatten();
+    let cam = rebuilt.as_ref().unwrap_or(cam);
     // L'étape d'entrée lit la source (en cache, partagée) et écrit l'image de travail.
     let mut img = t.time("entrée", || input_stage(cam, input, s));
     cancel.check()?;
@@ -118,6 +125,7 @@ pub fn base_key(s: &Settings) -> Settings {
         detail,
         dehaze: s.dehaze,
         highlights: s.highlights,
+        highlight_reconstruction: s.highlight_reconstruction,
         shadows: s.shadows,
         clarity: s.clarity,
         texture: s.texture,
@@ -353,8 +361,12 @@ fn input_stage(cam: &RgbImage, input: &Input, s: &Settings) -> RgbImage {
         let mut c = lc::apply(&m, src);
         // Un canal saturé au capteur donne une fausse teinte (le rose des ciels brûlés) :
         // on fond ces pixels vers un neutre de même luminance.
+        // Reconstruits, les canaux saturés ont retrouvé leur couleur : seul un pixel où
+        // tout sature (son plus petit canal) va encore vers le neutre.
         let clip = if input.rendered {
             0.0
+        } else if s.highlight_reconstruction {
+            smoothstep(0.88, 1.0, src[0].min(src[1]).min(src[2]))
         } else {
             smoothstep(0.88, 1.0, raw_max)
         };
