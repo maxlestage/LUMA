@@ -2503,6 +2503,8 @@ impl Studio {
                     action = Some("unflag");
                 } else if i.consume_key(Modifiers::SHIFT, Key::R) {
                     action = Some("auto_level");
+                } else if i.consume_key(Modifiers::SHIFT, Key::V) {
+                    action = Some("auto_vertical");
                 } else if i.consume_key(Modifiers::NONE, Key::R) {
                     action = Some("crop");
                 } else if i.consume_key(Modifiers::NONE, Key::Enter) {
@@ -2730,6 +2732,7 @@ impl Studio {
             "mask_overlay" if self.crop_tool.is_some() => self.crop_guide = self.crop_guide.next(),
             "guide_turn" => self.crop_turn = (self.crop_turn + 1) % 4,
             "auto_level" => self.auto_level(),
+            "auto_vertical" => self.auto_vertical(),
             "mask_overlay" => self.show_mask = !self.show_mask,
             "eyedropper" => self.eyedropper = !self.eyedropper && self.photo.is_some(),
             "targeting" => {
@@ -6094,6 +6097,49 @@ impl Studio {
         }
     }
 
+    /// Rend parallèles les verticales de la photo (la Verticale de la Transformation),
+    /// lues sur une copie de 1024 px sans recadrage ni transformation ; rien sans
+    /// longues verticales des deux côtés.
+    pub fn auto_vertical(&mut self) {
+        let Some(photo) = self.photo.clone() else {
+            return;
+        };
+        let settings = Settings {
+            crop: Crop::default(),
+            transform: Default::default(),
+            ..self.settings.clone()
+        };
+        let mut timings = luma_core::Timings::default();
+        let found = photo
+            .base(
+                &settings,
+                Size::Fit(1024),
+                &luma_core::Cancel::new(),
+                &mut timings,
+            )
+            .ok()
+            .and_then(|base| luma_image::horizon::auto_vertical(&base.image));
+        match found {
+            Some(v) => {
+                self.settings.transform.vertical = v.round();
+                let label = trf(
+                    "Verticales automatiques : {value}",
+                    &[(
+                        "value",
+                        &format_value(self.settings.transform.vertical, 0, true),
+                    )],
+                );
+                self.status = label.clone();
+                self.commit(label);
+                self.touch();
+            }
+            None => {
+                self.status =
+                    tr("Pas de verticales assez nettes des deux côtés de la photo.").into();
+            }
+        }
+    }
+
     /// Demande au prochain rendu de chercher les poussières du capteur.
     pub fn find_dust(&mut self) {
         if self.photo.is_some() {
@@ -7295,6 +7341,15 @@ impl Studio {
                 .id_salt("Transformation")
                 .default_open(true)
                 .show(ui, |ui| {
+                    if ui
+                        .button(tr("Verticales automatiques"))
+                        .on_hover_text(tr(
+                            "Rend parallèles les verticales d'un bâtiment photographié en visant vers le haut (Maj+V)",
+                        ))
+                        .clicked()
+                    {
+                        self.act("auto_vertical");
+                    }
                     let l = self.fields(ui, &TRANSFORM);
                     keep(l, &mut commits);
                 });

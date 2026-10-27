@@ -115,6 +115,9 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Verticales automáticas** (Mayús+V, o el botón de la Transformación): un edificio
+  fotografiado apuntando hacia arriba recupera sus paredes rectas; LÜMA mide dónde se
+  juntan sus verticales y ajusta la Vertical en consecuencia.
 - **Enderezado automático** (Mayús+R, o «Enderezar automáticamente» en el recorte):
   LÜMA lee el horizonte y las verticales de la foto y la endereza; en caso de duda (un
   primer plano hecho de líneas de fuga), no toca nada.

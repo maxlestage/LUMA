@@ -1138,6 +1138,23 @@ fn auto_straighten() {
     s.keys(&[(Modifiers::SHIFT, Key::R)]);
     s.wait();
     assert_eq!(s.studio().settings.crop.angle, 0.0);
+    // Le lac n'a pas de verticales : Maj+V n'y change rien.
+    s.studio().open_path(&lake);
+    s.wait();
+    s.keys(&[(Modifiers::SHIFT, Key::V)]);
+    s.wait();
+    assert_eq!(s.studio().settings.transform.vertical, 0.0);
+    // L'étagère du NEF, vue un peu d'en haut : ses verticales redeviennent parallèles.
+    let shelf = s.dir.join("DSC_0750.NEF");
+    if shelf.exists() {
+        s.studio().open_path(&shelf);
+        s.wait();
+        s.keys(&[(Modifiers::SHIFT, Key::V)]);
+        s.wait();
+        let v = s.studio().settings.transform.vertical;
+        assert!((v - 17.0).abs() <= 3.0, "étagère : {v}");
+        s.capture("verticales");
+    }
 }
 
 #[test]
