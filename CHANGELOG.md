@@ -171,6 +171,10 @@ La photothèque professionnelle, étape par étape.
 - **iPhone plus simple et plus sobre** : l'accueil ne se redessine plus deux fois par
   seconde pour rien (seulement pendant un import depuis Photos) ; la barre du haut ne
   montre que ce qui sert : sans photo, ni « Après » ni export ; l'épreuvage pour l'impression n'encombre plus l'iPhone et l'iPad.
+- **Rafales et séries d'exposition empilées** : les photos d'un même boîtier à moins
+  de deux secondes d'écart se replient derrière la première (« Rafale ×5 »,
+  « Série ×3 ») ; S les déplie, « Fusionner la série » ouvre l'outil Fusion avec les
+  photos d'une série d'exposition.
 
 ## 0.2.0 — octobre 2026
 

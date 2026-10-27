@@ -3010,3 +3010,45 @@ es = Restablecer la foto
 fr = Plus
 en = More
 es = Más
+
+# ----- Piles -----
+
+fr = Rafale ×{n}
+en = Burst ×{n}
+es = Ráfaga ×{n}
+
+fr = Série ×{n}
+en = Bracket ×{n}
+es = Serie ×{n}
+
+fr = Empiler les rafales et les séries (S)
+en = Stack bursts and brackets (S)
+es = Apilar ráfagas y series (S)
+
+fr = Les photos d'un même boîtier à moins de deux secondes d'écart, repliées derrière la première
+en = Photos from the same camera less than two seconds apart, folded behind the first one
+es = Las fotos de una misma cámara con menos de dos segundos de diferencia, plegadas tras la primera
+
+fr = Série d'exposition de {n} photos
+en = Exposure bracket of {n} photos
+es = Serie de exposición de {n} fotos
+
+fr = Rafale de {n} photos
+en = Burst of {n} photos
+es = Ráfaga de {n} fotos
+
+fr = Replier (S)
+en = Collapse (S)
+es = Plegar (S)
+
+fr = Déplier (S)
+en = Expand (S)
+es = Desplegar (S)
+
+fr = Fusionner la série
+en = Merge the bracket
+es = Fusionar la serie
+
+fr = Ouvre l'outil Fusion avec les photos de la série
+en = Opens the Merge tool with the photos of the bracket
+es = Abre la herramienta Fusión con las fotos de la serie

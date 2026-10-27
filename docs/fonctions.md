@@ -121,6 +121,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
 | Tri en plein écran au clavier (F) : notes, drapeaux, libellés de couleur (6 à 9), photo suivante d'elle‑même (A), Échap pour sortir ; libellés aux noms du format dans le XMP, retrouvés en français, anglais et espagnol | ✅ |
 | Comparaison de 2 à 4 photos (C) : côte à côte puis en grille, chacune développée avec ses réglages ; zoom et déplacement synchronisés (molette, double clic, glisser), loupe ×4 au même endroit de chaque photo (L), un clic ouvre la photo | ✅ |
+| Piles : rafales et séries d'exposition reconnues (même boîtier, moins de deux secondes d'écart ; l'exposition qui change fait la série), repliées derrière la première photo (S pour déplier), « Fusionner la série » vers l'outil Fusion | ✅ |
 | Catalogue local (`luma catalog`) : dossiers et sous‑dossiers, date de prise de vue, boîtier, objectif, ISO lus dans l'en‑tête sans décoder l'image, mise à jour incrémentale, tri par date | ✅ |
 | Vignettes instantanées (l'aperçu intégré au RAW, en 15 ms), puis rendues avec les réglages et enregistrées sans perte pour les visites suivantes | ✅ |
 | Doublon de travail en pleine définition : identique à l'original, ouverture plus rapide, mémoire divisée par deux et demi ; « Vider le cache » en un clic | ✅ |
