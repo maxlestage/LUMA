@@ -7,7 +7,7 @@
 //! luma export-preset [nom] [opt]    les préréglages d'export : liste, crée, modifie
 //! luma xmp <raw|xmp|json> [options] écrit les réglages au format XMP
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
-//! luma merge <raw>… [options]       empilement ou panorama, en DNG
+//! luma merge <raw>… [options]       empilement, HDR ou panorama, en DNG
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
 //! luma presets [dossier]            exporte les 100 films en préréglages XMP
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
@@ -85,7 +85,7 @@ USAGE
       (partagé avec l'app) ; --delete le retire.
   luma xmp <raw|f.xmp|f.json> [--set nom=valeur]… [-o f.xmp]
   luma bench <raw> [--size N] [--runs N]
-  luma merge <raw>… [--stack mean|median|max|stars | --pano perspective|cylindrical|spherical]
+  luma merge <raw>… [--stack mean|median|max|stars|hdr | --pano perspective|cylindrical|spherical]
                     [--no-align] [--no-crop] [--size N] [-o sortie.dng]
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
@@ -1136,7 +1136,7 @@ fn bench(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
-/// `luma merge` : empilement (bruit, médiane, filé, étoiles) ou panorama, en DNG.
+/// `luma merge` : empilement (bruit, médiane, filé, étoiles), HDR ou panorama, en DNG.
 fn merge(args: Vec<String>) -> Result<(), String> {
     use luma_merge::{Projection, StackMode};
     let mut paths = Vec::new();
@@ -1153,7 +1153,8 @@ fn merge(args: Vec<String>) -> Result<(), String> {
                     "median" | "mediane" => StackMode::Median,
                     "max" | "maximum" => StackMode::Maximum,
                     "stars" | "etoiles" => StackMode::Stars,
-                    v => return Err(format!("empilement inconnu « {v} » (mean, median, max, stars)")),
+                    "hdr" => StackMode::Hdr,
+                    v => return Err(format!("empilement inconnu « {v} » (mean, median, max, stars, hdr)")),
                 })
             }
             "--pano" => {
@@ -1209,6 +1210,12 @@ fn merge(args: Vec<String>) -> Result<(), String> {
         },
         started.elapsed().as_secs_f32()
     );
+    if merged.exposure > 0.0 {
+        println!(
+            "  {:.1} IL de lumières gardées au-delà de la pose de référence (exposition de base)",
+            merged.exposure
+        );
+    }
     if let Some(c) = merged.crop {
         println!(
             "  rognage {} : {:.1} % × {:.1} % de l'image",
