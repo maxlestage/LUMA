@@ -107,6 +107,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Aviso de gama: los colores que la impresora no podrá reproducir, en azul sobre la vista previa (ida y vuelta en colorimétrico relativo, diferencia superior a ΔE 3) | ✅ |
 | Simulación del papel (tono y luminosidad, colorimétrico absoluto) y de la tinta negra (su negro real); sin ellas, compensación del punto negro | ✅ |
 | Impresión («Imprimir…», `luma print`): PDF al tamaño exacto del papel (A4, A3, A3+, A5, Carta EE. UU., de 10 × 15 a 20 × 30 cm, o a medida), vertical u horizontal, márgenes, una foto por página u hoja de contactos (cuadrícula, separación, nombre bajo cada foto), fotos enteras o llenando su celda, resolución, enfoque para papel mate o brillante; páginas convertidas al perfil RGB de la impresora (el de la prueba en pantalla, con compensación del punto negro) | ✅ |
+| Libro de fotos en PDF («Libro y presentación…», `luma book`): portada (primera foto, título, subtítulo), páginas de una, dos o cuatro fotos según su orientación, formatos 20 × 20, 30 × 30, A4, 21 × 28, A3; presentación a pantalla completa en la app (avance automático, pausa, flechas) y presentación exportada (`luma slideshow`): una carpeta autónoma, index.html y JPEG, fundido, teclado, deslizamiento del dedo | ✅ |
 
 ## Exportación
 

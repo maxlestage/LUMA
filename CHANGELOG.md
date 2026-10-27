@@ -261,6 +261,14 @@ La photothèque professionnelle, étape par étape.
   entières ou remplissant leur case, accentuation pour papier mat ou brillant, aperçu
   de la page ; les pages converties vers le **profil de l'imprimante** (celui de
   l'épreuvage, noir compensé), à imprimer sans gestion des couleurs du pilote.
+- **Livre photo** (« Livre et diaporama… », `luma book`) : un PDF avec sa couverture
+  (la première photo, le titre et le sous‑titre), puis des pages d'une, deux ou quatre
+  photos choisies d'après leur orientation ; formats 20 × 20, 30 × 30, A4, 21 × 28, A3.
+- **Diaporama** : en plein écran dans l'app (la photo seule, elle avance d'elle‑même,
+  Espace pour la pause, Échap pour sortir), et **exporté** (`luma slideshow`) : un
+  dossier qui se suffit à lui‑même, index.html et les photos, à ouvrir dans n'importe
+  quel navigateur ou à mettre en ligne (fondu, flèches, glissement du doigt, plein
+  écran).
 
 ## 0.2.0 — octobre 2026
 
