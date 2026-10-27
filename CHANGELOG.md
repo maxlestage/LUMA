@@ -324,6 +324,9 @@ La photothèque professionnelle, étape par étape.
   à l'app Photos telle quelle (EXIF, IPTC et profil de couleur gardés ; iOS demande
   l'autorisation la première fois), et reste aussi dans LÜMA/ (app Fichiers). La
   fenêtre Exporter tient dans l'écran de l'iPhone, chaque réglage sous son titre.
+- **Films rangés en familles qui se plient** : pellicules couleur, noir et blanc,
+  cinéma, instantanés, mes préréglages, mes pellicules ; chaque titre dit combien la
+  famille compte de films, et seule celle du film appliqué s'ouvre d'abord.
 
 ## 0.2.0 — octobre 2026
 

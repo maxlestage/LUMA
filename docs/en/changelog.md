@@ -301,6 +301,9 @@ The professional photo library, step by step.
   to the Photos app as is (EXIF, IPTC and colour profile kept; iOS asks for permission
   the first time), and also stays in LÜMA/ (Files app). The Export window fits the
   iPhone screen, each setting under its title.
+- **Films in collapsible families**: colour film, black and white, cinema, instant,
+  my presets, my films; each title tells how many films the family holds, and only the
+  applied film's family opens at first.
 
 ## 0.2.0 — October 2026
 
