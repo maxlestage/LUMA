@@ -3,7 +3,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*"]
-exclude = ["site"]
+exclude = ["site", "vendor"]
 
 [workspace.package]
 version = "0.2.0"
@@ -58,3 +58,9 @@ codegen-units = 1
 opt-level = 3
 [profile.dev.package."*"]
 opt-level = 3
+
+# eframe et egui-wgpu corrigés pour l'iPhone et l'iPad : la surface à la taille de
+# l'écran entier, comme la mise en page d'egui (voir vendor/README.md).
+[patch.crates-io]
+eframe = { path = "vendor/eframe" }
+egui-wgpu = { path = "vendor/egui-wgpu" }
