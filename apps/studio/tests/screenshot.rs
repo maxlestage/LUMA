@@ -1446,6 +1446,32 @@ fn guided_upright() {
 }
 
 #[test]
+fn empty_edges_are_cropped() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("bords-vides") else {
+        return;
+    };
+    let st = s.studio();
+    st.tool = luma_studio::app::Tool::Geometry;
+    st.settings.transform.vertical = -40.0;
+    st.settings.transform.rotate = 3.0;
+    s.wait();
+    s.harness.get_by_label("Rogner les bords vides").click();
+    s.wait();
+    let c = s.studio().settings.crop;
+    assert!(c.right - c.left < 0.95 && c.right - c.left > 0.4, "{c:?}");
+    // Centré, aux proportions de la photo.
+    assert!((c.left + c.right - 1.0).abs() < 1e-4 && (c.top + c.bottom - 1.0).abs() < 1e-4);
+    assert!(((c.right - c.left) - (c.bottom - c.top)).abs() < 1e-4);
+    // Annulable comme tout réglage.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert!(s.studio().settings.crop.is_identity());
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::Z)]);
+    assert!(!s.studio().settings.crop.is_identity());
+    s.capture("bords-vides");
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {
