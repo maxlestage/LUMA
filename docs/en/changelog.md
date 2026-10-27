@@ -28,7 +28,9 @@ The professional photo library, step by step.
   and 144 MB less memory, same bytes.
   Then wavelet noise reduction, without a new image at each scale: 1.8 times faster
   (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
-  shorter (0.83 → 0.60 s), same pixels.
+  shorter (0.83 → 0.60 s), same pixels. Then the edge-following filter (Shadows,
+  Highlights, Clarity, mask and sky edges), without intermediate planes: almost twice
+  as fast (24 MP: 87 → 47 ms), same values.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
