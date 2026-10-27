@@ -197,6 +197,10 @@ La photothèque professionnelle, étape par étape.
   directement depuis ses entiers, sur tous les cœurs, sans copie préalable en
   flottants ; NEF 145 → 67 ms, ARW 143 → 65, RW2 131 → 65, RAF 169 → 73, DNG
   285 → 158, CR3 547 → 399, données identiques au bit près.
+- **Synchroniser une sélection** (Maj+Cmd+S, ou « Synchroniser… » dès deux photos
+  choisies) : les réglages de la photo ouverte vont aux autres, groupe par groupe
+  (recadrage et masques laissés à chacune par défaut). **Balance auto en lot** : chaque
+  photo choisie reçoit sa propre balance automatique.
 
 ## 0.2.0 — octobre 2026
 

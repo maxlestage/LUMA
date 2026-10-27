@@ -522,6 +522,10 @@ pub struct Studio {
     /// La fenêtre « Coller une partie des réglages » et les groupes cochés (gardés
     /// d'une fois sur l'autre).
     paste_open: bool,
+    /// La fenêtre des groupes sert à synchroniser la sélection, pas à coller.
+    syncing: bool,
+    /// Les photos du lot dont la balance automatique est attendue.
+    auto_pending: usize,
     paste_groups: Vec<luma_project::paste::Group>,
     texture: Option<TextureHandle>,
     image_size: [usize; 2],
@@ -775,6 +779,8 @@ impl Studio {
             history_pos: 0,
             clipboard: None,
             paste_open: false,
+            syncing: false,
+            auto_pending: 0,
             paste_groups: luma_project::paste::default_groups(),
             texture: None,
             image_size: [0, 0],
@@ -1356,6 +1362,116 @@ impl Studio {
         self.duplicates = None;
     }
 
+    /// Les photos choisies, sauf celle ouverte (la source d'une synchronisation).
+    fn sync_targets(&self) -> Vec<PathBuf> {
+        let current = self.current_path().map(Path::to_path_buf);
+        self.selected
+            .iter()
+            .filter_map(|i| self.folder.get(*i).cloned())
+            .filter(|p| Some(p) != current.as_ref())
+            .collect()
+    }
+
+    /// Donne les réglages de la photo ouverte (ces groupes‑là) aux autres photos
+    /// choisies : leur XMP est écrit, leur vignette refaite. Rend le nombre de photos.
+    pub fn sync_selected(&mut self, groups: &[luma_project::paste::Group]) -> usize {
+        let source = self.settings.clone();
+        let mut done = 0;
+        for path in self.sync_targets() {
+            let before = read_sidecar(&path).unwrap_or_default();
+            let after = luma_project::paste::paste(&before, &source, groups);
+            let meta = self.meta.get(&path).cloned().unwrap_or_default();
+            match write_sidecar(&path, &after, &meta) {
+                Ok(()) => {
+                    done += 1;
+                    self.edits.insert(path.clone(), presets::summary(&after));
+                    self.worker.thumbnail(path);
+                }
+                Err(e) => self.status = trf("XMP non enregistré : {error}", &[("error", &e)]),
+            }
+        }
+        self.status = trf("Réglages synchronisés sur {n} photo(s).", &[("n", &done)]);
+        done
+    }
+
+    /// La balance automatique de chaque photo choisie (de la photo ouverte sinon), en
+    /// arrière‑plan : chacune la sienne.
+    pub fn auto_balance_selected(&mut self) {
+        let mut paths = self.keyword_targets();
+        paths.sort();
+        self.auto_pending = paths.len();
+        self.status = trf(
+            "Balance automatique de {n} photo(s)…",
+            &[("n", &paths.len())],
+        );
+        self.worker.auto_balance(paths);
+    }
+
+    /// Les balances automatiques du lot sont‑elles toutes arrivées ?
+    pub fn auto_balance_done(&self) -> bool {
+        self.auto_pending == 0
+    }
+
+    fn apply_auto_balance(&mut self, path: PathBuf, t: luma_color::TempTint) {
+        let wb = WhiteBalance::Custom {
+            temperature: t.temperature,
+            tint: t.tint,
+        };
+        self.auto_pending = self.auto_pending.saturating_sub(1);
+        if self.current_path() == Some(path.as_path()) {
+            self.settings.white_balance = wb;
+            self.wb_label = "Auto";
+            self.commit(tr("Balance : auto").into());
+            self.touch();
+        } else {
+            let mut s = read_sidecar(&path).unwrap_or_default();
+            s.white_balance = wb;
+            let meta = self.meta.get(&path).cloned().unwrap_or_default();
+            if let Err(e) = write_sidecar(&path, &s, &meta) {
+                self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
+            }
+            self.edits.insert(path.clone(), presets::summary(&s));
+            self.worker.thumbnail(path);
+        }
+        if self.auto_pending == 0 {
+            self.status = tr("Balance automatique appliquée.").into();
+        }
+    }
+
+    /// Plusieurs photos choisies : les synchroniser, ou leur donner chacune sa balance
+    /// automatique.
+    fn selection_actions(&mut self, ui: &mut Ui) {
+        if self.selected.len() < 2 {
+            return;
+        }
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                RichText::new(trf("{n} photos choisies", &[("n", &self.selected.len())]))
+                    .size(11.5)
+                    .color(theme::DIM),
+            );
+            if ui
+                .small_button(tr("Synchroniser…"))
+                .on_hover_text(tr(
+                    "Les réglages de la photo ouverte, aux autres photos choisies (Maj+Cmd+S)",
+                ))
+                .clicked()
+            {
+                self.act("sync");
+            }
+            if ui
+                .small_button(tr("Balance auto"))
+                .on_hover_text(tr(
+                    "Chaque photo choisie reçoit sa propre balance automatique",
+                ))
+                .clicked()
+            {
+                self.auto_balance_selected();
+            }
+        });
+        ui.add_space(6.0);
+    }
+
     /// Une photo cachée dans une pile repliée (toutes sauf la première).
     fn folded_away(&self, path: &Path) -> bool {
         self.stacking
@@ -1696,6 +1812,7 @@ impl Studio {
                         }
                     }
                 }
+                Event::AutoBalanced { path, balance } => self.apply_auto_balance(path, balance),
                 Event::Compared {
                     tag,
                     index,
@@ -2164,6 +2281,8 @@ impl Studio {
                 action = Some("paste_some");
             } else if i.consume_key(cmd_shift, Key::V) {
                 action = Some("paste");
+            } else if i.consume_key(cmd_shift, Key::S) {
+                action = Some("sync");
             } else if i.consume_key(cmd_shift, Key::R) {
                 action = Some("reset");
             } else if i.consume_key(cmd_shift, Key::E) {
@@ -2289,8 +2408,17 @@ impl Studio {
                     self.touch();
                 }
             }
+            "sync" => {
+                if self.sync_targets().is_empty() {
+                    self.status = tr("Choisissez d'abord les photos à synchroniser.").into();
+                } else {
+                    self.syncing = true;
+                    self.paste_open = true;
+                }
+            }
             "paste_some" => {
                 if self.clipboard.is_some() && self.photo.is_some() {
+                    self.syncing = false;
                     self.paste_open = true;
                 } else {
                     self.status = tr("Copiez d'abord les réglages d'une photo.").into();
@@ -2648,7 +2776,14 @@ impl Studio {
         use luma_project::paste::{GROUPS, Group, paste};
         let mut open = self.paste_open;
         let mut go = false;
-        egui::Window::new(tr("Coller une partie des réglages"))
+        let syncing = self.syncing;
+        let n_targets = self.sync_targets().len();
+        let title = if syncing {
+            trf("Synchroniser {n} photos", &[("n", &n_targets)])
+        } else {
+            tr("Coller une partie des réglages").to_owned()
+        };
+        egui::Window::new(title)
             .id(egui::Id::unique("fenetre-coller"))
             .open(&mut open)
             .collapsible(false)
@@ -2658,7 +2793,11 @@ impl Studio {
             .show(ctx, |ui| {
                 // Le bouton en haut : toujours visible, même quand la liste défile.
                 ui.horizontal(|ui| {
-                    let label = trf("Coller ({n})", &[("n", &self.paste_groups.len())]);
+                    let label = if syncing {
+                        trf("Synchroniser ({n})", &[("n", &self.paste_groups.len())])
+                    } else {
+                        trf("Coller ({n})", &[("n", &self.paste_groups.len())])
+                    };
                     go = ui
                         .add_enabled(!self.paste_groups.is_empty(), egui::Button::new(label))
                         .clicked();
@@ -2681,7 +2820,10 @@ impl Studio {
                     }
                 }
             });
-        if go && let Some(source) = self.clipboard.clone() {
+        if go && syncing {
+            let groups: Vec<Group> = self.paste_groups.clone();
+            self.sync_selected(&groups);
+        } else if go && let Some(source) = self.clipboard.clone() {
             let groups: Vec<Group> = self.paste_groups.clone();
             self.settings = paste(&self.settings, &source, &groups);
             self.commit(trf(
@@ -5059,6 +5201,7 @@ impl Studio {
                 }
             }
         });
+        self.selection_actions(ui);
         self.stack_panel(ui, &path);
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr("Libellé")).color(theme::DIM).size(11.5));
@@ -6584,6 +6727,7 @@ impl Studio {
         )
         .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
         ui.add_space(6.0);
+        self.selection_actions(ui);
         if !self.compact || self.proofing.profile.is_some() {
             self.proofing_panel(ui);
         }
