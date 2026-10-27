@@ -23,18 +23,18 @@ fn smoothstep(e0: f32, e1: f32, x: f32) -> f32 {
 /// La zone d'un masque sur une image de `w × h` pixels : 1 où il agit pleinement, 0
 /// où il n'agit pas (inversion et intensité comprises).
 pub fn weights(mask: &Mask, w: usize, h: usize) -> Plane {
-    weights_guided(mask, w, h, None)
+    weights_guided(mask, w, h, None, None)
 }
 
 /// [`weights`], avec la clarté de la photo (`guide`, de même taille) pour un pinceau qui
 /// suit les bords : chaque touche ne peint que les pixels d'une clarté proche de celle de
 /// son centre, puis un filtre guidé lisse la zone sans traverser les contours.
-fn weights_guided(mask: &Mask, w: usize, h: usize, guide: Option<&Plane>) -> Plane {
+fn weights_guided(mask: &Mask, w: usize, h: usize, guide: Option<&Plane>, sky: Option<&Plane>) -> Plane {
     let guide = guide.filter(|g| mask.edges && (g.width, g.height) == (w, h));
-    let mut plane = shape_plane(&mask.shape, w, h, guide);
+    let mut plane = shape_plane(&mask.shape, w, h, guide, sky);
     // Les parties combinées, dans l'ordre : chacune ajoute, retire ou restreint.
     for part in &mask.parts {
-        let mut p = shape_plane(&part.shape, w, h, guide);
+        let mut p = shape_plane(&part.shape, w, h, guide, sky);
         if part.invert {
             p.data.par_iter_mut().for_each(|v| *v = 1.0 - *v);
         }
@@ -56,12 +56,18 @@ fn weights_guided(mask: &Mask, w: usize, h: usize, guide: Option<&Plane>) -> Pla
 }
 
 /// La zone d'une forme seule (0 à 1), sans inversion ni intensité ; `guide` : la clarté
-/// de la photo, pour un pinceau qui suit les bords.
-fn shape_plane(shape: &Shape, w: usize, h: usize, guide: Option<&Plane>) -> Plane {
+/// de la photo, pour un pinceau qui suit les bords ; `sky` : le ciel de la photo (sans
+/// photo, il n'y en a pas).
+fn shape_plane(shape: &Shape, w: usize, h: usize, guide: Option<&Plane>, sky: Option<&Plane>) -> Plane {
     let (fw, fh) = (w as f32, h as f32);
     let mut plane = Plane::new(w, h);
     match shape {
         Shape::Full => plane.data.iter_mut().for_each(|v| *v = 1.0),
+        Shape::Sky => {
+            if let Some(s) = sky.filter(|s| (s.width, s.height) == (w, h)) {
+                plane.data.copy_from_slice(&s.data);
+            }
+        }
         Shape::Linear { start, end } => {
             // En pixels, pour que le fondu soit le même dans les deux directions.
             let (sx, sy) = (start.0 * fw, start.1 * fh);
@@ -245,7 +251,9 @@ pub fn weights_for(mask: &Mask, w: usize, h: usize, img: &RgbImage) -> Plane {
     let brush = |s: &Shape| matches!(s, Shape::Brush { .. });
     let guide = (mask.edges && (brush(&mask.shape) || mask.parts.iter().any(|p| brush(&p.shape))))
         .then(|| lightness_plane(img, w, h).blur(1.5));
-    let mut plane = weights_guided(mask, w, h, guide.as_ref());
+    let sky = (matches!(mask.shape, Shape::Sky) || mask.parts.iter().any(|p| matches!(p.shape, Shape::Sky)))
+        .then(|| crate::sky::sky(img, w, h));
+    let mut plane = weights_guided(mask, w, h, guide.as_ref(), sky.as_ref());
     if let Some(r) = &mask.range {
         restrict(&mut plane, r, img);
     }
@@ -267,7 +275,11 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
     let (w, h) = (img.width, img.height);
     let diag = ((w * w + h * h) as f32).sqrt();
     let stops = Plane::from_rgb(img, |p| (luminance(p).max(1e-6) / 0.18).log2());
-    let before = active.iter().any(|m| m.range.is_some() || m.edges).then(|| img.clone());
+    let uses_sky = |m: &Mask| matches!(m.shape, Shape::Sky) || m.parts.iter().any(|p| matches!(p.shape, Shape::Sky));
+    let before = active
+        .iter()
+        .any(|m| m.range.is_some() || m.edges || uses_sky(m))
+        .then(|| img.clone());
     // La base de la clarté, comme pour la Clarté globale : une fois pour tous les masques.
     let clarity_base = active
         .iter()
