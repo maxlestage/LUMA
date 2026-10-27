@@ -37,6 +37,7 @@ rfd.workspace = true
 # Documents, que remplit l'app Fichiers).
 [target.'cfg(target_os = "ios")'.dependencies]
 eframe.workspace = true
+raw-window-handle = "0.6"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "ios")))'.dependencies]
 eframe = { workspace = true, features = ["x11"] }
