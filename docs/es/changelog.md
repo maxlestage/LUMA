@@ -188,6 +188,10 @@ La fototeca profesional, paso a paso.
   exportada a otro tamaño o recomprimida, encontrada por su huella y mostrada grupo
   por grupo. **En lote**: con varias fotos elegidas, la valoración, la bandera y la
   etiqueta van a todas.
+- **Apertura dos veces más rápida**: los niveles del sensor (negro, blanco) se
+  normalizan directamente desde sus enteros, en todos los núcleos, sin copia previa
+  a flotantes; NEF 145 → 67 ms, ARW 143 → 65, RW2 131 → 65, RAF 169 → 73, DNG
+  285 → 158, CR3 547 → 399, datos idénticos bit a bit.
 
 ## 0.2.0 — octubre de 2026
 
