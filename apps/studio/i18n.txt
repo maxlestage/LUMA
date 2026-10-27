@@ -4586,3 +4586,11 @@ es = Recorta al mayor encuadre sin bordes vacíos, con las proporciones de la fo
 fr = Bords vides rognés
 en = Empty edges cropped
 es = Bordes vacíos recortados
+
+fr = Déformer les bords
+en = Warp the edges
+es = Deformar los bordes
+
+fr = Les bords irréguliers du panorama sont étirés pour remplir le rectangle, au lieu d'être rognés
+en = The panorama's ragged edges are stretched to fill the rectangle instead of being cropped
+es = Los bordes irregulares de la panorámica se estiran para llenar el rectángulo en lugar de recortarse

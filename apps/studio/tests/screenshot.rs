@@ -1718,6 +1718,14 @@ fn hdr_merge_is_offered() {
     s.wait();
     assert_eq!(s.studio().stack_mode, luma_merge::StackMode::Focus);
     s.capture("fusion-mise-au-point");
+    // Le panorama : ses bords peuvent être déformés au lieu d'être rognés.
+    s.studio().merge_stack = false;
+    s.wait();
+    assert!(!s.studio().pano_warp);
+    s.harness.get_by_label("Déformer les bords").click();
+    s.wait();
+    assert!(s.studio().pano_warp);
+    s.capture("fusion-panorama");
 }
 
 #[test]

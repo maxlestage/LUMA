@@ -787,11 +787,13 @@ pub struct Studio {
     pub tool: Tool,
     /// Les photos choisies dans le film ou la grille (⌘‑clic, Maj‑clic), pour la fusion.
     pub selected: BTreeSet<usize>,
-    merge_stack: bool,
+    pub merge_stack: bool,
     pub stack_mode: luma_merge::StackMode,
     stack_align: bool,
     projection: luma_merge::Projection,
     auto_crop: bool,
+    /// Panorama : les bords étirés pour remplir le rectangle.
+    pub pano_warp: bool,
     merge_full: bool,
     merging: Option<(f32, String, luma_core::Cancel)>,
     /// Films : le film choisi (index dans les préréglages, puis dans `luts`), son
@@ -1095,6 +1097,7 @@ impl Studio {
             stack_align: true,
             projection: luma_merge::Projection::Cylindrical,
             auto_crop: true,
+            pano_warp: false,
             merge_full: true,
             merging: None,
             preset: None,
@@ -7357,6 +7360,10 @@ impl Studio {
                 .size(11.5)
                 .color(theme::DIM),
             );
+            ui.checkbox(&mut self.pano_warp, tr("Déformer les bords"))
+                .on_hover_text(tr(
+                    "Les bords irréguliers du panorama sont étirés pour remplir le rectangle, au lieu d'être rognés",
+                ));
         }
         ui.add_space(8.0);
         ui.checkbox(&mut self.auto_crop, tr("Rogner automatiquement"));
@@ -7401,7 +7408,7 @@ impl Studio {
             let kind = if self.merge_stack {
                 MergeKind::Stack(self.stack_mode, self.stack_align)
             } else {
-                MergeKind::Panorama(self.projection)
+                MergeKind::Panorama(self.projection, self.pano_warp)
             };
             let cancel = luma_core::Cancel::new();
             self.merging = Some((0.0, tr("Préparation").into(), cancel.clone()));
