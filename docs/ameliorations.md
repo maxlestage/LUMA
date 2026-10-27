@@ -132,7 +132,7 @@ et blanc, vignetage après recadrage et grain existent).
 
 - [x] 13.1 IPTC/XMP complet : titre, légende, mots‑clés hiérarchiques, lieu, auteur,
   droits ; modèles de métadonnées.
-- [ ] 13.2 Carte des photos géolocalisées (tuiles libres).
+- [x] 13.2 Carte des photos géolocalisées (tuiles libres).
 - [x] 13.3 Renommage par lot. (Pas de détection des visages : ce serait de l'IA.)
 
 ### 14. Sortie
@@ -172,7 +172,10 @@ et blanc, vignetage après recadrage et grain existent).
   affiché qui en contient (descriptions de films : « sous‑exposé », « vert‑cyan »)
   fait échouer le rendu de test ; à remplacer par un trait d'union simple à l'écran.
 - Les images développées (JPEG, HEIC…) : lire leur EXIF pour la date de prise de vue,
-  le boîtier et l'objectif (aujourd'hui, date du fichier).
+  le boîtier et l'objectif (aujourd'hui, date du fichier) ; et leur position GPS, pour la carte (les photos de l'iPhone).
+- Carte : placer à la main les photos sans position (les glisser sur la carte, écrit
+  dans le XMP), et suivre une trace GPX ; le téléchargement des tuiles n'existe que sur
+  Mac, iPhone et iPad (ailleurs, le cache seul).
 - Doublons dans le catalogue (même date, même boîtier, même taille).
 - Vignettes du catalogue en cache sur disque, partagées entre la grille et le film.
 - Export par lot avec un logo : le lire et le convertir une seule fois pour tout le lot
@@ -265,3 +268,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-27 | 13.3 Renommage par lot (`luma_render::rename`) : plan puis application ; groupes par dossier et nom sans extension (RAW + JPEG), XMP court et long, XMP des copies virtuelles ; noms pris → `-2`, `-3`… ; deux temps (noms provisoires) pour les échanges ; retour en arrière au premier échec ; `Catalog::rename` (entrée et collections manuelles, rien à relire), `luma_library::entry_of`, `NameFields::of_details` ; « Renommer… » dans l'app (aperçu des noms), `luma rename [--dry-run]` | Tests : compagnons, échanges, collisions, échec annulé, photothèque à jour sans relecture (0 ajout, 0 retrait) ; test de l'app : la photo ouverte suit, son XMP aussi |
 | 2026-10-27 | 15.1 Instantanés (`xmp::Snapshot`, dans `Meta`) : nom et réglages en JSON, attribut `luma:Snapshots` du XMP, écrit avec ou sans réglages, relu par `read_meta` ; panneau « Instantanés » sous l'historique (créer, revenir, retirer) ; revenir est une étape de l'historique | Tests : aller‑retour XMP (masques, guillemets, `&`, `<`), JSON illisible ignoré ; test de l'app : création, retour aux réglages, XMP relu, retrait |
 | 2026-10-27 | 15.2 `luma_library::backup` : copies datées du catalogue dans « Sauvegardes » (dix gardées), `due` (l'app en fait une par semaine au démarrage, dans un fil à part), `restore` (sauvegarde d'abord, puis fichier temporaire renommé) ; `Catalog::missing`, `Catalog::relocate` (par `Catalog::rename`, collections comprises) ; `luma catalog --backup --backups --restore --missing --relocate` | Tests : noms datés, `-2` dans la même seconde, rotation, restauration sans perte, dossier déplacé retrouvé (2 sur 3, la troisième reste manquante) |
+| 2026-10-27 | 13.2 Carte (`luma_library::map`) : projection des tuiles libres (Mercator, 256 px), vue au zoom fractionnaire (cadrée sur les photos, zoom autour du doigt, la carte se répète d'est en ouest), tuiles de l'écran du centre vers les bords, groupes de photos proches par grille (temps linéaire) ; position GPS de l'EXIF gardée dans la photothèque (format version 2 : l'ancien est lu, ses photos relues à la prochaine mise à jour) ; tuiles lues dans le cache, sinon téléchargées par le système (`luma_apple::net`, Foundation : aucune bibliothèque de chiffrement dans LÜMA) et gardées, deux fils de fond, 192 tuiles en mémoire au plus ; app : « Grille / Carte » au‑dessus de la grille, groupes avec la vignette de la première photo et leur nombre, toucher un groupe montre ses photos, « Fond de carte en ligne », crédit des tuiles | Essais : projection aller et retour, tuile de la tour Eiffel au niveau 15, cadrage de toutes les photos, zoom qui garde le point sous le doigt, tuiles qui couvrent l'écran et passent l'antiméridien, groupes qui se séparent de près, ancien catalogue relu ; app : carte cadrée, Paris en un groupe de deux, tuiles gardées lues sans réseau, groupe touché puis « Tout afficher » |
