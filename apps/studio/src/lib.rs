@@ -8,6 +8,7 @@ pub mod crop;
 pub mod dialogs;
 pub mod i18n;
 pub mod icons;
+pub mod keys;
 pub mod licence;
 pub mod masking;
 pub mod retouching;
