@@ -350,10 +350,18 @@ pub const FEATURES: [&str; 6] = [
     },
 ];
 
+/// Les formules s'achètent‑elles dans l'App Store (iPhone, iPad, ou leur interface
+/// rendue ailleurs pour les essais) ?
+pub fn app_store() -> bool {
+    luma_apple::store::AVAILABLE || crate::touch()
+}
+
 /// Les formules, dans l'ordre d'affichage : sur iPhone et iPad, l'achat unique de
 /// l'App Store ; sur Mac, les abonnements (Stripe).
-pub const PLANS: &[Plan] = if luma_apple::store::AVAILABLE {
-    &Plan::STORE
-} else {
-    &Plan::ALL
-};
+pub fn plans() -> &'static [Plan] {
+    if app_store() {
+        &Plan::STORE
+    } else {
+        &Plan::ALL
+    }
+}

@@ -143,3 +143,34 @@ fn a_glimpse_comes_before_the_raw_is_decoded() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Un fichier illisible ne bloque pas les vignettes : la photo demandée après lui a la
+/// sienne.
+#[test]
+fn a_broken_file_does_not_stop_the_thumbnails() {
+    let dir = std::env::temp_dir().join(format!("luma-vignette-cassee-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let broken = dir.join("cassée.ARW");
+    std::fs::write(&broken, b"II*\0pas vraiment un RAW").unwrap();
+    let good = dir.join("bonne.png");
+    image::RgbImage::from_fn(64, 48, |x, _| image::Rgb([x as u8 * 4, 90, 200]))
+        .save(&good)
+        .unwrap();
+    let worker = Worker::new(|| {});
+    worker.thumbnail(broken);
+    worker.thumbnail(good.clone());
+    let start = Instant::now();
+    let mut got = None;
+    while got.is_none() && start.elapsed() < Duration::from_secs(30) {
+        for e in worker.poll() {
+            if let Event::Thumbnail { path, .. } = e
+                && path == good
+            {
+                got = Some(path);
+            }
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert!(got.is_some(), "la vignette de la bonne photo");
+    let _ = std::fs::remove_dir_all(&dir);
+}

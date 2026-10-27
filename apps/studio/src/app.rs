@@ -29,6 +29,7 @@ use luma_render::{Photo, Size};
 use crate::crop;
 use crate::i18n::{tr, trf};
 use crate::icons::{self, Icon};
+use crate::liquifying;
 use crate::masking;
 use crate::retouching;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
@@ -743,7 +744,7 @@ pub struct Studio {
     catalog_collections: Vec<(String, usize)>,
     pub view: View,
     catalog_search: String,
-    export_options: ExportOptions,
+    pub export_options: ExportOptions,
     /// Les préréglages d'export (relus à l'ouverture de la fenêtre), ceux qui sont
     /// cochés, et si les réglages de la fenêtre sont exportés eux aussi.
     export_presets: luma_render::export::Presets,
@@ -769,6 +770,11 @@ pub struct Studio {
     mixer_tab: usize,
     /// L'outil de retouche actif (Q) : un clic sur la photo pose une retouche.
     pub retouch: Option<luma_project::SpotKind>,
+    /// La fluidité : le pinceau choisi (pousser, gonfler, dégonfler), sa taille (en
+    /// fraction de la largeur) et sa force.
+    pub liquify: Option<luma_project::WarpKind>,
+    pub liquify_radius: f32,
+    pub liquify_strength: f32,
     /// La retouche choisie.
     pub selected_spot: Option<usize>,
     /// Le rayon des nouvelles retouches, en fraction de la largeur.
@@ -1085,6 +1091,9 @@ impl Studio {
             guide_start: None,
             mixer_tab: 0,
             retouch: None,
+            liquify: None,
+            liquify_radius: 0.06,
+            liquify_strength: 50.0,
             selected_spot: None,
             spot_radius: 0.02,
             show_dust: false,
@@ -3396,7 +3405,7 @@ impl Studio {
                     match result {
                         Ok((name, before, after)) => {
                             self.status = trf(
-                                "Pellicule mesurée : « {name} » (écart numérique → film {before}, avec le film {after})",
+                                "Pellicule mesurée : « {name} » (écart du numérique au film {before}, avec le film {after})",
                                 &[
                                     ("name", &name),
                                     ("before", &format_value(before, 1, false)),
@@ -4485,6 +4494,8 @@ impl Studio {
                     self.export_open = false;
                 } else if self.paste_open {
                     self.paste_open = false;
+                } else if self.liquify.is_some() {
+                    self.liquify = None;
                 } else if self.retouch.is_some() || self.selected_spot.is_some() || self.show_dust {
                     self.retouch = None;
                     self.selected_spot = None;
@@ -4515,7 +4526,35 @@ impl Studio {
                     self.zoom = false;
                     self.selected_mask = None;
                     self.crop_tool = None;
+                    self.liquify = None;
                 }
+            }
+            "liquify_push" | "liquify_bloat" | "liquify_pucker" if self.photo.is_some() => {
+                use luma_project::WarpKind;
+                let kind = match action {
+                    "liquify_bloat" => WarpKind::Bloat,
+                    "liquify_pucker" => WarpKind::Pucker,
+                    _ => WarpKind::Push,
+                };
+                // Le même bouton une seconde fois : le pinceau se range.
+                self.liquify = if self.liquify == Some(kind) {
+                    None
+                } else {
+                    Some(kind)
+                };
+                if self.liquify.is_some() {
+                    self.set_tool(Tool::Masks);
+                    self.zoom = false;
+                    self.selected_mask = None;
+                    self.selected_spot = None;
+                    self.retouch = None;
+                    self.crop_tool = None;
+                }
+            }
+            "liquify_clear" if !self.settings.liquify.is_empty() => {
+                self.settings.liquify.clear();
+                self.commit(tr("Fluidité effacée").into());
+                self.touch();
             }
             "mask_linear" | "mask_radial" | "mask_brush" | "mask_full" | "mask_sky"
                 if self.photo.is_some() =>
@@ -4537,6 +4576,7 @@ impl Studio {
                 self.selected_mask = Some(self.settings.masks.len() - 1);
                 self.retouch = None;
                 self.selected_spot = None;
+                self.liquify = None;
                 self.commit(label);
                 self.touch();
             }
@@ -4914,7 +4954,16 @@ impl Studio {
                             .accessible_name(tr("Espace colorimétrique"));
                         form_end(ui, compact);
                         form_row(ui, compact, tr("Dimensions"));
-                        ui.horizontal_wrapped(|ui| resize_editor(ui, &mut o.resize));
+                        ui.horizontal_wrapped(|ui| {
+                            resize_editor(ui, &mut o.resize);
+                            // Au‑delà de la pleine définition : pour les grands tirages.
+                            if o.resize.is_some() {
+                                ui.checkbox(&mut o.enlarge, tr("Agrandir au besoin"))
+                                    .on_hover_text(tr(
+                                        "Une taille plus grande que la photo l'agrandit (jusqu'à quatre fois chaque côté), net et sans halo, pour les grands tirages",
+                                    ));
+                            }
+                        });
                         form_end(ui, compact);
                         form_row(ui, compact, tr("Accentuation de sortie"));
                         ui.horizontal_wrapped(|ui| sharpen_editor(ui, &mut o.sharpen));
@@ -5597,8 +5646,11 @@ impl Studio {
                 }
             });
         let w = (full.width() - 24.0).min(680.0);
-        // Sur un écran étroit, les deux formules l'une sous l'autre : la carte est plus haute.
-        let h = (full.height() - 24.0).min(if w < 520.0 { 760.0 } else { 560.0 });
+        // La feuille prend la hauteur de son contenu (mesurée à l'image d'avant), sans
+        // dépasser l'écran : au‑delà, elle défile.
+        let tall = egui::Id::unique("premium-hauteur");
+        let content = ctx.data(|d| d.get_temp::<f32>(tall)).unwrap_or(600.0);
+        let h = (full.height() - 24.0).min(content + 52.0);
         let card = Rect::from_center_size(full.center(), vec2(w, h));
         egui::Area::new(egui::Id::unique("premium"))
             .order(egui::Order::Foreground)
@@ -5625,13 +5677,20 @@ impl Studio {
                 );
                 let inner = card.shrink(26.0);
                 ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| self.premium_contents(ui, locked));
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        self.premium_contents(ui, locked);
+                        let used = ui.min_rect().height().ceil();
+                        if (used - content).abs() > 0.5 {
+                            ui.ctx().data_mut(|d| d.insert_temp(tall, used));
+                            ui.ctx().request_repaint();
+                        }
+                    });
                 });
             });
     }
 
     fn premium_contents(&mut self, ui: &mut Ui, locked: bool) {
-        use crate::licence::{FEATURES, PLANS, open_url};
+        use crate::licence::{FEATURES, open_url};
         use luma_licence::Access;
         let access = self.licence.access();
         ui.horizontal(|ui| {
@@ -5686,132 +5745,124 @@ impl Studio {
         });
         ui.add_space(14.0);
         for f in FEATURES {
-            ui.horizontal(|ui| {
-                let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), egui::Sense::hover());
+            ui.horizontal_top(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(16.0, 18.0), egui::Sense::hover());
                 widgets::spectral_ring(ui.painter(), r.center(), 4.0, 2.0, 1.0);
-                ui.label(RichText::new(tr(f)).size(13.0).color(theme::TEXT));
+                ui.vertical(|ui| {
+                    ui.add(
+                        egui::Label::new(RichText::new(tr(f)).size(13.5).color(theme::TEXT)).wrap(),
+                    );
+                });
             });
+            ui.add_space(2.0);
         }
-        ui.add_space(16.0);
-        let gap = 14.0;
-        // Côte à côte, ou l'une sous l'autre sur un écran étroit (iPhone) ; une seule
-        // formule (l'achat unique de l'App Store) prend toute la largeur.
-        let stacked = ui.available_width() < 470.0 || PLANS.len() == 1;
-        let card_h = 172.0;
-        let (row, _) = ui.allocate_exact_size(
-            vec2(
-                ui.available_width(),
-                if stacked {
-                    PLANS.len() as f32 * (card_h + gap) - gap
-                } else {
-                    card_h
-                },
-            ),
-            egui::Sense::hover(),
-        );
-        let card_w = if stacked {
-            row.width()
-        } else {
-            ((row.width() - gap) / 2.0).floor()
-        };
-        // Sur iPhone et iPad, l'abonnement s'achète dans l'App Store ; sur Mac, par le
+        ui.add_space(18.0);
+        let plans = crate::licence::plans();
+        // Sur iPhone et iPad, la formule s'achète dans l'App Store ; sur Mac, par le
         // lien de paiement Stripe.
-        let app_store = luma_apple::store::AVAILABLE;
+        let app_store = crate::licence::app_store();
+        let gap = 12.0;
+        // Côte à côte, ou l'une sous l'autre sur un écran étroit ; une seule formule
+        // (l'achat unique de l'App Store) prend toute la largeur.
+        let stacked = ui.available_width() < 470.0 || plans.len() == 1;
+        let card_w = if stacked {
+            ui.available_width()
+        } else {
+            ((ui.available_width() - gap) / 2.0).floor()
+        };
         let mut chosen = None;
         let mut buy = None;
-        for (k, plan) in PLANS.iter().copied().enumerate() {
+        let mut card = |ui: &mut Ui, plan: luma_licence::Plan| {
             let best = plan != luma_licence::Plan::Monthly;
-            let offset = if stacked {
-                vec2(0.0, k as f32 * (card_h + gap))
-            } else {
-                vec2(k as f32 * (card_w + gap), 0.0)
-            };
-            let rect = Rect::from_min_size(row.min + offset, vec2(card_w, card_h));
-            ui.painter().rect(
-                rect,
-                18.0,
-                theme::SECTION,
-                egui::Stroke::new(
+            egui::Frame::new()
+                .fill(theme::SECTION)
+                .stroke(egui::Stroke::new(
                     if best { 1.5 } else { 1.0 },
                     if best {
                         theme::ACCENT
                     } else {
                         theme::GLASS_EDGE
                     },
-                ),
-                egui::StrokeKind::Inside,
-            );
-            let mut card = ui.new_child(
-                egui::UiBuilder::new()
-                    .max_rect(rect.shrink(16.0))
-                    .layout(egui::Layout::top_down(egui::Align::Min)),
-            );
-            card.horizontal(|ui| {
-                ui.label(RichText::new(tr(plan.name())).size(15.0).color(theme::TEXT));
-                if plan == luma_licence::Plan::Lifetime {
-                    ui.label(
-                        RichText::new(tr("Une fois pour toutes"))
-                            .size(11.0)
-                            .color(theme::ACCENT),
+                ))
+                .corner_radius(18)
+                .inner_margin(18)
+                .show(ui, |ui| {
+                    ui.set_width(card_w - 36.0);
+                    let badge = match plan {
+                        luma_licence::Plan::Lifetime => Some(tr("Une fois pour toutes")),
+                        luma_licence::Plan::Annual => Some(tr("Un seul paiement par an")),
+                        luma_licence::Plan::Monthly => None,
+                    };
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(tr(plan.name()))
+                                .size(16.0)
+                                .strong()
+                                .color(theme::TEXT),
+                        );
+                        if let Some(badge) = badge {
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    widgets::pill(ui, badge);
+                                },
+                            );
+                        }
+                    });
+                    ui.add_space(6.0);
+                    // Le prix de l'App Store est dans la devise de l'acheteur.
+                    let price = match self.licence.store_price(plan) {
+                        Some(p) if app_store => p.to_owned(),
+                        _ => tr(plan.price()).to_owned(),
+                    };
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(price).size(32.0).strong().color(theme::TEXT));
+                        ui.label(
+                            RichText::new(tr(plan.period()))
+                                .size(14.0)
+                                .color(theme::DIM),
+                        );
+                    });
+                    ui.add_space(2.0);
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(tr(plan.note())).size(12.5).color(theme::DIM),
+                        )
+                        .wrap(),
                     );
-                } else if best {
-                    ui.label(
-                        RichText::new(tr("Un seul paiement par an"))
-                            .size(11.0)
-                            .color(theme::ACCENT),
-                    );
-                }
-            });
-            // Le prix de l'App Store est dans la devise de l'acheteur.
-            let price = match self.licence.store_price(plan) {
-                Some(p) if app_store => p.to_owned(),
-                _ => tr(plan.price()).to_owned(),
-            };
-            card.horizontal(|ui| {
-                ui.label(RichText::new(price).size(28.0).strong().color(theme::TEXT));
-                ui.label(
-                    RichText::new(tr(plan.period()))
-                        .size(13.0)
-                        .color(theme::DIM),
-                );
-            });
-            card.label(RichText::new(tr(plan.note())).size(12.0).color(theme::DIM));
-            card.add_space(8.0);
-            let size = vec2(card.available_width(), 30.0);
-            if app_store {
-                if card
-                    .add_enabled(
-                        !self.licence.busy(),
-                        egui::Button::new(if plan == luma_licence::Plan::Lifetime {
+                    ui.add_space(14.0);
+                    if app_store {
+                        let label = if plan == luma_licence::Plan::Lifetime {
                             tr("Acheter")
                         } else {
                             tr("S'abonner")
-                        })
-                        .min_size(size),
-                    )
-                    .clicked()
-                {
-                    buy = Some(plan);
-                }
-                continue;
-            }
-            match plan.checkout_url() {
-                Some(url) => {
-                    if card
-                        .add_sized(size, egui::Button::new(tr("S'abonner")))
-                        .clicked()
-                    {
-                        chosen = Some(url);
+                        };
+                        if widgets::call_to_action(ui, label, !self.licence.busy()) {
+                            buy = Some(plan);
+                        }
+                    } else if let Some(url) = plan.checkout_url() {
+                        if widgets::call_to_action(ui, tr("S'abonner"), true) {
+                            chosen = Some(url);
+                        }
+                    } else {
+                        widgets::call_to_action(ui, tr("Bientôt disponible"), false);
                     }
+                });
+        };
+        if stacked {
+            for (k, plan) in plans.iter().copied().enumerate() {
+                if k > 0 {
+                    ui.add_space(gap);
                 }
-                None => {
-                    card.add_enabled(
-                        false,
-                        egui::Button::new(tr("Bientôt disponible")).min_size(size),
-                    )
-                    .on_disabled_hover_text(tr("Le paiement en ligne ouvre bientôt."));
-                }
+                card(ui, plan);
             }
+        } else {
+            ui.horizontal_top(|ui| {
+                ui.spacing_mut().item_spacing.x = gap;
+                for plan in plans.iter().copied() {
+                    ui.vertical(|ui| card(ui, plan));
+                }
+            });
         }
         if let Some(plan) = buy {
             self.licence.buy(plan);
@@ -5837,23 +5888,24 @@ impl Studio {
                     .color(theme::DIM),
                 );
             } else {
-                ui.horizontal(|ui| {
+                ui.vertical_centered(|ui| {
                     ui.label(
                         RichText::new(tr("Déjà acheté avec ce compte Apple ?"))
                             .size(12.5)
                             .color(theme::DIM),
                     );
-                    if ui
-                        .add_enabled(
-                            !self.licence.busy(),
-                            egui::Button::new(tr("Restaurer les achats")),
+                    if self.licence.busy() {
+                        ui.spinner();
+                    } else if ui
+                        .add(
+                            egui::Button::new(
+                                RichText::new(tr("Restaurer les achats")).color(theme::ACCENT),
+                            )
+                            .frame(false),
                         )
                         .clicked()
                     {
                         self.licence.restore();
-                    }
-                    if self.licence.busy() {
-                        ui.spinner();
                     }
                 });
             }
@@ -5888,7 +5940,7 @@ impl Studio {
                 ui.add(
                     egui::TextEdit::singleline(&mut self.licence.key_input)
                         .hint_text(tr("Clé de licence"))
-                        .desired_width(330.0),
+                        .desired_width((ui.available_width() - 90.0).min(330.0)),
                 );
                 let ready = self.licence.key_input.trim().len() >= 8;
                 if ui
@@ -6210,8 +6262,17 @@ impl Studio {
         } else {
             (44.0, 44.0)
         };
-        let label = if horizontal { 14.0 } else { 0.0 };
+        // Les noms sous les icônes, s'ils ont la place de ne pas se toucher (sinon,
+        // en paysage sur iPhone, les icônes seules).
+        let named = horizontal && width >= 40.0;
+        let font = if width >= 50.0 { 10.5 } else { 9.5 };
+        let label = if named { 14.0 } else { 0.0 };
         let mut draw = |ui: &mut Ui| {
+            if horizontal {
+                // Les outils au milieu de la barre (sur iPad, elle est plus large qu'eux).
+                let rest = ui.available_width() - width * Tool::ALL.len() as f32;
+                ui.add_space((rest / 2.0).max(0.0).floor());
+            }
             for tool in Tool::ALL {
                 let (cell, r) =
                     ui.allocate_exact_size(vec2(width, size + label), egui::Sense::click());
@@ -6239,12 +6300,12 @@ impl Studio {
                     theme::DIM
                 };
                 icons::paint(p, tool.icon(), rect.shrink(size * 0.27), color);
-                if horizontal {
+                if named {
                     p.text(
                         pos2(cell.center().x, cell.max.y),
                         egui::Align2::CENTER_BOTTOM,
                         tool.short_name(),
-                        egui::FontId::proportional(10.0),
+                        egui::FontId::proportional(font),
                         color,
                     );
                 }
@@ -7819,32 +7880,27 @@ impl Studio {
                 .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
             return;
         }
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 2.0;
-            for s in Scope::ALL {
-                let name = match s {
-                    Scope::Histogram => tr("Histogramme"),
-                    Scope::Waveform => tr("Forme d'onde"),
-                    Scope::Parade => tr("Parade RVB"),
-                    Scope::Vectorscope => tr("Vectorscope"),
-                };
-                let selected = self.scope == s;
-                let text = RichText::new(name).size(10.5).color(if selected {
-                    theme::TEXT
-                } else {
-                    theme::DIM
-                });
-                if ui
-                    .selectable_label(selected, text)
-                    .on_hover_text(tr("Maj+J : instrument suivant"))
-                    .clicked()
-                    && !selected
-                {
-                    self.scope = s;
-                    self.scope_texture = None;
-                }
-            }
-        });
+        let names: Vec<&str> = Scope::ALL
+            .iter()
+            .map(|s| match s {
+                Scope::Histogram => tr("Histogramme"),
+                Scope::Waveform => tr("Forme d'onde"),
+                Scope::Parade => tr("Parade RVB"),
+                Scope::Vectorscope => tr("Vectorscope"),
+            })
+            .collect();
+        let on: Vec<bool> = Scope::ALL.iter().map(|&s| s == self.scope).collect();
+        if let Some(k) = widgets::segments(
+            ui,
+            &names,
+            &on,
+            &[tr("Maj+J : instrument suivant"); 4],
+            10.5,
+        ) && Scope::ALL[k] != self.scope
+        {
+            self.scope = Scope::ALL[k];
+            self.scope_texture = None;
+        }
         ui.add_space(2.0);
         match (&self.scope_texture, self.scope) {
             (Some(texture), scope) if scope != Scope::Histogram => {
@@ -8873,6 +8929,24 @@ impl Studio {
                 let name = tr(&self.settings.masks[i].name).to_lowercase();
                 self.commit(trf("Masque : {mask}", &[("mask", &name)]));
             }
+        } else if let Some(kind) = self.liquify.filter(|_| self.tool == Tool::Masks) {
+            let target = fit(rect.shrink(18.0), iw, ih);
+            painter.image(t.id(), target, uv, Color32::WHITE);
+            self.edit_label(&painter, target);
+            let c = liquifying::edit(
+                ui,
+                target,
+                &mut self.settings.liquify,
+                kind,
+                self.liquify_radius,
+                self.liquify_strength,
+            );
+            if c.changed {
+                self.touch();
+            }
+            if c.committed {
+                self.commit(tr("Fluidité").into());
+            }
         } else if self.tool == Tool::Masks
             && (self.retouch.is_some() || self.selected_spot.is_some())
         {
@@ -8995,6 +9069,8 @@ impl Studio {
                 }
                 _ => tr("Masque : tirer les poignées, O pour voir le masque, Échap pour quitter"),
             });
+        } else if self.tool == Tool::Masks && self.liquify.is_some() {
+            badges.push(tr("Fluidité : glissez sur la photo, Échap pour quitter"));
         } else if self.tool == Tool::Masks && self.retouch.is_some() {
             badges.push(tr(
                 "Retouche : cliquez une tache, tirez la zone ou sa source, Échap pour quitter",
@@ -9167,7 +9243,7 @@ impl Studio {
     /// celle qui est choisie.
     fn retouch_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
         use luma_project::SpotKind;
-        let open = self.retouch.is_some() || self.selected_spot.is_some();
+        let open = self.retouch.is_some() || self.selected_spot.is_some() || self.liquify.is_some();
         egui::CollapsingHeader::new(RichText::new(tr("Retouche")).strong())
             .id_salt("Retouche")
             .open(open.then_some(true))
@@ -9235,6 +9311,57 @@ impl Studio {
                     track: Track::Plain,
                     log: false,
                 };
+                // La fluidité : trois pinceaux qui déforment la photo.
+                ui.label(RichText::new(tr("Fluidité")).size(12.0).color(theme::DIM));
+                ui.horizontal_wrapped(|ui| {
+                    use luma_project::WarpKind;
+                    for (kind, label, hint, action) in [
+                        (
+                            WarpKind::Push,
+                            tr("Pousser"),
+                            tr("Glissez : la photo suit le pinceau"),
+                            "liquify_push",
+                        ),
+                        (
+                            WarpKind::Bloat,
+                            tr("Gonfler"),
+                            tr("Cliquez ou glissez : la zone grandit depuis son centre"),
+                            "liquify_bloat",
+                        ),
+                        (
+                            WarpKind::Pucker,
+                            tr("Dégonfler"),
+                            tr("Cliquez ou glissez : la zone se resserre vers son centre"),
+                            "liquify_pucker",
+                        ),
+                    ] {
+                        if ui
+                            .selectable_label(self.liquify == Some(kind), label)
+                            .on_hover_text(hint)
+                            .clicked()
+                        {
+                            self.act(action);
+                        }
+                    }
+                    let n = self.settings.liquify.len();
+                    if n > 0
+                        && ui
+                            .button(tr("Effacer|fluidité"))
+                            .on_hover_text(trf(
+                                "Retire les {n} coups de pinceau de la fluidité",
+                                &[("n", &n.to_string())],
+                            ))
+                            .clicked()
+                    {
+                        self.act("liquify_clear");
+                    }
+                });
+                if self.liquify.is_some() {
+                    let mut size = self.liquify_radius * 100.0;
+                    widgets::slider(ui, &spec("Taille", 1.0, 30.0, 6.0, 1), &mut size);
+                    self.liquify_radius = size / 100.0;
+                    widgets::slider(ui, &spec("Force", 1.0, 100.0, 50.0, 0), &mut self.liquify_strength);
+                }
                 let selected = self
                     .selected_spot
                     .filter(|&i| i < self.settings.spots.len());
@@ -9497,6 +9624,7 @@ impl Studio {
                     if s.is_some() {
                         self.retouch = None;
                         self.selected_spot = None;
+                        self.liquify = None;
                     }
                 }
                 let Some(i) = self
@@ -10159,25 +10287,34 @@ impl Studio {
                 .id_salt("Mélangeur de couleurs")
                 .default_open(true)
                 .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        for (i, name) in [tr("Teinte|mélangeur"), tr("Saturation"), tr("Luminance")]
-                            .into_iter()
-                            .enumerate()
-                        {
-                            ui.selectable_value(&mut self.hsl_tab, i, name);
-                        }
-                        let on = self.targeting;
-                        if ui
-                            .selectable_label(on, tr("Ciblage"))
-                            .on_hover_text(tr(
-                                "Ciblage direct (T) : glissez sur une couleur de la photo, vers le haut ou le bas, pour régler cette couleur dans l'onglet choisi.",
-                            ))
-                            .clicked()
-                        {
-                            self.targeting = !on;
+                    let names = [
+                        tr("Teinte|mélangeur"),
+                        tr("Saturation"),
+                        tr("Luminance"),
+                        tr("Ciblage"),
+                    ];
+                    let on = [
+                        self.hsl_tab == 0,
+                        self.hsl_tab == 1,
+                        self.hsl_tab == 2,
+                        self.targeting,
+                    ];
+                    let tips = [
+                        "",
+                        "",
+                        "",
+                        tr(
+                            "Ciblage direct (T) : glissez sur une couleur de la photo, vers le haut ou le bas, pour régler cette couleur dans l'onglet choisi.",
+                        ),
+                    ];
+                    match widgets::segments(ui, &names, &on, &tips, 12.5) {
+                        Some(3) => {
+                            self.targeting = !self.targeting;
                             self.eyedropper = false;
                         }
-                    });
+                        Some(i) => self.hsl_tab = i,
+                        None => {}
+                    }
                     let kind =
                         [tr("Teinte|mélangeur"), tr("Saturation"), tr("Luminance")][self.hsl_tab];
                     for (i, name) in HSL_NAMES.iter().enumerate() {
@@ -11414,6 +11551,9 @@ fn export_summary(o: &ExportOptions) -> String {
         Some(Resize::Fit { width, height }) => format!("{width} × {height} px"),
         Some(Resize::Megapixels(m)) => format!("{m} Mpx"),
     };
+    if o.enlarge && o.resize.is_some() {
+        return format!("{format}, {space}, {size}, {}", tr("agrandie au besoin"));
+    }
     format!("{format}, {space}, {size}")
 }
 

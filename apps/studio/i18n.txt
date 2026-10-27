@@ -175,9 +175,9 @@ fr = Fusion impossible : {error}
 en = Merge failed: {error}
 es = No se pudo combinar: {error}
 
-fr = Pellicule mesurée : « {name} » (écart numérique → film {before}, avec le film {after})
-en = Film measured: “{name}” (digital → film difference {before}, with the film {after})
-es = Película medida: «{name}» (diferencia digital → película {before}, con la película {after})
+fr = Pellicule mesurée : « {name} » (écart du numérique au film {before}, avec le film {after})
+en = Film measured: “{name}” (digital-to-film difference {before}, with the film {after})
+es = Película medida: «{name}» (diferencia de lo digital a la película {before}, con la película {after})
 
 fr = Mesure impossible : {error}
 en = Measurement failed: {error}
@@ -2533,7 +2533,7 @@ fr = Une diapositive développée comme un négatif : jaunes et verts, ombres bl
 en = Slide film developed as a negative: yellows and greens, blue shadows, strong contrast.
 es = Una diapositiva revelada como negativo: amarillos y verdes, sombras azules, contraste fuerte.
 
-fr = Tourner de jour pour faire la nuit : sous‑exposé, bleu, peu saturé.
+fr = Tourner de jour pour faire la nuit : sous-exposé, bleu, peu saturé.
 en = Shooting by day to make night: underexposed, blue, desaturated.
 es = Rodar de día para simular la noche: subexpuesta, azul, poco saturada.
 
@@ -2665,7 +2665,7 @@ fr = Inspiré d'Ilford Ortho Plus : aveugle au rouge, lèvres et peaux sombres, 
 en = Inspired by Ilford Ortho Plus: red-blind, dark lips and skin, white skies.
 es = Inspirada en Ilford Ortho Plus: ciega al rojo, labios y piel oscuros, cielos blancos.
 
-fr = L'instantané carré des années 80 : chaud, délavé, ombres vert‑cyan.
+fr = L'instantané carré des années 80 : chaud, délavé, ombres vert-cyan.
 en = The square instant photo of the 1980s: warm, faded, green-cyan shadows.
 es = La instantánea cuadrada de los años 80: cálida, desvaída, sombras verde cian.
 
@@ -5320,6 +5320,66 @@ es = Cielo
 fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
+
+fr = Agrandir au besoin
+en = Enlarge if needed
+es = Ampliar si es necesario
+
+fr = Une taille plus grande que la photo l'agrandit (jusqu'à quatre fois chaque côté), net et sans halo, pour les grands tirages
+en = A size larger than the photo enlarges it (up to four times each side), sharp and without halos, for large prints
+es = Un tamaño mayor que la foto la amplía (hasta cuatro veces cada lado), nítida y sin halos, para copias grandes
+
+fr = agrandie au besoin
+en = enlarged if needed
+es = ampliada si es necesario
+
+fr = Fluidité
+en = Liquify
+es = Licuar
+
+fr = Pousser
+en = Push
+es = Empujar
+
+fr = Gonfler
+en = Bloat
+es = Inflar
+
+fr = Dégonfler
+en = Pucker
+es = Desinflar
+
+fr = Glissez : la photo suit le pinceau
+en = Drag: the photo follows the brush
+es = Arrastre: la foto sigue al pincel
+
+fr = Cliquez ou glissez : la zone grandit depuis son centre
+en = Click or drag: the area grows from its centre
+es = Haga clic o arrastre: la zona crece desde su centro
+
+fr = Cliquez ou glissez : la zone se resserre vers son centre
+en = Click or drag: the area shrinks towards its centre
+es = Haga clic o arrastre: la zona se encoge hacia su centro
+
+fr = Effacer|fluidité
+en = Clear
+es = Borrar
+
+fr = Retire les {n} coups de pinceau de la fluidité
+en = Removes the {n} liquify brush strokes
+es = Quita los {n} trazos de pincel de licuado
+
+fr = Force
+en = Strength
+es = Fuerza
+
+fr = Fluidité effacée
+en = Liquify cleared
+es = Licuado borrado
+
+fr = Fluidité : glissez sur la photo, Échap pour quitter
+en = Liquify: drag on the photo, Esc to leave
+es = Licuar: arrastre sobre la foto, Esc para salir
 
 fr = Un masque sur le ciel de la photo, trouvé sur la photo elle-même (clair, uni, relié au haut), ses bords sur les branches et les toits
 en = A mask on the photo's sky, found from the photo itself (bright, even, connected to the top), its edges following branches and roofs
