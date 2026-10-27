@@ -137,6 +137,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Duplicados por huella de imagen (la misma foto copiada, exportada a otro tamaño o recomprimida), agrupados uno al lado del otro; valoraciones, banderas y etiquetas en lote en las fotos elegidas | ✅ |
 | Catálogo local (`luma catalog`): carpetas y subcarpetas, fecha de captura, cámara, objetivo, ISO leídos en la cabecera sin decodificar la imagen, actualización incremental, orden por fecha | ✅ |
 | Renombrado por lotes («Renombrar…», `luma rename`): los marcadores de la exportación (`{date}_{séquence}`…), el RAW y el JPEG de una toma juntos, el XMP y las copias virtuales los acompañan, `-2` cuando un nombre está ocupado, vuelta atrás ante cualquier fallo; la fototeca y sus colecciones lo siguen | ✅ |
+| Copias de seguridad del catálogo (una por semana en la app, se guardan las diez últimas; `luma catalog --backup`, `--restore`), fotos que faltan listadas, carpeta movida recuperada con sus colecciones (`--missing`, `--relocate`) | ✅ |
 | Miniaturas instantáneas (la vista previa integrada en el RAW, en 15 ms), luego renderizadas con los ajustes y guardadas sin pérdida para las visitas siguientes | ✅ |
 | Copia de trabajo a resolución completa: idéntica al original, más rápida de abrir, dos veces y media menos memoria; «Vaciar la caché» en un clic | ✅ |
 | Palabras clave en el XMP (`dc:subject`), leídas y escritas | ✅ |

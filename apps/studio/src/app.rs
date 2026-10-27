@@ -976,6 +976,11 @@ impl Studio {
             wb_label: "Personnalisée",
         };
         if let Some(path) = luma_library::default_path() {
+            // Une sauvegarde du catalogue par semaine, sans attendre.
+            if luma_library::backup::due(&path, 7) {
+                let file = path.clone();
+                std::thread::spawn(move || luma_library::backup::backup(&file));
+            }
             studio.use_catalog(path);
         }
         studio
