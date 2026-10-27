@@ -470,6 +470,39 @@ enum Output {
     Book,
     Slideshow,
     Gallery,
+    Import,
+}
+
+/// L'import depuis une carte : d'où, vers où, comment.
+pub struct Import {
+    /// La carte (ou le dossier) à importer.
+    pub source: Option<PathBuf>,
+    /// Le dossier de la photothèque.
+    pub dest: Option<PathBuf>,
+    /// Les sous‑dossiers d'après la date (voir `luma_library::import::folder`).
+    pub folders: String,
+    /// Le modèle des nouveaux noms ; vide : les noms d'origine.
+    pub name: String,
+    pub backup: Option<PathBuf>,
+    /// Les photos trouvées sur la source (comptées à son choix).
+    found: usize,
+}
+
+impl Default for Import {
+    fn default() -> Self {
+        // Le dossier Images de l'utilisateur, s'il existe.
+        let dest = std::env::var_os("HOME")
+            .map(|h| PathBuf::from(h).join("Pictures"))
+            .filter(|d| d.is_dir() && cfg!(target_os = "macos"));
+        Import {
+            source: None,
+            dest,
+            folders: "{année}/{année}-{mois}-{jour}".into(),
+            name: String::new(),
+            backup: None,
+            found: 0,
+        }
+    }
 }
 
 /// Le diaporama dans l'app : depuis quand la photo est montrée, et la pause.
@@ -561,6 +594,8 @@ pub struct Studio {
     /// Le diaporama : ses réglages (pour l'app comme pour l'export), et la lecture.
     pub show: luma_render::slideshow::Slideshow,
     playing: Option<Playing>,
+    import_open: bool,
+    pub import: Import,
     /// La galerie web.
     pub gallery: luma_render::gallery::Gallery,
     /// Le livre photo.
@@ -892,6 +927,8 @@ impl Studio {
             outputs_open: false,
             show: Default::default(),
             playing: None,
+            import_open: false,
+            import: Default::default(),
             gallery: Default::default(),
             book: Default::default(),
             rename_template: "{date}_{séquence}".into(),
@@ -1762,6 +1799,10 @@ impl Studio {
                         "Diaporama prêt : {n} photos, {file} (ouvrir index.html)",
                         &[("n", &n), ("file", &file)],
                     ),
+                    Output::Import => trf(
+                        "{n} photos importées et vérifiées dans {file}",
+                        &[("n", &n), ("file", &file)],
+                    ),
                     Output::Gallery => trf(
                         "Galerie prête : {n} photos, {file} (à mettre en ligne telle quelle)",
                         &[("n", &n), ("file", &file)],
@@ -1770,7 +1811,14 @@ impl Studio {
                 if p.output == Output::Print {
                     self.print_open = false;
                 }
+                let imported = p.output == Output::Import;
                 self.printing = None;
+                if imported && n > 0 {
+                    self.import_open = false;
+                    let status = self.status.clone();
+                    self.open_path(&path);
+                    self.status = status;
+                }
             }
             Ok(Err(e)) => {
                 self.status = trf("Impression impossible : {error}", &[("error", &e)]);
@@ -2022,6 +2070,197 @@ impl Studio {
             total,
             output: Output::Gallery,
         });
+    }
+
+    /// Ouvre la fenêtre d'import, sur la carte montée s'il y en a une.
+    pub fn open_import(&mut self) {
+        if self.import.source.is_none()
+            && let Some(card) = luma_library::import::cards().into_iter().next()
+        {
+            self.set_import_source(card);
+        }
+        self.import_open = true;
+    }
+
+    /// Choisit la carte (ou le dossier) à importer, et y compte les photos.
+    pub fn set_import_source(&mut self, source: PathBuf) {
+        self.import.found = luma_library::import::photos(&source).len();
+        self.import.source = Some(source);
+    }
+
+    /// Importe en arrière‑plan : lit les photos de la source, fait le plan (rangement,
+    /// noms, photos déjà là), copie et vérifie ; puis ouvre le dossier des premières
+    /// photos importées, qui entre dans la photothèque.
+    pub fn start_import(&mut self) {
+        use luma_library::import;
+        let (Some(source), Some(dest)) = (self.import.source.clone(), self.import.dest.clone())
+        else {
+            return;
+        };
+        let options = import::Options {
+            dest,
+            folders: self.import.folders.clone(),
+            backup: self.import.backup.clone(),
+        };
+        let template = Some(self.import.name.trim().to_owned()).filter(|t| !t.is_empty());
+        if let Some(t) = &template
+            && let Err(e) = luma_render::export::check_template(t)
+        {
+            self.status = e;
+            return;
+        }
+        let (send, done) = std::sync::mpsc::channel();
+        let placed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = placed.clone();
+        let total = self.import.found;
+        let job = move || -> Result<(PathBuf, usize), String> {
+            let photos = import::photos(&source);
+            let entries: Vec<luma_library::Entry> =
+                photos.iter().map(|p| luma_library::entry_of(p)).collect();
+            let plan = import::plan(&entries, &options, |e, n| {
+                let t = template.as_ref()?;
+                let f = luma_render::export::NameFields::of_details(
+                    &e.path, &e.date, &e.make, &e.model, &e.lens, e.iso, e.rating, &e.label,
+                );
+                Some(luma_render::export::file_name(
+                    t,
+                    &luma_render::export::NameFields { sequence: n, ..f },
+                ))
+            });
+            // Les photos déjà là comptent comme faites.
+            counter.store(plan.skipped.len(), std::sync::atomic::Ordering::Relaxed);
+            let skipped = plan.skipped.len();
+            let report = import::run(&plan, |n| {
+                counter.store(skipped + n, std::sync::atomic::Ordering::Relaxed)
+            })?;
+            let first = plan
+                .items
+                .first()
+                .and_then(|i| i.target.parent().map(Path::to_path_buf))
+                .unwrap_or(options.dest);
+            Ok((first, report.copied))
+        };
+        std::thread::spawn(move || {
+            let _ = send.send(job());
+        });
+        self.printing = Some(Printing {
+            done,
+            placed,
+            total,
+            output: Output::Import,
+        });
+    }
+
+    /// La fenêtre « Importer » : la carte, la photothèque, le rangement, le second
+    /// disque.
+    fn import_window(&mut self, ctx: &egui::Context) {
+        let mut open = self.import_open;
+        let mut go = false;
+        let shown = |p: &Option<PathBuf>, none: &str| {
+            p.as_ref()
+                .map_or_else(|| tr(none).to_owned(), |p| p.display().to_string())
+        };
+        egui::Window::new(tr("Importer des photos"))
+            .id(egui::Id::unique("fenetre-importer"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_width(440.0);
+                let cards = luma_library::import::cards();
+                egui::Grid::new("importer").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                    ui.label(RichText::new(tr("Depuis")).color(theme::DIM));
+                    ui.vertical(|ui| {
+                        for c in &cards {
+                            let on = self.import.source.as_ref() == Some(c);
+                            let name = c.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+                            if ui.selectable_label(on, trf("Carte {name}", &[("name", &name)])).clicked() {
+                                self.set_import_source(c.clone());
+                            }
+                        }
+                        ui.horizontal(|ui| {
+                            ui.label(shown(&self.import.source, "Aucune carte trouvée"));
+                            if ui.small_button(tr("Choisir…")).clicked()
+                                && let Some(d) = crate::dialogs::pick_folder(tr("Importer depuis…"))
+                            {
+                                self.set_import_source(d);
+                            }
+                        });
+                        if self.import.source.is_some() {
+                            ui.label(
+                                RichText::new(trf("{n} photos", &[("n", &self.import.found)]))
+                                    .size(11.0)
+                                    .color(theme::DIM),
+                            );
+                        }
+                    });
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Vers")).color(theme::DIM));
+                    ui.horizontal(|ui| {
+                        ui.label(shown(&self.import.dest, "Choisissez la photothèque"));
+                        if ui.small_button(tr("Choisir…")).clicked()
+                            && let Some(d) = crate::dialogs::pick_folder(tr("Importer dans…"))
+                        {
+                            self.import.dest = Some(d);
+                        }
+                    });
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Rangement")).color(theme::DIM));
+                    ui.add(egui::TextEdit::singleline(&mut self.import.folders).desired_width(f32::INFINITY));
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Renommer")).color(theme::DIM));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.import.name)
+                            .hint_text(tr("Noms d'origine ; ou {date}_{séquence}…"))
+                            .desired_width(f32::INFINITY),
+                    );
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Second disque")).color(theme::DIM));
+                    ui.horizontal(|ui| {
+                        ui.label(shown(&self.import.backup, "Aucun"));
+                        if ui.small_button(tr("Choisir…")).clicked()
+                            && let Some(d) = crate::dialogs::pick_folder(tr("Sauvegarder aussi dans…"))
+                        {
+                            self.import.backup = Some(d);
+                        }
+                        if self.import.backup.is_some() && ui.small_button(tr("Aucun")).clicked() {
+                            self.import.backup = None;
+                        }
+                    });
+                    ui.end_row();
+                });
+                ui.add_space(6.0);
+                ui.label(
+                    RichText::new(tr(
+                        "Chaque copie est relue et comparée à l'original ; le RAW, son JPEG et son XMP gardent un même nom ; une photo déjà importée est sautée ; la carte n'est jamais modifiée.",
+                    ))
+                    .size(10.5)
+                    .color(theme::DIM),
+                );
+                ui.add_space(6.0);
+                match &self.printing {
+                    Some(p) if p.output == Output::Import => {
+                        let done = p.placed.load(std::sync::atomic::Ordering::Relaxed);
+                        ui.add(egui::ProgressBar::new(done as f32 / p.total.max(1) as f32).text(trf(
+                            "Import : {done} sur {n}",
+                            &[("done", &done), ("n", &p.total)],
+                        )));
+                    }
+                    _ => {
+                        let ready = self.printing.is_none()
+                            && self.import.found > 0
+                            && self.import.dest.is_some();
+                        go = ui
+                            .add_enabled(ready, egui::Button::new(trf("Importer {n} photos", &[("n", &self.import.found)])))
+                            .clicked();
+                    }
+                }
+            });
+        if go {
+            self.start_import();
+        }
+        self.import_open = open;
     }
 
     /// La fenêtre « Livre, diaporama et galerie » : le diaporama (dans l'app ou exporté),
@@ -4537,6 +4776,9 @@ impl Studio {
         if self.outputs_open && allowed {
             self.outputs_window(&ctx);
         }
+        if self.import_open && allowed {
+            self.import_window(&ctx);
+        }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
         }
@@ -6722,6 +6964,16 @@ impl Studio {
 
     fn catalog_panel(&mut self, ui: &mut Ui) {
         section_title(ui, tr("Photothèque"));
+        if crate::dialogs::FOLDER_PICKER
+            && ui
+                .button(tr("Importer une carte…"))
+                .on_hover_text(tr(
+                    "Copie les photos d'une carte mémoire dans la photothèque, rangées par date, et sur un second disque",
+                ))
+                .clicked()
+        {
+            self.open_import();
+        }
         let edit = ui.add(
             egui::TextEdit::singleline(&mut self.catalog_search)
                 .hint_text(tr("Rechercher : mer note:3 date:2024 iso:..800"))
