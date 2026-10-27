@@ -1099,6 +1099,24 @@ fn crop_tool_and_export_window() {
 }
 
 #[test]
+fn export_enlarge() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("export-agrandir") else {
+        return;
+    };
+    // En pleine définition, pas de case : rien à agrandir.
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::E)]);
+    assert!(s.harness.query_by_label("Agrandir au besoin").is_none());
+    // Un grand côté de 12 000 px : la case apparaît et se coche.
+    s.studio().export_options.resize = Some(luma_render::export::Resize::LongEdge(12000));
+    s.wait();
+    s.harness.get_by_label("Agrandir au besoin").click();
+    s.wait();
+    assert!(s.studio().export_options.enlarge);
+    s.capture("export-agrandir");
+}
+
+#[test]
 fn masks_linear_and_radial() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("masques") else {

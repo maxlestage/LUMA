@@ -741,7 +741,7 @@ pub struct Studio {
     catalog_collections: Vec<(String, usize)>,
     pub view: View,
     catalog_search: String,
-    export_options: ExportOptions,
+    pub export_options: ExportOptions,
     /// Les préréglages d'export (relus à l'ouverture de la fenêtre), ceux qui sont
     /// cochés, et si les réglages de la fenêtre sont exportés eux aussi.
     export_presets: luma_render::export::Presets,
@@ -4937,7 +4937,16 @@ impl Studio {
                             .accessible_name(tr("Espace colorimétrique"));
                         form_end(ui, compact);
                         form_row(ui, compact, tr("Dimensions"));
-                        ui.horizontal_wrapped(|ui| resize_editor(ui, &mut o.resize));
+                        ui.horizontal_wrapped(|ui| {
+                            resize_editor(ui, &mut o.resize);
+                            // Au‑delà de la pleine définition : pour les grands tirages.
+                            if o.resize.is_some() {
+                                ui.checkbox(&mut o.enlarge, tr("Agrandir au besoin"))
+                                    .on_hover_text(tr(
+                                        "Une taille plus grande que la photo l'agrandit (jusqu'à quatre fois chaque côté), net et sans halo, pour les grands tirages",
+                                    ));
+                            }
+                        });
                         form_end(ui, compact);
                         form_row(ui, compact, tr("Accentuation de sortie"));
                         ui.horizontal_wrapped(|ui| sharpen_editor(ui, &mut o.sharpen));
@@ -11525,6 +11534,9 @@ fn export_summary(o: &ExportOptions) -> String {
         Some(Resize::Fit { width, height }) => format!("{width} × {height} px"),
         Some(Resize::Megapixels(m)) => format!("{m} Mpx"),
     };
+    if o.enlarge && o.resize.is_some() {
+        return format!("{format}, {space}, {size}, {}", tr("agrandie au besoin"));
+    }
     format!("{format}, {space}, {size}")
 }
 

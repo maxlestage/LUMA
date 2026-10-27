@@ -5321,6 +5321,18 @@ fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
 
+fr = Agrandir au besoin
+en = Enlarge if needed
+es = Ampliar si es necesario
+
+fr = Une taille plus grande que la photo l'agrandit (jusqu'à quatre fois chaque côté), net et sans halo, pour les grands tirages
+en = A size larger than the photo enlarges it (up to four times each side), sharp and without halos, for large prints
+es = Un tamaño mayor que la foto la amplía (hasta cuatro veces cada lado), nítida y sin halos, para copias grandes
+
+fr = agrandie au besoin
+en = enlarged if needed
+es = ampliada si es necesario
+
 fr = Fluidité
 en = Liquify
 es = Licuar
