@@ -521,7 +521,7 @@ macro_rules! preset {
     };
 }
 
-/// Les 100 préréglages intégrés.
+/// Les 150 préréglages intégrés.
 pub const PRESETS: &[Preset] = &[
     // ----- Pellicules couleur -----
     preset!(
@@ -1792,6 +1792,634 @@ pub const PRESETS: &[Preset] = &[
             band(s, A, 0.0, 0.0, -60.0);
         }
     ),
+    // ----- Les 50 films de la deuxième série -----
+    preset!(
+        "Kodacolor 200",
+        ColorFilm,
+        "Inspiré de Kodak Kodacolor 200 : la pellicule des albums de famille des années 80, chaude et un peu passée.",
+        |s| {
+            base(s, -2.0, -8.0, 4.0);
+            fade(s, 18.0, 240.0);
+            band(s, O, 4.0, 6.0, 4.0);
+            cross(s, [4.0, 8.0, 6.0], [2.0, 3.0, 2.0], [-6.0, -10.0, -14.0]);
+            grain(s, 24.0, 30.0, 50.0);
+        }
+    ),
+    preset!(
+        "Portra 160VC",
+        ColorFilm,
+        "Inspiré de Kodak Portra 160VC : la Portra aux couleurs vives, peaux justes et ciels francs.",
+        |s| {
+            base(s, 4.0, 10.0, 12.0);
+            tones(s, -10.0, 4.0, 0.0, 0.0);
+            fade(s, 6.0, 250.0);
+            band(s, O, 0.0, -4.0, 6.0);
+            band(s, B, -4.0, 14.0, -6.0);
+            cross(s, [0.0, 2.0, 4.0], [0.0, 1.0, 1.0], [2.0, 0.0, -4.0]);
+            grain(s, 10.0, 18.0, 35.0);
+        }
+    ),
+    preset!(
+        "Portra 400VC",
+        ColorFilm,
+        "Inspiré de Kodak Portra 400VC : chaleur de la Portra 400 et saturation plus franche.",
+        |s| {
+            base(s, 6.0, 8.0, 14.0);
+            tones(s, -14.0, 2.0, 0.0, 0.0);
+            fade(s, 10.0, 248.0);
+            band(s, R, 0.0, 8.0, 0.0);
+            band(s, G, 10.0, -10.0, 0.0);
+            cross(s, [0.0, 6.0, 9.0], [0.0, 2.0, 2.0], [4.0, -4.0, -12.0]);
+            grain(s, 20.0, 26.0, 48.0);
+        }
+    ),
+    preset!(
+        "Ektachrome 64",
+        ColorFilm,
+        "Inspiré de Kodak Ektachrome 64 : diapositive des années 70, bleus froids et magentas discrets.",
+        |s| {
+            base(s, 22.0, 6.0, 4.0);
+            tones(s, -6.0, -10.0, 0.0, -6.0);
+            s_curve(s, 2.0, 10.0, 252.0);
+            tint(s, 230.0, 10.0);
+            band(s, M, 8.0, 12.0, 0.0);
+            cross(s, [-4.0, -3.0, 0.0], [-2.0, -2.0, 0.0], [8.0, 8.0, 6.0]);
+            grain(s, 8.0, 15.0, 35.0);
+        }
+    ),
+    preset!(
+        "Fujicolor 100 Industrial",
+        ColorFilm,
+        "Inspiré de Fujicolor 100 Industrial : la pellicule des pharmacies japonaises, verts tendres et blancs crème.",
+        |s| {
+            base(s, -8.0, -14.0, 6.0);
+            fade(s, 20.0, 238.0);
+            band(s, G, -14.0, 12.0, 10.0);
+            band(s, Y, -6.0, -8.0, 4.0);
+            split(s, 160.0, 20.0, 60.0, 16.0);
+            grain(s, 14.0, 22.0, 40.0);
+        }
+    ),
+    preset!(
+        "Superia Venus 800",
+        ColorFilm,
+        "Inspiré de Fujifilm Superia Venus 800 : sensible et nerveux, ombres vertes et grain marqué.",
+        |s| {
+            base(s, 16.0, 6.0, 4.0);
+            tones(s, -8.0, 10.0, 0.0, 4.0);
+            fade(s, 14.0, 246.0);
+            cross(s, [-6.0, -2.0, 2.0], [8.0, 4.0, 0.0], [0.0, 0.0, -4.0]);
+            grain(s, 38.0, 36.0, 65.0);
+        }
+    ),
+    preset!(
+        "Sensia 100",
+        ColorFilm,
+        "Inspiré de Fujifilm Sensia 100 : diapositive grand public, nette, verts et bleus vifs sans excès.",
+        |s| {
+            base(s, 18.0, 14.0, 6.0);
+            tones(s, -8.0, -6.0, 0.0, -4.0);
+            s_curve(s, 2.0, 8.0, 253.0);
+            band(s, G, -4.0, 16.0, -4.0);
+            band(s, A, 0.0, 12.0, 0.0);
+            grain(s, 6.0, 14.0, 30.0);
+        }
+    ),
+    preset!(
+        "Precisa 100",
+        ColorFilm,
+        "Inspiré d'Agfa Precisa 100 : diapositive froide, cyans profonds, peaux pâles.",
+        |s| {
+            base(s, 20.0, 4.0, 0.0);
+            s_curve(s, 0.0, 9.0, 252.0);
+            band(s, A, 0.0, 20.0, -8.0);
+            band(s, O, -4.0, -12.0, 4.0);
+            cross(s, [-8.0, -6.0, -2.0], [2.0, 2.0, 2.0], [6.0, 4.0, 2.0]);
+            grain(s, 8.0, 15.0, 35.0);
+        }
+    ),
+    preset!(
+        "Agfa Portrait 160",
+        ColorFilm,
+        "Inspiré d'Agfa Portrait 160 : négatif de studio, peaux rosées, contraste très doux.",
+        |s| {
+            base(s, -18.0, -10.0, 0.0);
+            tones(s, -16.0, 12.0, 0.0, 0.0);
+            fade(s, 14.0, 246.0);
+            band(s, O, -4.0, -8.0, 8.0);
+            band(s, R, 6.0, -4.0, 10.0);
+            mids(s, 350.0, 16.0);
+            grain(s, 10.0, 18.0, 35.0);
+        }
+    ),
+    preset!(
+        "Konica VX 200",
+        ColorFilm,
+        "Inspiré de Konica VX 200 : couleurs franches, verts jaunes, magentas tirés.",
+        |s| {
+            base(s, 10.0, 10.0, 8.0);
+            band(s, G, -14.0, 8.0, 0.0);
+            band(s, M, 0.0, 16.0, 0.0);
+            fade(s, 8.0, 248.0);
+            cross(s, [2.0, 3.0, 2.0], [-3.0, 0.0, 3.0], [6.0, 2.0, -2.0]);
+            grain(s, 20.0, 26.0, 50.0);
+        }
+    ),
+    preset!(
+        "E100VS",
+        ColorFilm,
+        "Inspiré de Kodak E100VS : diapositive très saturée, rouges éclatants, noirs denses.",
+        |s| {
+            base(s, 26.0, 28.0, 10.0);
+            tones(s, -10.0, -12.0, 0.0, -12.0);
+            s_curve(s, 0.0, 12.0, 254.0);
+            band(s, R, 0.0, 16.0, -4.0);
+            band(s, B, 0.0, 10.0, -8.0);
+            grain(s, 6.0, 14.0, 30.0);
+        }
+    ),
+    preset!(
+        "Phoenix 200",
+        ColorFilm,
+        "Inspiré de Harman Phoenix 200 : nouvelle émulsion capricieuse, contraste fort, halos orangés.",
+        |s| {
+            base(s, 28.0, -6.0, 10.0);
+            tones(s, -20.0, -4.0, 0.0, -6.0);
+            split(s, 200.0, 14.0, 25.0, 30.0);
+            cross(s, [6.0, 10.0, 12.0], [0.0, 0.0, 0.0], [-4.0, -8.0, -12.0]);
+            grain(s, 34.0, 34.0, 62.0);
+        }
+    ),
+    preset!(
+        "Lomochrome Purple",
+        ColorFilm,
+        "Inspiré de Lomochrome Purple : les verts deviennent violets, les bleus verdissent.",
+        |s| {
+            base(s, 10.0, 6.0, 0.0);
+            band(s, G, 100.0, 10.0, -10.0);
+            band(s, Y, 60.0, -20.0, 0.0);
+            band(s, A, -60.0, 0.0, 0.0);
+            band(s, B, -50.0, -10.0, 0.0);
+            fade(s, 10.0, 246.0);
+            grain(s, 24.0, 28.0, 50.0);
+        }
+    ),
+    preset!(
+        "Lomochrome Metropolis",
+        ColorFilm,
+        "Inspiré de Lomochrome Metropolis : couleurs éteintes, contraste dur, rouges et jaunes préservés.",
+        |s| {
+            base(s, 30.0, -45.0, 0.0);
+            band(s, R, 0.0, 30.0, 0.0);
+            band(s, Y, 0.0, 20.0, 0.0);
+            band(s, B, 0.0, -30.0, 0.0);
+            s_curve(s, 4.0, 12.0, 248.0);
+            grain(s, 22.0, 26.0, 55.0);
+        }
+    ),
+    preset!(
+        "Aerochrome",
+        ColorFilm,
+        "Inspiré de Kodak Aerochrome : l'infrarouge couleur, feuillages rouges et ciels profonds.",
+        |s| {
+            base(s, 14.0, 10.0, 0.0);
+            band(s, G, -100.0, 40.0, 10.0);
+            band(s, Y, -60.0, 20.0, 0.0);
+            band(s, B, 20.0, 20.0, -20.0);
+            band(s, A, 30.0, 10.0, -10.0);
+            grain(s, 18.0, 24.0, 45.0);
+        }
+    ),
+    preset!(
+        "EXR 200T",
+        Cinema,
+        "Inspiré d'Eastman EXR 200T : négatif cinéma des années 90, tungstène, ombres bleutées et peaux chaudes.",
+        |s| {
+            base(s, 10.0, -10.0, 6.0);
+            tones(s, -10.0, 4.0, 0.0, 0.0);
+            split(s, 215.0, 40.0, 40.0, 26.0);
+            fade(s, 14.0, 244.0);
+            cross(s, [-8.0, -2.0, 6.0], [0.0, 0.0, 0.0], [12.0, 6.0, -8.0]);
+            grain(s, 22.0, 26.0, 45.0);
+        }
+    ),
+    preset!(
+        "Eterna 400T",
+        Cinema,
+        "Inspiré de Fujifilm Eterna 400T : tungstène sensible, couleurs sobres, ombres cyan.",
+        |s| {
+            base(s, -10.0, -30.0, 4.0);
+            tones(s, -8.0, 10.0, 0.0, 0.0);
+            fade(s, 18.0, 240.0);
+            split(s, 185.0, 34.0, 50.0, 10.0);
+            grain(s, 26.0, 28.0, 50.0);
+        }
+    ),
+    preset!(
+        "F-64D",
+        Cinema,
+        "Inspiré de Fujifilm F-64D : négatif lumière du jour très fin, verts profonds, rendu limpide.",
+        |s| {
+            base(s, 8.0, 4.0, 10.0);
+            band(s, G, 4.0, 14.0, -8.0);
+            band(s, A, -6.0, 8.0, -4.0);
+            s_curve(s, 6.0, 5.0, 250.0);
+            cross(s, [-2.0, -2.0, 0.0], [3.0, 2.0, 0.0], [0.0, 0.0, -2.0]);
+            grain(s, 6.0, 14.0, 30.0);
+        }
+    ),
+    preset!(
+        "XTR 250",
+        Cinema,
+        "Inspiré d'Agfa XTR 250 : négatif cinéma européen, tons chauds et doux, verts olive.",
+        |s| {
+            base(s, -8.0, -10.0, 6.0);
+            band(s, G, -24.0, -24.0, -6.0);
+            fade(s, 16.0, 242.0);
+            mids(s, 50.0, 18.0);
+            grain(s, 20.0, 26.0, 45.0);
+        }
+    ),
+    preset!(
+        "Super 16",
+        Cinema,
+        "Le 16 mm des séries et des documentaires : grain épais, contraste doux, couleurs un peu passées.",
+        |s| {
+            base(s, -6.0, -14.0, 4.0);
+            fade(s, 20.0, 240.0);
+            cross(s, [2.0, 4.0, 4.0], [2.0, 2.0, 0.0], [-2.0, -6.0, -8.0]);
+            vignette(s, -18.0, 40.0);
+            grain(s, 48.0, 45.0, 70.0);
+        }
+    ),
+    preset!(
+        "70 mm",
+        Cinema,
+        "Le grand format des épopées : image limpide, couleurs riches, grain invisible.",
+        |s| {
+            base(s, 10.0, 8.0, 12.0);
+            tones(s, -16.0, 8.0, 0.0, -4.0);
+            s_curve(s, 4.0, 7.0, 250.0);
+            split(s, 205.0, 8.0, 40.0, 10.0);
+        }
+    ),
+    preset!(
+        "Néon",
+        Cinema,
+        "La ville la nuit : magentas et cyans électriques, noirs profonds.",
+        |s| {
+            base(s, 22.0, 16.0, 10.0);
+            tones(s, 0.0, -10.0, 0.0, -14.0);
+            split(s, 280.0, 36.0, 185.0, 30.0);
+            band(s, M, 0.0, 30.0, 0.0);
+            band(s, A, 0.0, 30.0, 0.0);
+            vignette(s, -20.0, 45.0);
+        }
+    ),
+    preset!(
+        "Épouvante",
+        Cinema,
+        "Le film d'horreur : couleurs vidées, verts malades, ombres lourdes.",
+        |s| {
+            base(s, 18.0, -50.0, 0.0);
+            tones(s, -10.0, -16.0, 0.0, -10.0);
+            tint(s, 110.0, 12.0);
+            s_curve(s, 4.0, 10.0, 240.0);
+            vignette(s, -35.0, 35.0);
+            grain(s, 16.0, 24.0, 45.0);
+        }
+    ),
+    preset!(
+        "Romance",
+        Cinema,
+        "La comédie romantique : peaux lumineuses, pastels chauds, ombres ouvertes.",
+        |s| {
+            base(s, -12.0, -6.0, 10.0);
+            tones(s, -14.0, 34.0, 6.0, 0.0);
+            fade(s, 22.0, 248.0);
+            split(s, 330.0, 16.0, 40.0, 24.0);
+            band(s, O, 0.0, -6.0, 10.0);
+        }
+    ),
+    preset!(
+        "Documentaire",
+        Cinema,
+        "L'image vraie du reportage : couleurs justes mais retenues, contraste net.",
+        |s| {
+            base(s, 12.0, -24.0, 0.0);
+            s.clarity = 12.0;
+            tones(s, -10.0, 6.0, 0.0, -4.0);
+            cross(s, [0.0, 0.0, 0.0], [2.0, 1.0, 0.0], [2.0, 0.0, -2.0]);
+            grain(s, 12.0, 20.0, 40.0);
+        }
+    ),
+    preset!(
+        "Été indien",
+        Cinema,
+        "L'automne doux des films américains : orangés dorés, ciels voilés.",
+        |s| {
+            base(s, 4.0, 6.0, 8.0);
+            band(s, G, -24.0, -20.0, 0.0);
+            band(s, O, 0.0, 16.0, 4.0);
+            band(s, B, 0.0, -24.0, 8.0);
+            tint(s, 35.0, 16.0);
+            fade(s, 12.0, 244.0);
+        }
+    ),
+    preset!(
+        "Thriller urbain",
+        Cinema,
+        "Le polar d'aujourd'hui : verts et cyans froids, peaux ternes, ombres denses.",
+        |s| {
+            base(s, 16.0, -26.0, 0.0);
+            tones(s, -12.0, -8.0, 0.0, -8.0);
+            split(s, 170.0, 26.0, 150.0, 10.0);
+            s_curve(s, 2.0, 9.0, 246.0);
+            grain(s, 10.0, 18.0, 40.0);
+        }
+    ),
+    preset!(
+        "Delta 400",
+        BlackAndWhiteFilm,
+        "Inspiré d'Ilford Delta 400 : noir et blanc moderne à grain fin, gris riches.",
+        |s| {
+            mono(s);
+            base(s, 8.0, 0.0, 0.0);
+            tones(s, -10.0, 8.0, 0.0, 0.0);
+            band(s, B, 0.0, 0.0, 6.0);
+            grain(s, 16.0, 20.0, 40.0);
+        }
+    ),
+    preset!(
+        "Kentmere 400",
+        BlackAndWhiteFilm,
+        "Inspiré de Kentmere 400 : noir et blanc économique, contraste doux, grain présent.",
+        |s| {
+            mono(s);
+            base(s, -4.0, 0.0, 0.0);
+            band(s, G, 0.0, 0.0, 24.0);
+            band(s, Y, 0.0, 0.0, 24.0);
+            fade(s, 10.0, 240.0);
+            grain(s, 34.0, 32.0, 60.0);
+        }
+    ),
+    preset!(
+        "SFX 200",
+        BlackAndWhiteFilm,
+        "Inspiré d'Ilford SFX 200 : sensible au rouge lointain, ciels sombres et feuillages clairs.",
+        |s| {
+            mono(s);
+            base(s, 20.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, 30.0);
+            band(s, G, 0.0, 0.0, 30.0);
+            band(s, B, 0.0, 0.0, -50.0);
+            band(s, A, 0.0, 0.0, -35.0);
+            grain(s, 18.0, 22.0, 45.0);
+        }
+    ),
+    preset!(
+        "Fomapan 100",
+        BlackAndWhiteFilm,
+        "Inspiré de Fomapan 100 : noir et blanc tchèque au charme ancien, hautes lumières douces.",
+        |s| {
+            mono(s);
+            base(s, -2.0, 0.0, 0.0);
+            tones(s, -36.0, 0.0, -20.0, 0.0);
+            band(s, B, 0.0, 0.0, 24.0);
+            band(s, R, 0.0, 0.0, -10.0);
+            grain(s, 14.0, 18.0, 35.0);
+        }
+    ),
+    preset!(
+        "RPX 25",
+        BlackAndWhiteFilm,
+        "Inspiré de Rollei RPX 25 : très lent, piqué extrême, noirs profonds.",
+        |s| {
+            mono(s);
+            base(s, 22.0, 0.0, 0.0);
+            s.texture = 20.0;
+            tones(s, 10.0, -16.0, 6.0, -18.0);
+            band(s, R, 0.0, 0.0, -10.0);
+            band(s, B, 0.0, 0.0, 10.0);
+            grain(s, 4.0, 10.0, 25.0);
+        }
+    ),
+    preset!(
+        "Pancro 400",
+        BlackAndWhiteFilm,
+        "Inspiré de Bergger Pancro 400 : deux émulsions, latitude immense, gris veloutés.",
+        |s| {
+            mono(s);
+            base(s, -22.0, 0.0, 0.0);
+            tones(s, -30.0, 30.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, 24.0);
+            band(s, O, 0.0, 0.0, 16.0);
+            grain(s, 24.0, 28.0, 50.0);
+        }
+    ),
+    preset!(
+        "CHS 100 II",
+        BlackAndWhiteFilm,
+        "Inspiré d'Adox CHS 100 II : émulsion d'autrefois, orthopanchromatique, contraste charnu.",
+        |s| {
+            mono(s);
+            base(s, 14.0, 0.0, 0.0);
+            band(s, R, 0.0, 0.0, -24.0);
+            band(s, O, 0.0, 0.0, -14.0);
+            band(s, B, 0.0, 0.0, 22.0);
+            fade(s, 8.0, 248.0);
+            grain(s, 12.0, 18.0, 40.0);
+        }
+    ),
+    preset!(
+        "T-Max P3200",
+        BlackAndWhiteFilm,
+        "Inspiré de Kodak T-Max P3200 : la nuit en noir et blanc, grain énorme, noirs bouchés.",
+        |s| {
+            mono(s);
+            base(s, 34.0, 0.0, 0.0);
+            fade(s, 16.0, 240.0);
+            band(s, B, 0.0, 0.0, -15.0);
+            grain(s, 60.0, 50.0, 80.0);
+        }
+    ),
+    preset!(
+        "Pan 400",
+        BlackAndWhiteFilm,
+        "Inspiré d'Ilford Pan 400 : noir et blanc simple et franc, ciels légèrement assombris.",
+        |s| {
+            mono(s);
+            base(s, 12.0, 0.0, 0.0);
+            band(s, B, 0.0, 0.0, -20.0);
+            band(s, A, 0.0, 0.0, -10.0);
+            fade(s, 6.0, 250.0);
+            grain(s, 26.0, 28.0, 55.0);
+        }
+    ),
+    preset!(
+        "Verichrome Pan",
+        BlackAndWhiteFilm,
+        "Inspiré de Kodak Verichrome Pan : le noir et blanc des familles, gris tendres et larges.",
+        |s| {
+            mono(s);
+            base(s, -16.0, 0.0, 0.0);
+            tones(s, -16.0, 30.0, 0.0, 0.0);
+            fade(s, 30.0, 236.0);
+            grain(s, 12.0, 20.0, 35.0);
+        }
+    ),
+    preset!(
+        "Polaroid i-Type",
+        Instant,
+        "L'instantané d'aujourd'hui : couleurs franches mais douces, blancs crème.",
+        |s| {
+            base(s, -4.0, 4.0, 6.0);
+            fade(s, 22.0, 238.0);
+            split(s, 190.0, 10.0, 50.0, 12.0);
+            vignette(s, -10.0, 50.0);
+            grain(s, 8.0, 22.0, 35.0);
+        }
+    ),
+    preset!(
+        "Polaroid Spectra",
+        Instant,
+        "Le grand Polaroid des années 90 : magentas, ombres bleutées, contraste mou.",
+        |s| {
+            base(s, -14.0, -4.0, 0.0);
+            fade(s, 28.0, 234.0);
+            split(s, 230.0, 18.0, 320.0, 12.0);
+            vignette(s, -20.0, 45.0);
+            grain(s, 10.0, 24.0, 40.0);
+        }
+    ),
+    preset!(
+        "Instax Wide",
+        Instant,
+        "L'instantané large de Fujifilm : net, frais, verts et bleus lumineux.",
+        |s| {
+            base(s, 10.0, 10.0, 12.0);
+            tones(s, -16.0, 16.0, 12.0, 0.0);
+            fade(s, 12.0, 250.0);
+            tint(s, 180.0, 14.0);
+            band(s, G, 0.0, 10.0, 8.0);
+        }
+    ),
+    preset!(
+        "Impossible Project",
+        Instant,
+        "Les premiers films Polaroid relancés : teintes imprévisibles, sépia verdâtre, bords sombres.",
+        |s| {
+            base(s, -10.0, -40.0, 0.0);
+            fade(s, 30.0, 228.0);
+            tint(s, 75.0, 22.0);
+            vignette(s, -40.0, 30.0);
+            grain(s, 16.0, 28.0, 50.0);
+        }
+    ),
+    preset!(
+        "Instamatic",
+        Instant,
+        "L'appareil de poche Kodak : petit format 126, couleurs saturées et virées au rouge.",
+        |s| {
+            base(s, 8.0, 16.0, 0.0);
+            fade(s, 18.0, 236.0);
+            tint(s, 10.0, 14.0);
+            vignette(s, -30.0, 30.0);
+            grain(s, 30.0, 34.0, 60.0);
+        }
+    ),
+    preset!(
+        "Polaroid 669",
+        Instant,
+        "Le Polaroid à décoller : tons froids et pastel, ombres bleu-vert.",
+        |s| {
+            base(s, -16.0, -24.0, 0.0);
+            fade(s, 26.0, 240.0);
+            split(s, 175.0, 30.0, 200.0, 14.0);
+            band(s, O, 0.0, -10.0, 6.0);
+            grain(s, 8.0, 20.0, 35.0);
+        }
+    ),
+    preset!(
+        "Pastel",
+        Creative,
+        "Doux et lumineux : couleurs poudrées, aucun noir profond.",
+        |s| {
+            base(s, -24.0, -10.0, 12.0);
+            tones(s, -10.0, 30.0, 10.0, 0.0);
+            fade(s, 36.0, 244.0);
+            split(s, 330.0, 12.0, 60.0, 12.0);
+        }
+    ),
+    preset!(
+        "Automne",
+        Creative,
+        "Les couleurs de l'automne exaltées : oranges et rouges profonds, verts éteints.",
+        |s| {
+            base(s, 10.0, 6.0, 10.0);
+            band(s, G, -50.0, -40.0, -10.0);
+            band(s, Y, -20.0, 10.0, 0.0);
+            band(s, O, 0.0, 22.0, -4.0);
+            split(s, 30.0, 18.0, 40.0, 22.0);
+        }
+    ),
+    preset!(
+        "Hiver",
+        Creative,
+        "Lumière froide et claire : bleus glacés, blancs nets, peu de couleur.",
+        |s| {
+            base(s, 6.0, -30.0, 0.0);
+            tones(s, -10.0, 10.0, 12.0, 0.0);
+            tint(s, 210.0, 14.0);
+            band(s, B, 0.0, 10.0, 10.0);
+        }
+    ),
+    preset!(
+        "Printemps",
+        Creative,
+        "Frais et tendre : verts jeunes, roses clairs, lumière douce.",
+        |s| {
+            base(s, -14.0, 6.0, 20.0);
+            tones(s, -18.0, 24.0, 10.0, 0.0);
+            fade(s, 14.0, 250.0);
+            band(s, G, -10.0, 12.0, 10.0);
+            band(s, M, 0.0, 10.0, 10.0);
+            mids(s, 330.0, 12.0);
+        }
+    ),
+    preset!(
+        "Brume",
+        Creative,
+        "Une image voilée de brume : contraste effacé, lointains bleutés.",
+        |s| {
+            base(s, -30.0, -18.0, 0.0);
+            s.dehaze = -35.0;
+            tint(s, 205.0, 16.0);
+            fade(s, 30.0, 236.0);
+        }
+    ),
+    preset!(
+        "Contre-jour",
+        Creative,
+        "Le soleil dans l'objectif : hautes lumières dorées, ombres ouvertes et chaudes.",
+        |s| {
+            base(s, -10.0, 0.0, 12.0);
+            tones(s, -36.0, 36.0, 0.0, 8.0);
+            fade(s, 16.0, 246.0);
+            split(s, 30.0, 24.0, 45.0, 34.0);
+            s.dehaze = -10.0;
+        }
+    ),
+    preset!(
+        "Bichromie",
+        Creative,
+        "Deux couleurs seulement : ombres bleu nuit, lumières ambrées.",
+        |s| {
+            base(s, 14.0, -80.0, 0.0);
+            split(s, 225.0, 45.0, 40.0, 40.0);
+            s_curve(s, 4.0, 8.0, 250.0);
+        }
+    ),
 ];
 
 #[cfg(test)]
@@ -1800,11 +2428,11 @@ mod tests {
 
     #[test]
     fn a_hundred_presets_with_unique_names_in_every_family() {
-        assert_eq!(PRESETS.len(), 100);
+        assert_eq!(PRESETS.len(), 150);
         let mut names: Vec<&str> = PRESETS.iter().map(|p| p.name).collect();
         names.sort_unstable();
         names.dedup();
-        assert_eq!(names.len(), 100, "noms en double");
+        assert_eq!(names.len(), 150, "noms en double");
         for g in Group::ALL {
             assert!(PRESETS.iter().any(|p| p.group == g), "{}", g.name());
         }

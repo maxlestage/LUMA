@@ -76,9 +76,9 @@ fr = Télécharger · 14 jours d'essai
 en = Download · 14‑day free trial
 es = Descargar · 14 días de prueba
 
-fr = 100 films
-en = 100 films
-es = 100 películas
+fr = 150 films
+en = 150 films
+es = 150 películas
 
 fr = Défiler
 en = Scroll
@@ -178,9 +178,9 @@ fr = LÜMA — L'éditeur photo qui développe la lumière
 en = LÜMA — The photo editor that develops light
 es = LÜMA — El editor de fotos que revela la luz
 
-fr = LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 100 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone et iPad. 14 jours d'essai.
+fr = LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 150 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone et iPad. 14 jours d'essai.
 en = LÜMA, the professional photo editor: your RAW files developed with precision, 100 film looks, your own film stocks, masks, a fast photo library. On Mac, iPhone and iPad. 14‑day free trial.
-es = LÜMA, el editor de fotos profesional: tus RAW revelados con precisión, 100 películas, tus propios carretes, máscaras y una fototeca rápida. En Mac, iPhone y iPad. 14 días de prueba.
+es = LÜMA, el editor de fotos profesional: tus RAW revelados con precisión, 150 películas, tus propios carretes, máscaras y una fototeca rápida. En Mac, iPhone y iPad. 14 días de prueba.
 
 fr = Éditeur photo · Mac, iPhone et iPad
 en = Photo editor · Mac, iPhone and iPad
@@ -616,9 +616,9 @@ fr = Le développement RAW complet, sur le GPU
 en = Full RAW development, on the GPU
 es = El revelado RAW completo, en la GPU
 
-fr = 100 films, vos préréglages, et vos pellicules mesurées
+fr = 150 films, vos préréglages, et vos pellicules mesurées
 en = 100 film looks, your presets, and your measured film stocks
-es = 100 películas, tus ajustes preestablecidos y tus carretes medidos
+es = 150 películas, tus ajustes preestablecidos y tus carretes medidos
 
 fr = Masques, films empilés, recadrage et géométrie
 en = Masks, stacked film looks, cropping and geometry

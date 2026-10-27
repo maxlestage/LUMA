@@ -310,6 +310,16 @@ The professional photo library, step by step.
 - **Films in collapsible families**: colour film, black and white, cinema, instant,
   my presets, my films; each title tells how many films the family holds, and only the
   applied film's family opens at first.
+- **150 films**: 50 more. Colour film (Kodacolor 200, Portra 160VC and 400VC,
+  Ektachrome 64, Fujicolor 100 Industrial, Superia Venus 800, Sensia 100, Precisa 100,
+  Agfa Portrait 160, Konica VX 200, E100VS, Phoenix 200, Lomochrome Purple and
+  Metropolis, Aerochrome), cinema (EXR 200T, Eterna 400T, F-64D, XTR 250, Super 16,
+  70 mm, Neon, Horror, Romance, Documentary, Indian Summer, Urban Thriller), black and
+  white (Delta 400, Kentmere 400, SFX 200, Fomapan 100, RPX 25, Pancro 400, CHS 100 II,
+  T-Max P3200, Pan 400, Verichrome Pan), instant (Polaroid i-Type, Spectra and 669,
+  Instax Wide, Impossible Project, Instamatic) and creative (Pastel, Autumn, Winter,
+  Spring, Mist, Backlight, Duotone). All checked on the chart like the others:
+  distinct, no crushed image, neutral black and white, same renders on the GPU.
 
 ## 0.2.0 — October 2026
 
