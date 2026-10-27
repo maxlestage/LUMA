@@ -1933,7 +1933,7 @@ fn slideshow_and_photo_book() {
     let all = s.studio().visible().len();
     s.keys(&[(NONE, Key::G)]);
     s.harness
-        .get_all_by_label("Livre et diaporama…")
+        .get_all_by_label("Livre, diaporama, galerie…")
         .next()
         .unwrap()
         .click();
@@ -1980,4 +1980,14 @@ fn slideshow_and_photo_book() {
     let page = std::fs::read_to_string(show.join("index.html")).expect("le diaporama est écrit");
     assert_eq!(page.matches("\"photos/").count(), all);
     assert!(show.join(format!("photos/{all:03}.jpg")).is_file());
+    // La galerie web : la page, les photos et les vignettes.
+    s.studio().gallery.size = 400;
+    s.studio().gallery.title = "Corpus".into();
+    let site = dir.join("Galerie");
+    s.studio().export_gallery(site.clone());
+    s.wait();
+    let page = std::fs::read_to_string(site.join("index.html")).expect("la galerie est écrite");
+    assert!(page.contains("<h1>Corpus</h1>"));
+    assert_eq!(page.matches("loading=\"lazy\"").count(), all);
+    assert!(site.join(format!("vignettes/{all:03}.jpg")).is_file());
 }

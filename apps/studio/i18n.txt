@@ -3653,17 +3653,17 @@ es = este perfil no convierte en ambos sentidos
 
 # ----- Le livre photo et le diaporama -----
 
-fr = Livre et diaporama…
-en = Book and slideshow…
-es = Libro y presentación…
+fr = Livre, diaporama, galerie…
+en = Book, slideshow, gallery…
+es = Libro, presentación, galería…
 
-fr = Un diaporama (dans l'app ou exporté) et un livre photo en PDF
-en = A slideshow (in the app or exported) and a photo book as a PDF
-es = Una presentación (en la app o exportada) y un libro de fotos en PDF
+fr = Un diaporama (dans l'app ou exporté), un livre photo en PDF et une galerie web
+en = A slideshow (in the app or exported), a photo book as a PDF and a web gallery
+es = Una presentación (en la app o exportada), un libro de fotos en PDF y una galería web
 
-fr = Livre et diaporama : {n} photos
-en = Book and slideshow: {n} photos
-es = Libro y presentación: {n} fotos
+fr = Livre, diaporama et galerie : {n} photos
+en = Book, slideshow and gallery: {n} photos
+es = Libro, presentación y galería: {n} fotos
 
 fr = Diaporama
 en = Slideshow
@@ -3730,3 +3730,37 @@ es = Optimizado para la web
 fr = Couleur à demi-résolution (4:2:0) et codage calculé pour chaque image : de 9 à 29 % plus léger, que tout navigateur lit
 en = Half-resolution color (4:2:0) and coding computed for each image: 9 to 29% lighter, read by every browser
 es = Color a media resolución (4:2:0) y codificación calculada para cada imagen: de un 9 a un 29 % más ligero, legible por cualquier navegador
+
+# ----- La galerie web -----
+
+fr = Galerie web
+en = Web gallery
+es = Galería web
+
+fr = Description
+en = Description
+es = Descripción
+
+fr = La légende de chaque photo (son titre, sinon son nom)
+en = Each photo's caption (its title, otherwise its name)
+es = El pie de cada foto (su título o, si no, su nombre)
+
+fr = Exporter la galerie…
+en = Export the gallery…
+es = Exportar la galería…
+
+fr = Une page web et ses photos, allégées pour le web : à mettre en ligne telle quelle
+en = A web page and its photos, optimized for the web: to put online as is
+es = Una página web y sus fotos, optimizadas para la web: para publicar tal cual
+
+fr = Exporter la galerie dans…
+en = Export the gallery to…
+es = Exportar la galería en…
+
+fr = Galerie
+en = Gallery
+es = Galería
+
+fr = Galerie prête : {n} photos, {file} (à mettre en ligne telle quelle)
+en = Gallery ready: {n} photos, {file} (to put online as is)
+es = Galería lista: {n} fotos, {file} (para publicar tal cual)

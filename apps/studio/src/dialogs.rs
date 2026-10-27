@@ -254,3 +254,15 @@ pub fn slideshow_dir(name: &str) -> Option<PathBuf> {
 pub fn slideshow_dir(name: &str) -> Option<PathBuf> {
     Some(documents()?.join("Diaporamas").join(name))
 }
+
+/// Le dossier où exporter une galerie web (créé dans le dossier choisi). Sur iPhone et
+/// iPad : `Documents/Galeries/<nom>`.
+#[cfg(not(target_os = "ios"))]
+pub fn gallery_dir(name: &str) -> Option<PathBuf> {
+    Some(pick_folder(tr("Exporter la galerie dans…"))?.join(name))
+}
+
+#[cfg(target_os = "ios")]
+pub fn gallery_dir(name: &str) -> Option<PathBuf> {
+    Some(documents()?.join("Galeries").join(name))
+}
