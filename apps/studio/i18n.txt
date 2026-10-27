@@ -3394,3 +3394,37 @@ es = V
 fr = B|mesure
 en = B
 es = A
+
+# ----- La carte -----
+
+fr = Carte
+en = Map
+es = Mapa
+
+fr = Cadrer sur les photos
+en = Fit to photos
+es = Encuadrar las fotos
+
+fr = Les photos du film à l'endroit de leur prise de vue (position GPS)
+en = The filmstrip's photos where they were taken (GPS position)
+es = Las fotos de la tira donde se tomaron (posición GPS)
+
+fr = {n} photos à cet endroit
+en = {n} photos at this place
+es = {n} fotos en este lugar
+
+fr = {n} photos sur la carte, {m} sans position
+en = {n} photos on the map, {m} without a position
+es = {n} fotos en el mapa, {m} sin posición
+
+fr = Fond de carte en ligne
+en = Online base map
+es = Mapa base en línea
+
+fr = Télécharge les tuiles libres de la carte et les garde sur l'appareil ; sinon, celles déjà gardées
+en = Downloads the map's open tiles and keeps them on the device; otherwise, only those already kept
+es = Descarga los mosaicos libres del mapa y los guarda en el dispositivo; si no, solo los ya guardados
+
+fr = Aucune photo de ce film n'a de position GPS.
+en = No photo in this filmstrip has a GPS position.
+es = Ninguna foto de esta tira tiene posición GPS.
