@@ -17,7 +17,8 @@ objc2-core-foundation = { version = "0.3", default-features = false, features = 
 objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "CGImage", "CGColorSpace", "CGContext", "CGBitmapContext", "objc2"] }
 objc2-image-io = { version = "0.3", default-features = false, features = ["std", "CGImageSource", "CGImageProperties", "objc2-core-graphics"] }
 
-# La prise de vue en connexion sur Mac (ImageCaptureCore).
+# La prise de vue en connexion sur Mac (ImageCaptureCore) ; le téléchargement des
+# tuiles de la carte (NSData, NSURL).
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSData", "NSDictionary", "NSEnumerator", "NSError", "NSObject", "NSString", "NSURL", "block2"] }
@@ -27,7 +28,7 @@ block2 = { version = "0.6", default-features = false, features = ["std"] }
 # L'App Store sur iPhone et iPad (StoreKit) : les abonnements de LÜMA Premium.
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSDate", "NSDecimalNumber", "NSEnumerator", "NSError", "NSFormatter", "NSItemProvider", "NSLocale", "NSNumberFormatter", "NSObject", "NSProgress", "NSSet", "NSString", "NSURL", "NSValue", "block2"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSData", "NSDate", "NSDecimalNumber", "NSEnumerator", "NSError", "NSFormatter", "NSItemProvider", "NSLocale", "NSNumberFormatter", "NSObject", "NSProgress", "NSSet", "NSString", "NSURL", "NSValue", "block2"] }
 objc2-store-kit = { version = "0.3", default-features = false, features = ["std", "SKError", "SKPayment", "SKPaymentQueue", "SKPaymentTransaction", "SKProduct", "SKProductsRequest", "SKRequest"] }
 # Le sélecteur de Photos (PHPickerViewController) et la fenêtre qui le présente.
 objc2-photos-ui = { version = "0.3", default-features = false, features = ["std", "PHPicker"] }
