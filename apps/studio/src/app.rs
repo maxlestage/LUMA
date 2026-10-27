@@ -538,6 +538,10 @@ pub struct Studio {
     compare: Option<Compare>,
     /// Les rafales et séries d'exposition du film, repliées derrière leur première photo.
     stacking: bool,
+    /// L'empreinte de chaque photo, prise sur sa vignette (doublons).
+    prints: HashMap<PathBuf, u64>,
+    /// La vue des doublons : leurs groupes, à la place du film.
+    duplicates: Option<Vec<Vec<PathBuf>>>,
     stacks: Vec<luma_library::stacks::Stack>,
     /// La pile de chaque photo (sa place dans `stacks`).
     stack_of: HashMap<PathBuf, usize>,
@@ -776,6 +780,8 @@ impl Studio {
             zoom: false,
             compare: None,
             stacking: true,
+            prints: HashMap::new(),
+            duplicates: None,
             stacks: Vec::new(),
             stack_of: HashMap::new(),
             unfolded: Default::default(),
@@ -1239,6 +1245,14 @@ impl Studio {
     }
 
     pub fn visible(&self) -> Vec<usize> {
+        if let Some(groups) = &self.duplicates {
+            // Groupe par groupe, les doublons côte à côte.
+            return groups
+                .iter()
+                .flatten()
+                .filter_map(|p| self.folder.iter().position(|f| f == p))
+                .collect();
+        }
         (0..self.folder.len())
             .filter(|i| {
                 let m = self.meta.get(&self.folder[*i]).cloned().unwrap_or_default();
@@ -1299,6 +1313,34 @@ impl Studio {
                 self.set_tool(Tool::Merge);
             }
         });
+    }
+
+    /// Montre les doublons du film (la même image, à quelques bits d'empreinte près),
+    /// groupe par groupe ; rend le nombre de groupes.
+    pub fn show_duplicates(&mut self) -> usize {
+        let prints: Vec<(PathBuf, u64)> = self
+            .folder
+            .iter()
+            .filter_map(|p| Some((p.clone(), *self.prints.get(p)?)))
+            .collect();
+        let groups = luma_library::fingerprint::duplicates(&prints);
+        let n = groups.len();
+        let photos: usize = groups.iter().map(Vec::len).sum();
+        self.status = if n == 0 {
+            tr("Aucun doublon dans ce dossier").into()
+        } else {
+            trf(
+                "{groups} groupe(s) de doublons, {photos} photos",
+                &[("groups", &n), ("photos", &photos)],
+            )
+        };
+        self.duplicates = (n > 0).then_some(groups);
+        n
+    }
+
+    /// Revient au film entier.
+    pub fn hide_duplicates(&mut self) {
+        self.duplicates = None;
     }
 
     /// Une photo cachée dans une pile repliée (toutes sauf la première).
@@ -1461,13 +1503,18 @@ impl Studio {
             .unwrap_or_default()
     }
 
-    fn set_meta(&mut self, f: impl FnOnce(&mut Meta)) {
-        let Some(path) = self.current_path().map(Path::to_path_buf) else {
-            return;
+    /// Note, drapeau ou libellé : à toutes les photos choisies s'il y en a plusieurs,
+    /// sinon à la photo ouverte.
+    fn set_meta(&mut self, f: impl Fn(&mut Meta)) {
+        let paths = if self.selected.len() >= 2 {
+            self.keyword_targets()
+        } else {
+            self.current_path()
+                .map(Path::to_path_buf)
+                .into_iter()
+                .collect()
         };
-        let meta = self.meta.entry(path).or_default();
-        f(meta);
-        self.touch();
+        self.edit_meta(&paths, f);
     }
 
     /// Prête : photo chargée et dernier rendu affiché.
@@ -1602,6 +1649,11 @@ impl Studio {
                     }
                 }
                 Event::Thumbnail { path, size, rgba } => {
+                    if let Some(print) =
+                        luma_library::fingerprint::fingerprint(&rgba, size[0], size[1])
+                    {
+                        self.prints.insert(path.clone(), print);
+                    }
                     let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
                     let name = format!("vignette {}", path.display());
                     self.thumbs
@@ -4626,6 +4678,21 @@ impl Studio {
             .color(theme::DIM),
         );
         ui.add_space(14.0);
+        ui.horizontal_wrapped(|ui| {
+            if self.duplicates.is_some() {
+                if ui.button(tr("Tout afficher")).clicked() {
+                    self.hide_duplicates();
+                }
+            } else if ui
+                .button(tr("Chercher les doublons"))
+                .on_hover_text(tr(
+                    "La même image dans plusieurs fichiers : copiée, exportée à une autre taille, recompressée",
+                ))
+                .clicked()
+            {
+                self.show_duplicates();
+            }
+        });
         let mut stacking = self.stacking;
         if ui
             .checkbox(&mut stacking, tr("Empiler les rafales et les séries (S)"))
