@@ -455,11 +455,26 @@ struct Compare {
     loupe: bool,
 }
 
-/// Un PDF d'impression en cours de fabrication, en arrière‑plan.
+/// Une sortie en cours de fabrication, en arrière‑plan : un PDF d'impression, un livre
+/// ou un diaporama.
 struct Printing {
     done: std::sync::mpsc::Receiver<Result<(PathBuf, usize), String>>,
     placed: Arc<std::sync::atomic::AtomicUsize>,
     total: usize,
+    output: Output,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Output {
+    Print,
+    Book,
+    Slideshow,
+}
+
+/// Le diaporama dans l'app : depuis quand la photo est montrée, et la pause.
+struct Playing {
+    since: std::time::Instant,
+    paused: bool,
 }
 
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
@@ -541,6 +556,12 @@ pub struct Studio {
     pub print_convert: bool,
     /// Le PDF en cours : son résultat, les photos posées, leur nombre.
     printing: Option<Printing>,
+    outputs_open: bool,
+    /// Le diaporama : ses réglages (pour l'app comme pour l'export), et la lecture.
+    pub show: luma_render::slideshow::Slideshow,
+    playing: Option<Playing>,
+    /// Le livre photo.
+    pub book: luma_render::book::Book,
     rename_template: String,
     /// Le nom du prochain instantané, en cours de saisie.
     snapshot_name: String,
@@ -865,6 +886,10 @@ impl Studio {
             print_layout: Default::default(),
             print_convert: true,
             printing: None,
+            outputs_open: false,
+            show: Default::default(),
+            playing: None,
+            book: Default::default(),
             rename_template: "{date}_{séquence}".into(),
             snapshot_name: String::new(),
             rename_preview: None,
@@ -1707,6 +1732,7 @@ impl Studio {
             done,
             placed,
             total,
+            output: Output::Print,
         });
     }
 
@@ -1717,13 +1743,26 @@ impl Studio {
         };
         ctx.request_repaint_after(std::time::Duration::from_millis(200));
         match p.done.try_recv() {
-            Ok(Ok((path, pages))) => {
-                self.status = trf(
-                    "PDF prêt : {pages} page(s), {file}",
-                    &[("pages", &pages), ("file", &path.display())],
-                );
+            Ok(Ok((path, n))) => {
+                let file = path.display();
+                self.status = match p.output {
+                    Output::Print => trf(
+                        "PDF prêt : {pages} page(s), {file}",
+                        &[("pages", &n), ("file", &file)],
+                    ),
+                    Output::Book => trf(
+                        "Livre prêt : {pages} page(s), {file}",
+                        &[("pages", &n), ("file", &file)],
+                    ),
+                    Output::Slideshow => trf(
+                        "Diaporama prêt : {n} photos, {file} (ouvrir index.html)",
+                        &[("n", &n), ("file", &file)],
+                    ),
+                };
+                if p.output == Output::Print {
+                    self.print_open = false;
+                }
                 self.printing = None;
-                self.print_open = false;
             }
             Ok(Err(e)) => {
                 self.status = trf("Impression impossible : {error}", &[("error", &e)]);
@@ -1731,6 +1770,319 @@ impl Studio {
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {}
             Err(std::sync::mpsc::TryRecvError::Disconnected) => self.printing = None,
+        }
+    }
+
+    /// Les photos d'un livre ou d'un diaporama : celles choisies (deux au moins), sinon
+    /// tout le film affiché.
+    pub fn output_targets(&self) -> Vec<PathBuf> {
+        if self.selected.len() >= 2 {
+            return self.rename_targets();
+        }
+        self.visible()
+            .into_iter()
+            .map(|i| self.folder[i].clone())
+            .collect()
+    }
+
+    /// Lance le diaporama dans l'app, depuis la photo ouverte (sinon la première).
+    pub fn start_slideshow(&mut self) {
+        let visible = self.visible();
+        let Some(&first) = visible.first() else {
+            return;
+        };
+        if self.current.is_none_or(|c| !visible.contains(&c)) {
+            self.select(first);
+        }
+        self.culling = true;
+        self.compare = None;
+        self.playing = Some(Playing {
+            since: std::time::Instant::now(),
+            paused: false,
+        });
+    }
+
+    /// Le diaporama est‑il en cours (et pas en pause) ?
+    pub fn is_playing(&self) -> bool {
+        self.playing.as_ref().is_some_and(|p| !p.paused)
+    }
+
+    /// Passe à la photo suivante quand son temps est écoulé (une fois la photo
+    /// affichée : une photo lente à ouvrir n'est pas sautée), et revient au début après
+    /// la dernière.
+    fn tick_slideshow(&mut self, ctx: &egui::Context) {
+        if !self.culling {
+            self.playing = None;
+        }
+        let Some(p) = &self.playing else {
+            return;
+        };
+        if p.paused {
+            return;
+        }
+        let wait = std::time::Duration::from_secs_f32(self.show.seconds.max(0.5));
+        let elapsed = p.since.elapsed();
+        if elapsed < wait || self.shown != self.generation {
+            ctx.request_repaint_after(
+                wait.saturating_sub(elapsed)
+                    .max(std::time::Duration::from_millis(50)),
+            );
+            return;
+        }
+        let visible = self.visible();
+        let at = self
+            .current
+            .and_then(|c| visible.iter().position(|&v| v == c));
+        let next = match at {
+            Some(k) if k + 1 < visible.len() => visible[k + 1],
+            _ => visible.first().copied().unwrap_or(0),
+        };
+        self.select(next);
+        if let Some(p) = &mut self.playing {
+            p.since = std::time::Instant::now();
+        }
+        ctx.request_repaint();
+    }
+
+    /// Fait le livre photo des photos (en arrière‑plan) et l'écrit dans `out`.
+    pub fn make_book(&mut self, out: PathBuf) {
+        use luma_render::{book, print};
+        self.flush_xmp();
+        let photos = self.output_targets();
+        let b = self.book.clone();
+        if photos.is_empty() || b.cells(book::Kind::Four, true).is_empty() {
+            self.status = tr("Les marges ne laissent plus de place sur le papier.").into();
+            return;
+        }
+        let printer = match self.print_conversion() {
+            Ok(c) => c,
+            Err(e) => {
+                self.status = e;
+                return;
+            }
+        };
+        let (send, done) = std::sync::mpsc::channel();
+        let placed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = placed.clone();
+        let total = photos.len();
+        let job = move || -> Result<(PathBuf, usize), String> {
+            let open = |p: &Path| -> Result<(luma_render::Photo, Settings), String> {
+                let photo = crate::dialogs::open_photo(p).map_err(|e| e.to_string())?;
+                let settings =
+                    crate::worker::read_sidecar(p).unwrap_or_else(|| photo.default_settings());
+                Ok((photo, settings))
+            };
+            let mut landscape = Vec::with_capacity(photos.len());
+            for p in &photos {
+                let (photo, settings) = open(p)?;
+                landscape.push(book::is_landscape(&photo, &settings));
+            }
+            let layout = b.layout();
+            let mut pages = Vec::new();
+            for sheet in book::plan(&landscape) {
+                let cells = b.cells(sheet.kind, landscape[sheet.photos[0]]);
+                let mut pictures = Vec::with_capacity(sheet.photos.len());
+                for (&k, cell) in sheet.photos.iter().zip(&cells) {
+                    let (photo, settings) = open(&photos[k])?;
+                    pictures.push(print::develop(
+                        &photo,
+                        &settings,
+                        &layout,
+                        cell,
+                        file_name(&photos[k]),
+                    )?);
+                    counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }
+                pages.push(print::encode(&b.page(
+                    sheet.kind,
+                    &cells,
+                    &pictures,
+                    printer.as_ref(),
+                ))?);
+            }
+            std::fs::write(&out, print::pdf_of(&layout, &pages)).map_err(|e| e.to_string())?;
+            Ok((out, pages.len()))
+        };
+        std::thread::spawn(move || {
+            let _ = send.send(job());
+        });
+        self.printing = Some(Printing {
+            done,
+            placed,
+            total,
+            output: Output::Book,
+        });
+    }
+
+    /// Exporte le diaporama des photos (en arrière‑plan) dans le dossier `dir`.
+    pub fn export_slideshow(&mut self, dir: PathBuf) {
+        self.flush_xmp();
+        let photos = self.output_targets();
+        if photos.is_empty() {
+            return;
+        }
+        let show = self.show.clone();
+        let (send, done) = std::sync::mpsc::channel();
+        let placed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = placed.clone();
+        let total = photos.len();
+        let job = move || -> Result<(PathBuf, usize), String> {
+            let mut frames = Vec::with_capacity(photos.len());
+            for p in &photos {
+                let photo = crate::dialogs::open_photo(p).map_err(|e| e.to_string())?;
+                let settings =
+                    crate::worker::read_sidecar(p).unwrap_or_else(|| photo.default_settings());
+                let r = photo
+                    .render(&settings, Size::Fit(show.size), &luma_core::Cancel::new())
+                    .map_err(|e| e.to_string())?;
+                let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
+                let jpeg = luma_render::jpeg::encode(
+                    &rgb,
+                    r.image.width,
+                    r.image.height,
+                    show.quality,
+                    &[],
+                    &[],
+                )?;
+                frames.push((jpeg, file_name(p)));
+                counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+            luma_render::slideshow::write(&dir, &show, &frames)?;
+            Ok((dir.join("index.html"), frames.len()))
+        };
+        std::thread::spawn(move || {
+            let _ = send.send(job());
+        });
+        self.printing = Some(Printing {
+            done,
+            placed,
+            total,
+            output: Output::Slideshow,
+        });
+    }
+
+    /// La fenêtre « Livre et diaporama » : le diaporama (dans l'app ou exporté) et le
+    /// livre photo.
+    fn outputs_window(&mut self, ctx: &egui::Context) {
+        use luma_render::book::{self, FORMATS};
+        let mut open = self.outputs_open;
+        let photos = self.output_targets();
+        let n = photos.len();
+        let (mut play, mut export, mut make) = (false, false, false);
+        egui::Window::new(trf("Livre et diaporama : {n} photos", &[("n", &n)]))
+            .id(egui::Id::unique("fenetre-livre"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_width(400.0);
+                section_title(ui, tr("Diaporama"));
+                egui::Grid::new("diaporama").num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
+                    ui.label(RichText::new(tr("Titre")).color(theme::DIM));
+                    ui.text_edit_singleline(&mut self.show.title);
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Durée")).color(theme::DIM));
+                    ui.add(egui::Slider::new(&mut self.show.seconds, 1.0..=30.0).suffix(" s").step_by(0.5));
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Fondu")).color(theme::DIM));
+                    ui.add(egui::Slider::new(&mut self.show.fade, 0.0..=3.0).suffix(" s").step_by(0.1));
+                    ui.end_row();
+                });
+                ui.checkbox(&mut self.show.captions, tr("Le nom de chaque photo dessous"));
+                ui.horizontal(|ui| {
+                    play = ui
+                        .button(tr("Lancer le diaporama"))
+                        .on_hover_text(tr("En plein écran : Espace pour la pause, flèches pour les photos, Échap pour sortir"))
+                        .clicked();
+                    export = ui
+                        .add_enabled(self.printing.is_none(), egui::Button::new(tr("Exporter le diaporama…")))
+                        .on_hover_text(tr("Un dossier qui se suffit à lui-même : index.html et les photos, à ouvrir dans un navigateur"))
+                        .clicked();
+                });
+                ui.add_space(12.0);
+                section_title(ui, tr("Livre photo"));
+                let b = &mut self.book;
+                egui::Grid::new("livre").num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
+                    ui.label(RichText::new(tr("Titre")).color(theme::DIM));
+                    ui.text_edit_singleline(&mut b.title);
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Sous-titre")).color(theme::DIM));
+                    ui.text_edit_singleline(&mut b.subtitle);
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Format")).color(theme::DIM));
+                    let label = |p: &luma_render::print::Paper| match p.name {
+                        name if name.starts_with(|c: char| c.is_ascii_digit()) => {
+                            format!("{} cm", name.replace('x', " × "))
+                        }
+                        name => format!("{name} ({:.0} × {:.0} mm)", p.width, p.height),
+                    };
+                    egui::ComboBox::from_id_salt("format-livre")
+                        .selected_text(label(&b.paper))
+                        .show_ui(ui, |ui| {
+                            for f in FORMATS {
+                                ui.selectable_value(&mut b.paper, f, label(&f));
+                            }
+                        });
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Orientation")).color(theme::DIM));
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(&mut b.landscape, false, tr("Portrait"));
+                        ui.selectable_value(&mut b.landscape, true, tr("Paysage"));
+                    });
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Marges")).color(theme::DIM));
+                    ui.add(egui::Slider::new(&mut b.margin, 0.0..=40.0).suffix(" mm").step_by(1.0));
+                    ui.end_row();
+                });
+                ui.checkbox(&mut b.captions, tr("Le nom de chaque photo dessous"));
+                // Les pages d'après l'orientation des vignettes.
+                let landscape: Vec<bool> = photos
+                    .iter()
+                    .map(|p| self.thumbs.get(p).is_none_or(|t| t.size()[0] >= t.size()[1]))
+                    .collect();
+                let pages = book::plan(&landscape).len();
+                ui.label(
+                    RichText::new(trf(
+                        "Environ {pages} pages : la couverture, puis une, deux ou quatre photos par page",
+                        &[("pages", &pages)],
+                    ))
+                    .size(11.0)
+                    .color(theme::DIM),
+                );
+                make = ui
+                    .add_enabled(self.printing.is_none() && n > 0, egui::Button::new(tr("Créer le livre (PDF)…")))
+                    .clicked();
+                if let Some(p) = &self.printing {
+                    let done = p.placed.load(std::sync::atomic::Ordering::Relaxed);
+                    ui.add(egui::ProgressBar::new(done as f32 / p.total.max(1) as f32).text(trf(
+                        "Mise en page : {done} sur {n}",
+                        &[("done", &done), ("n", &p.total)],
+                    )));
+                }
+            });
+        self.outputs_open = open && !play;
+        if play {
+            self.start_slideshow();
+        }
+        let name = |title: &str, fallback: &str| {
+            let t = title.trim().replace(['/', '\\', ':'], "-");
+            if t.is_empty() {
+                tr(fallback).to_owned()
+            } else {
+                t
+            }
+        };
+        if export
+            && let Some(dir) = crate::dialogs::slideshow_dir(&name(&self.show.title, "Diaporama"))
+        {
+            self.export_slideshow(dir);
+        }
+        if make
+            && let Some(out) =
+                crate::dialogs::save_pdf(&format!("{}.pdf", name(&self.book.title, "Livre photo")))
+        {
+            self.make_book(out);
         }
     }
 
@@ -2213,6 +2565,13 @@ impl Studio {
                 .clicked()
             {
                 self.print_open = true;
+            }
+            if ui
+                .small_button(tr("Livre et diaporama…"))
+                .on_hover_text(tr("Un diaporama (dans l'app ou exporté) et un livre photo en PDF"))
+                .clicked()
+            {
+                self.outputs_open = true;
             }
         });
         ui.add_space(6.0);
@@ -3180,6 +3539,7 @@ impl Studio {
 
     fn shortcuts(&mut self, ctx: &egui::Context) {
         let typing = ctx.memory(|m| m.focused().is_some());
+        let playing = self.playing.is_some();
         let cmd_shift = Modifiers::COMMAND | Modifiers::SHIFT;
         let mut action: Option<&str> = None;
         ctx.input_mut(|i| {
@@ -3232,7 +3592,7 @@ impl Studio {
                 } else if i.consume_key(Modifiers::NONE, Key::A) {
                     action = Some("auto_advance");
                 } else if i.consume_key(Modifiers::NONE, Key::Space) {
-                    action = Some("next");
+                    action = Some(if playing { "slideshow_pause" } else { "next" });
                 } else if i.consume_key(Modifiers::SHIFT, Key::M) {
                     action = Some("mask_radial");
                 } else if i.consume_key(Modifiers::NONE, Key::M) {
@@ -3392,7 +3752,16 @@ impl Studio {
                     self.touch();
                 }
             }
-            "crop_cancel" if self.culling => self.culling = false,
+            "crop_cancel" if self.culling => {
+                self.culling = false;
+                self.playing = None;
+            }
+            "slideshow_pause" => {
+                if let Some(p) = &mut self.playing {
+                    p.paused = !p.paused;
+                    p.since = std::time::Instant::now();
+                }
+            }
             "crop_cancel" if self.compare.is_some() => self.compare = None,
             "compare" => {
                 if self.compare.is_some() {
@@ -4076,8 +4445,12 @@ impl Studio {
             self.rename_window(&ctx);
         }
         self.poll_printing(&ctx);
+        self.tick_slideshow(&ctx);
         if self.print_open && allowed {
             self.print_window(&ctx);
+        }
+        if self.outputs_open && allowed {
+            self.outputs_window(&ctx);
         }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
@@ -4345,6 +4718,25 @@ impl Studio {
     /// Le tri en plein écran : la photo seule, et en bas sa note, son drapeau, son libellé
     /// et les touches.
     fn culling_view(&mut self, ui: &mut Ui, full: Rect, m: f32) {
+        // Le diaporama : la photo seule, tout l'écran ; en pause, une ligne d'aide.
+        if let Some(p) = &self.playing {
+            let paused = p.paused;
+            ui.painter().rect_filled(full, 0.0, Color32::BLACK);
+            ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
+                ui.set_clip_rect(full);
+                self.viewer(ui);
+            });
+            if paused {
+                ui.painter().text(
+                    pos2(full.center().x, full.max.y - 24.0),
+                    egui::Align2::CENTER_BOTTOM,
+                    tr("Pause · Espace pour reprendre · flèches : photos · Échap pour sortir"),
+                    egui::FontId::proportional(12.5),
+                    Color32::from_gray(0xb0),
+                );
+            }
+            return;
+        }
         let bar = Rect::from_min_max(
             pos2(full.min.x + m, full.max.y - m - 64.0),
             full.max - vec2(m, m),
@@ -4801,6 +5193,25 @@ impl Studio {
             if ui.button(tr("Tout afficher")).clicked() {
                 self.hide_duplicates();
             }
+        }
+        ui.add_space(16.0);
+        if ui
+            .button(tr("Livre et diaporama…"))
+            .on_hover_text(tr(
+                "Un diaporama (dans l'app ou exporté) et un livre photo en PDF",
+            ))
+            .clicked()
+        {
+            self.outputs_open = true;
+        }
+        if ui
+            .button(tr("Diaporama"))
+            .on_hover_text(tr(
+                "En plein écran : Espace pour la pause, flèches pour les photos, Échap pour sortir",
+            ))
+            .clicked()
+        {
+            self.start_slideshow();
         }
     }
 

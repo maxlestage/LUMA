@@ -242,3 +242,15 @@ pub fn save_pdf(name: &str) -> Option<PathBuf> {
     std::fs::create_dir_all(&dir).ok()?;
     Some(dir.join(name))
 }
+
+/// Le dossier où exporter un diaporama (créé dans le dossier choisi). Sur iPhone et
+/// iPad : `Documents/Diaporamas/<nom>`.
+#[cfg(not(target_os = "ios"))]
+pub fn slideshow_dir(name: &str) -> Option<PathBuf> {
+    Some(pick_folder(tr("Exporter le diaporama dans…"))?.join(name))
+}
+
+#[cfg(target_os = "ios")]
+pub fn slideshow_dir(name: &str) -> Option<PathBuf> {
+    Some(documents()?.join("Diaporamas").join(name))
+}
