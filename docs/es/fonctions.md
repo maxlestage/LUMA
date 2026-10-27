@@ -64,7 +64,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Guías de recorte: tercios, proporción áurea, diagonales, triángulos áureos, espiral áurea, cuadrícula (O para cambiar, Mayús+O para girar) | ✅ |
 | | Enderezado automático (Mayús+R): horizonte y verticales leídos con una transformada de Hough; nada en caso de duda (primer plano, líneas de fuga) | ✅ |
 | | Verticales automáticas (Mayús+V): se mide el punto de fuga de las verticales y se ajusta la Vertical de la Transformación para volverlas paralelas | ✅ |
-| | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad | ✅ |
+| | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad, textura, neblina | ✅ |
 | | Máscaras restringidas a un rango de luminancia (mínimo, máximo, suavizado) o de color (tono, anchura, suavizado; grises excluidos), leído sobre la foto; zona visible (O) | ✅ |
 | | Máscara «Cielo» («Seleccionar el cielo»): cielo y nubes encontrados en la foto, bordes seguidos, reflejos en el agua excluidos; sin IA | ✅ |
 | | Pincel que sigue los bordes: cada toque solo pinta los tonos cercanos a su centro, la zona se detiene en los contornos de la foto | ✅ |

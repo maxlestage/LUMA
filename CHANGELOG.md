@@ -145,6 +145,8 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Texture et Correction du voile dans les masques** : adoucir une peau ou un fond au
+  pinceau, déboucher un ciel voilé dans un dégradé, sans toucher au reste de la photo.
 - **Agrandir au besoin** (Exporter, Dimensions, ou `--enlarge`) : une taille plus grande
   que la photo l'agrandit, jusqu'à quatre fois chaque côté, nette et sans halo autour
   des contours ; pour les grands tirages. Sans IA.
