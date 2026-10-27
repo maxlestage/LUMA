@@ -131,6 +131,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Fluidité** (Retouche) : Pousser, Gonfler et Dégonfler au pinceau, avec sa taille et sa
+  force ; pour redresser une ligne, affiner une forme ou corriger un pli. Chaque coup
+  est gardé dans le XMP et s'annule. Sans IA.
 - **Sélectionner le ciel** (Masques, Masquage) : un clic, et le ciel devient un
   masque, nuages compris, bords des arbres et des toits suivis ; un lac qui le reflète
   reste à part. Sans IA : seulement les couleurs et la texture de la photo.
