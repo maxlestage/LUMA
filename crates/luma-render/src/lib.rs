@@ -19,6 +19,7 @@ pub mod print;
 pub mod rename;
 pub mod slideshow;
 pub mod thumbnail;
+pub mod video;
 pub mod watermark;
 
 use std::collections::HashMap;
