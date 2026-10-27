@@ -4009,9 +4009,18 @@ impl Studio {
             .collect();
         // Mes préréglages, puis mes pellicules (mesurées sur de vraies pellicules, ou
         // importées).
+        // Sur iPhone (ou panneau étroit), les films d'abord : les siens et leur gestion
+        // (enregistrer, importer, exporter) viennent après.
         let mine = PRESETS.len() + self.luts.len();
-        sections.insert(0, ("Mes pellicules", (PRESETS.len()..mine).collect()));
-        sections.insert(0, ("Mes préréglages", (mine..self.film_count()).collect()));
+        let own = [
+            ("Mes préréglages", (mine..self.film_count()).collect()),
+            ("Mes pellicules", (PRESETS.len()..mine).collect()),
+        ];
+        if TOUCH || ui.available_width() < 420.0 {
+            sections.extend(own);
+        } else {
+            sections.splice(0..0, own);
+        }
         let mut export = None;
         for (title, items) in sections {
             sub_title(ui, tr(title));
