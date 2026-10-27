@@ -42,6 +42,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Virage partiel (ombres et hautes lumières, balance ; `crs:SplitToning*` lu et écrit) | ✅ |
 | | Mélangeur de couches : chaque couche de sortie faite des trois couches de la photo (−200 à +200 %) | ✅ |
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
+| | Accentuation par déconvolution (case « Déconvolution », Richardson‑Lucy), sans IA | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |
 | | Réduction du bruit avancée (ondelettes, case « Ondelettes »), sans IA | ✅ |
 | Corrections de l'objectif | Aberration chromatique latérale estimée sur la photo, distorsion, vignetage (gain, milieu), défrangeage violet et vert | ✅ |

@@ -42,6 +42,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Virado parcial (sombras y altas luces, equilibrio; `crs:SplitToning*` leído y escrito) | ✅ |
 | | Mezclador de canales: cada canal de salida hecho de los tres canales de la foto (−200 a +200 %) | ✅ |
 | Detalle | Enfoque: cantidad, radio, detalle, máscara | ✅ |
+| | Enfoque por deconvolución (casilla «Deconvolución», Richardson-Lucy), sin IA | ✅ |
 | | Reducción de ruido de luminancia y de color | ✅ |
 | | Reducción de ruido avanzada (ondículas, casilla «Ondículas»), sin IA | ✅ |
 | Correcciones de lente | Aberración cromática lateral estimada en la foto, distorsión, viñeteado (cantidad, punto medio), eliminación de halos púrpuras y verdes | ✅ |
