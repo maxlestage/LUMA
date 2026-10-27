@@ -264,6 +264,12 @@ The professional photo library, step by step.
   wish, also copied to a second disk; each copy is read back and compared with the
   original, the RAW, its JPEG and its XMP keep the same name, a photo already imported
   is skipped, the card is never modified.
+- **Customizable keyboard shortcuts** (language menu, “Keyboard shortcuts…”): every
+  command and its keys; click, then press the new keys; a key already taken moves to
+  the new command; back to the default keys, one by one or all. **Tab** hides the
+  panels.
+- **Workspaces**: Culling, Develop, Retouching, Presentation, and the ones you save (the
+  tool and the panels), from Cmd+1 to Cmd+9.
 
 ## 0.2.0 — October 2026
 
