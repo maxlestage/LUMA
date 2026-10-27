@@ -1922,3 +1922,62 @@ fn print_layout_and_pdf() {
     // 13 × 18 cm (127 × 177,8 mm) à 100 ppp : 500 × 700 pixels par page.
     assert!(text.contains("/Width 500 /Height 700"));
 }
+
+#[test]
+fn slideshow_and_photo_book() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("livre") else {
+        return;
+    };
+    let dir = s.dir.clone();
+    let all = s.studio().visible().len();
+    s.keys(&[(NONE, Key::G)]);
+    s.harness
+        .get_all_by_label("Livre et diaporama…")
+        .next()
+        .unwrap()
+        .click();
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    s.capture("livre-diaporama");
+
+    // Le diaporama dans l'app : il avance seul, l'espace le met en pause, Échap l'arrête.
+    s.studio().show.seconds = 0.5;
+    s.harness.get_by_label("Lancer le diaporama").click();
+    s.harness.step();
+    assert!(s.studio().is_playing());
+    let first = s.studio().current_path().unwrap().to_path_buf();
+    let start = Instant::now();
+    while s.studio().current_path() == Some(first.as_path()) {
+        assert!(
+            start.elapsed() < Duration::from_secs(60),
+            "le diaporama n'avance pas"
+        );
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    s.wait();
+    s.capture("diaporama");
+    s.keys(&[(NONE, Key::Space)]);
+    assert!(!s.studio().is_playing(), "en pause");
+    s.keys(&[(NONE, Key::Escape)]);
+    assert!(!s.studio().is_playing());
+
+    // Le livre photo de tout le film, et le diaporama exporté.
+    s.studio().book.dpi = 50;
+    s.studio().book.title = "Corpus".into();
+    let pdf = dir.join("Livre.pdf");
+    s.studio().make_book(pdf.clone());
+    s.wait();
+    let text =
+        String::from_utf8_lossy(&std::fs::read(&pdf).expect("le livre est écrit")).into_owned();
+    assert!(text.contains("/MediaBox [0 0 566.93 566.93]"));
+    s.studio().show.size = 320;
+    let show = dir.join("Diaporama");
+    s.studio().export_slideshow(show.clone());
+    s.wait();
+    let page = std::fs::read_to_string(show.join("index.html")).expect("le diaporama est écrit");
+    assert_eq!(page.matches("\"photos/").count(), all);
+    assert!(show.join(format!("photos/{all:03}.jpg")).is_file());
+}
