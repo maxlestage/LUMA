@@ -113,6 +113,10 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Highlight reconstruction**: the “Reconstruct highlights” box (Light, under Tone)
+  gives a channel clipped by the sensor the color of its neighbors; a burnt sky turns
+  orange again, a white towel gets its texture back. A pixel where everything clips
+  stays white. Also on the command line (`--set highlights.reconstruction=on`).
 - **Deconvolution sharpening**: the “Deconvolution” box in Sharpening undoes the lens
   blur instead of digging into edges; real detail comes back, without halos (1.6 dB
   better than unsharp masking in our tests). Visible at 100% and on export; also on
