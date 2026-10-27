@@ -3436,3 +3436,41 @@ es = {n} fotos renombradas
 fr = Renommage impossible : {error}
 en = Couldn't rename: {error}
 es = No se pudo renombrar: {error}
+
+# ----- Instantanés -----
+
+fr = Instantanés
+en = Snapshots
+es = Instantáneas
+
+fr = Instantané {n}
+en = Snapshot {n}
+es = Instantánea {n}
+
+fr = Instantané : {name}
+en = Snapshot: {name}
+es = Instantánea: {name}
+
+fr = Nom de l'instantané
+en = Snapshot name
+es = Nombre de la instantánea
+
+fr = Créer
+en = Create
+es = Crear
+
+fr = Garde les réglages du moment, pour y revenir d'un clic
+en = Keeps the current adjustments, to come back to them in one click
+es = Guarda los ajustes actuales, para volver a ellos con un clic
+
+fr = Retirer cet instantané
+en = Remove this snapshot
+es = Quitar esta instantánea
+
+fr = Revenir à ces réglages
+en = Go back to these adjustments
+es = Volver a estos ajustes
+
+fr = Aucun instantané pour cette photo.
+en = No snapshots for this photo.
+es = No hay instantáneas para esta foto.

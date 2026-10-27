@@ -221,6 +221,9 @@ The professional photo library, step by step.
   names before confirming; the RAW and JPEG of the same shot keep one name, the XMP and
   virtual copies follow, a name already taken gets `-2`; on any failure, everything goes
   back as it was. The library and its collections follow.
+- **Snapshots** (Light tool, below the history): the adjustments of a moment, under a
+  name, stored in the photo's XMP; one click goes back to them (a history step that can
+  be undone).
 
 ## 0.2.0 — October 2026
 
