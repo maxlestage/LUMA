@@ -321,7 +321,9 @@ impl Worker {
             if let (Some(photo), Some(dir)) = (photo, crate::dialogs::duplicates_dir())
                 && photo.wants_duplicate()
                 && duplicate_fits(&photo)
-                && photo.write_duplicate(&source, &dir).is_ok()
+                && background()
+                    .install(|| photo.write_duplicate(&source, &dir))
+                    .is_ok()
             {
                 drop(photo);
                 if let Ok(next) = Photo::open_with_duplicates(&source, &dir)
@@ -939,6 +941,22 @@ fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() 
     });
     trace(path, "envoyée", start);
     repaint();
+}
+
+/// Les fils du travail de fond (l'écriture des doublons) : la moitié des cœurs, pour
+/// que l'aperçu et les vignettes, calculés sur les fils communs, n'attendent pas
+/// derrière. Sur un ordinateur à trois cœurs, une photo ouverte faisait sinon attendre
+/// les vignettes plus de trente secondes.
+fn background() -> &'static rayon::ThreadPool {
+    static POOL: std::sync::OnceLock<rayon::ThreadPool> = std::sync::OnceLock::new();
+    POOL.get_or_init(|| {
+        let n = std::thread::available_parallelism().map_or(2, |n| n.get());
+        rayon::ThreadPoolBuilder::new()
+            .num_threads((n / 2).max(1))
+            .thread_name(|i| format!("luma-fond-{i}"))
+            .build()
+            .expect("fils du travail de fond")
+    })
 }
 
 /// L'écriture d'un doublon dématrice toute l'image d'un coup : sur iPhone et iPad, où
