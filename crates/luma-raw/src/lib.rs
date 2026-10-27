@@ -16,6 +16,7 @@
 pub mod cameras;
 mod demosaic;
 pub mod dng;
+pub mod exif;
 pub mod opcodes;
 pub mod raster;
 
@@ -494,8 +495,9 @@ fn metadata(source: &rawler::rawsource::RawSource, params: &rawler::decoders::Ra
 /// fait 25 à 60 Mo.
 pub fn info(path: impl AsRef<Path>) -> Option<Info> {
     let path = path.as_ref();
+    // Une image développée : son EXIF, s'il y en a un.
     if raster::is_raster(path) {
-        return None;
+        return exif::read(path);
     }
     let params = rawler::decoders::RawDecodeParams::default();
     let size = std::fs::metadata(path).ok()?.len();
@@ -522,10 +524,27 @@ impl RawPhoto {
     pub fn open(path: impl AsRef<Path>) -> Result<RawPhoto> {
         let path = path.as_ref();
         if raster::is_raster(path) {
-            return raster::open(path);
+            return raster::open(path).map(|p| p.with_exif_of(path));
         }
         // Un RAW, ou à défaut une image d'après son contenu (extension inconnue).
         Self::open_raw(path).or_else(|e| raster::sniff(path).ok_or(e))
+    }
+
+    /// Une image développée prend le boîtier et l'EXIF de son fichier (pour l'export,
+    /// les informations et la photothèque), s'il en a.
+    fn with_exif_of(mut self, path: &Path) -> RawPhoto {
+        if let Some(info) = exif::read(path) {
+            if self.make.is_empty() {
+                self.make = info.make;
+            }
+            if self.model.is_empty() {
+                self.model = info.model;
+            }
+            if self.exif == Exif::default() {
+                self.exif = info.exif;
+            }
+        }
+        self
     }
 
     fn open_raw(path: &Path) -> Result<RawPhoto> {

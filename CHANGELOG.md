@@ -296,6 +296,10 @@ La photothèque professionnelle, étape par étape.
   sont proches ; glisser, zoomer à la molette ou à deux doigts, toucher un groupe pour
   voir ses photos. Fond de tuiles libres, téléchargées par le système et gardées sur
   l'appareil ; hors ligne, celles déjà gardées.
+- **Les photos du téléphone à leur date et sur la carte** : l'EXIF des images
+  développées (JPEG, HEIC, AVIF, PNG, WebP, TIFF) est lu comme celui d'un RAW — date de
+  prise de vue, boîtier, objectif, réglages, position GPS. Les photos déjà dans la
+  photothèque sont relues une fois.
 - **Impression** (« Imprimer… » sur les photos choisies, `luma print`) : un PDF à la
   taille exacte du papier (A4, A3, A3+, 10 × 15 cm…), portrait ou paysage, marges, une
   photo par page ou une **planche contact** (grille, nom sous chaque photo), photos
