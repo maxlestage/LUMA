@@ -106,6 +106,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Épreuvage à l'écran : l'aperçu tel qu'il sera imprimé avec un profil d'imprimante, intention perceptuelle ou colorimétrique relative (histogramme compris) | ✅ |
 | Alerte de gamut : les couleurs que l'imprimante ne saura pas rendre, en bleu sur l'aperçu (aller et retour en colorimétrique relative, écart au‑delà de ΔE 3) | ✅ |
 | Simulation du papier (ton et luminosité, colorimétrie absolue) et de l'encre noire (son vrai noir) ; sans elles, compensation du point noir | ✅ |
+| Impression (« Imprimer… », `luma print`) : PDF à la taille exacte du papier (A4, A3, A3+, A5, Lettre US, 10 × 15 à 20 × 30 cm, ou sur mesure), portrait ou paysage, marges, une photo par page ou planche contact (grille, écart, nom sous chaque photo), photos entières ou remplissant leur case, résolution, accentuation pour papier mat ou brillant ; pages converties vers le profil RVB de l'imprimante (celui de l'épreuvage, noir compensé) | ✅ |
 
 ## Export
 
