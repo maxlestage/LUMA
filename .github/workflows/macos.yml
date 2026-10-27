@@ -43,6 +43,10 @@ jobs:
         run: scripts/fetch-corpus.sh
 
       - name: Tests (moteur et app)
+        # Les étapes des vignettes, affichées si un essai échoue : sur ce runner, une
+        # vignette n'arrivait parfois pas, sans erreur.
+        env:
+          LUMA_TRACE_VIGNETTES: "1"
         run: cargo test --workspace
 
       - name: Réactivité sur Metal
