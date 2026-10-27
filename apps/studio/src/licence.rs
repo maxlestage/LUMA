@@ -333,7 +333,11 @@ pub const FEATURES: [&str; 6] = [
     "Masques, films empilés, recadrage et géométrie",
     "Empilements, ciel étoilé, panoramas en DNG",
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
-    "Sur Mac, avec toutes les mises à jour",
+    if cfg!(target_os = "ios") {
+        "Sur iPhone et iPad, avec toutes les mises à jour"
+    } else {
+        "Sur Mac, avec toutes les mises à jour"
+    },
 ];
 
 /// Les formules, dans l'ordre d'affichage.

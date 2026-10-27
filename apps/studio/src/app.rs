@@ -5376,20 +5376,27 @@ impl Studio {
     /// L'écran Premium, par‑dessus tout : les formules, la clé. `locked` : l'essai est
     /// fini, on ne peut pas le fermer.
     fn premium_screen(&mut self, ctx: &egui::Context, full: Rect, locked: bool) {
-        // Le voile : rien derrière ne répond.
+        // Le voile : rien derrière ne répond. Il est sur une couche au‑dessous de la
+        // carte : toucher le voile le ferait sinon passer devant elle (egui remonte la
+        // couche touchée), la carte grisée et ses boutons hors d'atteinte. Le toucher
+        // ferme l'écran, sauf quand l'essai est fini.
         egui::Area::new(egui::Id::unique("premium-voile"))
-            .order(egui::Order::Foreground)
+            .order(egui::Order::Middle)
             .fixed_pos(full.min)
             .show(ctx, |ui| {
-                let (r, _) = ui.allocate_exact_size(full.size(), egui::Sense::click_and_drag());
+                let (r, resp) = ui.allocate_exact_size(full.size(), egui::Sense::click_and_drag());
                 ui.painter().rect_filled(
                     r,
                     0.0,
                     Color32::from_black_alpha(if locked { 215 } else { 170 }),
                 );
+                if resp.clicked() && !locked {
+                    self.premium_open = false;
+                }
             });
         let w = (full.width() - 24.0).min(680.0);
-        let h = (full.height() - 24.0).min(560.0);
+        // Sur un écran étroit, les deux formules l'une sous l'autre : la carte est plus haute.
+        let h = (full.height() - 24.0).min(if w < 520.0 { 760.0 } else { 560.0 });
         let card = Rect::from_center_size(full.center(), vec2(w, h));
         egui::Area::new(egui::Id::unique("premium"))
             .order(egui::Order::Foreground)
@@ -5485,9 +5492,21 @@ impl Studio {
         }
         ui.add_space(16.0);
         let gap = 14.0;
-        let (row, _) =
-            ui.allocate_exact_size(vec2(ui.available_width(), 172.0), egui::Sense::hover());
-        let card_w = ((row.width() - gap) / 2.0).floor();
+        // Côte à côte, ou l'une sous l'autre sur un écran étroit (iPhone).
+        let stacked = ui.available_width() < 470.0;
+        let card_h = 172.0;
+        let (row, _) = ui.allocate_exact_size(
+            vec2(
+                ui.available_width(),
+                if stacked { 2.0 * card_h + gap } else { card_h },
+            ),
+            egui::Sense::hover(),
+        );
+        let card_w = if stacked {
+            row.width()
+        } else {
+            ((row.width() - gap) / 2.0).floor()
+        };
         // Sur iPhone et iPad, l'abonnement s'achète dans l'App Store ; sur Mac, par le
         // lien de paiement Stripe.
         let app_store = luma_apple::store::AVAILABLE;
@@ -5495,10 +5514,12 @@ impl Studio {
         let mut buy = None;
         for (k, plan) in PLANS.into_iter().enumerate() {
             let best = plan == luma_licence::Plan::Annual;
-            let rect = Rect::from_min_size(
-                row.min + vec2(k as f32 * (card_w + gap), 0.0),
-                vec2(card_w, row.height()),
-            );
+            let offset = if stacked {
+                vec2(0.0, k as f32 * (card_h + gap))
+            } else {
+                vec2(k as f32 * (card_w + gap), 0.0)
+            };
+            let rect = Rect::from_min_size(row.min + offset, vec2(card_w, card_h));
             ui.painter().rect(
                 rect,
                 18.0,
@@ -8353,7 +8374,11 @@ impl Studio {
             badges.push(tr("Rendu…"));
         }
         if self.clipping {
-            badges.push(tr("Écrêtage (J)"));
+            badges.push(if TOUCH {
+                tr("Écrêtage")
+            } else {
+                tr("Écrêtage (J)")
+            });
         }
         if self.proofing.active().is_some_and(|p| p.simulate) {
             badges.push(tr("Épreuvage à l'écran"));
