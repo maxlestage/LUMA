@@ -5899,7 +5899,12 @@ impl Studio {
                 if (has_photo || !compact)
                     && icon_button(
                         ui,
-                        Icon::Open,
+                        // Sur iPhone et iPad, on ajoute des photos : le « + ».
+                        if luma_apple::photos::AVAILABLE {
+                            Icon::Add
+                        } else {
+                            Icon::Open
+                        },
                         if compact {
                             ""
                         } else if luma_apple::photos::AVAILABLE {
@@ -7827,6 +7832,24 @@ impl Studio {
             .auto_shrink(false)
             .show(ui, |ui| {
                 ui.add_space(14.0);
+                // Sur iPhone et iPad, ajouter des photos se fait d'ici aussi.
+                if luma_apple::photos::AVAILABLE {
+                    ui.horizontal(|ui| {
+                        ui.add_space(14.0);
+                        let button = egui::Button::new(
+                            RichText::new(format!("+  {}", tr("Importer des photos")))
+                                .size(15.0)
+                                .color(theme::BACKGROUND),
+                        )
+                        .fill(theme::ACCENT)
+                        .corner_radius(20.0)
+                        .min_size(vec2(ui.available_width() - 14.0, 40.0));
+                        if ui.add(button).clicked() {
+                            self.act("open");
+                        }
+                    });
+                    ui.add_space(12.0);
+                }
                 let cols = ((ui.available_width() - 14.0) / (cell + 10.0))
                     .floor()
                     .max(1.0) as usize;
