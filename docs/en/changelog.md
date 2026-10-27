@@ -274,6 +274,11 @@ The professional photo library, step by step.
   panels.
 - **Workspaces**: Culling, Develop, Retouching, Presentation, and the ones you save (the
   tool and the panels), from Cmd+1 to Cmd+9.
+- **iPhone: the photo grid realigned**: columns computed from the screen width, on the
+  islands' margins, the file name above the photo instead of over it; the Grid, Map and
+  Slideshow bar fits on one line (“Book, slideshow, gallery…” moves to “•••”); the
+  histogram alone in the Photos panel. After an app update, photos follow the app's new
+  folder instead of showing up in a second “Documents”.
 
 ## 0.2.0 — October 2026
 

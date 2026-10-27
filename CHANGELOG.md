@@ -296,6 +296,12 @@ La photothèque professionnelle, étape par étape.
   touches par défaut, une à une ou toutes. **Tab** masque les panneaux.
 - **Espaces de travail** : Tri, Développement, Retouche, Présentation, et ceux qu'on
   enregistre (l'outil et les panneaux), de Cmd+1 à Cmd+9.
+- **iPhone : la grille des photos recalée** : colonnes calculées sur la largeur de
+  l'écran, aux marges des îlots, le nom au‑dessus de la photo et non plus dessus ; la
+  barre Grille, Carte et Diaporama tient sur une ligne (« Livre, diaporama,
+  galerie… » passe dans « ••• ») ; l'histogramme seul dans le panneau Photos. Après
+  une mise à jour de l'app, les photos suivent le nouveau dossier de l'app au lieu
+  d'apparaître dans un second « Documents ».
 
 ## 0.2.0 — octobre 2026
 
