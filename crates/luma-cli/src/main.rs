@@ -16,6 +16,7 @@
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
 //! luma slideshow <photo>… -o dossier un diaporama autonome (index.html et JPEG)
+//! luma gallery <photo>… -o dossier  une galerie web statique, prête à mettre en ligne
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! luma licence-keys                 une paire de clés pour signer les licences
 //! ```
@@ -121,6 +122,12 @@ USAGE
       (JPEG sRGB, grand côté de 2048 px par défaut), à ouvrir dans un navigateur ou à
       mettre en ligne. Fondu entre les photos, flèches ou glissement du doigt, espace
       pour la pause, F pour le plein écran.
+  luma gallery <photo>… -o dossier [--title titre] [--description texte] [--size 2048]
+                       [--thumb 480] [--quality 85] [--no-captions]
+      Une galerie web statique : index.html (la grille des vignettes, chaque photo en
+      grand d'un clic, flèches, glissement du doigt, Échap), photos/ et vignettes/ en
+      JPEG allégés pour le web. À mettre en ligne tel quel. La légende de chaque photo
+      est son titre (informations IPTC), sinon son nom.
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -1535,6 +1542,54 @@ fn book(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// La galerie web statique.
+fn gallery(args: Vec<String>) -> Result<(), String> {
+    use luma_render::gallery::{self, Gallery};
+    let mut g = Gallery::default();
+    let (mut out, mut photos) = (None, Vec::new());
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "-o" | "--output" => out = Some(PathBuf::from(it.next().ok_or("-o : dossier attendu")?)),
+            "--title" => g.title = it.next().unwrap_or_default(),
+            "--description" => g.description = it.next().unwrap_or_default(),
+            "--size" => g.size = bounded("--size", it.next(), 320, 8192)?,
+            "--thumb" => g.thumb = bounded("--thumb", it.next(), 80, 2048)?,
+            "--quality" => g.quality = bounded("--quality", it.next(), 1, 100)?,
+            "--no-captions" => g.captions = false,
+            _ => photos.push(PathBuf::from(a)),
+        }
+    }
+    let out = out.ok_or("il faut un dossier de sortie (-o galerie)")?;
+    if photos.is_empty() {
+        return Err("aucune photo pour la galerie".into());
+    }
+    let start = Instant::now();
+    let mut entries = Vec::with_capacity(photos.len());
+    for p in &photos {
+        let (photo, settings) = open_with_settings(p)?;
+        let r = photo
+            .render(&settings, Size::Fit(g.size), &Cancel::new())
+            .map_err(|e| format!("{} : {e}", p.display()))?;
+        // La légende : le titre de la photo (IPTC), sinon son nom.
+        let title = sidecar(p)
+            .and_then(|x| std::fs::read_to_string(x).ok())
+            .map(|t| xmp::read_meta(&t).title)
+            .filter(|t| !t.trim().is_empty());
+        entries.push(gallery::entry(&r.image, &g, title.unwrap_or_else(|| file_label(p)))?);
+    }
+    gallery::write(&out, &g, &entries)?;
+    let bytes: usize = entries.iter().map(|e| e.photo.len() + e.thumb.len()).sum();
+    println!(
+        "{} : galerie de {} photo(s), {:.1} Mo, en {:.1} s (ouvrir index.html)",
+        out.display(),
+        entries.len(),
+        bytes as f64 / 1e6,
+        start.elapsed().as_secs_f64()
+    );
+    Ok(())
+}
+
 /// Le diaporama autonome.
 fn slideshow(args: Vec<String>) -> Result<(), String> {
     use luma_render::slideshow::{self, Slideshow};
@@ -1867,11 +1922,11 @@ fn main() -> ExitCode {
         }
         return if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE };
     }
-    if command == "book" || command == "slideshow" {
-        let result = if command == "book" {
-            book(args.collect())
-        } else {
-            slideshow(args.collect())
+    if command == "book" || command == "slideshow" || command == "gallery" {
+        let result = match command.as_str() {
+            "book" => book(args.collect()),
+            "slideshow" => slideshow(args.collect()),
+            _ => gallery(args.collect()),
         };
         return match result {
             Ok(()) => ExitCode::SUCCESS,
