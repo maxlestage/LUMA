@@ -927,6 +927,7 @@ impl Studio {
 
     pub fn new(ctx: &egui::Context) -> Self {
         crate::style::apply(ctx);
+        crate::set_screen(ctx);
         let repaint_ctx = ctx.clone();
         let mut studio = Self {
             worker: Worker::new(move || repaint_ctx.request_repaint()),
@@ -1236,6 +1237,7 @@ impl Studio {
             catalog.add_folder(&dir, false);
             let _ = catalog.save(&file);
             let _ = tx.send(catalog);
+            crate::wake();
         });
         self.indexing = Some(rx);
     }
@@ -4908,9 +4910,6 @@ impl Studio {
             self.worker.reload_original(path.clone());
             self.original_asked = Some(path);
         }
-        if self.indexing.is_some() {
-            ctx.request_repaint_after(std::time::Duration::from_millis(100));
-        }
         if self.licence.poll() {
             // Une clé activée ferme l'écran Premium.
             if matches!(self.licence.access(), luma_licence::Access::Premium { .. })
@@ -4919,7 +4918,9 @@ impl Studio {
                 self.status = self.licence.message.clone();
             }
         }
-        if self.licence.busy() {
+        // Un achat dans l'App Store répond par le fil principal : on regarde. La
+        // vérification de la licence, elle, réveille l'écran quand elle a fini.
+        if self.licence.store_busy {
             ctx.request_repaint_after(std::time::Duration::from_millis(150));
         }
         let allowed = self.licence.access().is_allowed();
