@@ -31,6 +31,9 @@ pub enum Shape {
     Brush { dabs: Vec<Dab> },
     /// Toute l'image : pour empiler des films (chacun avec son intensité).
     Full,
+    /// Le ciel, trouvé sur la photo elle‑même (clair, peu texturé, relié au haut de
+    /// l'image), ses bords affinés sur ceux de la photo.
+    Sky,
 }
 
 /// Une plage : la zone du masque ne garde que les pixels de certains tons ou de
@@ -277,6 +280,15 @@ impl Mask {
         }
     }
 
+    /// Le ciel de la photo.
+    pub fn sky() -> Mask {
+        Mask {
+            name: "Ciel".into(),
+            shape: Shape::Sky,
+            ..Mask::full()
+        }
+    }
+
     /// Les curseurs locaux agissent‑ils ?
     pub fn is_active(&self) -> bool {
         self.amount > 0.0 && !self.local.is_neutral()
@@ -288,5 +300,20 @@ impl Mask {
         // L'intensité du masque (et son inversion) est déjà dans sa zone.
         let k = l.amount / 100.0;
         (k > 0.0).then_some((l.name.as_str(), k))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_sky_mask_is_saved_and_read_back() {
+        let m = Mask::sky();
+        let json = serde_json::to_string(&m).unwrap();
+        assert!(json.contains(r#""kind":"sky""#), "{json}");
+        let back: Mask = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, m);
+        assert_eq!(back.shape, Shape::Sky);
     }
 }
