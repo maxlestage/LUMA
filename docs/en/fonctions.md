@@ -156,6 +156,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | On Mac, tethered camera (USB, or network if it allows) through the system framework: each photo taken arrives in the watched folder, shutter release from LÜMA for cameras that allow it | ✅ |
 | Virtual copies: several developments of a photo without duplicating the file (one XMP per copy), each with its own rating, keywords and thumbnail, next to its original; exported as `IMG_0001-2`; deleted without touching the original | ✅ |
 | Importing existing catalogues | ⏳ |
+| Customizable keyboard shortcuts (“Keyboard shortcuts…”: every command, its keys, a key already taken moves to the new command, back to the default keys; “Raccourcis.txt”); Tab hides the panels; workspaces (Culling, Develop, Retouching, Presentation and your own: tool and panels), Cmd+1 to Cmd+9 | ✅ |
 
 ## What sets LÜMA apart
 

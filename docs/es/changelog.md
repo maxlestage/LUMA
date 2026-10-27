@@ -286,6 +286,12 @@ La fototeca profesional, paso a paso.
   toma, se renombran si se quiere y se copian también en un segundo disco; cada copia
   se relee y se compara con el original, el RAW, su JPEG y su XMP conservan el mismo
   nombre, una foto ya importada se omite y la tarjeta nunca se modifica.
+- **Atajos de teclado personalizables** (menú del idioma, «Atajos de teclado…»): cada
+  comando y sus teclas; hacer clic y pulsar las nuevas teclas; una tecla ya usada pasa
+  al nuevo comando; vuelta a las teclas por defecto, una a una o todas. **Tab** oculta
+  los paneles.
+- **Espacios de trabajo**: Selección, Revelado, Retoque, Presentación y los que se
+  guardan (la herramienta y los paneles), de Cmd+1 a Cmd+9.
 
 ## 0.2.0 — octubre de 2026
 
