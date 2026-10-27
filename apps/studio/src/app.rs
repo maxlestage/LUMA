@@ -683,6 +683,11 @@ pub struct Studio {
     /// Les photos importées depuis Photos déjà vues (voir `watch_imports`).
     imports_seen: usize,
     imports_failed: usize,
+    /// Les exports envoyés à la Pellicule (iPhone, iPad), et les réponses de Photos déjà
+    /// annoncées : ajoutées, refusées.
+    library_sent: usize,
+    library_saved: usize,
+    library_refused: usize,
     /// Les touchers reçus du système (diagnostic sur iPhone) et le dernier.
     touches: usize,
     last_touch: Option<egui::Pos2>,
@@ -1014,6 +1019,9 @@ impl Studio {
             memory_check: 0.0,
             imports_seen: 0,
             imports_failed: 0,
+            library_sent: 0,
+            library_saved: 0,
+            library_refused: 0,
             touches: 0,
             last_touch: None,
             import_result: None,
@@ -3389,7 +3397,20 @@ impl Studio {
                     } else {
                         String::new()
                     };
+                    // Sur iPhone et iPad, chaque image exportée va aussi dans la Pellicule.
+                    if let Ok(p) = &result
+                        && luma_apple::photos::AVAILABLE
+                    {
+                        luma_apple::photos::save_to_library(p);
+                        self.library_sent += 1;
+                    }
                     self.status = match result {
+                        // Au doigt, le nom du fichier seul : le chemin du dossier de l'app
+                        // ne dit rien et ne tient pas sur l'écran.
+                        Ok(p) if crate::touch() => trf(
+                            "Exporté{count} : {path}",
+                            &[("count", &count), ("path", &file_name(&p))],
+                        ),
                         Ok(p) => trf(
                             "Exporté{count} : {path}",
                             &[("count", &count), ("path", &p.display())],
@@ -3632,6 +3653,25 @@ impl Studio {
         }
         if luma_apple::photos::pending() {
             ctx.request_repaint_after(std::time::Duration::from_millis(200));
+        }
+        // Les exports ajoutés à la Pellicule : Photos répond plus tard.
+        let (saved, refused) = (
+            luma_apple::photos::saved(),
+            luma_apple::photos::save_failed(),
+        );
+        if refused != self.library_refused {
+            self.library_refused = refused;
+            self.status = tr(
+                "Photos a refusé l'export : autorisez LÜMA à ajouter des photos (Réglages › LÜMA › Photos). Le fichier est dans LÜMA/, app Fichiers.",
+            )
+            .into();
+        } else if saved != self.library_saved {
+            let n = saved - self.library_saved;
+            self.library_saved = saved;
+            self.status = trf("{n} photo(s) ajoutée(s) à la Pellicule.", &[("n", &n)]);
+        }
+        if self.library_sent > saved + refused {
+            ctx.request_repaint_after(std::time::Duration::from_millis(250));
         }
         let failed = luma_apple::photos::failed();
         if failed != self.imports_failed {
@@ -4590,11 +4630,37 @@ impl Studio {
         ui.label(RichText::new(tr("Exporter vers")).strong());
         ui.checkbox(&mut self.export_current, tr("Les réglages ci-dessous"));
         let mut load = None;
+        // Sur iPhone : le préréglage et « Reprendre » sur une ligne, son résumé dessous.
+        if self.compact {
+            for p in self.export_presets.all() {
+                let mut on = self.export_targets.contains(&p.name);
+                ui.horizontal(|ui| {
+                    if ui.checkbox(&mut on, tr(&p.name)).changed() {
+                        self.export_targets.retain(|t| *t != p.name);
+                        if on {
+                            self.export_targets.push(p.name.clone());
+                        }
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.small_button(tr("Reprendre")).clicked() {
+                            load = Some(p.options.clone());
+                        }
+                    });
+                });
+                ui.label(
+                    RichText::new(export_summary(&p.options))
+                        .small()
+                        .color(theme::DIM),
+                );
+                ui.add_space(4.0);
+            }
+        }
+        let grid = !self.compact;
         egui::Grid::new("export-presets")
             .num_columns(3)
             .spacing(vec2(10.0, 4.0))
             .show(ui, |ui| {
-                for p in self.export_presets.all() {
+                for p in self.export_presets.all().into_iter().filter(|_| grid) {
                     let mut on = self.export_targets.contains(&p.name);
                     if ui.checkbox(&mut on, tr(&p.name)).changed() {
                         self.export_targets.retain(|t| *t != p.name);
@@ -4617,7 +4683,7 @@ impl Studio {
             self.export_options = o;
             self.export_current = true;
         }
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             ui.add(
                 egui::TextEdit::singleline(&mut self.preset_name)
                     .hint_text(tr("Nom du préréglage"))
@@ -4721,24 +4787,22 @@ impl Studio {
         let mut open = self.export_open;
         let mut go = false;
         let count = self.visible().len();
-        egui::Window::new(tr("Exporter"))
+        let compact = self.compact;
+        let window = egui::Window::new(tr("Exporter"))
             .id(egui::Id::unique("fenetre-export"))
             .open(&mut open)
             .collapsible(false)
             .resizable(false)
             // Plus haute qu'un écran d'iPhone : elle défile.
-            .vscroll(true)
-            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
-            .show(ctx, |ui| {
+            .vscroll(true);
+        place_window(ctx, window, compact).show(ctx, |ui| {
                 self.presets_editor(ui);
                 ui.add_space(6.0);
                 let o = &mut self.export_options;
-                egui::Grid::new("export")
-                    .num_columns(2)
-                    .spacing(vec2(12.0, 8.0))
-                    .show(ui, |ui| {
-                        ui.label(tr("Photos"));
-                        ui.horizontal(|ui| {
+                // Sur iPhone, chaque réglage sous son titre ; ailleurs, deux colonnes.
+                let mut body = |ui: &mut Ui| {
+                        form_row(ui, compact, tr("Photos"));
+                        ui.horizontal_wrapped(|ui| {
                             ui.radio_value(&mut self.export_all, false, tr("Photo affichée"));
                             ui.radio_value(
                                 &mut self.export_all,
@@ -4746,32 +4810,35 @@ impl Studio {
                                 trf("Les {n} du filtre", &[("n", &count)]),
                             );
                         });
-                        ui.end_row();
-                        ui.label(tr("Format"));
+                        form_end(ui, compact);
+                        form_row(ui, compact, tr("Format"));
                         ui.horizontal(|ui| {
                             ui.radio_value(&mut o.format, Format::Jpeg, "JPEG");
                             ui.radio_value(&mut o.format, Format::Png, "PNG");
                             ui.radio_value(&mut o.format, Format::Tiff, "TIFF");
                         });
-                        ui.end_row();
+                        form_end(ui, compact);
                         if o.format == Format::Jpeg {
-                            ui.label(tr("Qualité"));
+                            form_row(ui, compact, tr("Qualité"));
+                            if compact {
+                                ui.spacing_mut().slider_width = ui.available_width() - 90.0;
+                            }
                             ui.add(egui::Slider::new(&mut o.quality, 1..=100));
-                            ui.end_row();
-                            ui.label("");
+                            form_end(ui, compact);
+                            form_row(ui, compact, "");
                             ui.checkbox(&mut o.web, tr("Allégé pour le web"))
                                 .on_hover_text(tr(
                                     "Couleur à demi-résolution (4:2:0) et codage calculé pour chaque image : de 9 à 29 % plus léger, que tout navigateur lit",
                                 ));
                         } else {
-                            ui.label(tr("Profondeur"));
+                            form_row(ui, compact, tr("Profondeur"));
                             ui.horizontal(|ui| {
                                 ui.radio_value(&mut o.bits, 8, "8 bits");
                                 ui.radio_value(&mut o.bits, 16, "16 bits");
                             });
                         }
-                        ui.end_row();
-                        ui.label(tr("Espace colorimétrique"));
+                        form_end(ui, compact);
+                        form_row(ui, compact, tr("Espace colorimétrique"));
                         let spaces = [
                             (OutputSpace::Srgb, "sRGB"),
                             (OutputSpace::DisplayP3, "Display P3"),
@@ -4791,32 +4858,32 @@ impl Studio {
                             })
                             .response
                             .accessible_name(tr("Espace colorimétrique"));
-                        ui.end_row();
-                        ui.label(tr("Dimensions"));
-                        ui.horizontal(|ui| resize_editor(ui, &mut o.resize));
-                        ui.end_row();
-                        ui.label(tr("Accentuation de sortie"));
-                        ui.horizontal(|ui| sharpen_editor(ui, &mut o.sharpen));
-                        ui.end_row();
-                        ui.label(tr("Filigrane"));
+                        form_end(ui, compact);
+                        form_row(ui, compact, tr("Dimensions"));
+                        ui.horizontal_wrapped(|ui| resize_editor(ui, &mut o.resize));
+                        form_end(ui, compact);
+                        form_row(ui, compact, tr("Accentuation de sortie"));
+                        ui.horizontal_wrapped(|ui| sharpen_editor(ui, &mut o.sharpen));
+                        form_end(ui, compact);
+                        form_row(ui, compact, tr("Filigrane"));
                         ui.vertical(|ui| watermark_editor(ui, &mut o.watermark));
-                        ui.end_row();
-                        ui.label(tr("Métadonnées"));
+                        form_end(ui, compact);
+                        form_row(ui, compact, tr("Métadonnées"));
                         ui.vertical(|ui| metadata_editor(ui, &mut o.metadata));
-                        ui.end_row();
+                        form_end(ui, compact);
                         if crate::dialogs::FOLDER_PICKER || o.logo.is_some() {
-                            ui.label(tr("Logo"));
+                            form_row(ui, compact, tr("Logo"));
                             ui.vertical(|ui| logo_editor(ui, &mut o.logo));
-                            ui.end_row();
+                            form_end(ui, compact);
                         }
-                        ui.label(tr("Nom des fichiers"));
+                        form_row(ui, compact, tr("Nom des fichiers"));
                         ui.vertical(|ui| {
                             let mut text = o.name.clone().unwrap_or_default();
                             let edit = ui
                                 .add(
                                     egui::TextEdit::singleline(&mut text)
                                         .hint_text("{nom}")
-                                        .desired_width(260.0),
+                                        .desired_width(ui.available_width().min(260.0)),
                                 )
                                 .accessible_name(tr("Nom des fichiers"));
                             if edit.changed() {
@@ -4833,11 +4900,15 @@ impl Studio {
                             };
                             ui.label(note.small());
                         });
-                        ui.end_row();
-                        ui.label(tr("Dossier"));
-                        ui.horizontal(|ui| {
+                        form_end(ui, compact);
+                        form_row(ui, compact, tr("Dossier"));
+                        ui.horizontal_wrapped(|ui| {
                             let text = match &o.folder {
                                 Some(d) => d.display().to_string(),
+                                // Sur iPhone et iPad, chaque image va aussi dans Photos.
+                                None if luma_apple::photos::AVAILABLE => {
+                                    tr("La Pellicule de Photos, et LÜMA/ à côté de l'original (app Fichiers)").into()
+                                }
                                 None => tr("LÜMA/, à côté de l'original").into(),
                             };
                             ui.label(RichText::new(text).color(theme::DIM));
@@ -4852,8 +4923,16 @@ impl Studio {
                                 o.folder = None;
                             }
                         });
-                        ui.end_row();
-                    });
+                        form_end(ui, compact);
+                };
+                if compact {
+                    body(ui);
+                } else {
+                    egui::Grid::new("export")
+                        .num_columns(2)
+                        .spacing(vec2(12.0, 8.0))
+                        .show(ui, body);
+                }
                 ui.add_space(8.0);
                 let valid = valid_name(self.export_options.name.as_deref().unwrap_or(""))
                     && (self.export_current || !self.export_targets.is_empty());
@@ -10604,6 +10683,43 @@ fn paint_meta(painter: &egui::Painter, rect: egui::Rect, meta: &Meta) {
                 egui::Stroke::new(1.5, Color32::BLACK),
             );
         }
+    }
+}
+
+/// Une fenêtre de réglages (Exporter…) : au centre de l'écran ; sur iPhone, tout l'écran
+/// utile, sur un fond opaque (rien du panneau ne se lit au travers).
+fn place_window<'a>(
+    ctx: &egui::Context,
+    window: egui::Window<'a>,
+    compact: bool,
+) -> egui::Window<'a> {
+    if compact {
+        let style = ctx.global_style();
+        window
+            .fixed_rect(ctx.content_rect().shrink(8.0))
+            .frame(egui::Frame::window(&style).fill(Color32::from_rgb(0x14, 0x14, 0x1a)))
+    } else {
+        window.anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+    }
+}
+
+/// Le titre d'une ligne de formulaire : à gauche dans une grille, ou au‑dessus du
+/// réglage sur iPhone (rien pour un titre vide).
+fn form_row(ui: &mut Ui, compact: bool, title: &str) {
+    if !compact {
+        ui.label(title);
+    } else if !title.is_empty() {
+        ui.add_space(4.0);
+        ui.label(RichText::new(title).size(12.0).color(theme::DIM));
+    }
+}
+
+/// La fin d'une ligne de formulaire (voir [`form_row`]).
+fn form_end(ui: &mut Ui, compact: bool) {
+    if compact {
+        ui.add_space(6.0);
+    } else {
+        ui.end_row();
     }
 }
 

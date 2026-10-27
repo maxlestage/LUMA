@@ -28,6 +28,8 @@ cp "target/$target/release/luma-studio" "$app/luma-studio"
 sed -e "s/@VERSION@/$version/g" -e "s/@PLATFORM@/$platform/g" packaging/ios/Info.plist > "$app/Info.plist"
 # Le manifeste de confidentialité (exigé par l'App Store).
 cp packaging/ios/PrivacyInfo.xcprivacy "$app/PrivacyInfo.xcprivacy"
+# Les textes des demandes d'autorisation, en français, anglais et espagnol.
+cp -R packaging/ios/fr.lproj packaging/ios/en.lproj packaging/ios/es.lproj "$app/"
 
 # Les icônes : le logo de LÜMA (luma-brand), aux tailles de l'iPhone et de l'iPad.
 cargo run -q --release -p luma-studio --example icon -- "$out/icon.png" ios
