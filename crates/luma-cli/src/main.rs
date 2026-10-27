@@ -13,6 +13,7 @@
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
+//! luma import [carte] --to dossier  importe une carte (rangement, renommage, 2nd disque)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
 //! luma slideshow <photo>… -o dossier un diaporama autonome (index.html et JPEG)
@@ -128,6 +129,15 @@ USAGE
       grand d'un clic, flèches, glissement du doigt, Échap), photos/ et vignettes/ en
       JPEG allégés pour le web. À mettre en ligne tel quel. La légende de chaque photo
       est son titre (informations IPTC), sinon son nom.
+  luma import [carte|dossier] --to dossier [--folders \"{année}/{année}-{mois}-{jour}\"]
+              [--name modèle] [--backup second-disque] [--dry-run] [--catalog f.lumacat]
+      Importe les photos d'une carte mémoire (sans carte donnée : la carte montée, celle
+      qui a un dossier DCIM) ou d'un dossier : copiées dans --to, rangées par date de
+      prise de vue (--folders, vide : tout au même endroit), renommées avec --name (les
+      repères de l'export : {date}_{séquence}, {boîtier}-{nom}…), et copiées aussi sur
+      --backup. Chaque copie est relue et comparée à l'original ; le RAW, son JPEG et
+      son XMP gardent un même nom ; une photo déjà importée est sautée ; la carte n'est
+      jamais modifiée. Les photos importées entrent dans la photothèque.
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -1741,6 +1751,99 @@ fn print(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// L'import d'une carte mémoire ou d'un dossier.
+fn import(args: Vec<String>) -> Result<(), String> {
+    use luma_library::import::{self, Options};
+    let mut o = Options {
+        dest: PathBuf::new(),
+        folders: "{année}/{année}-{mois}-{jour}".into(),
+        backup: None,
+    };
+    let (mut source, mut dest, mut template, mut dry, mut file) = (None, None, None, false, None);
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--to" => dest = Some(PathBuf::from(it.next().ok_or("--to : dossier attendu")?)),
+            "--folders" => o.folders = it.next().unwrap_or_default(),
+            "--name" => template = Some(it.next().ok_or("--name : modèle attendu")?),
+            "--backup" => o.backup = Some(PathBuf::from(it.next().ok_or("--backup : dossier attendu")?)),
+            "--dry-run" | "-n" => dry = true,
+            "--catalog" => file = Some(PathBuf::from(it.next().ok_or("--catalog : fichier attendu")?)),
+            _ => source = Some(PathBuf::from(a)),
+        }
+    }
+    o.dest = dest.ok_or("il faut le dossier de la photothèque (--to ~/Photos)")?;
+    let source = match source {
+        Some(s) => s,
+        None => {
+            let cards = import::cards();
+            match cards.as_slice() {
+                [one] => one.clone(),
+                [] => return Err("aucune carte mémoire montée (ou donnez le dossier à importer)".into()),
+                many => {
+                    let list: Vec<String> = many.iter().map(|c| c.display().to_string()).collect();
+                    return Err(format!("plusieurs cartes : {} ; dites laquelle", list.join(", ")));
+                }
+            }
+        }
+    };
+    if let Some(t) = &template {
+        export::check_template(t)?;
+    }
+    let found = import::photos(&source);
+    if found.is_empty() {
+        return Err(format!("aucune photo dans {}", source.display()));
+    }
+    let entries: Vec<luma_library::Entry> = found.iter().map(|p| luma_library::entry_of(p)).collect();
+    let plan = import::plan(&entries, &o, |e, n| {
+        let t = template.as_ref()?;
+        let f = export::NameFields::of_details(&e.path, &e.date, &e.make, &e.model, &e.lens, e.iso, e.rating, &e.label);
+        let fields = export::NameFields { sequence: n, ..f };
+        Some(export::file_name(t, &fields))
+    });
+    for item in &plan.items {
+        println!("{}\t→ {}", item.source.display(), item.target.display());
+    }
+    eprintln!(
+        "{} photo(s) à importer ({:.1} Mo), {} déjà importée(s)",
+        plan.items.len(),
+        plan.bytes() as f64 / 1e6,
+        plan.skipped.len()
+    );
+    if dry || plan.items.is_empty() {
+        return Ok(());
+    }
+    let start = Instant::now();
+    let report = import::run(&plan, |n| eprint!("\r{n} / {}", plan.items.len()))?;
+    eprintln!(
+        "\r{} photo(s) importée(s) et vérifiée(s), {:.1} Mo, en {:.1} s{}",
+        report.copied,
+        report.bytes as f64 / 1e6,
+        start.elapsed().as_secs_f64(),
+        if o.backup.is_some() {
+            ", aussi sur le second disque"
+        } else {
+            ""
+        }
+    );
+    // La photothèque : les dossiers où les photos sont arrivées.
+    if let Some(file) = file.or_else(luma_library::default_path) {
+        let mut catalog = luma_library::Catalog::load(&file);
+        let mut dirs: Vec<PathBuf> = plan
+            .items
+            .iter()
+            .filter_map(|i| i.target.parent().map(Path::to_path_buf))
+            .collect();
+        dirs.sort();
+        dirs.dedup();
+        for d in &dirs {
+            catalog.add_folder(d, false);
+        }
+        catalog.save(&file).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Décrit un profil ICC.
 fn icc(path: &Path) -> Result<(), String> {
     use luma_color::profile::{Class, Intent, Pcs, Profile, Space, xyz_to_lab};
@@ -1938,6 +2041,15 @@ fn main() -> ExitCode {
     }
     if command == "print" {
         return match print(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "import" {
+        return match import(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");
