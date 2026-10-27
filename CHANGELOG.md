@@ -121,6 +121,11 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Hautes lumières reconstruites** : la case « Reconstruire les hautes lumières »
+  (Lumière, sous la Tonalité) rend à un canal saturé par le capteur la couleur de ses
+  voisins ; un ciel brûlé redevient orangé, une serviette blanche retrouve sa texture.
+  Un pixel où tout sature reste blanc. Aussi en ligne de commande
+  (`--set highlights.reconstruction=on`).
 - **Accentuation par déconvolution** : la case « Déconvolution » de l'Accentuation
   défait le flou de l'objectif au lieu d'en creuser les contours ; du vrai détail
   revient, sans halo (1,6 dB de mieux que le masque flou sur nos essais). Visible à
