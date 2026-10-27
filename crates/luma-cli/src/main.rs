@@ -14,6 +14,8 @@
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
+//! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
+//! luma slideshow <photo>… -o dossier un diaporama autonome (index.html et JPEG)
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! luma licence-keys                 une paire de clés pour signer les licences
 //! ```
@@ -104,6 +106,19 @@ USAGE
       --captions). Marges de 10 mm et 300 points par pouce par défaut. --profile
       convertit chaque page vers le profil RVB de l'imprimante (colorimétrique relative
       par défaut, noir compensé) : imprimez alors sans gestion des couleurs du pilote.
+  luma book <photo>… -o livre.pdf [--title titre] [--subtitle texte]
+                    [--format 20x20|30x30|A4|21x28|A3|LxH] [--landscape] [--margin mm]
+                    [--gap mm] [--dpi 300] [--captions] [--profile imprimante.icc]
+      Un livre photo : la couverture (la première photo, le titre et le sous‑titre
+      dessous), puis des pages d'une, deux ou quatre photos selon leur orientation (deux
+      paysages l'un sous l'autre, deux portraits côte à côte). 20 × 20 cm, marges de
+      15 mm et 300 points par pouce par défaut.
+  luma slideshow <photo>… -o dossier [--title titre] [--seconds 5] [--fade 1]
+                         [--size 2048] [--quality 85] [--captions]
+      Un diaporama qui se suffit à lui‑même : le dossier reçoit index.html et les photos
+      (JPEG sRGB, grand côté de 2048 px par défaut), à ouvrir dans un navigateur ou à
+      mettre en ligne. Fondu entre les photos, flèches ou glissement du doigt, espace
+      pour la pause, F pour le plein écran.
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -1401,6 +1416,157 @@ fn rename(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// Une photo et ses réglages : ceux de son XMP, sinon ceux de départ.
+fn open_with_settings(path: &Path) -> Result<(Photo, Settings), String> {
+    let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
+    let settings = match sidecar(path) {
+        Some(x) => xmp::read(&std::fs::read_to_string(&x).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?,
+        None => photo.default_settings(),
+    };
+    Ok((photo, settings))
+}
+
+fn file_label(path: &Path) -> String {
+    path.file_name()
+        .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+}
+
+/// Un nombre d'une option, dans ces bornes.
+fn bounded<T: std::str::FromStr + PartialOrd>(option: &str, v: Option<String>, lo: T, hi: T) -> Result<T, String> {
+    v.and_then(|v| v.replace(',', ".").parse::<T>().ok())
+        .filter(|v| *v >= lo && *v <= hi)
+        .ok_or_else(|| format!("{option} : valeur hors des bornes"))
+}
+
+/// Le livre photo, en PDF.
+fn book(args: Vec<String>) -> Result<(), String> {
+    use luma_render::book::{self, Book};
+    use luma_render::print;
+    let mut b = Book::default();
+    let (mut out, mut profile, mut photos) = (None, None, Vec::new());
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "-o" | "--output" => out = Some(PathBuf::from(it.next().ok_or("-o : fichier attendu")?)),
+            "--title" => b.title = it.next().unwrap_or_default(),
+            "--subtitle" => b.subtitle = it.next().unwrap_or_default(),
+            "--format" | "--paper" => {
+                let v = it.next().unwrap_or_default();
+                let n = v.to_lowercase().replace(['×', ' '], "x");
+                b.paper = book::FORMATS
+                    .iter()
+                    .find(|f| f.name.to_lowercase() == n)
+                    .copied()
+                    .or_else(|| print::paper(&v))
+                    .ok_or_else(|| format!("--format : format inconnu « {v} »"))?;
+            }
+            "--landscape" => b.landscape = true,
+            "--margin" => b.margin = bounded("--margin", it.next(), 0.0, 100.0)?,
+            "--gap" => b.gap = bounded("--gap", it.next(), 0.0, 50.0)?,
+            "--dpi" => b.dpi = bounded("--dpi", it.next(), 72, 1200)?,
+            "--captions" => b.captions = true,
+            "--profile" => profile = Some(PathBuf::from(it.next().ok_or("--profile : fichier ICC attendu")?)),
+            _ => photos.push(PathBuf::from(a)),
+        }
+    }
+    let out = out.ok_or("il faut un fichier de sortie (-o livre.pdf)")?;
+    if photos.is_empty() {
+        return Err("aucune photo pour le livre".into());
+    }
+    if b.cells(book::Kind::Four, true).is_empty() {
+        return Err("les marges ne laissent plus de place sur la page".into());
+    }
+    let printer = match &profile {
+        Some(p) => {
+            let bytes = std::fs::read(p).map_err(|e| format!("{} : {e}", p.display()))?;
+            let profile =
+                luma_color::profile::Profile::parse(&bytes).map_err(|e| format!("{} : {}", p.display(), e.0))?;
+            Some(
+                luma_color::proof::Conversion::new(&profile, luma_color::profile::Intent::Relative)
+                    .map_err(|e| e.0.to_owned())?,
+            )
+        }
+        None => None,
+    };
+    let start = Instant::now();
+    // L'orientation de chaque photo décide des pages.
+    let mut landscape = Vec::with_capacity(photos.len());
+    for p in &photos {
+        let (photo, settings) = open_with_settings(p)?;
+        landscape.push(book::is_landscape(&photo, &settings));
+    }
+    let layout = b.layout();
+    let mut pages = Vec::new();
+    for sheet in book::plan(&landscape) {
+        let cells = b.cells(sheet.kind, landscape[sheet.photos[0]]);
+        let mut pictures = Vec::with_capacity(sheet.photos.len());
+        for (&k, cell) in sheet.photos.iter().zip(&cells) {
+            let (photo, settings) = open_with_settings(&photos[k])?;
+            pictures.push(print::develop(
+                &photo,
+                &settings,
+                &layout,
+                cell,
+                file_label(&photos[k]),
+            )?);
+        }
+        pages.push(print::encode(&b.page(sheet.kind, &cells, &pictures, printer.as_ref()))?);
+    }
+    std::fs::write(&out, print::pdf_of(&layout, &pages)).map_err(|e| format!("{} : {e}", out.display()))?;
+    let (w, h) = layout.page_mm();
+    println!(
+        "{} : livre de {} page(s) de {w:.0} × {h:.0} mm, {} photo(s), en {:.1} s",
+        out.display(),
+        pages.len(),
+        photos.len(),
+        start.elapsed().as_secs_f64()
+    );
+    Ok(())
+}
+
+/// Le diaporama autonome.
+fn slideshow(args: Vec<String>) -> Result<(), String> {
+    use luma_render::slideshow::{self, Slideshow};
+    let mut show = Slideshow::default();
+    let (mut out, mut photos) = (None, Vec::new());
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "-o" | "--output" => out = Some(PathBuf::from(it.next().ok_or("-o : dossier attendu")?)),
+            "--title" => show.title = it.next().unwrap_or_default(),
+            "--seconds" => show.seconds = bounded("--seconds", it.next(), 0.5, 600.0)?,
+            "--fade" => show.fade = bounded("--fade", it.next(), 0.0, 5.0)?,
+            "--size" => show.size = bounded("--size", it.next(), 320, 8192)?,
+            "--quality" => show.quality = bounded("--quality", it.next(), 1, 100)?,
+            "--captions" => show.captions = true,
+            _ => photos.push(PathBuf::from(a)),
+        }
+    }
+    let out = out.ok_or("il faut un dossier de sortie (-o diaporama)")?;
+    if photos.is_empty() {
+        return Err("aucune photo pour le diaporama".into());
+    }
+    let start = Instant::now();
+    let mut frames = Vec::with_capacity(photos.len());
+    for p in &photos {
+        let (photo, settings) = open_with_settings(p)?;
+        let r = photo
+            .render(&settings, Size::Fit(show.size), &Cancel::new())
+            .map_err(|e| format!("{} : {e}", p.display()))?;
+        let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
+        let jpeg = luma_render::jpeg::encode(&rgb, r.image.width, r.image.height, show.quality, &[], &[])?;
+        frames.push((jpeg, file_label(p)));
+    }
+    slideshow::write(&out, &show, &frames)?;
+    println!(
+        "{} : diaporama de {} photo(s), en {:.1} s (ouvrir index.html)",
+        out.display(),
+        frames.len(),
+        start.elapsed().as_secs_f64()
+    );
+    Ok(())
+}
+
 /// La mise en page pour l'imprimante, en PDF.
 fn print(args: Vec<String>) -> Result<(), String> {
     use luma_color::profile::{Intent, Profile};
@@ -1689,6 +1855,20 @@ fn main() -> ExitCode {
             }
         }
         return if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE };
+    }
+    if command == "book" || command == "slideshow" {
+        let result = if command == "book" {
+            book(args.collect())
+        } else {
+            slideshow(args.collect())
+        };
+        return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
     }
     if command == "print" {
         return match print(args.collect()) {
