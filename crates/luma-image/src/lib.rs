@@ -111,6 +111,7 @@ pub fn base_key(s: &Settings) -> Settings {
         white_balance: s.white_balance,
         exposure: s.exposure,
         calibration: s.calibration.clone(),
+        channel_mixer: s.channel_mixer,
         detail,
         dehaze: s.dehaze,
         highlights: s.highlights,
@@ -328,7 +329,15 @@ pub fn render_tables(s: &Settings) -> (Vec<f32>, Option<[Vec<f32>; 3]>) {
 
 fn input_stage(cam: &RgbImage, input: &Input, s: &Settings) -> RgbImage {
     let gain = (s.exposure + input.exposure_bias).exp2();
-    let m = lc::mul(&color::calibration_matrix(&s.calibration), &input.camera_to_working).map(|r| r.map(|v| v * gain));
+    // Le mélangeur de couches, en Rec. 2020 linéaire : une matrice de plus dans la même
+    // multiplication (aucun calcul par pixel en plus).
+    let working = lc::mul(&color::calibration_matrix(&s.calibration), &input.camera_to_working);
+    let mixed = if s.channel_mixer.is_identity() {
+        working
+    } else {
+        lc::mul(&s.channel_mixer.matrix(), &working)
+    };
+    let m = mixed.map(|r| r.map(|v| v * gain));
     let tint = s.calibration.shadows_tint / 100.0;
     let mut img = RgbImage {
         width: cam.width,
@@ -741,6 +750,27 @@ mod tests {
             scale: 1.0,
             rendered: false,
         }
+    }
+
+    #[test]
+    fn channel_mixer_mixes_in_the_input_stage() {
+        let img = RgbImage::from_fn(4, 4, |_, _| [0.4, 0.1, 0.05]);
+        let input = gray_input();
+        let plain = input_stage(&img, &input, &Settings::default());
+        // Le mélangeur neutre ne change rien, au bit près.
+        let mut s = Settings::default();
+        assert_eq!(input_stage(&img, &input, &s).data, plain.data);
+        // Rouge et bleu échangés.
+        s.channel_mixer.red = [0.0, 0.0, 100.0];
+        s.channel_mixer.blue = [100.0, 0.0, 0.0];
+        let p = input_stage(&img, &input, &s).data[0];
+        assert!((p[0] - 0.05).abs() < 1e-6 && (p[2] - 0.4).abs() < 1e-6, "{p:?}");
+        // Une couche faite des trois : 50 % de rouge et 50 % de vert.
+        s.channel_mixer.red = [50.0, 50.0, 0.0];
+        let p = input_stage(&img, &input, &s).data[0];
+        assert!((p[0] - 0.25).abs() < 1e-6, "{p:?}");
+        // La base en cache change avec lui.
+        assert_ne!(base_key(&s), base_key(&Settings::default()));
     }
 
     fn develop_flat(v: f32, s: &Settings) -> [f32; 3] {

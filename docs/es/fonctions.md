@@ -39,6 +39,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Mezcla de blanco y negro (±3 EV, `crs:GrayMixer*`) | ✅ |
 | | Herramienta de ajuste selectivo (T): arrastrar sobre un color de la foto ajusta su tono, saturación o luminancia | ✅ |
 | Gradación de color | Sombras, medios tonos, altas luces, global; fusión, equilibrio | ✅ |
+| | Virado parcial (sombras y altas luces, equilibrio; `crs:SplitToning*` leído y escrito) | ✅ |
+| | Mezclador de canales: cada canal de salida hecho de los tres canales de la foto (−200 a +200 %) | ✅ |
 | Detalle | Enfoque: cantidad, radio, detalle, máscara | ✅ |
 | | Reducción de ruido de luminancia y de color | ✅ |
 | | Reducción de ruido avanzada (medias no locales, ondículas), sin IA | ⏳ |

@@ -892,6 +892,36 @@ fn masks_combined() {
 }
 
 #[test]
+fn channel_mixer() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("melangeur") else {
+        return;
+    };
+    let st = s.studio();
+    st.tool = luma_studio::app::Tool::Color;
+    s.wait();
+    let before = s.studio().histogram();
+    // La couche rouge à moitié : l'image vire au cyan, le vert bouge peu.
+    let st = s.studio();
+    st.settings.channel_mixer.red = [50.0, 0.0, 0.0];
+    s.wait();
+    let after = s.studio().histogram();
+    let mean = |h: &[u32; 256]| {
+        let n: u64 = h.iter().map(|&c| c as u64).sum();
+        h.iter()
+            .enumerate()
+            .map(|(v, &c)| v as u64 * c as u64)
+            .sum::<u64>() as f32
+            / n as f32
+    };
+    let (r0, g0) = (mean(&before[0]), mean(&before[1]));
+    let (r1, g1) = (mean(&after[0]), mean(&after[1]));
+    assert!(r1 < r0 - 15.0, "rouge {r0} → {r1}");
+    assert!(r0 - r1 > 2.0 * (g0 - g1).abs(), "vert {g0} → {g1}");
+    s.capture("melangeur");
+}
+
+#[test]
 fn iphone_layout() {
     let _gpu = one_at_a_time();
     // Un iPhone en portrait (points), écran Retina ×3.
