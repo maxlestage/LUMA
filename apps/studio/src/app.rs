@@ -431,6 +431,19 @@ struct Request {
     find_dust: bool,
 }
 
+/// La comparaison de 2 à 4 photos : leurs rendus, et la vue commune (zoom et centre
+/// partagés par toutes, loupe).
+struct Compare {
+    paths: Vec<PathBuf>,
+    textures: Vec<Option<TextureHandle>>,
+    tag: u64,
+    /// 1 : la photo entière ; au‑delà, agrandie.
+    zoom: f32,
+    /// Le point de la photo au centre de chaque case (0 à 1 sur chaque axe).
+    center: egui::Vec2,
+    loupe: bool,
+}
+
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
 /// table qui en découle. Une vue, pas un réglage : rien n'est écrit dans le XMP.
 #[derive(Default)]
@@ -513,6 +526,8 @@ pub struct Studio {
     clipping: bool,
     proofing: Proofing,
     zoom: bool,
+    compare: Option<Compare>,
+    compare_tag: u64,
     /// Le tri en plein écran (F) : la photo seule, notée au clavier.
     culling: bool,
     /// Au tri, passer à la suivante après chaque note, drapeau ou libellé (A).
@@ -733,6 +748,8 @@ impl Studio {
             clipping: false,
             proofing: Proofing::default(),
             zoom: false,
+            compare: None,
+            compare_tag: 0,
             culling: false,
             auto_advance: true,
             thumbs: HashMap::new(),
@@ -1475,6 +1492,24 @@ impl Studio {
                         }
                     }
                 }
+                Event::Compared {
+                    tag,
+                    index,
+                    size,
+                    rgba,
+                } => {
+                    if let Some(c) = &mut self.compare
+                        && c.tag == tag
+                        && index < c.textures.len()
+                    {
+                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        c.textures[index] = Some(ctx.load_texture(
+                            format!("comparaison {index}"),
+                            image,
+                            TextureOptions::LINEAR,
+                        ));
+                    }
+                }
                 Event::Preview {
                     tag,
                     index,
@@ -1891,6 +1926,10 @@ impl Studio {
                     action = Some(["label0", "label1", "label2", "label3"][n]);
                 } else if i.consume_key(Modifiers::NONE, Key::F) {
                     action = Some("culling");
+                } else if i.consume_key(Modifiers::NONE, Key::C) {
+                    action = Some("compare");
+                } else if i.consume_key(Modifiers::NONE, Key::L) {
+                    action = Some("loupe");
                 } else if i.consume_key(Modifiers::NONE, Key::A) {
                     action = Some("auto_advance");
                 } else if i.consume_key(Modifiers::NONE, Key::Space) {
@@ -2037,6 +2076,19 @@ impl Studio {
                 }
             }
             "crop_cancel" if self.culling => self.culling = false,
+            "crop_cancel" if self.compare.is_some() => self.compare = None,
+            "compare" => {
+                if self.compare.is_some() {
+                    self.compare = None;
+                } else {
+                    self.start_compare();
+                }
+            }
+            "loupe" => {
+                if let Some(c) = &mut self.compare {
+                    c.loupe = !c.loupe;
+                }
+            }
             "culling" => {
                 self.culling = !self.culling && !self.folder.is_empty();
                 if self.culling && self.current.is_none() {
@@ -2598,6 +2650,8 @@ impl Studio {
         let welcome = compact && self.folder.is_empty() && self.texture.is_none();
         if culling {
             self.culling_view(ui, full, m);
+        } else if self.compare.is_some() && !compact {
+            self.compare_view(ui, full, top, m);
         } else if welcome {
             let stage = Rect::from_min_max(pos2(full.min.x, top.max.y + m), full.max);
             self.stage(ui, stage);
@@ -2652,6 +2706,264 @@ impl Studio {
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
         }
+    }
+
+    /// Compare les photos choisies (2 à 4) ; sans choix, la photo ouverte et la suivante.
+    pub fn start_compare(&mut self) {
+        let visible = self.visible();
+        let mut picked: Vec<usize> = self
+            .selected
+            .iter()
+            .copied()
+            .filter(|i| visible.contains(i))
+            .collect();
+        if picked.len() < 2 {
+            picked.clear();
+            let at = self
+                .current
+                .and_then(|c| visible.iter().position(|&v| v == c))
+                .unwrap_or(0);
+            picked.extend(visible.iter().skip(at).take(2));
+            if picked.len() < 2 && at > 0 {
+                picked.insert(0, visible[at - 1]);
+            }
+        }
+        picked.truncate(4);
+        if picked.len() < 2 {
+            self.status = tr("Choisissez au moins deux photos à comparer").into();
+            return;
+        }
+        let paths: Vec<PathBuf> = picked.iter().map(|&i| self.folder[i].clone()).collect();
+        self.compare_tag += 1;
+        // Une case fait au plus la moitié de l'écran : 2048 px suffisent, même zoomés.
+        self.worker.compare(paths.clone(), 2048, self.compare_tag);
+        self.compare = Some(Compare {
+            textures: vec![None; paths.len()],
+            paths,
+            tag: self.compare_tag,
+            zoom: 1.0,
+            center: vec2(0.5, 0.5),
+            loupe: false,
+        });
+    }
+
+    /// Toutes les photos de la comparaison sont‑elles rendues ?
+    pub fn compare_ready(&self) -> bool {
+        self.compare
+            .as_ref()
+            .is_some_and(|c| c.textures.iter().all(Option::is_some))
+    }
+
+    /// Les photos comparées (vide hors de la comparaison).
+    pub fn compared(&self) -> Vec<PathBuf> {
+        self.compare
+            .as_ref()
+            .map_or_else(Vec::new, |c| c.paths.clone())
+    }
+
+    /// Le zoom commun de la comparaison et le point au centre de chaque case.
+    pub fn compare_view_state(&self) -> Option<(f32, [f32; 2], bool)> {
+        self.compare
+            .as_ref()
+            .map(|c| (c.zoom, [c.center.x, c.center.y], c.loupe))
+    }
+
+    /// Agrandit la comparaison (toutes les cases ensemble) autour de `at` (0 à 1).
+    pub fn compare_zoom(&mut self, factor: f32, at: [f32; 2]) {
+        if let Some(c) = &mut self.compare {
+            let before = c.zoom;
+            c.zoom = (c.zoom * factor).clamp(1.0, 8.0);
+            // Le point sous le pointeur reste sous le pointeur.
+            let at = vec2(at[0], at[1]);
+            c.center = at + (c.center - at) * (before / c.zoom);
+            clamp_center(c);
+        }
+    }
+
+    /// Déplace la vue de toutes les cases, en fraction de la photo.
+    pub fn compare_pan(&mut self, by: [f32; 2]) {
+        if let Some(c) = &mut self.compare {
+            c.center -= vec2(by[0], by[1]);
+            clamp_center(c);
+        }
+    }
+
+    fn compare_view(&mut self, ui: &mut Ui, full: Rect, top: Rect, m: f32) {
+        let area = Rect::from_min_max(
+            pos2(full.min.x + m, top.max.y + m),
+            full.max - vec2(m, m + 40.0),
+        );
+        let n = self.compare.as_ref().map_or(0, |c| c.paths.len());
+        let (cols, rows) = match n {
+            2 => (2, 1),
+            3 if area.width() > area.height() * 2.2 => (3, 1),
+            _ => (2, 2),
+        };
+        let gap = 8.0;
+        let cell = vec2(
+            (area.width() - gap * (cols - 1) as f32) / cols as f32,
+            (area.height() - gap * (rows - 1) as f32) / rows as f32,
+        );
+        let painter = ui.painter_at(area);
+        let mut action: Option<(usize, egui::Response, Rect)> = None;
+        let mut pointer_at: Option<egui::Vec2> = None;
+        for i in 0..n {
+            let (cx, cy) = (i % cols, i / cols);
+            let rect = Rect::from_min_size(
+                area.min + vec2(cx as f32 * (cell.x + gap), cy as f32 * (cell.y + gap)),
+                cell,
+            );
+            painter.rect_filled(rect, 8.0, Color32::from_black_alpha(90));
+            let id = ui.scope_id().with(("comparaison", i));
+            let response = ui.interact(rect, id, egui::Sense::click_and_drag());
+            let Some(c) = &self.compare else { return };
+            let fitted = match &c.textures[i] {
+                Some(t) => {
+                    let size = t.size_vec2();
+                    let scale =
+                        ((rect.width() - 12.0) / size.x).min((rect.height() - 34.0) / size.y);
+                    let fitted =
+                        Rect::from_center_size(rect.center() - vec2(0.0, 11.0), size * scale);
+                    let half = 0.5 / c.zoom;
+                    let uv = Rect::from_min_max(
+                        pos2(c.center.x - half, c.center.y - half),
+                        pos2(c.center.x + half, c.center.y + half),
+                    );
+                    painter.image(t.id(), fitted, uv, Color32::WHITE);
+                    Some(fitted)
+                }
+                None => {
+                    centered_text(
+                        &painter,
+                        rect.center(),
+                        rect.width() - 20.0,
+                        tr("Rendu…").to_owned(),
+                    );
+                    None
+                }
+            };
+            let path = c.paths[i].clone();
+            let meta = self.meta.get(&path).cloned().unwrap_or_default();
+            let current = self.current_path() == Some(path.as_path());
+            painter.text(
+                pos2(rect.min.x + 12.0, rect.max.y - 14.0),
+                egui::Align2::LEFT_CENTER,
+                file_name(&path),
+                egui::FontId::proportional(12.0),
+                if current {
+                    theme::ACCENT
+                } else {
+                    Color32::from_gray(0xd8)
+                },
+            );
+            paint_meta(
+                &painter,
+                Rect::from_min_max(
+                    pos2(rect.max.x - 120.0, rect.max.y - 26.0),
+                    rect.max - vec2(4.0, 0.0),
+                ),
+                &meta,
+            );
+            if current {
+                painter.rect_stroke(
+                    rect,
+                    8.0,
+                    egui::Stroke::new(2.0, theme::ACCENT),
+                    egui::StrokeKind::Inside,
+                );
+            }
+            if let Some(f) = fitted {
+                if let Some(p) = response.hover_pos().filter(|p| f.contains(*p)) {
+                    let c = &self.compare.as_ref().expect("comparaison");
+                    let local = (p - f.min) / f.size();
+                    let half = 0.5 / c.zoom;
+                    pointer_at = Some(vec2(
+                        c.center.x - half + local.x * 2.0 * half,
+                        c.center.y - half + local.y * 2.0 * half,
+                    ));
+                }
+                action = action.or_else(|| {
+                    (response.clicked() || response.dragged() || response.hovered())
+                        .then(|| (i, response.clone(), f))
+                });
+            }
+        }
+        // La molette (ou le pincement) agrandit toutes les cases autour du point visé ;
+        // le glisser les déplace ensemble ; un double clic passe du tout au 3:1 ; un clic
+        // ouvre la photo.
+        if let Some((i, response, fitted)) = action {
+            let (scroll, pinch) = ui.input(|inp| (inp.smooth_scroll_delta.y, inp.zoom_delta()));
+            let factor = pinch * (scroll / 400.0).exp();
+            if let Some(at) = pointer_at
+                && (factor - 1.0).abs() > 1e-3
+            {
+                self.compare_zoom(factor, [at.x, at.y]);
+            }
+            if response.dragged() {
+                let zoom = self.compare.as_ref().map_or(1.0, |c| c.zoom);
+                let d = response.drag_delta() / fitted.size() / zoom;
+                self.compare_pan([d.x, d.y]);
+            }
+            if response.double_clicked() {
+                let at = pointer_at.unwrap_or(vec2(0.5, 0.5));
+                let zoom = self.compare.as_ref().map_or(1.0, |c| c.zoom);
+                self.compare_zoom(if zoom > 1.0 { 1.0 / zoom } else { 3.0 }, [at.x, at.y]);
+            } else if response.clicked() {
+                let path = self.compare.as_ref().map(|c| c.paths[i].clone());
+                if let Some(k) = path.and_then(|p| self.folder.iter().position(|f| *f == p)) {
+                    self.select(k);
+                }
+            }
+        }
+        // La loupe : le même point de chaque photo, agrandi quatre fois, sous le pointeur.
+        if let (Some(at), Some(c)) = (pointer_at, &self.compare)
+            && c.loupe
+            && let Some(p) = ui.input(|i| i.pointer.hover_pos())
+        {
+            let radius = 90.0;
+            let lens = Rect::from_center_size(p, vec2(radius * 2.0, radius * 2.0));
+            // Une loupe par case, au même endroit de chacune.
+            for i in 0..n {
+                let Some(t) = &c.textures[i] else { continue };
+                let (cx, cy) = (i % cols, i / cols);
+                let rect = Rect::from_min_size(
+                    area.min + vec2(cx as f32 * (cell.x + gap), cy as f32 * (cell.y + gap)),
+                    cell,
+                );
+                let size = t.size_vec2();
+                let scale = ((rect.width() - 12.0) / size.x).min((rect.height() - 34.0) / size.y);
+                let fitted = Rect::from_center_size(rect.center() - vec2(0.0, 11.0), size * scale);
+                let half = 0.5 / c.zoom;
+                let local = (at - vec2(c.center.x - half, c.center.y - half)) / (2.0 * half);
+                let spot = fitted.min + local * fitted.size();
+                let place = lens.translate(spot - p);
+                let span = vec2(radius * 2.0, radius * 2.0) / fitted.size() * (2.0 * half) / 4.0;
+                let uv = Rect::from_center_size(pos2(at.x, at.y), span);
+                let clip = ui.painter_at(place.intersect(area));
+                clip.image(t.id(), place, uv, Color32::WHITE);
+                clip.rect_stroke(
+                    place,
+                    radius,
+                    egui::Stroke::new(2.0, Color32::WHITE),
+                    egui::StrokeKind::Inside,
+                );
+            }
+        }
+        let bar = Rect::from_min_max(
+            pos2(area.min.x, area.max.y + 6.0),
+            pos2(area.max.x, full.max.y - m),
+        );
+        let zoom = self.compare.as_ref().map_or(1.0, |c| c.zoom);
+        let hint = trf(
+            "Comparaison · {zoom} · molette ou double clic : zoom · glisser : déplacer · L : loupe · clic : ouvrir · Échap pour sortir",
+            &[("zoom", &format!("×{}", (zoom * 10.0).round() / 10.0))],
+        );
+        centered_text(
+            &ui.painter_at(bar),
+            pos2(bar.center().x, bar.min.y + 4.0),
+            bar.width(),
+            hint,
+        );
     }
 
     /// Le tri en plein écran : la photo seule, et en bas sa note, son drapeau, son libellé
@@ -6532,6 +6844,13 @@ fn safe_name(name: &str) -> String {
         .collect::<String>()
         .trim()
         .to_string()
+}
+
+/// La vue de la comparaison ne sort pas de la photo.
+fn clamp_center(c: &mut Compare) {
+    let half = 0.5 / c.zoom;
+    c.center.x = c.center.x.clamp(half, 1.0 - half);
+    c.center.y = c.center.y.clamp(half, 1.0 - half);
 }
 
 /// Les cinq pastilles de libellé ; rend celle cliquée (un clic sur la pastille choisie

@@ -2978,3 +2978,13 @@ es = Flechas: fotos · 0-5 valoración · P X U bandera · 6-9 etiqueta · Esc p
 fr = Libellé
 en = Label
 es = Etiqueta
+
+# ----- Comparaison -----
+
+fr = Choisissez au moins deux photos à comparer
+en = Choose at least two photos to compare
+es = Elija al menos dos fotos para comparar
+
+fr = Comparaison · {zoom} · molette ou double clic : zoom · glisser : déplacer · L : loupe · clic : ouvrir · Échap pour sortir
+en = Compare · {zoom} · scroll or double-click: zoom · drag: move · L: loupe · click: open · Esc to leave
+es = Comparación · {zoom} · rueda o doble clic: zoom · arrastrar: mover · L: lupa · clic: abrir · Esc para salir

@@ -148,6 +148,10 @@ The professional photo library, step by step.
   purple with the mouse); the next photo comes by itself (A to turn it off), Esc to
   leave. Labels are written to the XMP under the format's names, which other photo
   software reads, and can be searched in French, English or Spanish.
+- **Compare** (C): 2 to 4 photos side by side or in a grid (the selected ones,
+  otherwise the open photo and the next one), each developed with its own
+  adjustments; zoom and pan are shared by all, the loupe (L) magnifies the same spot
+  of each one, a click opens the photo.
 
 ## 0.2.0 — October 2026
 

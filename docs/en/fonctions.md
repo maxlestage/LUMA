@@ -119,6 +119,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Folder filmstrip with thumbnails, ← → navigation | ✅ |
 | Grid, ratings (0 to 5), flags (P, X, U), filter by rating and flag, stored in the XMP | ✅ |
 | Full-screen culling from the keyboard (F): ratings, flags, color labels (6 to 9), next photo by itself (A), Esc to leave; labels stored under the format's names in the XMP, found in French, English and Spanish | ✅ |
+| Compare 2 to 4 photos (C): side by side then in a grid, each developed with its own adjustments; synchronized zoom and pan (scroll, double-click, drag), ×4 loupe at the same spot of every photo (L), a click opens the photo | ✅ |
 | Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
 | Instant thumbnails (the preview embedded in the raw file, in 15 ms), then rendered with the adjustments and saved losslessly for later visits | ✅ |
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
