@@ -270,6 +270,51 @@ pub const ACTIONS: &[Action] = &[
     a("eyedropper", "Pipette de la balance", &[Combo::new(Key::W)]),
     a("targeting", "Réglage ciblé", &[Combo::new(Key::T)]),
     a("panels", "Masquer les panneaux", &[Combo::new(Key::Tab)]),
+    cmd(
+        "workspace1",
+        "Espace de travail 1",
+        &[Combo::cmd(Key::Num1)],
+    ),
+    cmd(
+        "workspace2",
+        "Espace de travail 2",
+        &[Combo::cmd(Key::Num2)],
+    ),
+    cmd(
+        "workspace3",
+        "Espace de travail 3",
+        &[Combo::cmd(Key::Num3)],
+    ),
+    cmd(
+        "workspace4",
+        "Espace de travail 4",
+        &[Combo::cmd(Key::Num4)],
+    ),
+    cmd(
+        "workspace5",
+        "Espace de travail 5",
+        &[Combo::cmd(Key::Num5)],
+    ),
+    cmd(
+        "workspace6",
+        "Espace de travail 6",
+        &[Combo::cmd(Key::Num6)],
+    ),
+    cmd(
+        "workspace7",
+        "Espace de travail 7",
+        &[Combo::cmd(Key::Num7)],
+    ),
+    cmd(
+        "workspace8",
+        "Espace de travail 8",
+        &[Combo::cmd(Key::Num8)],
+    ),
+    cmd(
+        "workspace9",
+        "Espace de travail 9",
+        &[Combo::cmd(Key::Num9)],
+    ),
 ];
 
 /// Les touches de chaque commande.
