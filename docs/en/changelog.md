@@ -224,6 +224,10 @@ The professional photo library, step by step.
 - **Snapshots** (Light tool, below the history): the adjustments of a moment, under a
   name, stored in the photo's XMP; one click goes back to them (a history step that can
   be undone).
+- **Catalogue backups**: one a week, on its own, in “Sauvegardes” next to the catalogue
+  (the last ten kept); `luma catalog --backup`, `--backups`, `--restore` (the replaced
+  catalogue is backed up first). **Missing photos**: `--missing` lists them,
+  `--relocate old new` finds a folder moved outside LÜMA, collections included.
 
 ## 0.2.0 — October 2026
 

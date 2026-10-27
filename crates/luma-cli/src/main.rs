@@ -98,7 +98,8 @@ USAGE
       et ce que donnent le blanc, le noir et les primaires du périphérique.
   luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords]
                [--smart nom \"règle\"] [--add nom photo]… [--remove-collection nom]
-               [--collections] [--collection nom]
+               [--collections] [--collection nom] [--backup] [--backups] [--restore f]
+               [--missing] [--relocate ancien nouveau]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
       au catalogue de LÜMA, ou le remet à jour ; seuls les fichiers modifiés sont relus.
       --list affiche les photos par date de prise de vue ; --search ne garde que celles
@@ -111,6 +112,11 @@ USAGE
       recherche : \"note:4 date:2024\"), --add range une photo dans une collection
       manuelle (créée au besoin), --collections les liste, --collection montre les
       photos de l'une d'elles.
+      Entretien : --backup copie le catalogue dans « Sauvegardes » à côté de lui (les dix
+      dernières sont gardées ; l'app en fait une par semaine), --backups les liste,
+      --restore remet l'une d'elles (le catalogue remplacé est sauvegardé d'abord).
+      --missing liste les photos dont le fichier n'est plus là ; --relocate retrouve
+      celles d'un dossier déplacé à sa nouvelle place, collections comprises.
   luma cameras [--markdown] [--corpus dossier]
       Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
       --corpus marque ceux dont un vrai RAW est dans le dossier.
@@ -286,6 +292,10 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     // Les changements de collections, appliqués dans l'ordre ; la collection à montrer.
     let mut edits: Vec<(String, String, String)> = Vec::new();
     let (mut list_collections, mut shown) = (false, None);
+    // Sauvegardes et photos manquantes.
+    let (mut save_copy, mut list_backups, mut missing) = (false, false, false);
+    let mut restore = None;
+    let mut relocate = None;
     let mut it = args.into_iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -313,11 +323,25 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             }
             "--collections" => list_collections = true,
             "--collection" => shown = Some(it.next().ok_or("--collection attend un nom")?),
+            "--backup" => save_copy = true,
+            "--backups" => list_backups = true,
+            "--restore" => restore = Some(PathBuf::from(it.next().ok_or("--restore attend une sauvegarde")?)),
+            "--missing" => missing = true,
+            "--relocate" => {
+                let from = it.next().ok_or("--relocate attend l'ancien dossier")?;
+                let to = it.next().ok_or("--relocate attend le nouveau dossier")?;
+                relocate = Some((PathBuf::from(from), PathBuf::from(to)));
+            }
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => folders.push(PathBuf::from(arg)),
         }
     }
     let file = file.ok_or("pas de dossier personnel pour le catalogue : --catalog f.lumacat")?;
+    use luma_library::backup;
+    if let Some(from) = &restore {
+        backup::restore(from, &file).map_err(|e| format!("{} : {e}", from.display()))?;
+        println!("{} remis à la place du catalogue", from.display());
+    }
     let t = Instant::now();
     let mut cat = luma_library::Catalog::load(&file);
     let loaded = t.elapsed();
@@ -355,8 +379,30 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             _ => return Err(format!("pas de collection « {name} »")),
         }
     }
-    if !folders.is_empty() || !edits.is_empty() {
+    let mut moved = false;
+    if let Some((from, to)) = &relocate {
+        let n = cat.relocate(from, to);
+        println!("{n} photos retrouvées dans {}", to.display());
+        moved = n > 0;
+    }
+    if missing {
+        let gone = cat.missing();
+        println!("{} photos manquantes", gone.len());
+        for e in gone {
+            println!("  {}", e.path.display());
+        }
+    }
+    if !folders.is_empty() || !edits.is_empty() || moved {
         cat.save(&file).map_err(|e| format!("{} : {e}", file.display()))?;
+    }
+    if save_copy {
+        let to = backup::backup(&file).map_err(|e| format!("{} : {e}", file.display()))?;
+        println!("sauvegarde : {}", to.display());
+    }
+    if list_backups {
+        for b in backup::list(&file) {
+            println!("{}", b.display());
+        }
     }
     println!("{} : {} photos (lu en {:.1} ms)", file.display(), cat.len(), ms(loaded));
     if facets {

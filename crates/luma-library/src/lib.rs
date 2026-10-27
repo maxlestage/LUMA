@@ -10,6 +10,7 @@
 //! la date de modification sont celles de l'index, avec un XMP inchangé, n'est pas
 //! rouvert. Les en‑têtes sont lus en parallèle, sans décoder les pixels.
 
+pub mod backup;
 pub mod collections;
 pub mod fingerprint;
 pub mod query;

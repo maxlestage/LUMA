@@ -237,6 +237,11 @@ La fototeca profesional, paso a paso.
 - **Instantáneas** (herramienta Luz, bajo el historial): los ajustes de un momento, con
   un nombre, guardados en el XMP de la foto; un clic vuelve a ellos (un paso del
   historial, que se puede deshacer).
+- **Copias de seguridad del catálogo**: una por semana, sola, en «Sauvegardes» junto al
+  catálogo (se guardan las diez últimas); `luma catalog --backup`, `--backups`,
+  `--restore` (el catálogo reemplazado se guarda antes). **Fotos que faltan**:
+  `--missing` las lista, `--relocate antigua nueva` recupera una carpeta movida fuera de
+  LÜMA, colecciones incluidas.
 
 ## 0.2.0 — octubre de 2026
 
