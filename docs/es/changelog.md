@@ -30,7 +30,10 @@ La fototeca profesional, paso a paso.
   372 → 299 ms) y 144 MB menos de memoria, mismos bytes.
   Después la reducción de ruido por ondículas, sin imagen nueva en cada escala: 1,8
   veces más rápida (24 Mpx: 1,17 → 0,65 s), y el enfoque por deconvolución, ocho píxeles
-  a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles.
+  a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles. Después el filtro que
+  sigue los contornos (Sombras, Altas luces, Claridad, bordes de máscaras y del
+  cielo), sin planos intermedios: casi el doble de rápido (24 Mpx: 87 → 47 ms), mismos
+  valores.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
