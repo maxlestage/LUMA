@@ -21,6 +21,9 @@ The professional photo library, step by step.
   Then 16-bit TIFF and PNG exports: the image written straight to
   bytes, on every core, without a second copy: 20 to 28% shorter (24 MP: 372 → 299 ms)
   and 144 MB less memory, same bytes.
+  Then wavelet noise reduction, without a new image at each scale: 1.8 times faster
+  (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
+  shorter (0.83 → 0.60 s), same pixels.
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and
