@@ -126,6 +126,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Seleccionar el cielo** (Máscaras, Enmascarado): un clic y el cielo se convierte
+  en una máscara, nubes incluidas, siguiendo los bordes de árboles y tejados; un lago
+  que lo refleja queda fuera. Sin IA: solo los colores y la textura de la foto.
 - **Eliminar** (Retoque, junto al corrector): un círculo sobre lo que molesta, un
   cable, un transeúnte, basura, y LÜMA lo sustituye por trozos de la foto de alrededor,
   textura y grano incluidos. Sin IA: solo la propia foto.

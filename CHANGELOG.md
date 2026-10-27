@@ -128,6 +128,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Sélectionner le ciel** (Masques, Masquage) : un clic, et le ciel devient un
+  masque, nuages compris, bords des arbres et des toits suivis ; un lac qui le reflète
+  reste à part. Sans IA : seulement les couleurs et la texture de la photo.
 - **Supprimer** (Retouche, à côté du correcteur) : un cercle sur ce qui gêne, un fil, un
   passant, un déchet, et LÜMA le remplace par des morceaux de la photo qui l'entourent,
   texture et grain compris. Sans IA : seulement la photo elle-même.
