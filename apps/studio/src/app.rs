@@ -547,6 +547,8 @@ pub struct Studio {
     /// Les photos importées depuis Photos déjà vues (voir `watch_imports`).
     imports_seen: usize,
     imports_failed: usize,
+    /// Jusqu'à quand guetter les photos d'un import Photos (il en arrive une à une).
+    imports_until: f64,
     /// Les vignettes libérées faute de mémoire : redemandées quand elles réapparaissent.
     evicted: std::collections::HashSet<PathBuf>,
     /// Les vignettes affichées sans image pendant cette image de l'interface.
@@ -766,6 +768,7 @@ impl Studio {
             memory_check: 0.0,
             imports_seen: 0,
             imports_failed: 0,
+            imports_until: 0.0,
             evicted: Default::default(),
             shown_missing: Default::default(),
             // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
@@ -1717,9 +1720,12 @@ impl Studio {
                 &[("n", &failed)],
             );
         }
+        let now = ctx.input(|i| i.time);
         let count = luma_apple::photos::imported();
         if count != self.imports_seen {
             crate::journal(&format!("import : {count} photo(s) copiée(s)"));
+            // D'autres suivent peut‑être : on guette encore une minute.
+            self.imports_until = self.imports_until.max(now + 60.0);
             let new = count - self.imports_seen;
             self.imports_seen = count;
             let current = self.current_path().map(Path::to_path_buf);
@@ -1731,8 +1737,11 @@ impl Studio {
                 self.status = trf("{n} photo(s) importée(s).", &[("n", &new)]);
             }
         }
-        // Tant qu'un import peut arriver, on regarde deux fois par seconde.
-        ctx.request_repaint_after(std::time::Duration::from_millis(500));
+        // Tant qu'un import peut arriver, on regarde deux fois par seconde ; le reste du
+        // temps, l'écran ne se redessine pas pour rien (la batterie).
+        if now < self.imports_until {
+            ctx.request_repaint_after(std::time::Duration::from_millis(500));
+        }
     }
 
     /// Sur iPhone et iPad, le système ferme une app qui dépasse sa mémoire. Une fois par
@@ -2228,6 +2237,8 @@ impl Studio {
                         .ok_or("dossier Documents introuvable")
                         .and_then(luma_apple::photos::pick);
                     crate::journal(&format!("importer : {opened:?}"));
+                    // Le choix dans Photos prend son temps, et la copie des fichiers aussi.
+                    self.imports_until = f64::INFINITY;
                     if let Err(why) = opened {
                         self.status = trf("Photos ne s'ouvre pas ({why}).", &[("why", &why)]);
                     }
@@ -3439,12 +3450,15 @@ impl Studio {
                 );
             }
             ui.add_space(2.0);
-            ui.label(
-                RichText::new("LÜMA")
-                    .size(15.0)
-                    .extra_letter_spacing(5.0)
-                    .color(theme::TEXT),
-            );
+            // Sur iPhone, l'anneau suffit : la place va aux boutons.
+            if !compact {
+                ui.label(
+                    RichText::new("LÜMA")
+                        .size(15.0)
+                        .extra_letter_spacing(5.0)
+                        .color(theme::TEXT),
+                );
+            }
             // La puce Premium : l'essai, ou l'abonnement ; un clic ouvre l'écran Premium.
             let premium = matches!(self.licence.access(), luma_licence::Access::Premium { .. });
             let badge = egui::Button::new(
@@ -3482,32 +3496,36 @@ impl Studio {
                         });
                 }
             }
+            let has_photo = self.photo.is_some();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if icon_button(
-                    ui,
-                    Icon::Export,
-                    if compact { "" } else { tr("Exporter") },
-                    false,
-                )
-                .on_hover_text(tr("Maj+Cmd+E"))
-                .clicked()
+                if (has_photo || !compact)
+                    && icon_button(
+                        ui,
+                        Icon::Export,
+                        if compact { "" } else { tr("Exporter") },
+                        false,
+                    )
+                    .on_hover_text(tr("Maj+Cmd+E"))
+                    .clicked()
                 {
                     self.act("export");
                 }
-                if icon_button(
-                    ui,
-                    Icon::Open,
-                    if compact {
-                        ""
-                    } else if luma_apple::photos::AVAILABLE {
-                        tr("Importer")
-                    } else {
-                        tr("Ouvrir")
-                    },
-                    false,
-                )
-                .on_hover_text("Cmd+O")
-                .clicked()
+                // Sans photo sur iPhone, l'accueil a son grand bouton « Importer ».
+                if (has_photo || !compact)
+                    && icon_button(
+                        ui,
+                        Icon::Open,
+                        if compact {
+                            ""
+                        } else if luma_apple::photos::AVAILABLE {
+                            tr("Importer")
+                        } else {
+                            tr("Ouvrir")
+                        },
+                        false,
+                    )
+                    .on_hover_text("Cmd+O")
+                    .clicked()
                 {
                     self.act("open");
                 }
@@ -3534,6 +3552,22 @@ impl Studio {
                             self.act(action);
                         }
                     }
+                }
+                if compact && has_photo {
+                    // Sans clavier, Annuler est un bouton.
+                    let can = self.history_pos > 0;
+                    if ui
+                        .add_enabled(
+                            can,
+                            egui::Button::new(RichText::new(tr("Annuler")).size(12.0)).frame(false),
+                        )
+                        .clicked()
+                    {
+                        self.act("undo");
+                    }
+                }
+                if compact && !(has_photo && self.module == Module::Develop) {
+                    return;
                 }
                 let label = if self.before {
                     tr("Avant")
@@ -6056,7 +6090,11 @@ impl Studio {
         widgets::histogram(ui, &self.histogram, &mut self.clipping)
             .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
         ui.add_space(6.0);
-        self.proofing_panel(ui);
+        // L'épreuvage pour l'impression : sur Mac ; sur iPhone et iPad, une section de
+        // moins.
+        if !cfg!(target_os = "ios") {
+            self.proofing_panel(ui);
+        }
 
         if self.tool == Tool::Masks {
             self.retouch_panel(ui, &mut commits);

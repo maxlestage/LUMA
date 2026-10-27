@@ -162,6 +162,10 @@ La fototeca profesional, paso a paso.
   la foto abierta y la siguiente), cada una revelada con sus ajustes; el zoom y el
   desplazamiento son comunes a todas, la lupa (L) amplía el mismo punto de cada una,
   un clic abre la foto.
+- **iPhone más simple y más sobrio**: la pantalla de inicio ya no se redibuja dos
+  veces por segundo sin motivo (solo durante una importación desde Fotos); la barra
+  superior muestra solo lo útil: sin foto, ni «Después» ni exportar; con una foto, un
+  botón Deshacer; la prueba de impresión ya no ocupa sitio en iPhone y iPad.
 
 ## 0.2.0 — octubre de 2026
 
