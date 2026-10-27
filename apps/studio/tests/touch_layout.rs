@@ -187,3 +187,48 @@ fn finger_scrolls_the_panel() {
         .unwrap();
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// L'écran Premium de l'iPhone : l'achat à vie dans une carte qui tient dans la
+/// feuille, son bouton « Acheter » en pleine largeur dedans, la restauration dessous.
+/// Capture dans
+/// `target/studio-tactile-premium.png`.
+#[test]
+fn premium_sheet_on_iphone() {
+    luma_studio::force_touch(true);
+    let dir = std::env::temp_dir().join("luma-tactile-premium");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut harness = Harness::builder()
+        .with_size([440.0, 860.0])
+        .with_pixels_per_point(2.0)
+        .wgpu()
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(dir.clone());
+                        s.premium_open = true;
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    for _ in 0..6 {
+        harness.step();
+    }
+    harness
+        .render()
+        .expect("rendu de l'interface")
+        .save(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/studio-tactile-premium.png"))
+        .unwrap();
+    let buy = harness.get_by_label("Acheter").rect();
+    let price = harness.get_by_label("89,99 €").rect();
+    let restore = harness.get_by_label("Restaurer les achats").rect();
+    // La feuille : 12 points de marge, 26 de bord intérieur, 18 de carte.
+    assert!(buy.left() >= 12.0 + 26.0 + 18.0 - 1.0, "{buy:?}");
+    assert!(buy.right() <= 440.0 - (12.0 + 26.0 + 18.0) + 1.0, "{buy:?}");
+    assert!(buy.height() >= 44.0, "{buy:?}");
+    assert!(price.bottom() < buy.top() && buy.bottom() < restore.top());
+}

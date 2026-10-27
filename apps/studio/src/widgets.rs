@@ -722,6 +722,65 @@ pub fn rating(ui: &mut Ui, value: u8, size: f32) -> Option<u8> {
     }
 }
 
+/// Le bouton d'une action principale (acheter, s'abonner) : toute la largeur, plein,
+/// couleur d'accent, son texte au centre. `true` quand il est touché.
+pub fn call_to_action(ui: &mut egui::Ui, label: &str, enabled: bool) -> bool {
+    let h = if crate::touch() { 48.0 } else { 38.0 };
+    let sense = if enabled {
+        egui::Sense::click()
+    } else {
+        egui::Sense::hover()
+    };
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), h), sense);
+    let resp = resp.on_hover_cursor(if enabled {
+        egui::CursorIcon::PointingHand
+    } else {
+        egui::CursorIcon::Default
+    });
+    let fill = if !enabled {
+        egui::Color32::from_rgb(0x2c, 0x2e, 0x3a)
+    } else if resp.is_pointer_button_down_on() {
+        theme::ACCENT.gamma_multiply(0.8)
+    } else if resp.hovered() {
+        theme::ACCENT.gamma_multiply(1.08)
+    } else {
+        theme::ACCENT
+    };
+    let p = ui.painter();
+    p.rect_filled(rect, 12.0, fill);
+    p.text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        label,
+        egui::FontId::proportional(16.0),
+        if enabled {
+            egui::Color32::from_rgb(0x1a, 0x12, 0x06)
+        } else {
+            theme::DIM
+        },
+    );
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, label));
+    enabled && resp.clicked()
+}
+
+/// Une petite étiquette arrondie, couleur d'accent (« Une fois pour toutes »).
+pub fn pill(ui: &mut egui::Ui, text: &str) {
+    let galley = ui.painter().layout_no_wrap(
+        text.to_owned(),
+        egui::FontId::proportional(11.0),
+        theme::ACCENT,
+    );
+    let (rect, _) =
+        ui.allocate_exact_size(galley.size() + egui::vec2(16.0, 8.0), egui::Sense::hover());
+    let p = ui.painter();
+    p.rect_filled(
+        rect,
+        rect.height() / 2.0,
+        theme::ACCENT.gamma_multiply(0.16),
+    );
+    p.galley(rect.center() - galley.size() / 2.0, galley, theme::ACCENT);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
