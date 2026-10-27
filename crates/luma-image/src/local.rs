@@ -285,6 +285,17 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
         .iter()
         .any(|m| m.local.clarity != 0.0)
         .then(|| stops.guided(0.008 * diag, 0.5));
+    // De même pour la Texture (le flou fin de la luminance) et le voile (canal sombre
+    // et lumière du voile, lus sur l'image d'avant les masques).
+    let texture_base = active
+        .iter()
+        .any(|m| m.local.texture != 0.0)
+        .then(|| stops.blur(crate::tone::texture_sigma(diag)));
+    let haze = if active.iter().any(|m| m.local.dehaze != 0.0) {
+        crate::tone::haze(img)
+    } else {
+        None
+    };
     for mask in active {
         let weights = match &before {
             Some(b) => weights_for(mask, w, h, b),
@@ -294,6 +305,7 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
         let k = |v: f32| v / 100.0;
         let (contrast, hl, sh, wh, bl) = (k(l.contrast), k(l.highlights), k(l.shadows), k(l.whites), k(l.blacks));
         let (temp, tint, sat, clarity) = (k(l.temperature), k(l.tint), k(l.saturation), k(l.clarity));
+        let (texture, dehaze) = (k(l.texture), k(l.dehaze));
         img.data
             .par_iter_mut()
             .enumerate()
@@ -301,6 +313,17 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
             .for_each(|((i, p), (&m, &s))| {
                 if m <= 0.0 {
                     return;
+                }
+                // Le voile d'abord, comme sur toute la photo : la zone mêlée à sa version
+                // corrigée selon le masque.
+                if dehaze != 0.0
+                    && let Some((dark, air)) = &haze
+                {
+                    let mut c = *p;
+                    crate::tone::clear_haze(&mut c, dark.data[i], *air, dehaze);
+                    for k in 0..3 {
+                        p[k] += (c[k] - p[k]) * m;
+                    }
                 }
                 // Les tons, en IL : la même famille de courbes que le panneau Base.
                 let mut d = l.exposure;
@@ -312,6 +335,10 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
                 if let Some(base) = &clarity_base {
                     let mid = (-(s / 2.5).powi(2)).exp();
                     d += clarity * 0.7 * (s - base.data[i]) * mid;
+                }
+                // La Texture : le détail fin, hors des ombres profondes où vit le bruit.
+                if let Some(base) = &texture_base {
+                    d += texture * 0.9 * (s - base.data[i]) * smoothstep(-6.0, -3.0, s);
                 }
                 let g = (d * m).clamp(-6.0, 6.0).exp2();
                 // Température (bleu ↔ jaune) et teinte (vert ↔ magenta).
@@ -721,5 +748,104 @@ mod tests {
         apply(&mut img, &[m]);
         let p = img.data[0];
         assert!((p[0] - p[2]).abs() < 1e-5 && (luminance(p) - y0).abs() < 1e-5, "{p:?}");
+    }
+
+    /// Un disque net au centre (rayon 0,2), qui ne déborde pas.
+    fn disk(local: Local) -> Mask {
+        let mut m = Mask::radial();
+        m.shape = Shape::Radial {
+            center: (0.5, 0.5),
+            radius: (0.2, 0.2),
+            angle: 0.0,
+            feather: 0.0,
+        };
+        m.local = local;
+        m
+    }
+
+    /// L'écart type de la luminance sur un carré de côté `r` autour de `(cx, cy)`.
+    fn local_spread(img: &RgbImage, cx: usize, cy: usize, r: usize) -> f32 {
+        let v: Vec<f32> = (cy - r..cy + r)
+            .flat_map(|y| (cx - r..cx + r).map(move |x| (x, y)))
+            .map(|(x, y)| luminance(img.data[y * img.width + x]))
+            .collect();
+        let mean = v.iter().sum::<f32>() / v.len() as f32;
+        (v.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / v.len() as f32).sqrt()
+    }
+
+    #[test]
+    fn local_texture_softens_fine_detail_inside_only() {
+        // Un gris moyen et un grain fin, partout.
+        let (w, h) = (200, 200);
+        let mut img = RgbImage::from_fn(w, h, |x, y| {
+            let n = ((x * 73_856_093) ^ (y * 19_349_663)).wrapping_mul(2_654_435_761) as u32;
+            let v = 0.18 * (1.0 + 0.3 * ((n >> 8) as f32 / 16_777_216.0 - 0.5));
+            [v, v, v]
+        });
+        let before = img.clone();
+        apply(
+            &mut img,
+            &[disk(Local {
+                texture: -100.0,
+                ..Local::default()
+            })],
+        );
+        let (inside, was) = (local_spread(&img, 100, 100, 15), local_spread(&before, 100, 100, 15));
+        assert!(inside < 0.75 * was, "grain {was} → {inside}");
+        // Hors du disque, rien ne bouge.
+        assert_eq!(img.data[5 * w + 5], before.data[5 * w + 5]);
+        // Relevée, la Texture accentue le grain.
+        let mut sharper = before.clone();
+        apply(
+            &mut sharper,
+            &[disk(Local {
+                texture: 100.0,
+                ..Local::default()
+            })],
+        );
+        assert!(local_spread(&sharper, 100, 100, 15) > 1.2 * was);
+    }
+
+    #[test]
+    fn local_dehaze_clears_haze_inside_only_like_the_global_slider() {
+        // Une scène voilée : des tons resserrés au‑dessus d'un gris clair.
+        let (w, h) = (160, 160);
+        let hazy = RgbImage::from_fn(w, h, |x, y| {
+            let v = 0.35 + 0.25 * ((x as f32 * 0.21).sin() * (y as f32 * 0.13).cos()).abs();
+            [v, v * 0.97, v * 1.05]
+        });
+        let mut img = hazy.clone();
+        apply(
+            &mut img,
+            &[disk(Local {
+                dehaze: 80.0,
+                ..Local::default()
+            })],
+        );
+        let darkest = |img: &RgbImage| {
+            (60..100)
+                .flat_map(|y| (60..100).map(move |x| (x, y)))
+                .map(|(x, y)| luminance(img.data[y * w + x]))
+                .fold(f32::INFINITY, f32::min)
+        };
+        assert!(
+            darkest(&img) < darkest(&hazy) - 0.05,
+            "{} → {}",
+            darkest(&hazy),
+            darkest(&img)
+        );
+        assert_eq!(img.data[3 * w + 3], hazy.data[3 * w + 3]);
+        // Sur toute la photo, le masque fait ce que fait le curseur global.
+        let mut global = hazy.clone();
+        crate::tone::dehaze(&mut global, 60.0);
+        let mut full = hazy.clone();
+        let mut m = Mask::full();
+        m.local.dehaze = 60.0;
+        apply(&mut full, &[m]);
+        for (a, b) in full.data.iter().zip(&global.data) {
+            for c in 0..3 {
+                assert!((a[c] - b[c]).abs() < 1e-5, "{a:?} / {b:?}");
+            }
+        }
     }
 }

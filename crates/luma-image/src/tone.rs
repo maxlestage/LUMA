@@ -29,30 +29,49 @@ pub fn dehaze(img: &mut RgbImage, amount: f32) {
     if amount == 0.0 {
         return;
     }
+    let Some((dark, air)) = haze(img) else {
+        return;
+    };
+    let a = amount / 100.0;
+    img.data
+        .par_iter_mut()
+        .zip(&dark.data)
+        .for_each(|(p, &d)| clear_haze(p, d, air, a));
+}
+
+/// Le voile de `img` : son canal sombre flouté, et la lumière du voile (les canaux
+/// sombres les plus clairs, 99,5e centile). `None` pour une image vide.
+pub fn haze(img: &RgbImage) -> Option<(Plane, f32)> {
     let diag = ((img.width * img.width + img.height * img.height) as f32).sqrt();
     let dark = Plane::from_rgb(img, |p| p[0].min(p[1]).min(p[2]).max(0.0)).blur(0.01 * diag);
-    // La lumière du voile : les canaux sombres les plus clairs (99,5e centile).
     let mut sample: Vec<f32> = dark.data.iter().step_by(7).copied().collect();
     if sample.is_empty() {
-        return;
+        return None;
     }
     let k = ((sample.len() - 1) as f32 * 0.995) as usize;
     let air = *sample.select_nth_unstable_by(k, f32::total_cmp).1;
-    let air = air.max(0.05);
-    let a = amount / 100.0;
-    img.data.par_iter_mut().zip(&dark.data).for_each(|(p, &d)| {
-        if a > 0.0 {
-            let t = (1.0 - 0.9 * a * (d / air)).max(0.2);
-            for c in p.iter_mut() {
-                *c = ((*c - air) / t + air).max(0.0);
-            }
-        } else {
-            let h = -a * 0.45 * (1.0 - (d / air).min(1.0) * 0.5);
-            for c in p.iter_mut() {
-                *c = *c * (1.0 - h) + air * h;
-            }
+    Some((dark, air.max(0.05)))
+}
+
+/// Un pixel dont le canal sombre vaut `d`, le voile `air`, corrigé de `a` (−1 à 1).
+#[inline]
+pub fn clear_haze(p: &mut [f32; 3], d: f32, air: f32, a: f32) {
+    if a > 0.0 {
+        let t = (1.0 - 0.9 * a * (d / air)).max(0.2);
+        for c in p.iter_mut() {
+            *c = ((*c - air) / t + air).max(0.0);
         }
-    });
+    } else {
+        let h = -a * 0.45 * (1.0 - (d / air).min(1.0) * 0.5);
+        for c in p.iter_mut() {
+            *c = *c * (1.0 - h) + air * h;
+        }
+    }
+}
+
+/// Le rayon du flou de la Texture, pour une image de diagonale `diag`.
+pub fn texture_sigma(diag: f32) -> f32 {
+    (0.0012 * diag).max(1.0)
 }
 
 /// Hautes lumières, Ombres, Clarté et Texture, en un gain de luminance.
@@ -106,7 +125,7 @@ pub fn local_tone(img: &mut RgbImage, s: &Settings) {
             });
     }
     if texture != 0.0 {
-        let base = stops.blur((0.0012 * diag).max(1.0));
+        let base = stops.blur(texture_sigma(diag));
         out.data
             .par_iter_mut()
             .zip(stops.data.par_iter().zip(&base.data))
