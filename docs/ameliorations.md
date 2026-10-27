@@ -150,10 +150,16 @@ et blanc, vignetage après recadrage et grain existent).
 
 ### 16. Vidéo de base
 
-- [ ] 16.1 Si possible sans dépendance native : un film ou préréglage appliqué à une
-  vidéo courte, export.
+- [x] 16.1 Si possible sans dépendance native : un film ou préréglage appliqué à une
+  vidéo courte, export. (AVI en Motion JPEG, en ligne de commande ; les vidéos H.264 et
+  HEVC des téléphones demandent un décodeur, voir les idées)
 
 ## Idées
+
+- Vidéo : les vidéos H.264 et HEVC (MP4, MOV) des téléphones et de la plupart des
+  boîtiers demandent un décodeur ; sur Mac, iPhone et iPad, celui du système
+  (AVFoundation, dans `luma-apple`) ; puis la vidéo dans l'app (aperçu d'une image,
+  export avec le film en place).
 
 - Corriger l'objectif sur l'aperçu déjà réduit (idée de la session principale) : mesuré
   70 à 100 ms plus rapide au premier aperçu (ARW 278–341 → 201–225 ms, ORF, RW2), mais
@@ -297,3 +303,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-27 | 11.5 (fin) Empilement de mise au point (`StackMode::Focus`, Fusion « Mise au point », `luma merge --stack focus`) : alignement enchaîné (chaque pose sur sa voisine vers la référence, homographies composées : deux poses éloignées n'ont presque rien de net en commun) ; netteté = |laplacien| de la racine de la luminance, moyenné sur max(1,5 ; grand côté / 800) px ; poids = netteté⁴ ; toujours aligné (la focale respire) | Cinq poses nettes chacune sur une bande, décalées, flou gaussien de 2,5 px ailleurs : écart à la scène nette 0,0308 (meilleure pose) → 0,0072 (−77 %) ; alignées directement sur la référence, deux poses sur quatre échouaient |
 | 2026-10-27 | 12.1 Profil de boîtier (`luma_render::chart::fit_profile`, `luma colorchecker -o profil.xmp [--name]`, « Profil depuis une charte » du Mélangeur de couches) : 24 plages (tiers central, exposition ramenée sur la plage 22) ; matrice 3 × 3 dans l'espace de travail, lignes de somme 1 (le blanc et la balance restent ceux de la photo) : moindres carrés à deux inconnues par ligne, puis descente coordonnée sur le ΔE 2000 moyen ; posée dans le mélangeur (composée avec celui déjà posé), enregistrée en préréglage du groupe « Profils de boîtier » ; l'app refuse une photo qui n'est pas une charte (écart > 6 après correction) | Charte de synthèse dérivée (moteur) : ΔE moyen 3,50 → 0,01 ; charte en DNG par un boîtier imaginaire (ligne de commande) : 3,77 → 0,02, et remesurée avec le profil posé : < 0,2 |
 | 2026-10-27 | 12.2 Correspondance des couleurs entre deux boîtiers (`luma_merge::matching::match_colors`, `luma match-colors <référence> <autre> [-o accord.xmp]`, « Accorder sur la photo choisie » du Mélangeur de couches) : les deux photos (sans look, lumière linéaire de travail) alignées comme une fusion (coins, RANSAC, homographie), floutées 3 × 3, comparées loin des contours (pente relative < 0,15) et des saturations ; exposition ramenée (médiane des rapports) ; matrice aux lignes de somme 1, moindres carrés repondérés trois fois (Cauchy à deux fois l'écart médian) ; refus si moins de 16 points communs | Scène dérivée (autre cadrage, −0,5 IL, bruit, un passant) : matrice retrouvée à 0,2 % près, écart 6,22 → 1,57 ΔE (le reste : le bruit des deux prises) ; ARW du corpus contre un DNG dérivé : 1,63 → 0,69 ; deux scènes différentes refusées |
+| 2026-10-27 | 16.1 Vidéo de base (`luma_render::video`, `luma video`) : AVI lu en Rust pur (RIFF, suites `AVIX` au‑delà d'1 Go, sous‑listes `rec `), le premier flux vidéo en Motion JPEG (codec annoncé ou première image JPEG), les autres flux (le son) gardés tels quels à leur place ; tables de Huffman standard remises dans les images qui les omettent (`jpeg::with_standard_tables`) ; chaque image développée comme une photo déjà développée (sRGB) avec le film (`--film nom[:intensité]`), le XMP, `--set` ou `--lut`, réencodée en JPEG ; AVI 1.0 écrit avec son index `idx1` (1 Go au plus), même taille, même rythme (`rate / scale`) | Vidéo de synthèse avec son : écrite, relue, réécrite à l'octet près, index pointant chaque morceau ; images assombries une à une, son intact ; JPEG sans tables de Huffman relu aux mêmes pixels ; `luma video` en 29,97 images/s : sans réglage la couleur reste, avec « Tri-X 400 » chaque image est en noir et blanc ; erreurs (pas d'AVI, pas de Motion JPEG, film inconnu, sortie sur l'entrée) expliquées |
