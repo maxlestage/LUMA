@@ -34,6 +34,19 @@ pub fn write_with(
     bits: u8,
     meta: &Embedded,
 ) -> Result<(), String> {
+    write_file(path, img, space, quality, bits, meta, false)
+}
+
+/// `write_with` ; `web` : un JPEG allégé pour le web ([`crate::jpeg::encode_web`]).
+pub fn write_file(
+    path: &Path,
+    img: &RgbImage,
+    space: OutputSpace,
+    quality: u8,
+    bits: u8,
+    meta: &Embedded,
+    web: bool,
+) -> Result<(), String> {
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
@@ -57,7 +70,12 @@ pub fn write_with(
         "jpg" | "jpeg" => {
             // Sur tous les cœurs, octet pour octet le JPEG d'avant ; en mémoire d'abord :
             // le paquet XMP s'insère après les premiers segments.
-            let mut out = crate::jpeg::encode(&bytes, img.width, img.height, quality, &meta.exif, &profile)?;
+            let encode = if web {
+                crate::jpeg::encode_web
+            } else {
+                crate::jpeg::encode
+            };
+            let mut out = encode(&bytes, img.width, img.height, quality, &meta.exif, &profile)?;
             if let Some(x) = &meta.xmp {
                 insert_jpeg_xmp(&mut out, x);
             }
@@ -144,6 +162,8 @@ pub struct Options {
     pub logo: Option<Logo>,
     /// Les métadonnées recopiées et ajoutées.
     pub metadata: MetadataOptions,
+    /// Un JPEG allégé pour le web (chrominance 4:2:0, tables de Huffman de l'image).
+    pub web: bool,
 }
 
 impl Default for Options {
@@ -160,6 +180,7 @@ impl Default for Options {
             watermark: None,
             logo: None,
             metadata: MetadataOptions::default(),
+            web: false,
         }
     }
 }
@@ -707,7 +728,8 @@ pub fn develop(
         image.width,
         image.height,
     );
-    write_with(out, &image, options.space, options.quality, bits, &embedded)
+    let web = options.web && options.format == Format::Jpeg;
+    write_file(out, &image, options.space, options.quality, bits, &embedded, web)
 }
 
 /// Un préréglage d'export : un nom et des options.
@@ -729,6 +751,7 @@ pub fn builtin() -> Vec<Preset> {
             Options {
                 quality: 85,
                 resize: Some(Resize::LongEdge(2048)),
+                web: true,
                 ..Options::default()
             },
         ),
@@ -796,6 +819,8 @@ struct StoredPreset {
     logo: Option<StoredLogo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     metadata: Option<StoredMetadata>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    web: bool,
 }
 
 /// Les métadonnées, seulement si elles diffèrent de celles d'un export ordinaire.
@@ -875,6 +900,7 @@ impl StoredPreset {
                 author: o.metadata.author.clone(),
                 copyright: o.metadata.copyright.clone(),
             }),
+            web: o.web,
         }
     }
 
@@ -941,6 +967,7 @@ impl StoredPreset {
                         author: m.author.filter(|a| !a.trim().is_empty()),
                         copyright: m.copyright.filter(|c| !c.trim().is_empty()),
                     }),
+                web: self.web,
             },
         })
     }
@@ -1065,6 +1092,9 @@ pub fn describe(o: &Options) -> String {
     }
     if let Some(m) = o.metadata.describe() {
         out += &format!(", {m}");
+    }
+    if o.web && o.format == Format::Jpeg {
+        out += ", allégé pour le web";
     }
     if let Some(w) = &o.watermark {
         out += &format!(", {}", w.describe());
@@ -1444,6 +1474,7 @@ mod tests {
                     author: Some("Maxime Lestage".into()),
                     ..MetadataOptions::default()
                 },
+                web: true,
                 ..Options::default()
             },
         };
@@ -1465,6 +1496,8 @@ mod tests {
         assert_eq!(back.get("Web"), Some(web));
         assert_eq!(back.all().len(), builtin().len() + 1);
         assert_eq!(back.get("Impression").unwrap().options.space, OutputSpace::ProPhoto);
+        assert!(builtin()[0].options.web, "le préréglage Web allège ses JPEG");
+        assert!(describe(&builtin()[0].options).ends_with(", allégé pour le web"));
         // Renommer en gardant le nom remplace, sans doublon.
         let mut again = back.clone();
         again.set(Preset {
@@ -1504,10 +1537,36 @@ mod tests {
 
     #[test]
     fn descriptions() {
-        assert_eq!(describe(&builtin()[0].options), "JPEG 85, sRGB, 2048 px, LÜMA/");
+        assert_eq!(
+            describe(&builtin()[0].options),
+            "JPEG 85, sRGB, 2048 px, LÜMA/, allégé pour le web"
+        );
         assert_eq!(
             describe(&builtin()[3].options),
             "TIFF 16 bits, ProPhoto RGB, pleine définition, LÜMA/"
         );
+    }
+
+    #[test]
+    fn web_jpeg_is_written_in_4_2_0() {
+        let dir = std::env::temp_dir().join(format!("luma-web-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let img = RgbImage {
+            width: 48,
+            height: 32,
+            data: (0..48 * 32)
+                .map(|i| [(i % 48) as f32 / 48.0, 0.3, (i / 48) as f32 / 32.0])
+                .collect(),
+        };
+        let sampling = |web: bool| {
+            let path = dir.join(format!("{web}.jpg"));
+            write_file(&path, &img, OutputSpace::Srgb, 85, 8, &Embedded::default(), web).unwrap();
+            let bytes = std::fs::read(&path).unwrap();
+            let sof = bytes.windows(2).position(|w| w == [0xFF, 0xC0]).unwrap();
+            // Le facteur d'échantillonnage de la luminance.
+            bytes[sof + 11]
+        };
+        assert_eq!((sampling(false), sampling(true)), (0x11, 0x22));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
