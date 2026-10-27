@@ -1339,6 +1339,21 @@ fn deconvolution_sharpening() {
 }
 
 #[test]
+fn profile_from_a_chart() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("profil-charte") else {
+        return;
+    };
+    s.studio().tool = luma_studio::app::Tool::Color;
+    s.wait();
+    // La photo n'est pas une charte : rien n'est changé, et la barre d'état le dit.
+    assert!(s.studio().profile_from_chart().is_none());
+    assert!(s.studio().settings.channel_mixer.is_identity());
+    s.wait();
+    s.capture("profil-charte");
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {
