@@ -3650,3 +3650,73 @@ es = solo se admiten perfiles de impresora RGB
 fr = ce profil ne convertit pas dans les deux sens
 en = this profile doesn't convert both ways
 es = este perfil no convierte en ambos sentidos
+
+# ----- Le livre photo et le diaporama -----
+
+fr = Livre et diaporama…
+en = Book and slideshow…
+es = Libro y presentación…
+
+fr = Un diaporama (dans l'app ou exporté) et un livre photo en PDF
+en = A slideshow (in the app or exported) and a photo book as a PDF
+es = Una presentación (en la app o exportada) y un libro de fotos en PDF
+
+fr = Livre et diaporama : {n} photos
+en = Book and slideshow: {n} photos
+es = Libro y presentación: {n} fotos
+
+fr = Diaporama
+en = Slideshow
+es = Presentación
+
+fr = Durée
+en = Duration
+es = Duración
+
+fr = Lancer le diaporama
+en = Play the slideshow
+es = Iniciar la presentación
+
+fr = En plein écran : Espace pour la pause, flèches pour les photos, Échap pour sortir
+en = Full screen: Space to pause, arrows for the photos, Esc to leave
+es = A pantalla completa: Espacio para pausar, flechas para las fotos, Esc para salir
+
+fr = Pause · Espace pour reprendre · flèches : photos · Échap pour sortir
+en = Paused · Space to resume · arrows: photos · Esc to leave
+es = En pausa · Espacio para seguir · flechas: fotos · Esc para salir
+
+fr = Exporter le diaporama…
+en = Export the slideshow…
+es = Exportar la presentación…
+
+fr = Exporter le diaporama dans…
+en = Export the slideshow to…
+es = Exportar la presentación en…
+
+fr = Un dossier qui se suffit à lui-même : index.html et les photos, à ouvrir dans un navigateur
+en = A self-contained folder: index.html and the photos, to open in a browser
+es = Una carpeta autónoma: index.html y las fotos, para abrir en un navegador
+
+fr = Livre photo
+en = Photo book
+es = Libro de fotos
+
+fr = Sous-titre
+en = Subtitle
+es = Subtítulo
+
+fr = Environ {pages} pages : la couverture, puis une, deux ou quatre photos par page
+en = About {pages} pages: the cover, then one, two or four photos per page
+es = Unas {pages} páginas: la portada y luego una, dos o cuatro fotos por página
+
+fr = Créer le livre (PDF)…
+en = Create the book (PDF)…
+es = Crear el libro (PDF)…
+
+fr = Livre prêt : {pages} page(s), {file}
+en = Book ready: {pages} page(s), {file}
+es = Libro listo: {pages} página(s), {file}
+
+fr = Diaporama prêt : {n} photos, {file} (ouvrir index.html)
+en = Slideshow ready: {n} photos, {file} (open index.html)
+es = Presentación lista: {n} fotos, {file} (abrir index.html)
