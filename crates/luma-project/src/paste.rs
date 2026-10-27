@@ -60,6 +60,7 @@ pub fn paste(target: &Settings, source: &Settings, groups: &[Group]) -> Settings
             Group::Tone => {
                 s.contrast = source.contrast;
                 s.highlights = source.highlights;
+                s.highlight_reconstruction = source.highlight_reconstruction;
                 s.shadows = source.shadows;
                 s.whites = source.whites;
                 s.blacks = source.blacks;

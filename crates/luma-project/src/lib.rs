@@ -396,6 +396,10 @@ pub struct Settings {
     /// −100 à +100.
     pub contrast: f32,
     pub highlights: f32,
+    /// Les canaux saturés au capteur reconstruits à partir des autres ; faux par défaut,
+    /// ce qui garde le rendu des photos déjà réglées.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub highlight_reconstruction: bool,
     pub shadows: f32,
     pub whites: f32,
     pub blacks: f32,
@@ -437,6 +441,7 @@ impl Default for Settings {
             exposure: 0.0,
             contrast: 0.0,
             highlights: 0.0,
+            highlight_reconstruction: false,
             shadows: 0.0,
             whites: 0.0,
             blacks: 0.0,
@@ -656,8 +661,9 @@ impl Settings {
             };
             return Ok(());
         }
-        // Les deux méthodes du Détail : oui ou non.
+        // Les interrupteurs : oui ou non.
         let switch = match key.as_str() {
+            "highlights.reconstruction" => Some(&mut self.highlight_reconstruction),
             "sharpen.deconvolution" => Some(&mut self.detail.sharpen_deconvolution),
             "noise.wavelets" => Some(&mut self.detail.luminance_nr_wavelets),
             _ => None,
@@ -814,6 +820,8 @@ mod tests {
         s.set("noise.wavelets=off").unwrap();
         assert!(!s.detail.luminance_nr_wavelets);
         assert!(s.set("sharpen.deconvolution=peut-être").is_err());
+        s.set("highlights.reconstruction=on").unwrap();
+        assert!(s.highlight_reconstruction);
         assert_eq!(s.exposure, 0.7);
         assert_eq!(s.hsl.saturation[5], -30.0);
         assert_eq!(s.color_grading.shadows.hue, 220.0);
