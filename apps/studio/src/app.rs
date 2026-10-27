@@ -4004,7 +4004,20 @@ impl Studio {
                 .proofing
                 .active()
                 .map(|p| (self.proofing.version, p.simulate, p.gamut)),
-            scene: self.retouch.is_some() || self.selected_spot.is_some(),
+            // La copie réduite de la photo : pour chercher les sources des retouches, et
+            // pour la zone d'un masque qui se lit sur la photo (ciel, plage, bords).
+            scene: self.retouch.is_some()
+                || self.selected_spot.is_some()
+                || self
+                    .selected_mask
+                    .and_then(|i| self.settings.masks.get(i))
+                    .is_some_and(|m| {
+                        let sky = |s: &luma_project::Shape| *s == luma_project::Shape::Sky;
+                        m.range.is_some()
+                            || m.edges
+                            || sky(&m.shape)
+                            || m.parts.iter().any(|p| sky(&p.shape))
+                    }),
             dust_view: self.show_dust && self.tool == Tool::Masks,
             find_dust: self.dust_pending,
             scope: self.scope,
@@ -4487,11 +4500,14 @@ impl Studio {
                     self.crop_tool = None;
                 }
             }
-            "mask_linear" | "mask_radial" | "mask_brush" | "mask_full" if self.photo.is_some() => {
+            "mask_linear" | "mask_radial" | "mask_brush" | "mask_full" | "mask_sky"
+                if self.photo.is_some() =>
+            {
                 let mask = match action {
                     "mask_linear" => Mask::linear(),
                     "mask_radial" => Mask::radial(),
                     "mask_full" => Mask::full(),
+                    "mask_sky" => Mask::sky(),
                     _ => Mask::brush(),
                 };
                 let label = trf(
@@ -9417,6 +9433,15 @@ impl Studio {
                         }
                     }
                 });
+                if ui
+                    .button(tr("Sélectionner le ciel"))
+                    .on_hover_text(tr(
+                        "Un masque sur le ciel de la photo, trouvé sur la photo elle-même (clair, uni, relié au haut), ses bords sur les branches et les toits",
+                    ))
+                    .clicked()
+                {
+                    self.act("mask_sky");
+                }
                 let mut select = None;
                 for (i, m) in self.settings.masks.iter().enumerate() {
                     let current = self.selected_mask == Some(i);
@@ -10557,6 +10582,7 @@ fn shape_name(s: &luma_project::Shape) -> &'static str {
         luma_project::Shape::Radial { .. } => "Dégradé radial",
         luma_project::Shape::Brush { .. } => "Pinceau",
         luma_project::Shape::Full => "Image entière",
+        luma_project::Shape::Sky => "Ciel",
     }
 }
 
