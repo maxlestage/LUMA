@@ -37,6 +37,22 @@ pub fn force_touch(on: bool) {
     TOUCH_FORCED.store(on, Ordering::Relaxed);
 }
 
+/// L'écran de l'app, pour qu'un travail de fond le réveille quand il a fini (au lieu
+/// de redessiner toutes les 100 ms pour voir s'il a fini).
+static SCREEN: std::sync::OnceLock<egui::Context> = std::sync::OnceLock::new();
+
+/// Retient l'écran de l'app (une fois, au démarrage).
+pub fn set_screen(ctx: &egui::Context) {
+    let _ = SCREEN.set(ctx.clone());
+}
+
+/// Redessine l'écran : un travail de fond vient de finir.
+pub fn wake() {
+    if let Some(ctx) = SCREEN.get() {
+        ctx.request_repaint();
+    }
+}
+
 /// Le journal de démarrage : sur la sortie d'erreur, et sur iPhone et iPad dans
 /// `Documents/LÜMA-journal.txt` (lisible dans l'app Fichiers).
 pub fn journal(message: &str) {
