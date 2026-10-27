@@ -88,7 +88,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | HDR merge: bracketed shots aligned, ghost-free, as DNG (`luma merge --stack hdr`) | ✅ |
 | | Focus stacking: each shot aligned to its neighbor, the sharpest part of each (`luma merge --stack focus`) | ✅ |
 | | Panorama boundary warp: ragged edges stretched to fill the rectangle instead of being cropped (“Warp the edges”, `luma merge --warp`) | ✅ |
-| | 150 presets with amount: colour film stocks, cinema, black & white, instant film; all measured on a test chart in every test run (distinct, no crushed images, identical renders on the GPU) | ✅ |
+| | 275 presets with amount: colour film stocks, cinema, black & white, instant film; all measured on a test chart in every test run (distinct, no crushed images, identical renders on the GPU) | ✅ |
 | | User presets (save, import `.xmp` files), export one at a time or as a folder in XMP format | ✅ |
 | | Edited photos marked below the photo and on thumbnails (film, amount, edited panels) | ✅ |
 | | Measuring a real film stock: a scan compared with the same scene shot digitally, automatic alignment, 3D LUT | ✅ |

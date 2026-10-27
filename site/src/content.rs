@@ -4,7 +4,7 @@
 use crate::i18n::{Lang, t};
 
 pub const TITLE: &str = "LÜMA — L'éditeur photo qui développe la lumière";
-pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 150 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone et iPad. 14 jours d'essai.";
+pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone et iPad. 14 jours d'essai.";
 
 pub const NAV: [(&str, &str); 6] = [
     ("#etapes", "Fonctions"),
@@ -37,7 +37,7 @@ pub const PLANS: [(&str, &str, &str, &str, &str); 2] = [
 /// Ce que LÜMA Premium comprend (comme dans l'app).
 pub const PREMIUM: [&str; 6] = [
     "Le développement RAW complet, sur le GPU",
-    "150 films, vos préréglages, et vos pellicules mesurées",
+    "275 films, vos préréglages, et vos pellicules mesurées",
     "Masques, films empilés, recadrage et géométrie",
     "Empilements, HDR, mise au point, ciel étoilé, panoramas en DNG",
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
@@ -47,7 +47,7 @@ pub const PREMIUM: [&str; 6] = [
 pub const MARQUEE: [&str; 9] = [
     "735 boîtiers",
     "iPhone ProRAW",
-    "150 films",
+    "275 films",
     "Vos pellicules",
     "Masques",
     "Photothèque",
@@ -75,7 +75,7 @@ pub const STATS: [Stat; 4] = [
     },
     Stat {
         prefix: "",
-        value: 150,
+        value: 275,
         unit: "films",
         text: "Pellicules couleur, noir et blanc, cinéma et instantanés, prêtes à poser.",
     },

@@ -169,7 +169,7 @@ fn every_per_pixel_stage_matches_the_cpu() {
     }
     compare(&gpu, "Display P3", &cases[3].1, OutputSpace::DisplayP3, 0.25);
     compare(&gpu, "ProPhoto", &cases[2].1, OutputSpace::ProPhoto, 0.25);
-    // Les 150 films, tels qu'ils sont livrés.
+    // Les 275 films, tels qu'ils sont livrés.
     for p in luma_project::presets::PRESETS {
         compare(
             &gpu,

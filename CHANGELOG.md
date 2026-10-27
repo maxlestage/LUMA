@@ -371,6 +371,19 @@ La photothèque professionnelle, étape par étape.
 - **Rechercher un film** (outil Films) : par nom ou par description (« Kodak »,
   « chaud », « noir et blanc »), sans accents ni majuscules ; seuls les films trouvés
   restent, dans leurs familles ouvertes.
+- **275 films** : 125 de plus. 35 pellicules couleur (Gold 100, Pro Foto 100, Portra
+  100T, Ektar 25, Kodachrome 200, Fortia 50, Superia 1600, Vista 400, Ultra 50,
+  Agfacolor CT18, Impresa 50, Redscale, Orwocolor NC 19…), 30 films et looks de cinéma
+  (Vision 320T, Vision2 250D et 100T, Eastman 5248 et 5287, Eterna 500, Kodachrome
+  Super 8, Technicolor IB, Néo-Tokyo, Âge d'or, Science-fiction, Giallo, Nouvelle Vague,
+  VHS, Caméscope…), 25 noir et blanc (Tri-X 320, T-Max 100, HP5 à 3200, Ortho 25,
+  Silvermax, CMS 20, APX 400, ORWO UN54 et N74, Svema 125, P30, HIE, Neopan 400,
+  Technical Pan…), 15 instantanés (Polaroid Duochrome, bleu, Type 100, 55, Time-Zero,
+  Instax Mini, Square, Monochrome et sépia, Photomaton…) et 20 créatifs (Ambre, Menthe,
+  Lavande, Océan, Forêt, Nuit bleue, Aube, Crépuscule, Mat chaud et froid,
+  Clair-obscur, Pop, Sélénium, Cuivre…). Chaque noir et blanc a sa sensibilité aux
+  couleurs. Tous vérifiés sur la mire : distincts deux à deux, sans image écrasée, noir
+  et blanc neutres, mêmes rendus sur le GPU.
 
 ## 0.2.0 — octobre 2026
 

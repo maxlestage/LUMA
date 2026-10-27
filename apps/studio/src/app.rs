@@ -6936,7 +6936,7 @@ impl Studio {
             ui.add_space(6.0);
         }
         let mut choose = None;
-        // 150 films : une recherche par nom ou par description (« Kodak », « chaud »,
+        // 275 films : une recherche par nom ou par description (« Kodak », « chaud »,
         // « noir et blanc »), sans accents ni majuscules.
         ui.add(
             egui::TextEdit::singleline(&mut self.film_search)
