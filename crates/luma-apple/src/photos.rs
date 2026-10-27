@@ -54,6 +54,29 @@ pub fn pick(dest: PathBuf) -> Result<String, &'static str> {
     }
 }
 
+/// À appeler à chaque image tant qu'un import est en cours : si le sélecteur n'est
+/// toujours pas à l'écran une demi‑seconde après la demande (iOS a refusé de le
+/// présenter depuis la fenêtre de LÜMA), il est présenté depuis une fenêtre de
+/// secours. Rend ce qui vient de se passer, pour le dire (une seule fois).
+pub fn watch() -> Option<&'static str> {
+    #[cfg(target_os = "ios")]
+    {
+        ios::watch()
+    }
+    #[cfg(not(target_os = "ios"))]
+    None
+}
+
+/// Un sélecteur est‑il demandé et pas encore fermé ?
+pub fn pending() -> bool {
+    #[cfg(target_os = "ios")]
+    {
+        ios::pending()
+    }
+    #[cfg(not(target_os = "ios"))]
+    false
+}
+
 /// Le sélecteur de Photos existe‑t‑il (iPhone et iPad) ?
 pub const AVAILABLE: bool = cfg!(target_os = "ios");
 
@@ -119,6 +142,7 @@ mod ios {
                 let _: () = unsafe {
                     msg_send![picker, dismissViewControllerAnimated: true, completion: None::<&Block<dyn Fn()>>]
                 };
+                PENDING.with(|p| *p.borrow_mut() = None);
                 // La fenêtre de secours, s'il a fallu l'ouvrir, s'en va avec lui.
                 PRESENTER.with(|w| {
                     if let Some(w) = w.borrow_mut().take() {
@@ -139,6 +163,16 @@ mod ios {
         /// La fenêtre de secours qui présente le sélecteur quand la fenêtre de LÜMA ne
         /// le peut pas (voir `pick`).
         static PRESENTER: RefCell<Option<Retained<UIWindow>>> = const { RefCell::new(None) };
+        /// Le sélecteur demandé et pas encore fermé : depuis quand, et s'il est déjà
+        /// passé par la fenêtre de secours.
+        static PENDING: RefCell<Option<Pending>> = const { RefCell::new(None) };
+    }
+
+    struct Pending {
+        picker: Retained<AnyObject>,
+        since: std::time::Instant,
+        rescued: bool,
+        top: Retained<UIViewController>,
     }
 
     /// Copie le fichier d'origine d'une photo choisie dans `dest`.
@@ -257,36 +291,64 @@ mod ios {
         };
         DELEGATE.with(|d| *d.borrow_mut() = Some(delegate));
         let name = top.class().name().to_string_lossy().into_owned();
-        // UIKit refuse sans rien dire (un message dans la console) de présenter depuis
-        // un contrôleur hors de l'écran : on vérifie que quelque chose est présenté.
-        // (Ce n'est pas toujours la classe exacte du sélecteur : un conteneur du système
-        // peut l'envelopper ; tout contrôleur présenté compte.)
-        if present(&top, &picker) {
-            return Ok(name);
-        }
-        // Secours : une fenêtre à nous, au‑dessus de tout, avec son propre contrôleur.
-        let fallback = presenter(mtm, &top).ok_or("fenêtre de secours impossible")?;
-        if present(&fallback, &picker) {
-            Ok(format!("{name}, puis fenêtre de secours"))
-        } else {
-            PRESENTER.with(|w| {
-                if let Some(w) = w.borrow_mut().take() {
-                    w.setHidden(true);
-                }
-            });
-            Err("le sélecteur ne s'affiche pas")
-        }
-    }
-
-    /// Présente `picker` depuis `from` ; vrai si quelque chose est bien présenté.
-    fn present(from: &UIViewController, picker: &AnyObject) -> bool {
-        // SAFETY: `picker` est un UIViewController neuf ; `from` un contrôleur de l'app,
+        // SAFETY: `picker` est un UIViewController neuf ; `top` un contrôleur de l'app,
         // sur le fil principal.
         unsafe {
             let _: () =
-                msg_send![from, presentViewController: picker, animated: true, completion: None::<&Block<dyn Fn()>>];
+                msg_send![&top, presentViewController: &*picker, animated: true, completion: None::<&Block<dyn Fn()>>];
         }
-        from.presentedViewController().is_some()
+        // iOS peut refuser sans rien dire ; on ne le sait qu'un peu plus tard (la
+        // présentation n'est pas immédiate) : voir `watch`.
+        PENDING.with(|p| {
+            *p.borrow_mut() = Some(Pending {
+                picker,
+                since: std::time::Instant::now(),
+                rescued: false,
+                top,
+            })
+        });
+        Ok(name)
+    }
+
+    /// Le sélecteur est‑il dans une fenêtre (donc à l'écran, ou en train d'y venir) ?
+    fn on_screen(picker: &AnyObject) -> bool {
+        // SAFETY: `viewIfLoaded` d'un UIViewController, sur le fil principal.
+        let view: Option<Retained<UIView>> = unsafe { msg_send![picker, viewIfLoaded] };
+        view.is_some_and(|v| v.window().is_some())
+    }
+
+    pub fn pending() -> bool {
+        PENDING.with(|p| p.borrow().is_some())
+    }
+
+    pub fn watch() -> Option<&'static str> {
+        let mtm = MainThreadMarker::new()?;
+        PENDING.with(|p| {
+            let mut p = p.borrow_mut();
+            let pending = p.as_mut()?;
+            if pending.since.elapsed() < std::time::Duration::from_millis(600) || on_screen(&pending.picker) {
+                return None;
+            }
+            if pending.rescued {
+                // Même la fenêtre de secours n'a rien montré : on abandonne.
+                *p = None;
+                PRESENTER.with(|w| {
+                    if let Some(w) = w.borrow_mut().take() {
+                        w.setHidden(true);
+                    }
+                });
+                return Some("Photos ne s'affiche pas");
+            }
+            let fallback = presenter(mtm, &pending.top)?;
+            // SAFETY: le sélecteur n'est présenté nulle part (il n'a pas de fenêtre) ;
+            // la fenêtre de secours vient d'être mise à l'écran.
+            unsafe {
+                let _: () = msg_send![&fallback, presentViewController: &*pending.picker, animated: true, completion: None::<&Block<dyn Fn()>>];
+            }
+            pending.rescued = true;
+            pending.since = std::time::Instant::now();
+            Some("Photos présenté depuis une fenêtre de secours")
+        })
     }
 
     /// Une fenêtre de secours au‑dessus de tout, dans la scène de LÜMA, avec un
