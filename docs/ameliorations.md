@@ -132,7 +132,7 @@ et blanc, vignetage après recadrage et grain existent).
 
 - [x] 13.1 IPTC/XMP complet : titre, légende, mots‑clés hiérarchiques, lieu, auteur,
   droits ; modèles de métadonnées.
-- [ ] 13.2 Carte des photos géolocalisées (tuiles libres).
+- [x] 13.2 Carte des photos géolocalisées (tuiles libres).
 - [ ] 13.3 Renommage par lot. (Pas de détection des visages : ce serait de l'IA.)
 
 ### 14. Sortie
@@ -172,7 +172,10 @@ et blanc, vignetage après recadrage et grain existent).
   affiché qui en contient (descriptions de films : « sous‑exposé », « vert‑cyan »)
   fait échouer le rendu de test ; à remplacer par un trait d'union simple à l'écran.
 - Les images développées (JPEG, HEIC…) : lire leur EXIF pour la date de prise de vue,
-  le boîtier et l'objectif (aujourd'hui, date du fichier).
+  le boîtier et l'objectif (aujourd'hui, date du fichier) ; et leur position GPS, pour la carte (les photos de l'iPhone).
+- Carte : placer à la main les photos sans position (les glisser sur la carte, écrit
+  dans le XMP), et suivre une trace GPX ; le téléchargement des tuiles n'existe que sur
+  Mac, iPhone et iPad (ailleurs, le cache seul).
 - Doublons dans le catalogue (même date, même boîtier, même taille).
 - Vignettes du catalogue en cache sur disque, partagées entre la grille et le film.
 - Export par lot avec un logo : le lire et le convertir une seule fois pour tout le lot
@@ -262,3 +265,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-27 | 13.1 Informations IPTC (`xmp::Meta`) : titre `dc:title`, légende `dc:description` (en `rdf:Alt`, la langue par défaut lue d'abord), auteur `dc:creator` (`rdf:Seq`, séparés par des virgules), droits `dc:rights`, lieu dans la structure `Iptc4xmpExt:LocationCreated` (lieu, ville, région, pays) ; mots‑clés hiérarchiques « A|B|C » rangés dans `luma:HierarchicalSubject`, chaque niveau aussi dans `dc:subject` (les autres logiciels voient les mots) ; un XMP d'informations seules n'est pas pris pour des réglages ; modèles de métadonnées (`xmp::Template` : auteur, droits, lieu, mots‑clés ; un champ vide ne change rien) dans « Modèles de métadonnées.json » ; export : titre, légende, lieu et mots‑clés dans le XMP des JPEG, l'auteur et les droits de la photo quand l'export n'en donne pas ; app : section « Informations » de la Bibliothèque (photo ouverte ou sélection, « Plusieurs valeurs » quand elles diffèrent), saisie « Lieux > France > Paris » | Essais : aller et retour de toutes les informations, lieu et titre écrits par un autre logiciel relus, modèles sans écraser le titre ni doubler un mot‑clé, paquet d'export relu ; app : informations et mot‑clé hiérarchique dans le XMP de la photo, modèle enregistré puis donné à deux photos choisies |
 | 2026-10-27 | 12.3 Instruments (`luma_image::scopes`) : forme d'onde (luminance Rec. 709, 256 colonnes × 128 niveaux), parade RVB (trois couches de 96 colonnes), vectorscope (Cb/Cr Rec. 709, 160 × 160, teinte de chaque case) ; densité rendue en intensité exponentielle, repères dessinés par l'app (niveaux 0–100 %, cibles des primaires à 75 %, ligne des tons chair) ; sélecteur au‑dessus de l'histogramme, Maj+J ; calculés dans le rendu, après l'épreuvage | Au plus 600 000 pixels lus (un sur deux, trois… au‑delà) ; rendu seulement pour l'instrument affiché ; tests : gris, dégradé, couches séparées, teintes à leur place, capture de l'app |
 | 2026-10-27 | 12.4 Mesure au point : la couleur de l'aperçu sous le pointeur (gardé sans copie à chaque rendu ; une copie propre seulement quand l'écrêtage, l'alerte de gamut ou la vue des taches sont peints), RVB 0–255 et Lab D50 (`luma_color::profile::srgb8_to_lab`, matrice sRGB → XYZ adaptée par Bradford) ; écrêtage par couche (`clip_color`) sur la photo et dans le coin de l'histogramme | Lab de référence vérifié (blanc L 100, gris 119 L 50, rouge L 54,3 a 80,8 b 69,9) ; test de l'app : même mesure écrêtage affiché ou non, rien hors de la photo ; rien de gardé sur iPhone |
+| 2026-10-27 | 13.2 Carte (`luma_library::map`) : projection des tuiles libres (Mercator, 256 px), vue au zoom fractionnaire (cadrée sur les photos, zoom autour du doigt, la carte se répète d'est en ouest), tuiles de l'écran du centre vers les bords, groupes de photos proches par grille (temps linéaire) ; position GPS de l'EXIF gardée dans la photothèque (format version 2 : l'ancien est lu, ses photos relues à la prochaine mise à jour) ; tuiles lues dans le cache, sinon téléchargées par le système (`luma_apple::net`, Foundation : aucune bibliothèque de chiffrement dans LÜMA) et gardées, deux fils de fond, 192 tuiles en mémoire au plus ; app : « Grille / Carte » au‑dessus de la grille, groupes avec la vignette de la première photo et leur nombre, toucher un groupe montre ses photos, « Fond de carte en ligne », crédit des tuiles | Essais : projection aller et retour, tuile de la tour Eiffel au niveau 15, cadrage de toutes les photos, zoom qui garde le point sous le doigt, tuiles qui couvrent l'écran et passent l'antiméridien, groupes qui se séparent de près, ancien catalogue relu ; app : carte cadrée, Paris en un groupe de deux, tuiles gardées lues sans réseau, groupe touché puis « Tout afficher » |

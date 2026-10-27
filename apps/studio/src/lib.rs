@@ -12,6 +12,7 @@ pub mod licence;
 pub mod masking;
 pub mod retouching;
 pub mod style;
+pub mod tiles;
 pub mod widgets;
 pub mod worker;
 

@@ -232,6 +232,11 @@ La photothèque professionnelle, étape par étape.
   affiché. **Écrêtage couche par couche** : sur la photo comme dans le coin de
   l'histogramme, la couleur dit quelles couches sont brûlées (rouge, jaune pour rouge
   et vert…, blanc pour les trois).
+- **Carte** (Bibliothèque, « Carte ») : les photos du film à l'endroit de leur prise
+  de vue (position GPS de l'EXIF, gardée dans la photothèque), regroupées quand elles
+  sont proches ; glisser, zoomer à la molette ou à deux doigts, toucher un groupe pour
+  voir ses photos. Fond de tuiles libres, téléchargées par le système et gardées sur
+  l'appareil ; hors ligne, celles déjà gardées.
 
 ## 0.2.0 — octobre 2026
 
