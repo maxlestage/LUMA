@@ -171,6 +171,10 @@ La fototeca profesional, paso a paso.
 - **iPhone más simple y más sobrio**: la pantalla de inicio ya no se redibuja dos
   veces por segundo sin motivo (solo durante una importación desde Fotos); la barra
   superior muestra solo lo útil: sin foto, ni «Después» ni exportar; la prueba de impresión ya no ocupa sitio en iPhone y iPad.
+- **Ráfagas y series de exposición apiladas**: las fotos de una misma cámara con
+  menos de dos segundos de diferencia se pliegan tras la primera («Ráfaga ×5»,
+  «Serie ×3»); S las despliega, «Fusionar la serie» abre la herramienta Fusión con
+  las fotos de una serie de exposición.
 
 ## 0.2.0 — octubre de 2026
 

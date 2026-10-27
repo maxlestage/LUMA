@@ -162,6 +162,10 @@ The professional photo library, step by step.
   nothing (only during an import from Photos); the top bar shows only what is useful:
   no “After” or export without a photo; soft proofing
   for print no longer clutters iPhone and iPad.
+- **Bursts and exposure brackets stacked**: photos from the same camera less than
+  two seconds apart fold behind the first one (“Burst ×5”, “Bracket ×3”); S expands
+  them, “Merge the bracket” opens the Merge tool with the photos of an exposure
+  bracket.
 
 ## 0.2.0 — October 2026
 
