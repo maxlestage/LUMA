@@ -133,6 +133,10 @@ La fototeca profesional, paso a paso.
   un papel, y la vista previa muestra la foto tal como saldrá, con la intención
   perceptual o colorimétrica relativa; el histograma la sigue. Una vista, no un
   ajuste: no se escribe nada en la foto.
+- **iPhone más sencillo**: una flecha Deshacer en la barra superior y un menú «•••»
+  para lo demás (rehacer, copiar, pegar, restablecer, idioma); un botón «Antes» que
+  dice lo que muestra; cada herramienta nombrada bajo su icono; en la hoja de
+  herramientas, primero los controles.
 - **LÜMA Premium en el App Store** (iPhone y iPad): las dos suscripciones a su precio del
   App Store, «Suscribirse» y «Restaurar compras»; cada compra y renovación abre
   Premium. En iPhone y iPad, solo el App Store vende la suscripción; en Mac, solo el

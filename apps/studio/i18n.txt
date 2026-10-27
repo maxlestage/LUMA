@@ -2863,9 +2863,9 @@ fr = Choisissez vos photos dans Photos : RAW, ProRAW, HEIC, JPEG.
 en = Choose your pictures from Photos: RAW, ProRAW, HEIC, JPEG.
 es = Elija sus fotos en Fotos: RAW, ProRAW, HEIC, JPEG.
 
-fr = Aucune photo pour l'instant : touchez « Importer des photos ».
-en = No photos yet: tap “Import photos”.
-es = Aún no hay fotos: toque «Importar fotos».
+fr = Vos photos apparaîtront ici.
+en = Your photos will appear here.
+es = Sus fotos aparecerán aquí.
 
 # ----- Dossier surveillé -----
 
