@@ -2157,3 +2157,51 @@ fn workspaces_switch_tool_and_panels() {
     s.studio().remove_workspace("Couleur seule");
     assert!(s.studio().workspaces.is_empty());
 }
+
+/// L'écran Premium sur iPhone, pendant l'essai : les formules l'une sous l'autre, et
+/// un toucher sur le voile (autour de la carte) le ferme au lieu de passer devant elle.
+#[test]
+fn premium_screen_on_iphone() {
+    let _gpu = one_at_a_time();
+    let dir = std::env::temp_dir().join("luma-premium-iphone");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut harness = Harness::builder()
+        .with_size([440.0, 956.0])
+        .with_pixels_per_point(2.0)
+        .wgpu()
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(dir.clone());
+                        s.premium_open = true;
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    for _ in 0..5 {
+        harness.step();
+    }
+    let image = harness.render().expect("rendu de l'interface");
+    image
+        .save(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/studio-premium-iphone.png"))
+        .unwrap();
+    // « Fermer » répond (la carte est devant le voile).
+    harness.get_by_label("Fermer").click();
+    harness.step();
+    harness.step();
+    assert!(!harness.state().as_ref().unwrap().premium_open);
+    // Rouverte, un toucher sur le voile la ferme aussi.
+    harness.state_mut().as_mut().unwrap().premium_open = true;
+    harness.step();
+    harness.drag_at(egui::pos2(6.0, 950.0));
+    harness.step();
+    harness.drop_at(egui::pos2(6.0, 950.0));
+    harness.step();
+    harness.step();
+    assert!(!harness.state().as_ref().unwrap().premium_open);
+}

@@ -4184,3 +4184,7 @@ es = Espacio de trabajo: {name}
 fr = Langue, espaces de travail, clavier et cache
 en = Language, workspaces, keyboard and cache
 es = Idioma, espacios de trabajo, teclado y caché
+
+fr = Sur iPhone et iPad, avec toutes les mises à jour
+en = On iPhone and iPad, with every update
+es = En iPhone y iPad, con todas las actualizaciones
