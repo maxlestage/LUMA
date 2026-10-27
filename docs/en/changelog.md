@@ -169,6 +169,10 @@ The professional photo library, step by step.
   two seconds apart fold behind the first one (“Burst ×5”, “Bracket ×3”); S expands
   them, “Merge the bracket” opens the Merge tool with the photos of an exposure
   bracket.
+- **Duplicates** (“Find duplicates”): the same image in several files, copied,
+  exported at another size or recompressed, found by its fingerprint and shown group
+  by group. **In batch**: with several photos selected, the rating, flag and label go
+  to all of them.
 
 ## 0.2.0 — October 2026
 

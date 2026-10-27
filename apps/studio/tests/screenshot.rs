@@ -325,6 +325,60 @@ fn bursts_are_stacked() {
 }
 
 #[test]
+fn duplicates_and_batch_ratings() {
+    let _gpu = one_at_a_time();
+    // Une copie du RAW Sony sous un autre nom : la même image.
+    let Some(mut s) = Session::open_prepared("doublons", [1440.0, 900.0], 1.0, |dir| {
+        std::fs::copy(dir.join("_DSC0009.ARW"), dir.join("copie.ARW")).unwrap();
+    }) else {
+        return;
+    };
+    s.keys(&[(NONE, Key::G)]);
+    let dir = s
+        .studio()
+        .current_path()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    assert_eq!(s.studio().show_duplicates(), 1);
+    let shown: Vec<_> = s
+        .studio()
+        .visible()
+        .into_iter()
+        .map(|i| s.studio().photos()[i].clone())
+        .collect();
+    assert_eq!(shown, [dir.join("_DSC0009.ARW"), dir.join("copie.ARW")]);
+    s.wait();
+    s.capture("doublons");
+    s.studio().hide_duplicates();
+
+    // Trois photos choisies : la note et le drapeau vont aux trois.
+    let photos = s.studio().photos().to_vec();
+    s.studio().selected = [0, 1, 2].into_iter().collect();
+    s.keys(&[(NONE, Key::Num4), (NONE, Key::P)]);
+    s.studio().flush_xmp();
+    for p in &photos[..3] {
+        let m = luma_studio::worker::read_meta(p);
+        assert_eq!(
+            (m.rating, m.flag),
+            (4, luma_project::xmp::Flag::Pick),
+            "{}",
+            p.display()
+        );
+    }
+    // Une seule photo choisie : seule la photo ouverte change.
+    s.studio().selected = [0].into_iter().collect();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    s.keys(&[(NONE, Key::Num1)]);
+    s.studio().flush_xmp();
+    assert_eq!(luma_studio::worker::read_meta(&open).rating, 1);
+    if open != photos[0] {
+        assert_eq!(luma_studio::worker::read_meta(&photos[0]).rating, 4);
+    }
+}
+
+#[test]
 fn library_keywords() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("mots-cles") else {

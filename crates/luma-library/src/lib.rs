@@ -11,6 +11,7 @@
 //! rouvert. Les en‑têtes sont lus en parallèle, sans décoder les pixels.
 
 pub mod collections;
+pub mod fingerprint;
 pub mod query;
 pub mod stacks;
 mod store;

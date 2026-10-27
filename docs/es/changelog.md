@@ -178,6 +178,10 @@ La fototeca profesional, paso a paso.
   menos de dos segundos de diferencia se pliegan tras la primera («Ráfaga ×5»,
   «Serie ×3»); S las despliega, «Fusionar la serie» abre la herramienta Fusión con
   las fotos de una serie de exposición.
+- **Duplicados** («Buscar duplicados»): la misma imagen en varios archivos, copiada,
+  exportada a otro tamaño o recomprimida, encontrada por su huella y mostrada grupo
+  por grupo. **En lote**: con varias fotos elegidas, la valoración, la bandera y la
+  etiqueta van a todas.
 
 ## 0.2.0 — octubre de 2026
 
