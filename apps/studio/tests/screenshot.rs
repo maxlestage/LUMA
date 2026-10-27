@@ -852,6 +852,28 @@ fn iphone_layout() {
         return;
     };
     s.capture("iphone");
+    // Le menu « ••• » de l'iPhone : les commandes d'édition, la langue, le cache.
+    s.harness.get_by_label("Plus").click();
+    for _ in 0..5 {
+        s.harness.step();
+    }
+    s.harness.get_by_label("Réinitialiser la photo");
+    s.capture("iphone-menu");
+    // Annuler (le menu et la flèche font la même chose) : la photo reste ouverte.
+    s.harness
+        .get_all_by_label("Annuler")
+        .next()
+        .unwrap()
+        .click();
+    s.wait();
+    assert!(s.studio().current_path().is_some());
+    // La barre d'outils nomme chaque outil : Couleur ouvre son panneau.
+    s.harness
+        .get_by_role_and_label(egui::accesskit::Role::Button, "Couleur")
+        .click();
+    s.wait();
+    assert_eq!(s.studio().tool, luma_studio::app::Tool::Color);
+    s.capture("iphone-couleur");
 }
 
 #[test]
