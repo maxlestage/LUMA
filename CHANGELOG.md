@@ -122,6 +122,11 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Couleurs accordées entre deux boîtiers** : la même scène photographiée par vos deux
+  boîtiers, même cadrée un peu autrement ; choisissez les deux photos, puis « Accorder
+  sur la photo choisie » (Mélangeur de couches), ou `luma match-colors`. Le second
+  boîtier prend les couleurs du premier ; enregistrée en préréglage, la correction se
+  pose sur toutes ses photos.
 - **Profil de boîtier** : photographiez une charte ColorChecker, recadrez-la au plus
   juste, puis « Profil depuis une charte » (Mélangeur de couches) ou
   `luma colorchecker charte.ARW -o profil.xmp` : LÜMA calcule la correction qui rend
