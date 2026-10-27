@@ -285,6 +285,12 @@ La photothèque professionnelle, étape par étape.
   prise de vue, renommées si on le veut, copiées aussi sur un second disque ; chaque
   copie est relue et comparée à l'original, le RAW, son JPEG et son XMP gardent un même
   nom, une photo déjà importée est sautée, la carte n'est jamais modifiée.
+- **Raccourcis clavier personnalisables** (menu de la langue, « Raccourcis
+  clavier… ») : chaque commande et ses touches ; cliquer, puis appuyer sur les
+  nouvelles touches ; une touche déjà prise passe à la nouvelle commande ; retour aux
+  touches par défaut, une à une ou toutes. **Tab** masque les panneaux.
+- **Espaces de travail** : Tri, Développement, Retouche, Présentation, et ceux qu'on
+  enregistre (l'outil et les panneaux), de Cmd+1 à Cmd+9.
 
 ## 0.2.0 — octobre 2026
 
