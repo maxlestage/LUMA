@@ -5580,8 +5580,11 @@ impl Studio {
                 }
             });
         let w = (full.width() - 24.0).min(680.0);
-        // Sur un écran étroit, les deux formules l'une sous l'autre : la carte est plus haute.
-        let h = (full.height() - 24.0).min(if w < 520.0 { 760.0 } else { 560.0 });
+        // La feuille prend la hauteur de son contenu (mesurée à l'image d'avant), sans
+        // dépasser l'écran : au‑delà, elle défile.
+        let tall = egui::Id::unique("premium-hauteur");
+        let content = ctx.data(|d| d.get_temp::<f32>(tall)).unwrap_or(600.0);
+        let h = (full.height() - 24.0).min(content + 52.0);
         let card = Rect::from_center_size(full.center(), vec2(w, h));
         egui::Area::new(egui::Id::unique("premium"))
             .order(egui::Order::Foreground)
@@ -5608,13 +5611,20 @@ impl Studio {
                 );
                 let inner = card.shrink(26.0);
                 ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| self.premium_contents(ui, locked));
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        self.premium_contents(ui, locked);
+                        let used = ui.min_rect().height().ceil();
+                        if (used - content).abs() > 0.5 {
+                            ui.ctx().data_mut(|d| d.insert_temp(tall, used));
+                            ui.ctx().request_repaint();
+                        }
+                    });
                 });
             });
     }
 
     fn premium_contents(&mut self, ui: &mut Ui, locked: bool) {
-        use crate::licence::{FEATURES, PLANS, open_url};
+        use crate::licence::{FEATURES, open_url};
         use luma_licence::Access;
         let access = self.licence.access();
         ui.horizontal(|ui| {
@@ -5669,132 +5679,124 @@ impl Studio {
         });
         ui.add_space(14.0);
         for f in FEATURES {
-            ui.horizontal(|ui| {
-                let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), egui::Sense::hover());
+            ui.horizontal_top(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(16.0, 18.0), egui::Sense::hover());
                 widgets::spectral_ring(ui.painter(), r.center(), 4.0, 2.0, 1.0);
-                ui.label(RichText::new(tr(f)).size(13.0).color(theme::TEXT));
+                ui.vertical(|ui| {
+                    ui.add(
+                        egui::Label::new(RichText::new(tr(f)).size(13.5).color(theme::TEXT)).wrap(),
+                    );
+                });
             });
+            ui.add_space(2.0);
         }
-        ui.add_space(16.0);
-        let gap = 14.0;
-        // Côte à côte, ou l'une sous l'autre sur un écran étroit (iPhone) ; une seule
-        // formule (l'achat unique de l'App Store) prend toute la largeur.
-        let stacked = ui.available_width() < 470.0 || PLANS.len() == 1;
-        let card_h = 172.0;
-        let (row, _) = ui.allocate_exact_size(
-            vec2(
-                ui.available_width(),
-                if stacked {
-                    PLANS.len() as f32 * (card_h + gap) - gap
-                } else {
-                    card_h
-                },
-            ),
-            egui::Sense::hover(),
-        );
-        let card_w = if stacked {
-            row.width()
-        } else {
-            ((row.width() - gap) / 2.0).floor()
-        };
-        // Sur iPhone et iPad, l'abonnement s'achète dans l'App Store ; sur Mac, par le
+        ui.add_space(18.0);
+        let plans = crate::licence::plans();
+        // Sur iPhone et iPad, la formule s'achète dans l'App Store ; sur Mac, par le
         // lien de paiement Stripe.
-        let app_store = luma_apple::store::AVAILABLE;
+        let app_store = crate::licence::app_store();
+        let gap = 12.0;
+        // Côte à côte, ou l'une sous l'autre sur un écran étroit ; une seule formule
+        // (l'achat unique de l'App Store) prend toute la largeur.
+        let stacked = ui.available_width() < 470.0 || plans.len() == 1;
+        let card_w = if stacked {
+            ui.available_width()
+        } else {
+            ((ui.available_width() - gap) / 2.0).floor()
+        };
         let mut chosen = None;
         let mut buy = None;
-        for (k, plan) in PLANS.iter().copied().enumerate() {
+        let mut card = |ui: &mut Ui, plan: luma_licence::Plan| {
             let best = plan != luma_licence::Plan::Monthly;
-            let offset = if stacked {
-                vec2(0.0, k as f32 * (card_h + gap))
-            } else {
-                vec2(k as f32 * (card_w + gap), 0.0)
-            };
-            let rect = Rect::from_min_size(row.min + offset, vec2(card_w, card_h));
-            ui.painter().rect(
-                rect,
-                18.0,
-                theme::SECTION,
-                egui::Stroke::new(
+            egui::Frame::new()
+                .fill(theme::SECTION)
+                .stroke(egui::Stroke::new(
                     if best { 1.5 } else { 1.0 },
                     if best {
                         theme::ACCENT
                     } else {
                         theme::GLASS_EDGE
                     },
-                ),
-                egui::StrokeKind::Inside,
-            );
-            let mut card = ui.new_child(
-                egui::UiBuilder::new()
-                    .max_rect(rect.shrink(16.0))
-                    .layout(egui::Layout::top_down(egui::Align::Min)),
-            );
-            card.horizontal(|ui| {
-                ui.label(RichText::new(tr(plan.name())).size(15.0).color(theme::TEXT));
-                if plan == luma_licence::Plan::Lifetime {
-                    ui.label(
-                        RichText::new(tr("Une fois pour toutes"))
-                            .size(11.0)
-                            .color(theme::ACCENT),
+                ))
+                .corner_radius(18)
+                .inner_margin(18)
+                .show(ui, |ui| {
+                    ui.set_width(card_w - 36.0);
+                    let badge = match plan {
+                        luma_licence::Plan::Lifetime => Some(tr("Une fois pour toutes")),
+                        luma_licence::Plan::Annual => Some(tr("Un seul paiement par an")),
+                        luma_licence::Plan::Monthly => None,
+                    };
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(tr(plan.name()))
+                                .size(16.0)
+                                .strong()
+                                .color(theme::TEXT),
+                        );
+                        if let Some(badge) = badge {
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    widgets::pill(ui, badge);
+                                },
+                            );
+                        }
+                    });
+                    ui.add_space(6.0);
+                    // Le prix de l'App Store est dans la devise de l'acheteur.
+                    let price = match self.licence.store_price(plan) {
+                        Some(p) if app_store => p.to_owned(),
+                        _ => tr(plan.price()).to_owned(),
+                    };
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(price).size(32.0).strong().color(theme::TEXT));
+                        ui.label(
+                            RichText::new(tr(plan.period()))
+                                .size(14.0)
+                                .color(theme::DIM),
+                        );
+                    });
+                    ui.add_space(2.0);
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(tr(plan.note())).size(12.5).color(theme::DIM),
+                        )
+                        .wrap(),
                     );
-                } else if best {
-                    ui.label(
-                        RichText::new(tr("Un seul paiement par an"))
-                            .size(11.0)
-                            .color(theme::ACCENT),
-                    );
-                }
-            });
-            // Le prix de l'App Store est dans la devise de l'acheteur.
-            let price = match self.licence.store_price(plan) {
-                Some(p) if app_store => p.to_owned(),
-                _ => tr(plan.price()).to_owned(),
-            };
-            card.horizontal(|ui| {
-                ui.label(RichText::new(price).size(28.0).strong().color(theme::TEXT));
-                ui.label(
-                    RichText::new(tr(plan.period()))
-                        .size(13.0)
-                        .color(theme::DIM),
-                );
-            });
-            card.label(RichText::new(tr(plan.note())).size(12.0).color(theme::DIM));
-            card.add_space(8.0);
-            let size = vec2(card.available_width(), 30.0);
-            if app_store {
-                if card
-                    .add_enabled(
-                        !self.licence.busy(),
-                        egui::Button::new(if plan == luma_licence::Plan::Lifetime {
+                    ui.add_space(14.0);
+                    if app_store {
+                        let label = if plan == luma_licence::Plan::Lifetime {
                             tr("Acheter")
                         } else {
                             tr("S'abonner")
-                        })
-                        .min_size(size),
-                    )
-                    .clicked()
-                {
-                    buy = Some(plan);
-                }
-                continue;
-            }
-            match plan.checkout_url() {
-                Some(url) => {
-                    if card
-                        .add_sized(size, egui::Button::new(tr("S'abonner")))
-                        .clicked()
-                    {
-                        chosen = Some(url);
+                        };
+                        if widgets::call_to_action(ui, label, !self.licence.busy()) {
+                            buy = Some(plan);
+                        }
+                    } else if let Some(url) = plan.checkout_url() {
+                        if widgets::call_to_action(ui, tr("S'abonner"), true) {
+                            chosen = Some(url);
+                        }
+                    } else {
+                        widgets::call_to_action(ui, tr("Bientôt disponible"), false);
                     }
+                });
+        };
+        if stacked {
+            for (k, plan) in plans.iter().copied().enumerate() {
+                if k > 0 {
+                    ui.add_space(gap);
                 }
-                None => {
-                    card.add_enabled(
-                        false,
-                        egui::Button::new(tr("Bientôt disponible")).min_size(size),
-                    )
-                    .on_disabled_hover_text(tr("Le paiement en ligne ouvre bientôt."));
-                }
+                card(ui, plan);
             }
+        } else {
+            ui.horizontal_top(|ui| {
+                ui.spacing_mut().item_spacing.x = gap;
+                for plan in plans.iter().copied() {
+                    ui.vertical(|ui| card(ui, plan));
+                }
+            });
         }
         if let Some(plan) = buy {
             self.licence.buy(plan);
@@ -5820,23 +5822,24 @@ impl Studio {
                     .color(theme::DIM),
                 );
             } else {
-                ui.horizontal(|ui| {
+                ui.vertical_centered(|ui| {
                     ui.label(
                         RichText::new(tr("Déjà acheté avec ce compte Apple ?"))
                             .size(12.5)
                             .color(theme::DIM),
                     );
-                    if ui
-                        .add_enabled(
-                            !self.licence.busy(),
-                            egui::Button::new(tr("Restaurer les achats")),
+                    if self.licence.busy() {
+                        ui.spinner();
+                    } else if ui
+                        .add(
+                            egui::Button::new(
+                                RichText::new(tr("Restaurer les achats")).color(theme::ACCENT),
+                            )
+                            .frame(false),
                         )
                         .clicked()
                     {
                         self.licence.restore();
-                    }
-                    if self.licence.busy() {
-                        ui.spinner();
                     }
                 });
             }
@@ -5871,7 +5874,7 @@ impl Studio {
                 ui.add(
                     egui::TextEdit::singleline(&mut self.licence.key_input)
                         .hint_text(tr("Clé de licence"))
-                        .desired_width(330.0),
+                        .desired_width((ui.available_width() - 90.0).min(330.0)),
                 );
                 let ready = self.licence.key_input.trim().len() >= 8;
                 if ui
