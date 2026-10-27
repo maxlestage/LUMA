@@ -3720,3 +3720,13 @@ es = Libro listo: {pages} página(s), {file}
 fr = Diaporama prêt : {n} photos, {file} (ouvrir index.html)
 en = Slideshow ready: {n} photos, {file} (open index.html)
 es = Presentación lista: {n} fotos, {file} (abrir index.html)
+
+# ----- Le JPEG pour le web -----
+
+fr = Allégé pour le web
+en = Optimized for the web
+es = Optimizado para la web
+
+fr = Couleur à demi-résolution (4:2:0) et codage calculé pour chaque image : de 9 à 29 % plus léger, que tout navigateur lit
+en = Half-resolution color (4:2:0) and coding computed for each image: 9 to 29% lighter, read by every browser
+es = Color a media resolución (4:2:0) y codificación calculada para cada imagen: de un 9 a un 29 % más ligero, legible por cualquier navegador
