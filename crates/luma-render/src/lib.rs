@@ -16,6 +16,7 @@ pub mod metadata;
 pub mod pdf;
 pub mod print;
 pub mod rename;
+pub mod slideshow;
 pub mod thumbnail;
 pub mod watermark;
 
