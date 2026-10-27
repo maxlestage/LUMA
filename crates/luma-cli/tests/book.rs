@@ -43,6 +43,9 @@ fn wrong_options_are_explained() {
         (vec!["slideshow", "a.ARW"], "-o diaporama"),
         (vec!["slideshow", "-o", "d"], "aucune photo"),
         (vec!["slideshow", "a.ARW", "-o", "d", "--seconds", "0"], "--seconds"),
+        (vec!["gallery", "a.ARW"], "-o galerie"),
+        (vec!["gallery", "-o", "g"], "aucune photo"),
+        (vec!["gallery", "a.ARW", "-o", "g", "--thumb", "5"], "--thumb"),
     ] {
         let (ok, out) = luma(&args);
         assert!(!ok && out.contains(says), "{args:?} : {out}");
@@ -105,6 +108,30 @@ fn a_book_and_a_slideshow() {
     for k in 1..=4 {
         let jpeg = std::fs::read(show.join(format!("photos/{k:03}.jpg"))).unwrap();
         assert!(jpeg.starts_with(&[0xFF, 0xD8]));
+    }
+
+    // La galerie : la grille, les grandes photos et les vignettes, allégées pour le web.
+    let site = dir.join("galerie");
+    let mut args = vec![
+        "gallery",
+        "-o",
+        site.to_str().unwrap(),
+        "--size",
+        "800",
+        "--title",
+        "Essais",
+    ];
+    args.extend(photos.iter().map(String::as_str));
+    let (ok, out) = luma(&args);
+    assert!(ok, "{out}");
+    let page = std::fs::read_to_string(site.join("index.html")).unwrap();
+    assert!(page.contains("<h1>Essais</h1>") && page.contains("alt=\"_DSC0009.ARW\""));
+    for k in 1..=4 {
+        for sub in ["photos", "vignettes"] {
+            let jpeg = std::fs::read(site.join(format!("{sub}/{k:03}.jpg"))).unwrap();
+            let sof = jpeg.windows(2).position(|w| w == [0xFF, 0xC0]).unwrap();
+            assert_eq!(jpeg[sof + 11], 0x22, "allégé pour le web : 4:2:0");
+        }
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
