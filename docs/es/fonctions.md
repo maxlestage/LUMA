@@ -136,6 +136,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Miniaturas instantáneas (la vista previa integrada en el RAW, en 15 ms), luego renderizadas con los ajustes y guardadas sin pérdida para las visitas siguientes | ✅ |
 | Copia de trabajo a resolución completa: idéntica al original, más rápida de abrir, dos veces y media menos memoria; «Vaciar la caché» en un clic | ✅ |
 | Palabras clave en el XMP (`dc:subject`), leídas y escritas | ✅ |
+| Información IPTC en el XMP: título, leyenda, autor, derechos, lugar (lugar, ciudad, región, país); palabras clave jerárquicas («Lugares > Francia > París», cada nivel también en `dc:subject`); plantillas de metadatos para las fotos elegidas; en los JPEG exportados | ✅ |
 | Búsqueda y filtros (`luma catalog --search`): palabras sin tener en cuenta los acentos; valoración, bandera, etiqueta, fechas, ISO, focal, cámara, objetivo, palabra clave; recuento de palabras clave, cámaras y objetivos | ✅ |
 | Colecciones manuales e inteligentes (regla: valoración, fecha, cámara, objetivo, ISO, palabras clave…), guardadas en el catálogo | ✅ |
 | Palabras clave en la app: escritura (varias a la vez, separadas por comas), añadidas y quitadas en todas las fotos seleccionadas, lista de palabras clave de la carpeta con su número, filtro de la cuadrícula | ✅ |

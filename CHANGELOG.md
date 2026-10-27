@@ -210,6 +210,11 @@ La photothèque professionnelle, étape par étape.
   de ce boîtier sans XMP, à tout ISO ou à partir de son ISO (la règle la plus précise
   l'emporte ; recadrage et masques exceptés). **Film d'import** : choisi dans le
   dossier surveillé, il est donné à chaque photo qui arrive.
+- **Informations IPTC** (Bibliothèque, « Informations ») : titre, légende, auteur,
+  droits et lieu de la prise de vue, pour une photo ou toutes les photos choisies,
+  dans le XMP et les JPEG exportés ; **mots‑clés hiérarchiques** (« Lieux > France >
+  Paris ») ; **modèles de métadonnées** (auteur, droits, lieu, mots‑clés) enregistrés
+  et donnés d'un coup.
 
 ## 0.2.0 — octobre 2026
 

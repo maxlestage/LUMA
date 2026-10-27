@@ -208,6 +208,11 @@ La fototeca profesional, paso a paso.
   las fotos de esa cámara sin XMP, a cualquier ISO o a partir de su ISO (gana la regla
   más precisa; salvo recorte y máscaras). **Película de importación**: elegida en la
   carpeta vigilada, se da a cada foto que llega.
+- **Información IPTC** (Biblioteca, «Información»): título, leyenda, autor, derechos
+  y lugar de la toma, para una foto o todas las fotos elegidas, en el XMP y en los JPEG
+  exportados; **palabras clave jerárquicas** («Lugares > Francia > París»);
+  **plantillas de metadatos** (autor, derechos, lugar, palabras clave) guardadas y
+  aplicadas de una vez.
 
 ## 0.2.0 — octubre de 2026
 

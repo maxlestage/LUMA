@@ -522,6 +522,13 @@ pub struct Studio {
     /// La fenêtre « Coller une partie des réglages » et les groupes cochés (gardés
     /// d'une fois sur l'autre).
     paste_open: bool,
+    /// Les champs des informations (IPTC) en cours de saisie, et les photos qu'ils visent.
+    info_edit: HashMap<&'static str, String>,
+    info_for: Vec<PathBuf>,
+    /// Les modèles de métadonnées, et leur fichier.
+    templates: Vec<luma_project::xmp::Template>,
+    templates_path: Option<PathBuf>,
+    template_name: String,
     /// Les réglages par défaut par boîtier et par ISO, et le film donné à l'arrivée.
     defaults: luma_project::defaults::Defaults,
     defaults_path: Option<PathBuf>,
@@ -782,6 +789,13 @@ impl Studio {
             history_pos: 0,
             clipboard: None,
             paste_open: false,
+            info_edit: HashMap::new(),
+            info_for: Vec::new(),
+            templates: crate::dialogs::presets_dir()
+                .map(|d| load_templates(&d.join(TEMPLATES_FILE)))
+                .unwrap_or_default(),
+            templates_path: None,
+            template_name: String::new(),
             defaults: crate::dialogs::presets_dir()
                 .map(|d| luma_project::defaults::Defaults::load(&d.join(DEFAULTS_FILE)))
                 .unwrap_or_default(),
@@ -1613,11 +1627,17 @@ impl Studio {
     /// affichée ; un mot‑clé déjà là (aux majuscules et accents près) n'est pas doublé.
     /// Renvoie le nombre de photos touchées.
     pub fn add_keywords(&mut self, text: &str) -> usize {
+        // « Lieux > France > Paris » (ou « Lieux|France|Paris ») : un mot‑clé hiérarchique.
         let words: Vec<String> = text
             .split([',', ';'])
-            .map(str::trim)
+            .map(|w| {
+                w.split(['>', luma_project::xmp::LEVEL])
+                    .map(str::trim)
+                    .filter(|l| !l.is_empty())
+                    .collect::<Vec<_>>()
+                    .join("|")
+            })
             .filter(|w| !w.is_empty())
-            .map(str::to_owned)
             .collect();
         let targets = self.keyword_targets();
         if words.is_empty() || targets.is_empty() {
@@ -5397,6 +5417,7 @@ impl Studio {
         });
         ui.add_space(8.0);
         self.keywords_editor(ui);
+        self.info_editor(ui);
         ui.add_space(8.0);
         if let Some(photo) = &self.photo {
             let raw = photo.raw();
@@ -5438,13 +5459,157 @@ impl Studio {
 
     /// Les mots‑clés des photos visées (la sélection, sinon la photo affichée), × pour en
     /// retirer un, et la saisie, qui les ajoute à toutes.
+    /// Change une information (titre, légende, auteur, droits, lieu) des photos visées.
+    pub fn set_info(&mut self, field: &str, value: &str) {
+        let Some(&(_, _, _, get)) = INFO_FIELDS.iter().find(|f| f.0 == field) else {
+            return;
+        };
+        let targets = self.keyword_targets();
+        let value = value.trim().to_owned();
+        self.edit_meta(&targets, |m| *get(m) = value.clone());
+    }
+
+    /// Le fichier des modèles de métadonnées (les essais en prennent un à eux).
+    pub fn use_templates_file(&mut self, path: PathBuf) {
+        self.templates = load_templates(&path);
+        self.templates_path = Some(path);
+    }
+
+    /// Les modèles de métadonnées, par nom.
+    pub fn templates(&self) -> &[luma_project::xmp::Template] {
+        &self.templates
+    }
+
+    /// Enregistre les informations de la photo ouverte comme modèle (un modèle du même
+    /// nom est remplacé).
+    pub fn save_template(&mut self, name: &str) {
+        let name = name.trim();
+        if name.is_empty() {
+            return;
+        }
+        let t = luma_project::xmp::Template::of(name, &self.current_meta());
+        self.templates.retain(|o| o.name != name);
+        self.templates.push(t);
+        self.templates.sort_by(|a, b| a.name.cmp(&b.name));
+        let path = self
+            .templates_path
+            .clone()
+            .or_else(|| crate::dialogs::presets_dir().map(|d| d.join(TEMPLATES_FILE)));
+        if let Some(path) = path {
+            if let Err(e) = luma_project::xmp::save_templates(&path, &self.templates) {
+                self.status = trf("Modèle non enregistré : {error}", &[("error", &e)]);
+            } else {
+                self.status = trf("Modèle « {name} » enregistré", &[("name", &name)]);
+            }
+            self.templates_path = Some(path);
+        }
+    }
+
+    /// Donne un modèle aux photos visées (la sélection, ou la photo ouverte).
+    pub fn apply_template(&mut self, name: &str) {
+        let Some(t) = self.templates.iter().find(|t| t.name == name).cloned() else {
+            return;
+        };
+        let targets = self.keyword_targets();
+        self.edit_meta(&targets, |m| t.apply(m));
+        self.status = trf(
+            "Modèle « {name} » appliqué à {n} photo(s)",
+            &[("name", &name), ("n", &targets.len())],
+        );
+    }
+
+    /// Les informations de la photo (IPTC) : titre, légende, auteur, droits, lieu ; et les
+    /// modèles. Plusieurs photos visées : un champ commun s'affiche, un champ qui
+    /// diffère reste vide.
+    fn info_editor(&mut self, ui: &mut Ui) {
+        let targets = self.keyword_targets();
+        if targets.is_empty() {
+            return;
+        }
+        let metas: Vec<Meta> = targets
+            .iter()
+            .map(|p| self.meta.get(p).cloned().unwrap_or_default())
+            .collect();
+        let common = |get: fn(&mut Meta) -> &mut String| -> (String, bool) {
+            let mut values = metas.iter().cloned().map(|mut m| get(&mut m).clone());
+            let first = values.next().unwrap_or_default();
+            let same = values.all(|v| v == first);
+            (if same { first } else { String::new() }, same)
+        };
+        if self.info_for != targets {
+            self.info_for = targets.clone();
+            self.info_edit.clear();
+        }
+        let mut changes: Vec<(&'static str, String)> = Vec::new();
+        let mut apply = None;
+        let mut save = false;
+        egui::CollapsingHeader::new(RichText::new(tr("Informations")).strong())
+            .id_salt("Informations IPTC")
+            .default_open(false)
+            .show(ui, |ui| {
+                for &(key, label, multiline, get) in INFO_FIELDS {
+                    let (value, same) = common(get);
+                    let buffer = self.info_edit.entry(key).or_insert_with(|| value.clone());
+                    ui.label(RichText::new(tr(label)).size(11.0).color(theme::DIM));
+                    let edit = if multiline {
+                        egui::TextEdit::multiline(buffer).desired_rows(2)
+                    } else {
+                        egui::TextEdit::singleline(buffer)
+                    };
+                    let hint = if same { "" } else { tr("Plusieurs valeurs") };
+                    let r = ui.add(edit.hint_text(hint).desired_width(f32::INFINITY));
+                    if r.lost_focus() && *buffer != value {
+                        changes.push((key, buffer.clone()));
+                    }
+                }
+                ui.add_space(6.0);
+                ui.horizontal_wrapped(|ui| {
+                    if !self.templates.is_empty() {
+                        ui.menu_button(tr("Appliquer un modèle"), |ui| {
+                            for t in &self.templates {
+                                if ui.button(&t.name).clicked() {
+                                    apply = Some(t.name.clone());
+                                    ui.close();
+                                }
+                            }
+                        });
+                    }
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.template_name)
+                            .hint_text(tr("Nom du modèle"))
+                            .desired_width(110.0),
+                    );
+                    save = ui
+                        .add_enabled(
+                            !self.template_name.trim().is_empty(),
+                            egui::Button::new(tr("Enregistrer comme modèle")),
+                        )
+                        .on_hover_text(tr(
+                            "L'auteur, les droits, le lieu et les mots-clés de la photo ouverte",
+                        ))
+                        .clicked();
+                });
+            });
+        for (key, value) in changes {
+            self.set_info(key, &value);
+        }
+        if let Some(name) = apply {
+            self.apply_template(&name);
+            self.info_edit.clear();
+        }
+        if save {
+            let name = std::mem::take(&mut self.template_name);
+            self.save_template(&name);
+        }
+    }
+
     fn keywords_editor(&mut self, ui: &mut Ui) {
         ui.label(RichText::new(tr("Mots-clés")).color(theme::DIM).size(11.5));
         let mut removed = None;
         ui.horizontal_wrapped(|ui| {
             for k in self.target_keywords() {
                 if ui
-                    .small_button(format!("{k}  ×"))
+                    .small_button(format!("{}  ×", k.replace('|', " > ")))
                     .on_hover_text(tr("Retirer ce mot-clé"))
                     .clicked()
                 {
@@ -7847,6 +8012,33 @@ fn clamp_center(c: &mut Compare) {
     let half = 0.5 / c.zoom;
     c.center.x = c.center.x.clamp(half, 1.0 - half);
     c.center.y = c.center.y.clamp(half, 1.0 - half);
+}
+
+/// Les informations de la photo : nom, libellé, sur plusieurs lignes, et le champ.
+type InfoField = (
+    &'static str,
+    &'static str,
+    bool,
+    fn(&mut Meta) -> &mut String,
+);
+const INFO_FIELDS: &[InfoField] = &[
+    ("title", "Titre", false, |m| &mut m.title),
+    ("caption", "Légende", true, |m| &mut m.caption),
+    ("creator", "Auteur", false, |m| &mut m.creator),
+    ("rights", "Droits", false, |m| &mut m.rights),
+    ("sublocation", "Lieu", false, |m| {
+        &mut m.location.sublocation
+    }),
+    ("city", "Ville", false, |m| &mut m.location.city),
+    ("state", "Région", false, |m| &mut m.location.state),
+    ("country", "Pays", false, |m| &mut m.location.country),
+];
+
+/// Le fichier des modèles de métadonnées, dans le dossier des préréglages.
+const TEMPLATES_FILE: &str = "Modèles de métadonnées.json";
+
+fn load_templates(path: &Path) -> Vec<luma_project::xmp::Template> {
+    luma_project::xmp::load_templates(path)
 }
 
 /// Le fichier des réglages par défaut, dans le dossier des préréglages.

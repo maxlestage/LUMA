@@ -448,7 +448,7 @@ fn exported_metadata() {
     assert_eq!(exif_text(&t, 0x013B).as_deref(), Some("Maxime Lestage"));
     let s = String::from_utf8_lossy(&bytes);
     assert!(
-        s.contains("<dc:creator><rdf:Seq><rdf:li>Maxime Lestage</rdf:li>"),
+        s.contains("<dc:creator>") && s.contains("<rdf:li>Maxime Lestage</rdf:li>"),
         "XMP absent"
     );
     // La position de l'iPhone : retirée par défaut, gardée sur demande.
