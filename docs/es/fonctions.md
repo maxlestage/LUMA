@@ -157,6 +157,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | En Mac, cámara conectada (USB, o red si lo permite) mediante el marco del sistema: cada foto tomada llega a la carpeta vigilada, disparo desde LÜMA para las cámaras que lo permiten | ✅ |
 | Copias virtuales: varios revelados de una foto sin duplicar el archivo (un XMP por copia), cada una con su valoración, sus palabras clave y su miniatura, junto a su original; exportada como `IMG_0001-2`; eliminada sin tocar el original | ✅ |
 | Importación de catálogos existentes | ⏳ |
+| Atajos de teclado personalizables («Atajos de teclado…»: cada comando, sus teclas, una tecla ya usada pasa al nuevo comando, vuelta a las teclas por defecto; «Raccourcis.txt»); Tab oculta los paneles; espacios de trabajo (Selección, Revelado, Retoque, Presentación y los suyos: herramienta y paneles), Cmd+1 a Cmd+9 | ✅ |
 
 ## Lo que distingue a LÜMA
 
