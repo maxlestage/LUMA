@@ -863,9 +863,9 @@ fr = Masques, films empilés, recadrage et géométrie
 en = Masks, stacked films, crop and geometry
 es = Máscaras, películas apiladas, recorte y geometría
 
-fr = Empilements, ciel étoilé, panoramas en DNG
-en = Stacks, starry skies, panoramas as DNG
-es = Apilados, cielos estrellados, panorámicas en DNG
+fr = Empilements, HDR, ciel étoilé, panoramas en DNG
+en = Stacks, HDR, starry skies, panoramas as DNG
+es = Apilados, HDR, cielos estrellados, panorámicas en DNG
 
 fr = Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto
 en = JPEG, PNG and 16-bit TIFF export, in P3 and ProPhoto
