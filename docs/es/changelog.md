@@ -122,6 +122,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Enderezado guiado** (Geometría, Transformación): arrastra a lo largo de dos a
+  cuatro aristas que deberían ser rectas (una pared, un poste, el horizonte); LÜMA
+  ajusta al momento la perspectiva y la rotación. Una sola línea solo gira la foto.
 - **Colores igualados entre dos cámaras**: la misma escena fotografiada con tus dos
   cámaras, aunque esté encuadrada algo distinto; elige las dos fotos y luego «Igualar
   con la foto elegida» (Mezclador de canales), o `luma match-colors`. La segunda cámara

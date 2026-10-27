@@ -54,7 +54,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | “Camera corrections” checkbox: on by default, saved in the XMP (`crs:LensProfileEnable`); turned off, the photo goes back to what the lens gave, and the distortion and vignetting sliders take over | ✅ |
 | | Longitudinal chromatic aberration, corrections of other brands (Canon, Nikon, Pentax…) | ⏳ |
 | Transform | Vertical and horizontal perspective, rotate, aspect, scale (homography, fixed centre) | ✅ |
-| | Automatic and guided straightening | ⏳ |
+| | Automatic (Shift+R, Shift+V) and guided straightening: two to four lines drawn on the photo set the perspective and rotation | ✅ |
 | Effects | Post-crop vignetting (amount, midpoint, roundness, feather, highlights) | ✅ |
 | | Grain (amount, size, roughness), identical at every size | ✅ |
 | Calibration | Shadows tint, hue and saturation of the primaries | ✅ |
