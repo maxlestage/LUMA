@@ -31,7 +31,7 @@ pub fn place(
 ) -> Spot {
     let mut spot = Spot::new(kind, center, radius);
     // Les yeux rouges n'ont pas de source.
-    if kind != SpotKind::RedEye
+    if kind.has_source()
         && let Some(source) =
             scene.and_then(|s| luma_image::retouch::find_source(s, center, radius))
     {
@@ -76,10 +76,7 @@ pub fn edit(
         for i in order {
             let s = &spots[i];
             let r = (s.radius * rect.width()).max(6.0);
-            if Some(i) == selected
-                && s.kind != SpotKind::RedEye
-                && p.distance(to_screen(s.source)) < r
-            {
+            if Some(i) == selected && s.kind.has_source() && p.distance(to_screen(s.source)) < r {
                 return Some(Grip::Source(i));
             }
             if p.distance(to_screen(s.center)) < r {
@@ -155,7 +152,7 @@ pub fn edit(
             painter.circle_stroke(c, r + 1.0, Stroke::new(3.0, Color32::from_black_alpha(110)));
             painter.circle_stroke(c, r, Stroke::new(1.5, white));
             // Les yeux rouges n'ont pas de source.
-            let sourced = s.kind != SpotKind::RedEye;
+            let sourced = s.kind.has_source();
             if sourced {
                 painter.add(egui::Shape::dashed_line(
                     &circle(src, r),
