@@ -178,7 +178,7 @@ RÉGLAGES (--set)
   hsl.hue|saturation|luminance.<red|orange|yellow|green|aqua|blue|purple|magenta>
   grading.<shadows|midtones|highlights|global>.<hue|saturation|luminance>
   grading.blending grading.balance sharpen sharpen.radius sharpen.detail sharpen.masking
-  noise.luminance noise.color vignette vignette.midpoint vignette.feather
+  sharpen.deconvolution=on|off noise.luminance noise.wavelets=on|off noise.color vignette vignette.midpoint vignette.feather
   vignette.roundness grain grain.size grain.roughness crop.angle
 
 Un fichier XMP posé à côté du RAW (IMG_0001.xmp ou IMG_0001.CR3.xmp) est lu
