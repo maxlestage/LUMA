@@ -610,10 +610,11 @@ fn develop(a: &Args) -> Result<(), String> {
         }
         let meta = sidecar_meta(a, path);
         let fields = export::NameFields::of_photo(path, &photo, &meta, 1);
-        let out = a
-            .output
-            .clone()
-            .unwrap_or_else(|| export::output_path(path, &o, &fields));
+        let out = a.output.clone().unwrap_or_else(|| {
+            let mut taken = std::collections::HashSet::new();
+            export::reserve_sources(&mut taken, [path]);
+            export::unique(export::output_path(path, &o, &fields), &mut taken)
+        });
         let t2 = Instant::now();
         export::develop(&photo, &settings, &out, &o, &meta)?;
         println!("{} → {} ({})", path.display(), out.display(), export::describe(&o));
@@ -905,6 +906,7 @@ fn export_many(a: &Args) -> Result<(), String> {
     };
     let start = Instant::now();
     let mut taken = std::collections::HashSet::new();
+    export::reserve_sources(&mut taken, a.positional.iter().map(Path::new));
     let (mut written, mut failed) = (0, 0);
     for (k, path) in a.positional.iter().enumerate() {
         let path = Path::new(path);

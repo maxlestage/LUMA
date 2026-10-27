@@ -643,6 +643,9 @@ pub struct Studio {
     probe: Option<[f32; 2]>,
     generation: u64,
     shown: u64,
+    /// La première génération demandée pour la photo ouverte : les rendus plus anciens,
+    /// encore en route, sont ceux de la photo d'avant.
+    fresh_from: u64,
     last_request: Option<Request>,
     render_ms: f32,
     render_gpu: bool,
@@ -1002,6 +1005,7 @@ impl Studio {
             probe: None,
             generation: 0,
             shown: 0,
+            fresh_from: 0,
             last_request: None,
             render_ms: 0.0,
             render_gpu: false,
@@ -3185,6 +3189,11 @@ impl Studio {
                             self.history_pos = self.history.len() - 1;
                             self.selected_mask = None;
                             self.preset = None;
+                            // Le recadrage ou le redressement en cours était celui de la
+                            // photo d'avant (Échap y remettrait son cadre).
+                            self.crop_tool = None;
+                            self.guiding = false;
+                            self.fresh_from = self.generation + 1;
                             let raw = photo.raw();
                             let e = &raw.exif;
                             let mut info = format!("{} {}", raw.make, raw.model);
@@ -3229,7 +3238,10 @@ impl Studio {
                     }
                 }
                 Event::Rendered(frame) => {
-                    if frame.generation < self.shown {
+                    // Pendant l'ouverture, et ensuite tant qu'un rendu de la photo d'avant
+                    // arrive : l'aperçu rapide de la nouvelle photo reste.
+                    if frame.generation < self.shown.max(self.fresh_from) || self.loading.is_some()
+                    {
                         continue;
                     }
                     self.shown = frame.generation;
@@ -3496,14 +3508,15 @@ impl Studio {
     }
 
     fn commit(&mut self, label: String) {
-        self.history.truncate(self.history_pos + 1);
+        // Rien de changé : l'historique à refaire (après une annulation) reste.
         if self
             .history
-            .last()
+            .get(self.history_pos)
             .is_some_and(|(_, s)| *s == self.settings)
         {
             return;
         }
+        self.history.truncate(self.history_pos + 1);
         self.history.push((label, self.settings.clone()));
         self.history_pos = self.history.len() - 1;
     }
@@ -3959,6 +3972,10 @@ impl Studio {
     }
 
     fn request_render(&mut self, viewport_px: f32, pressed: bool) {
+        // Pendant l'ouverture, `photo` et `settings` sont encore ceux de la photo d'avant.
+        if self.loading.is_some() {
+            return;
+        }
         let (Some(photo), Some(path)) = (&self.photo, self.current_path()) else {
             return;
         };

@@ -389,11 +389,15 @@ pub fn output_path(source: &Path, options: &Options, fields: &NameFields) -> Pat
 }
 
 /// Un fichier de sortie pas encore pris dans cet export : `IMG-2.jpg`, `IMG-3.jpg`… si
-/// le modèle donne le même nom à plusieurs photos.
+/// le modèle donne le même nom à plusieurs photos, ou le nom d'un original réservé par
+/// [`reserve_sources`].
 pub fn unique(path: PathBuf, taken: &mut std::collections::HashSet<PathBuf>) -> PathBuf {
     let mut out = path.clone();
     let mut n = 2;
-    while taken.contains(&out) {
+    let is_taken = |p: &Path, taken: &std::collections::HashSet<PathBuf>| {
+        taken.contains(p) || p.canonicalize().is_ok_and(|c| taken.contains(&c))
+    };
+    while is_taken(&out, taken) {
         let stem = path.file_stem().unwrap_or_default().to_string_lossy();
         let ext = path.extension().unwrap_or_default().to_string_lossy();
         out = path.with_file_name(format!("{stem}-{n}.{ext}"));
@@ -401,6 +405,15 @@ pub fn unique(path: PathBuf, taken: &mut std::collections::HashSet<PathBuf>) -> 
     }
     taken.insert(out.clone());
     out
+}
+
+/// Réserve les originaux d'un export (leur chemin absolu) : [`unique`] ne les écrase
+/// jamais, même quand le dossier de sortie est le leur.
+pub fn reserve_sources<'a>(
+    taken: &mut std::collections::HashSet<PathBuf>,
+    sources: impl IntoIterator<Item = &'a Path>,
+) {
+    taken.extend(sources.into_iter().filter_map(|s| s.canonicalize().ok()));
 }
 
 /// Ce qu'un modèle de nom peut citer, pour une photo.
@@ -1343,6 +1356,20 @@ mod tests {
         assert_eq!(unique(p.clone(), &mut taken), p);
         assert_eq!(unique(p.clone(), &mut taken), PathBuf::from("/s/2026-03-09-2.jpg"));
         assert_eq!(unique(p, &mut taken), PathBuf::from("/s/2026-03-09-3.jpg"));
+        // Un original dans le dossier de sortie n'est jamais écrasé.
+        let dir = std::env::temp_dir().join(format!("luma-unique-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let src = dir.join("IMG_1.jpg");
+        std::fs::write(&src, b"original").unwrap();
+        let mut taken = std::collections::HashSet::new();
+        reserve_sources(&mut taken, [src.as_path()]);
+        let o = Options {
+            folder: Some(dir.join(".")),
+            ..Options::default()
+        };
+        let out = unique(output_path(&src, &o, &NameFields::of_file(&src)), &mut taken);
+        assert_eq!(out.file_name().unwrap(), "IMG_1-2.jpg");
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     fn fields() -> NameFields {

@@ -698,7 +698,8 @@ impl Profile {
             return Err(Error("ce fichier n'est pas un profil ICC"));
         }
         let size = be32(data, 0)? as usize;
-        let d = data.get(..size).ok_or(TRUNCATED)?;
+        // La taille déclarée couvre au moins l'en-tête et le nombre de balises.
+        let d = data.get(..size).filter(|d| d.len() >= 132).ok_or(TRUNCATED)?;
         let class = match &d[12..16] {
             b"scnr" => Class::Input,
             b"mntr" => Class::Display,
