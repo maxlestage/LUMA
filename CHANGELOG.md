@@ -159,6 +159,10 @@ La photothèque professionnelle, étape par étape.
   violet à la souris) ; la photo suivante vient d'elle‑même (A pour couper), Échap
   pour sortir. Les libellés s'écrivent dans le XMP sous les noms du format, que
   lisent les autres logiciels, et se cherchent en français, anglais ou espagnol.
+- **Comparaison** (C) : 2 à 4 photos côte à côte ou en grille (celles choisies, sinon
+  la photo ouverte et la suivante), chacune développée avec ses réglages ; le zoom
+  et le déplacement sont communs à toutes, la loupe (L) agrandit le même endroit de
+  chacune, un clic ouvre la photo.
 
 ## 0.2.0 — octobre 2026
 

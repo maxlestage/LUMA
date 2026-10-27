@@ -234,6 +234,58 @@ fn culling_full_screen_from_the_keyboard() {
 }
 
 #[test]
+fn compare_two_to_four_photos() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("comparaison") else {
+        return;
+    };
+    // Sans choix : la photo ouverte et la suivante (ou la précédente, en fin de film).
+    s.keys(&[(NONE, Key::C)]);
+    assert_eq!(s.studio().compared().len(), 2);
+    s.keys(&[(NONE, Key::Escape)]);
+    assert!(s.studio().compared().is_empty());
+
+    // Trois photos choisies : trois cases, rendues avec leurs réglages.
+    let photos = s.studio().photos().to_vec();
+    s.studio().selected = [0, 1, 2].into_iter().collect();
+    s.studio().start_compare();
+    assert_eq!(s.studio().compared(), photos[..3].to_vec());
+    let start = Instant::now();
+    while !s.studio().compare_ready() {
+        s.harness.step();
+        assert!(
+            start.elapsed() < Duration::from_secs(120),
+            "la comparaison n'arrive pas"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    s.harness.step();
+    s.capture("comparaison");
+
+    // Zoom et déplacement communs, jamais hors de la photo ; la loupe (L).
+    s.studio().compare_zoom(2.0, [0.1, 0.1]);
+    let (zoom, center, _) = s.studio().compare_view_state().unwrap();
+    assert_eq!(zoom, 2.0);
+    assert!(
+        center.iter().all(|c| (0.25..=0.75).contains(c)),
+        "{center:?}"
+    );
+    s.studio().compare_pan([-1.0, 0.0]);
+    let (_, center, _) = s.studio().compare_view_state().unwrap();
+    assert_eq!(center[0], 0.75, "bord droit de la photo");
+    s.studio().compare_zoom(0.1, [0.5, 0.5]);
+    assert_eq!(
+        s.studio().compare_view_state().unwrap().0,
+        1.0,
+        "jamais plus petit que la photo entière"
+    );
+    s.keys(&[(NONE, Key::L)]);
+    assert!(s.studio().compare_view_state().unwrap().2);
+    s.keys(&[(NONE, Key::C)]);
+    assert!(s.studio().compared().is_empty(), "C referme");
+}
+
+#[test]
 fn library_keywords() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("mots-cles") else {

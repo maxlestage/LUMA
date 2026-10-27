@@ -64,6 +64,13 @@ pub enum Event {
     Merged {
         result: Result<PathBuf, String>,
     },
+    /// Une photo de la comparaison, développée avec ses réglages.
+    Compared {
+        tag: u64,
+        index: usize,
+        size: [usize; 2],
+        rgba: Vec<u8>,
+    },
     /// L'aperçu d'un préréglage sur la photo affichée.
     Preview {
         tag: u64,
@@ -462,6 +469,34 @@ impl Worker {
     }
 
     /// Les aperçus des préréglages (petits rendus), dans l'ordre.
+    /// Développe les photos à comparer, chacune avec ses réglages, au grand côté `side`,
+    /// l'une après l'autre (la première arrive vite).
+    pub fn compare(&self, paths: Vec<PathBuf>, side: usize, tag: u64) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-comparaison".into())
+            .spawn(move || {
+                for (index, path) in paths.iter().enumerate() {
+                    let Ok(photo) = crate::dialogs::open_photo(path) else {
+                        continue;
+                    };
+                    let settings = read_sidecar(path).unwrap_or_default();
+                    let Ok(r) = photo.render(&settings, Size::Fit(side), &Cancel::new()) else {
+                        continue;
+                    };
+                    let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
+                    let _ = sender.send(Event::Compared {
+                        tag,
+                        index,
+                        size: [r.image.width, r.image.height],
+                        rgba: to_rgba(&rgb, false),
+                    });
+                    repaint();
+                }
+            })
+            .expect("fil de la comparaison");
+    }
+
     pub fn previews(&self, photo: Arc<Photo>, settings: Vec<Settings>, tag: u64) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
