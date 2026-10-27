@@ -27,7 +27,8 @@ jobs:
       - name: idb (touchers dans le simulateur)
         run: |
           brew tap facebook/fb
-          brew install idb-companion
+          brew trust facebook/fb 2>/dev/null || true
+          brew install facebook/fb/idb-companion
           python3 -m pip install --quiet --break-system-packages fb-idb
 
       - name: Essayer

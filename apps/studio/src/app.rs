@@ -340,6 +340,15 @@ impl Tool {
         Tool::Merge,
     ];
 
+    /// Le nom sous l'icône, dans la barre de l'iPhone : un mot.
+    pub fn short_name(self) -> &'static str {
+        match self {
+            Tool::Library => tr("Photos"),
+            Tool::Geometry => tr("Cadrage"),
+            t => t.name(),
+        }
+    }
+
     pub fn name(self) -> &'static str {
         match self {
             Tool::Library => tr("Bibliothèque"),
@@ -2681,7 +2690,7 @@ impl Studio {
             );
             let bar = Rect::from_min_size(
                 pos2(full.min.x + m, stage.max.y + m),
-                vec2(full.width() - 2.0 * m, 60.0),
+                vec2(full.width() - 2.0 * m, 70.0),
             );
             let sheet = Rect::from_min_max(
                 pos2(full.min.x + m, bar.max.y + m),
@@ -3545,14 +3554,25 @@ impl Studio {
     /// Le rail des outils (vertical ; horizontal sur iPhone).
     fn rail(&mut self, ui: &mut Ui, horizontal: bool) {
         let mut clicked = None;
-        let size = if horizontal {
-            (ui.available_width() / Tool::ALL.len() as f32).min(52.0)
+        // Sur iPhone, la barre est en bas de la photo : chaque outil porte son nom court
+        // sous l'icône.
+        let (width, size) = if horizontal {
+            (
+                (ui.available_width() / Tool::ALL.len() as f32).min(64.0),
+                36.0,
+            )
         } else {
-            44.0
+            (44.0, 44.0)
         };
+        let label = if horizontal { 14.0 } else { 0.0 };
         let mut draw = |ui: &mut Ui| {
             for tool in Tool::ALL {
-                let (rect, r) = ui.allocate_exact_size(vec2(size, size), egui::Sense::click());
+                let (cell, r) =
+                    ui.allocate_exact_size(vec2(width, size + label), egui::Sense::click());
+                let rect = Rect::from_center_size(
+                    pos2(cell.center().x, cell.min.y + size / 2.0),
+                    vec2(size, size),
+                );
                 let active = self.tool == tool;
                 let p = ui.painter();
                 if active {
@@ -3573,6 +3593,15 @@ impl Studio {
                     theme::DIM
                 };
                 icons::paint(p, tool.icon(), rect.shrink(size * 0.27), color);
+                if horizontal {
+                    p.text(
+                        pos2(cell.center().x, cell.max.y),
+                        egui::Align2::CENTER_BOTTOM,
+                        tool.short_name(),
+                        egui::FontId::proportional(10.0),
+                        color,
+                    );
+                }
                 let tip = if tool.key().is_empty() {
                     tool.name().to_owned()
                 } else {
