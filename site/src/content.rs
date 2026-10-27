@@ -127,7 +127,7 @@ pub const STEPS: [(&str, &str, &str); 4] = [
     (
         "01",
         "Ranger",
-        "Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche, carte et renommage par lot : vos photos se retrouvent en un instant.",
+        "Chaque carte importée, chaque dossier ouvert entre dans la photothèque, sauvegardé sur un second disque si vous voulez. Notes, drapeaux, mots‑clés, collections, recherche, carte et renommage par lot : vos photos se retrouvent en un instant.",
     ),
     (
         "02",
