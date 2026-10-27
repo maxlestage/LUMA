@@ -238,6 +238,9 @@ La photothèque professionnelle, étape par étape.
   gardent un même nom, le XMP et les copies virtuelles suivent, un nom déjà pris reçoit
   `-2` ; au moindre échec, tout revient comme avant. La photothèque et ses collections
   suivent.
+- **Instantanés** (outil Lumière, sous l'historique) : les réglages d'un moment, sous
+  un nom, rangés dans le XMP de la photo ; un clic y revient (une étape de l'historique,
+  qu'on peut annuler).
 
 ## 0.2.0 — octobre 2026
 

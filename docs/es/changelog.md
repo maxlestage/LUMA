@@ -234,6 +234,9 @@ La fototeca profesional, paso a paso.
   el RAW y el JPEG de una misma toma conservan un mismo nombre, el XMP y las copias
   virtuales los acompañan, un nombre ya ocupado recibe `-2`; ante cualquier fallo, todo
   vuelve a como estaba. La fototeca y sus colecciones lo siguen.
+- **Instantáneas** (herramienta Luz, bajo el historial): los ajustes de un momento, con
+  un nombre, guardados en el XMP de la foto; un clic vuelve a ellos (un paso del
+  historial, que se puede deshacer).
 
 ## 0.2.0 — octubre de 2026
 

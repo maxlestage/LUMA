@@ -75,7 +75,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |
 | | Synchroniser une sélection (Maj+Cmd+S) : les réglages de la photo ouverte aux autres photos choisies, groupe par groupe ; balance automatique en lot, chaque photo la sienne | ✅ |
 | | Réglages par défaut par boîtier et à partir d'un ISO (le plus précis l'emporte), point de départ des photos sans XMP ; film d'import donné aux photos qui arrivent (dossier surveillé, boîtier relié) | ✅ |
-| | Instantanés, synchronisation sur plusieurs photos | ⏳ |
+| | Instantanés nommés, rangés dans le XMP, retrouvés d'un clic (une étape de l'historique) ; synchronisation sur plusieurs photos | ✅ |
 | | iPhone et iPad : aperçu réduit pendant un geste (12 fois plus rapide), mémoire surveillée, caches libérés avant que le système ne ferme l'app | ✅ |
 | | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), zoom 1:1 | ✅ |
 | | Forme d'onde, parade RVB, vectorscope (Maj+J) | ✅ |
