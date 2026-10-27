@@ -3856,3 +3856,253 @@ es = Importar {n} fotos
 fr = {n} photos importées et vérifiées dans {file}
 en = {n} photos imported and verified in {file}
 es = {n} fotos importadas y verificadas en {file}
+
+# ----- Les raccourcis clavier -----
+
+fr = Appuyez sur les touches pour « {action} » (Échap : annuler)
+en = Press the keys for “{action}” (Esc: cancel)
+es = Pulse las teclas para «{action}» (Esc: cancelar)
+
+fr = Changer le raccourci
+en = Change the shortcut
+es = Cambiar el atajo
+
+fr = Clavier
+en = Keyboard
+es = Teclado
+
+fr = Cliquez sur une commande, puis appuyez sur ses nouvelles touches.
+en = Click a command, then press its new keys.
+es = Haga clic en un comando y pulse sus nuevas teclas.
+
+fr = Langue, clavier et cache
+en = Language, keyboard and cache
+es = Idioma, teclado y caché
+
+fr = Par défaut
+en = Default
+es = Por defecto
+
+fr = Raccourcis clavier
+en = Keyboard shortcuts
+es = Atajos de teclado
+
+fr = Raccourcis clavier…
+en = Keyboard shortcuts…
+es = Atajos de teclado…
+
+fr = Tout remettre par défaut
+en = Reset all to defaults
+es = Restablecer todo
+
+fr = ou
+en = or
+es = o
+
+fr = « {action} » n'a plus ce raccourci
+en = “{action}” no longer has this shortcut
+es = «{action}» ya no tiene este atajo
+
+fr = Entrée
+en = Enter
+es = Intro
+
+fr = Espace
+en = Space
+es = Espacio
+
+fr = Flèche bas
+en = Down arrow
+es = Flecha abajo
+
+fr = Flèche droite
+en = Right arrow
+es = Flecha derecha
+
+fr = Flèche gauche
+en = Left arrow
+es = Flecha izquierda
+
+fr = Flèche haut
+en = Up arrow
+es = Flecha arriba
+
+fr = Maj
+en = Shift
+es = Mayús
+
+fr = Option
+en = Option
+es = Opción
+
+fr = Retour arrière
+en = Backspace
+es = Retroceso
+
+fr = Suppr
+en = Delete
+es = Supr
+
+fr = Tab
+en = Tab
+es = Tab
+
+fr = Échap
+en = Esc
+es = Esc
+
+fr = Coller certains réglages
+en = Paste some settings
+es = Pegar algunos ajustes
+
+fr = Synchroniser les photos choisies
+en = Sync the selected photos
+es = Sincronizar las fotos seleccionadas
+
+fr = Développement
+en = Develop
+es = Revelado
+
+fr = Tri en plein écran
+en = Full-screen culling
+es = Selección a pantalla completa
+
+fr = Comparer
+en = Compare
+es = Comparar
+
+fr = Loupe de la comparaison
+en = Comparison loupe
+es = Lupa de la comparación
+
+fr = Déplier ou replier la pile
+en = Expand or collapse the stack
+es = Desplegar o plegar la pila
+
+fr = Photo précédente
+en = Previous photo
+es = Foto anterior
+
+fr = Photo suivante
+en = Next photo
+es = Foto siguiente
+
+fr = Photo suivante, pause du diaporama
+en = Next photo, pause the slideshow
+es = Foto siguiente, pausa de la presentación
+
+fr = Sans note
+en = No rating
+es = Sin valoración
+
+fr = Une étoile
+en = One star
+es = Una estrella
+
+fr = Deux étoiles
+en = Two stars
+es = Dos estrellas
+
+fr = Trois étoiles
+en = Three stars
+es = Tres estrellas
+
+fr = Quatre étoiles
+en = Four stars
+es = Cuatro estrellas
+
+fr = Cinq étoiles
+en = Five stars
+es = Cinco estrellas
+
+fr = Libellé rouge
+en = Red label
+es = Etiqueta roja
+
+fr = Libellé jaune
+en = Yellow label
+es = Etiqueta amarilla
+
+fr = Libellé vert
+en = Green label
+es = Etiqueta verde
+
+fr = Libellé bleu
+en = Blue label
+es = Etiqueta azul
+
+fr = Libellé violet
+en = Purple label
+es = Etiqueta violeta
+
+fr = Avant / après
+en = Before / after
+es = Antes / después
+
+fr = Zoom 100 %
+en = Zoom 100%
+es = Zoom 100 %
+
+fr = Écrêtage
+en = Clipping
+es = Recorte de tonos
+
+fr = Instruments de mesure
+en = Scopes
+es = Instrumentos de medida
+
+fr = Recadrer
+en = Crop
+es = Recortar
+
+fr = Redresser l'horizon
+en = Level the horizon
+es = Enderezar el horizonte
+
+fr = Redresser les verticales
+en = Straighten the verticals
+es = Enderezar las verticales
+
+fr = Tourner la grille de composition
+en = Rotate the composition overlay
+es = Girar la cuadrícula de composición
+
+fr = Valider le recadrage
+en = Apply the crop
+es = Aplicar el recorte
+
+fr = Annuler, sortir
+en = Cancel, leave
+es = Cancelar, salir
+
+fr = Masque linéaire
+en = Linear mask
+es = Máscara lineal
+
+fr = Masque radial
+en = Radial mask
+es = Máscara radial
+
+fr = Montrer le masque
+en = Show the mask
+es = Mostrar la máscara
+
+fr = Supprimer le masque
+en = Delete the mask
+es = Eliminar la máscara
+
+fr = Retouche des taches
+en = Spot removal
+es = Eliminación de manchas
+
+fr = Pipette de la balance
+en = White balance picker
+es = Cuentagotas del balance
+
+fr = Réglage ciblé
+en = Targeted adjustment
+es = Ajuste selectivo
+
+fr = Masquer les panneaux
+en = Hide the panels
+es = Ocultar los paneles
