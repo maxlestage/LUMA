@@ -3524,3 +3524,129 @@ es = Reducción de ruido por ondículas
 fr = Bruit par filtre guidé
 en = Guided-filter noise reduction
 es = Reducción de ruido por filtro guiado
+
+# ----- L'impression -----
+
+fr = Imprimer…
+en = Print…
+es = Imprimir…
+
+fr = Mise en page pour l'imprimante : une photo par page ou une planche contact, en PDF
+en = Page layout for the printer: one photo per page or a contact sheet, as a PDF
+es = Maquetación para la impresora: una foto por página o una hoja de contactos, en PDF
+
+fr = Imprimer {n} photos
+en = Print {n} photos
+es = Imprimir {n} fotos
+
+fr = Papier
+en = Paper
+es = Papel
+
+fr = Lettre US
+en = US Letter
+es = Carta EE. UU.
+
+fr = Orientation
+en = Orientation
+es = Orientación
+
+fr = Portrait
+en = Portrait
+es = Vertical
+
+fr = Paysage
+en = Landscape
+es = Horizontal
+
+fr = Disposition
+en = Layout
+es = Disposición
+
+fr = Une photo par page
+en = One photo per page
+es = Una foto por página
+
+fr = Planche contact
+en = Contact sheet
+es = Hoja de contactos
+
+fr = colonnes × lignes
+en = columns × rows
+es = columnas × filas
+
+fr = Marges
+en = Margins
+es = Márgenes
+
+fr = Écart
+en = Spacing
+es = Separación
+
+fr = Résolution
+en = Resolution
+es = Resolución
+
+fr = {dpi} ppp
+en = {dpi} ppi
+es = {dpi} ppp
+
+fr = Le nom de chaque photo dessous
+en = Each photo's name underneath
+es = El nombre de cada foto debajo
+
+fr = Remplir les cases (photos recadrées au centre)
+en = Fill the cells (photos cropped to the center)
+es = Llenar las celdas (fotos recortadas al centro)
+
+fr = Convertir vers le profil de l'imprimante
+en = Convert to the printer profile
+es = Convertir al perfil de la impresora
+
+fr = Imprimez alors sans gestion des couleurs du pilote
+en = Then print without the driver's color management
+es = Imprima entonces sin la gestión de color del controlador
+
+fr = Sans profil d'imprimante : les pages restent en sRGB.
+en = No printer profile: the pages stay in sRGB.
+es = Sin perfil de impresora: las páginas quedan en sRGB.
+
+fr = {pages} page(s) de {w} × {h} mm
+en = {pages} page(s) of {w} × {h} mm
+es = {pages} página(s) de {w} × {h} mm
+
+fr = Mise en page : {done} sur {n}
+en = Laying out: {done} of {n}
+es = Maquetando: {done} de {n}
+
+fr = Créer le PDF…
+en = Create the PDF…
+es = Crear el PDF…
+
+fr = Enregistrer le PDF à imprimer
+en = Save the PDF to print
+es = Guardar el PDF para imprimir
+
+fr = Tirage
+en = Print
+es = Copia
+
+fr = PDF prêt : {pages} page(s), {file}
+en = PDF ready: {pages} page(s), {file}
+es = PDF listo: {pages} página(s), {file}
+
+fr = Impression impossible : {error}
+en = Couldn't print: {error}
+es = No se pudo imprimir: {error}
+
+fr = Les marges ne laissent plus de place sur le papier.
+en = The margins leave no room on the paper.
+es = Los márgenes no dejan sitio en el papel.
+
+fr = seuls les profils d'imprimante RVB sont pris en charge
+en = only RGB printer profiles are supported
+es = solo se admiten perfiles de impresora RGB
+
+fr = ce profil ne convertit pas dans les deux sens
+en = this profile doesn't convert both ways
+es = este perfil no convierte en ambos sentidos

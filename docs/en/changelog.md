@@ -236,6 +236,12 @@ The professional photo library, step by step.
   (the last ten kept); `luma catalog --backup`, `--backups`, `--restore` (the replaced
   catalogue is backed up first). **Missing photos**: `--missing` lists them,
   `--relocate old new` finds a folder moved outside LÜMA, collections included.
+- **Printing** (“Print…” on the selected photos, `luma print`): a PDF at the paper's
+  exact size (A4, A3, A3+, 10 × 15 cm…), portrait or landscape, margins, one photo per
+  page or a **contact sheet** (grid, name under each photo), photos whole or filling
+  their cell, output sharpening for matte or glossy paper, page preview; pages
+  converted to the **printer profile** (the soft-proofing one, black point
+  compensated), to print without the driver's color management.
 
 ## 0.2.0 — October 2026
 
