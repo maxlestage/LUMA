@@ -1494,6 +1494,47 @@ fn empty_edges_are_cropped() {
 }
 
 #[test]
+fn sky_mask() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("ciel") else {
+        return;
+    };
+    // Le paysage de l'OM System : un ciel bleu à nuages au‑dessus d'un arbre et d'une
+    // vallée.
+    let orf = s.dir.join("OM_System_OM-5_2_regular.ORF");
+    s.studio().open_path(&orf);
+    s.wait();
+    s.studio().tool = luma_studio::app::Tool::Masks;
+    s.wait();
+    s.harness.get_by_label("Sélectionner le ciel").click();
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.masks.len(), 1);
+    assert_eq!(st.settings.masks[0].shape, luma_project::Shape::Sky);
+    // Le masque choisi : sa zone se lit sur la photo, la copie réduite arrive.
+    st.selected_mask = Some(0);
+    s.wait();
+    let st = s.studio();
+    // La zone, lue sur la copie réduite de la photo (le masque n'agit pas encore) : le
+    // haut est du ciel, le bas non.
+    let scene = st.scene_map().expect("copie réduite").clone();
+    let zone = luma_image::local::weights_on(&st.settings.masks[0], &scene);
+    let (w, h) = (zone.width, zone.height);
+    let mean = |y0: usize, y1: usize| {
+        let rows = &zone.data[y0 * w..y1 * w];
+        rows.iter().sum::<f32>() / rows.len() as f32
+    };
+    let (top, bottom) = (mean(h / 10, h / 4), mean(h * 3 / 4, h));
+    assert!(top > 0.5 && bottom < 0.05, "haut {top}, bas {bottom}");
+    // Un ciel plus sombre, et sa zone affichée (O).
+    st.settings.masks[0].local.exposure = -1.0;
+    st.selected_mask = Some(0);
+    s.wait();
+    s.keys(&[(NONE, Key::O)]);
+    s.capture("masque-ciel");
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {
