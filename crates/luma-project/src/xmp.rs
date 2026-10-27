@@ -29,7 +29,7 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 12] = [
+const META_KEYS: [&str; 13] = [
     "luma:Snapshots",
     "xmp:Rating",
     "xmp:Label",
@@ -42,6 +42,7 @@ const META_KEYS: [&str; 12] = [
     "luma:Film",
     "luma:FilmAmount",
     "luma:NoiseWavelets",
+    "luma:Deconvolution",
 ];
 const LUMA_NS: &str = "https://luma.photo/ns/1.0/";
 
@@ -666,6 +667,8 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     s.film = look("luma:Film", "luma:FilmAmount");
     // La réduction du bruit de luminance par ondelettes.
     s.detail.luminance_nr_wavelets = values.meta.get("luma:NoiseWavelets").is_some_and(|v| v == "True");
+    // L'accentuation par déconvolution.
+    s.detail.sharpen_deconvolution = values.meta.get("luma:Deconvolution").is_some_and(|v| v == "True");
     Ok(s.clamped())
 }
 
@@ -729,6 +732,7 @@ pub fn write_preset(name: &str, group: &str, s: &Settings) -> String {
             || t.starts_with("luma:Spots")
             || t.starts_with("luma:Film")
             || t.starts_with("luma:NoiseWavelets")
+            || t.starts_with("luma:Deconvolution")
         {
             continue;
         }
@@ -875,6 +879,9 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     }
     if s.detail.luminance_nr_wavelets {
         out.push_str("    luma:NoiseWavelets=\"True\"\n");
+    }
+    if s.detail.sharpen_deconvolution {
+        out.push_str("    luma:Deconvolution=\"True\"\n");
     }
     for (key, look) in [("Lut", &s.lut), ("Film", &s.film)] {
         if let Some(l) = look {
@@ -1210,6 +1217,18 @@ mod tests {
         // Sans l'étiquette, les corrections du boîtier restent actives.
         let without = text.replace("crs:LensProfileEnable=\"0\"", "");
         assert!(read(&without).unwrap().lens.camera);
+    }
+
+    #[test]
+    fn deconvolution_round_trip() {
+        let mut s = Settings::default();
+        s.detail.sharpen_deconvolution = true;
+        let text = write(&s);
+        assert!(text.contains("luma:Deconvolution=\"True\""), "{text}");
+        assert!(read(&text).unwrap().detail.sharpen_deconvolution);
+        // Propre à la photo, comme le reste du Détail.
+        assert!(!write_preset("Netteté", "LÜMA", &s).contains("Deconvolution"));
+        assert!(!write(&Settings::default()).contains("Deconvolution"));
     }
 
     #[test]

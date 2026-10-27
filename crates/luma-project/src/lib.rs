@@ -163,6 +163,10 @@ pub struct Detail {
     pub sharpen_radius: f32,
     pub sharpen_detail: f32,
     pub sharpen_masking: f32,
+    /// Accentuation par déconvolution (Richardson‑Lucy) plutôt que par masque flou ;
+    /// faux par défaut, ce qui garde le rendu des photos déjà réglées.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub sharpen_deconvolution: bool,
     /// Réduction du bruit de luminance : 0 à 100, détail, contraste.
     pub luminance_nr: f32,
     pub luminance_nr_detail: f32,
@@ -185,6 +189,7 @@ impl Default for Detail {
             sharpen_radius: 1.0,
             sharpen_detail: 25.0,
             sharpen_masking: 0.0,
+            sharpen_deconvolution: false,
             luminance_nr: 0.0,
             luminance_nr_detail: 50.0,
             luminance_nr_contrast: 0.0,

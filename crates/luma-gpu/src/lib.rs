@@ -362,11 +362,14 @@ impl Gpu {
         &self.name
     }
 
-    /// Le GPU sait-il finir ce développement ? Oui, toutes les étapes de la fin y sont ;
+    /// Le GPU sait-il finir ce développement ? Oui, toutes les étapes de la fin y sont,
+    /// sauf l'accentuation par déconvolution (ses itérations restent au processeur) ;
     /// non si l'image dépasse ce que le GPU accepte d'un bloc.
-    pub fn can_finish(&self, _s: &Settings, width: usize, height: usize, _scale: f32) -> bool {
+    pub fn can_finish(&self, s: &Settings, width: usize, height: usize, scale: f32) -> bool {
         let bytes = (width * height * 16) as u64;
-        bytes <= self.max_buffer && width * height > 0
+        let deconvolution =
+            s.detail.sharpen_deconvolution && luma_image::detail::sharpening(&s.detail, scale).is_some();
+        bytes <= self.max_buffer && width * height > 0 && !deconvolution
     }
 
     /// Finit `base` (sortie de `develop_base`, identifiée par `id`) et l'encode en RGBA
