@@ -71,6 +71,7 @@ impl Defaults {
         let groups: Vec<Group> = default_groups();
         let mut kept = paste(&base, settings, &groups);
         kept.spots.clear();
+        kept.liquify.clear();
         self.rules.retain(|r| !(r.camera == camera && r.from_iso == from_iso));
         self.rules.push(Rule {
             camera: camera.to_owned(),

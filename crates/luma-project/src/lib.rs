@@ -8,12 +8,14 @@
 
 pub mod copies;
 pub mod defaults;
+pub mod liquify;
 pub mod masks;
 pub mod paste;
 pub mod presets;
 pub mod retouch;
 pub mod xmp;
 
+pub use liquify::{Warp, WarpKind};
 pub use masks::{Combine, Dab, Local, Look, Mask, Part, Range, Shape};
 pub use retouch::{Spot, SpotKind};
 
@@ -425,6 +427,9 @@ pub struct Settings {
     /// Tampon et correcteur : les retouches, dans l'ordre (chacune voit les précédentes).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub spots: Vec<Spot>,
+    /// Fluidité : les coups de pinceau, dans l'ordre, avant les retouches.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub liquify: Vec<Warp>,
     /// Un film mesuré sur une vraie pellicule ou une LUT 3D importée (`.cube`) : son nom
     /// et son intensité (0 à 100).
     pub lut: Option<Look>,
@@ -462,6 +467,7 @@ impl Default for Settings {
             transform: Transform::default(),
             masks: Vec::new(),
             spots: Vec::new(),
+            liquify: Vec::new(),
             lut: None,
             film: None,
         }
@@ -511,6 +517,10 @@ impl Settings {
         for spot in &mut s.spots {
             spot.clamp();
         }
+        for warp in &mut s.liquify {
+            warp.clamp();
+        }
+        s.liquify.retain(|w| !w.points.is_empty());
         let mixer = &mut s.channel_mixer;
         for row in [&mut mixer.red, &mut mixer.green, &mut mixer.blue] {
             for v in row.iter_mut() {
