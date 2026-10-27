@@ -46,7 +46,7 @@ pub struct Slide {
 }
 
 /// Le texte sûr dans du HTML.
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
@@ -64,7 +64,7 @@ fn escape(s: &str) -> String {
 
 /// Le texte sûr dans une chaîne JavaScript entre guillemets, dans un `<script>` : ni
 /// guillemet, ni barre oblique inverse, ni `</script>` ne peuvent en sortir.
-fn js(s: &str) -> String {
+pub(crate) fn js(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
