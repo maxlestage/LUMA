@@ -613,6 +613,8 @@ pub struct Studio {
     rename_template: String,
     /// Le nom du prochain instantané, en cours de saisie.
     snapshot_name: String,
+    /// La recherche dans les films (nom, description), sans tenir compte des accents.
+    film_search: String,
     rename_preview: Option<(String, Result<luma_render::rename::Plan, String>)>,
     /// Les champs des informations (IPTC) en cours de saisie, et les photos qu'ils visent.
     info_edit: HashMap<&'static str, String>,
@@ -968,6 +970,7 @@ impl Studio {
             book: Default::default(),
             rename_template: "{date}_{séquence}".into(),
             snapshot_name: String::new(),
+            film_search: String::new(),
             rename_preview: None,
             info_edit: HashMap::new(),
             info_for: Vec::new(),
@@ -6836,6 +6839,16 @@ impl Studio {
             ui.add_space(6.0);
         }
         let mut choose = None;
+        // 150 films : une recherche par nom ou par description (« Kodak », « chaud »,
+        // « noir et blanc »), sans accents ni majuscules.
+        ui.add(
+            egui::TextEdit::singleline(&mut self.film_search)
+                .hint_text(tr("Rechercher un film"))
+                .desired_width(f32::INFINITY),
+        )
+        .accessible_name(tr("Rechercher un film"));
+        let wanted = fold(self.film_search.trim());
+        ui.add_space(4.0);
         let mut sections: Vec<(&str, Vec<usize>)> = presets::Group::ALL
             .iter()
             .map(|&g| {
@@ -6865,6 +6878,22 @@ impl Studio {
         // Chaque famille se plie et se déplie (son titre dit combien elle compte de
         // films) ; au départ, seule celle du film appliqué est ouverte, sinon la première.
         let active = self.preset.as_ref().map(|p| p.0);
+        // En recherche : seuls les films trouvés, dans leurs familles toutes ouvertes.
+        if !wanted.is_empty() {
+            for (_, items) in &mut sections {
+                items.retain(|&k| {
+                    let hint = match self.film(k) {
+                        Film::Builtin(p) => tr(p.description),
+                        _ => "",
+                    };
+                    fold(self.film_name(k)).contains(&wanted) || fold(hint).contains(&wanted)
+                });
+            }
+            sections.retain(|(_, items)| !items.is_empty());
+            if sections.is_empty() {
+                ui.label(RichText::new(tr("Aucun film ne correspond.")).color(theme::DIM));
+            }
+        }
         let first = sections.iter().position(|(_, items)| !items.is_empty());
         for (n, (title, items)) in sections.into_iter().enumerate() {
             let open = match active {
@@ -6875,6 +6904,7 @@ impl Studio {
             egui::CollapsingHeader::new(header)
                 .id_salt(("famille", title))
                 .default_open(open)
+                .open((!wanted.is_empty()).then_some(true))
                 .show(ui, |ui| {
                     let width = ((ui.available_width() - 10.0) / 2.0).floor();
                     if title == "Mes préréglages" {
