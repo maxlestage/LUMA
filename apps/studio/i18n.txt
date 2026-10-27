@@ -3856,3 +3856,19 @@ es = Importar {n} fotos
 fr = {n} photos importées et vérifiées dans {file}
 en = {n} photos imported and verified in {file}
 es = {n} fotos importadas y verificadas en {file}
+
+fr = Reconstruire les hautes lumières
+en = Reconstruct highlights
+es = Reconstruir las altas luces
+
+fr = Un canal saturé par le capteur reprend la couleur de ses voisins : ciels, peaux et tissus clairs retrouvent teinte et texture
+en = A channel clipped by the sensor takes the color of its neighbors: skies, skin and light fabrics get their hue and texture back
+es = Un canal saturado por el sensor toma el color de sus vecinos: cielos, pieles y tejidos claros recuperan tono y textura
+
+fr = Hautes lumières reconstruites
+en = Highlights reconstructed
+es = Altas luces reconstruidas
+
+fr = Hautes lumières telles que mesurées
+en = Highlights as measured
+es = Altas luces tal como se midieron

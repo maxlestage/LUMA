@@ -1300,6 +1300,26 @@ fn wavelet_noise_reduction() {
 }
 
 #[test]
+fn highlight_reconstruction() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("hautes-lumieres") else {
+        return;
+    };
+    s.studio().tool = luma_studio::app::Tool::Light;
+    s.wait();
+    assert!(!s.studio().settings.highlight_reconstruction);
+    s.harness
+        .get_by_label("Reconstruire les hautes lumières")
+        .click();
+    s.wait();
+    assert!(s.studio().settings.highlight_reconstruction);
+    assert!(s.studio().has_image());
+    s.capture("hautes-lumieres");
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert!(!s.studio().settings.highlight_reconstruction, "annulée");
+}
+
+#[test]
 fn deconvolution_sharpening() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("deconvolution") else {
