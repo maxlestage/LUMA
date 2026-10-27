@@ -113,7 +113,12 @@ const WAVELET_NOISE: [f32; 5] = [0.889, 0.200, 0.086, 0.041, 0.020];
 /// grandes.
 fn wavelet_denoise(y: &Plane, strength: f32, detail: f32, contrast: f32) -> Plane {
     let (w, h) = (y.width, y.height);
-    let mut coarse = y.clone();
+    // Quatre tampons pour toutes les échelles : l'image grossière, son lissage, la passe
+    // des lignes, la somme. Les coefficients fins (grossière − lissée) et leur carré
+    // se calculent à la lecture, l'atténuation et le cumul dans la passe des colonnes.
+    let mut coarse = y.data.clone();
+    let mut smooth = vec![0.0; w * h];
+    let mut rows = vec![0.0; w * h];
     let mut out = Plane::new(w, h);
     let mut sigma = 0.0;
     for (level, noise) in WAVELET_NOISE.iter().enumerate() {
@@ -121,10 +126,11 @@ fn wavelet_denoise(y: &Plane, strength: f32, detail: f32, contrast: f32) -> Plan
         if 2 * step >= w.min(h) {
             break;
         }
-        let smooth = atrous(&coarse, step);
-        let mut fine = coarse.zip(&smooth, |c, s| c - s);
+        atrous_rows(|i| coarse[i], w, step, &mut rows);
+        atrous_cols(&rows, w, h, step, &mut smooth, |_, o, v| *o = v);
+        let (c, s) = (&coarse, &smooth);
         if level == 0 {
-            sigma = median_abs(&fine.data) / 0.6745 / noise;
+            sigma = median_abs(c.len(), |i| c[i] - s[i]) / 0.6745 / noise;
         }
         let keep = if level < 2 {
             1.0 - 0.7 * detail
@@ -136,60 +142,85 @@ fn wavelet_denoise(y: &Plane, strength: f32, detail: f32, contrast: f32) -> Plan
         // coefficient s'efface ; une texture ou un contour, bien plus énergiques, restent.
         let t = 3.0 * strength * keep * sigma * noise;
         if t > 0.0 {
-            let energy = atrous(&fine.zip(&fine, |a, b| a * b), step);
-            fine.data.par_iter_mut().zip(&energy.data).for_each(|(v, e)| {
-                *v *= ((e - t * t) / e.max(1e-12)).max(0.0);
+            atrous_rows(
+                |i| {
+                    let f = c[i] - s[i];
+                    f * f
+                },
+                w,
+                step,
+                &mut rows,
+            );
+            atrous_cols(&rows, w, h, step, &mut out.data, |i, o, e| {
+                *o += (c[i] - s[i]) * ((e - t * t) / e.max(1e-12)).max(0.0);
             });
+        } else {
+            out.data.par_iter_mut().enumerate().for_each(|(i, o)| *o += c[i] - s[i]);
         }
-        out.data.par_iter_mut().zip(&fine.data).for_each(|(o, f)| *o += f);
-        coarse = smooth;
+        std::mem::swap(&mut coarse, &mut smooth);
     }
-    out.data.par_iter_mut().zip(&coarse.data).for_each(|(o, c)| *o += c);
+    out.data.par_iter_mut().zip(&coarse).for_each(|(o, c)| *o += c);
     out
 }
 
-/// Un lissage B3 (1 4 6 4 1, sur 16) dont les prises sont espacées de `step` pixels,
-/// en lignes puis en colonnes ; les bords se reflètent.
-fn atrous(p: &Plane, step: usize) -> Plane {
-    const K: [f32; 5] = [1.0 / 16.0, 4.0 / 16.0, 6.0 / 16.0, 4.0 / 16.0, 1.0 / 16.0];
-    let (w, h) = (p.width, p.height);
-    let reflect = |i: isize, n: usize| -> usize {
-        let n = n as isize;
-        let i = if i < 0 { -i } else { i };
-        (if i >= n { 2 * (n - 1) - i } else { i }).clamp(0, n - 1) as usize
-    };
-    let tap = |v: [f32; 5]| K[0] * (v[0] + v[4]) + K[1] * (v[1] + v[3]) + K[2] * v[2];
-    let mut rows = Plane::new(w, h);
-    rows.data.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
-        let src = &p.data[yy * w..(yy + 1) * w];
+/// Le lissage B3 (1 4 6 4 1, sur 16) à prises espacées de `step` pixels.
+const B3: [f32; 5] = [1.0 / 16.0, 4.0 / 16.0, 6.0 / 16.0, 4.0 / 16.0, 1.0 / 16.0];
+
+fn b3(v: [f32; 5]) -> f32 {
+    B3[0] * (v[0] + v[4]) + B3[1] * (v[1] + v[3]) + B3[2] * v[2]
+}
+
+/// L'indice `i` reflété dans `0..n`.
+fn reflect(i: isize, n: usize) -> usize {
+    let n = n as isize;
+    let i = if i < 0 { -i } else { i };
+    (if i >= n { 2 * (n - 1) - i } else { i }).clamp(0, n - 1) as usize
+}
+
+/// La passe des lignes du lissage B3 (bords reflétés) ; `at(i)` donne la valeur lue à
+/// l'indice `i`.
+fn atrous_rows(at: impl Fn(usize) -> f32 + Sync, w: usize, step: usize, dst: &mut [f32]) {
+    dst.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
+        let base = yy * w;
         for (x, o) in row.iter_mut().enumerate() {
             // L'intérieur, sans réflexion ; les bords la prennent.
             *o = if x >= 2 * step && x + 2 * step < w {
-                tap(std::array::from_fn(|k| src[x + k * step - 2 * step]))
+                b3(std::array::from_fn(|k| at(base + x + k * step - 2 * step)))
             } else {
-                tap(std::array::from_fn(|k| {
-                    src[reflect(x as isize + (k as isize - 2) * step as isize, w)]
+                b3(std::array::from_fn(|k| {
+                    at(base + reflect(x as isize + (k as isize - 2) * step as isize, w))
                 }))
             };
         }
     });
-    let mut out = Plane::new(w, h);
-    out.data.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
-        let lines: [&[f32]; 5] = std::array::from_fn(|k| {
-            let l = reflect(yy as isize + (k as isize - 2) * step as isize, h) * w;
-            &rows.data[l..l + w]
-        });
-        for (x, o) in row.iter_mut().enumerate() {
-            *o = tap(std::array::from_fn(|k| lines[k][x]));
-        }
-    });
-    out
 }
 
-/// La médiane des valeurs absolues (sur au plus 2¹⁸ valeurs régulièrement prises).
-fn median_abs(data: &[f32]) -> f32 {
-    let every = (data.len() >> 18).max(1);
-    let mut v: Vec<f32> = data.iter().step_by(every).map(|x| x.abs()).collect();
+/// La passe des colonnes du lissage B3 (bords reflétés) ; `put(i, sortie, lissé)` écrit
+/// le résultat de l'indice `i`.
+fn atrous_cols(
+    rows: &[f32],
+    w: usize,
+    h: usize,
+    step: usize,
+    dst: &mut [f32],
+    put: impl Fn(usize, &mut f32, f32) + Sync,
+) {
+    dst.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
+        let lines: [&[f32]; 5] = std::array::from_fn(|k| {
+            let l = reflect(yy as isize + (k as isize - 2) * step as isize, h) * w;
+            &rows[l..l + w]
+        });
+        for (x, o) in row.iter_mut().enumerate() {
+            put(yy * w + x, o, b3(std::array::from_fn(|k| lines[k][x])));
+        }
+    });
+}
+
+/// La médiane des valeurs absolues des `n` valeurs `at(i)` (sur au plus 2¹⁸ valeurs
+/// régulièrement prises).
+fn median_abs(n: usize, at: impl Fn(usize) -> f32) -> f32 {
+    let every = (n >> 18).max(1);
+    let mut v: Vec<f32> = (0..n).step_by(every).map(|i| at(i).abs()).collect();
     if v.is_empty() {
         return 0.0;
     }
@@ -362,7 +393,23 @@ fn convolve_rows(src: &[f32], dst: &mut [f32], w: usize, k: &[f32], pre: impl Fn
                 let sx = x.saturating_sub(r).min(w - 1);
                 *v = pre(y * w + sx, row[sx]);
             }
-            for (x, o) in out.iter_mut().enumerate() {
+            // Huit pixels à la fois, chacun avec les mêmes produits ajoutés dans le même
+            // ordre (depuis le zéro de `sum`) : les mêmes valeurs, en colonnes.
+            let zero: f32 = std::iter::empty::<f32>().sum();
+            let (blocks, tail) = out.as_chunks_mut::<8>();
+            for (b, o) in blocks.iter_mut().enumerate() {
+                let x = 8 * b;
+                let mut acc = [zero; 8];
+                for (j, kj) in k.iter().enumerate() {
+                    let v = &line[x + j..x + j + 8];
+                    for l in 0..8 {
+                        acc[l] += kj * v[l];
+                    }
+                }
+                *o = acc;
+            }
+            let rest = w - tail.len();
+            for (x, o) in out.iter_mut().enumerate().skip(rest) {
                 *o = k.iter().zip(&line[x..x + k.len()]).map(|(a, b)| a * b).sum();
             }
         },
@@ -547,6 +594,110 @@ mod tests {
         -10.0 * mse.log10()
     }
 
+    // L'ancienne version des ondelettes (un tampon neuf par passe), pour vérifier que la
+    // version fusionnée donne exactement les mêmes pixels.
+    fn wavelet_denoise_reference(y: &Plane, strength: f32, detail: f32, contrast: f32) -> Plane {
+        let (w, h) = (y.width, y.height);
+        let mut coarse = y.clone();
+        let mut out = Plane::new(w, h);
+        let mut sigma = 0.0;
+        for (level, noise) in WAVELET_NOISE.iter().enumerate() {
+            let step = 1 << level;
+            if 2 * step >= w.min(h) {
+                break;
+            }
+            let smooth = atrous_reference(&coarse, step);
+            let mut fine = coarse.zip(&smooth, |c, s| c - s);
+            if level == 0 {
+                sigma = median_abs_reference(&fine.data) / 0.6745 / noise;
+            }
+            let keep = if level < 2 {
+                1.0 - 0.7 * detail
+            } else {
+                1.0 - 0.8 * contrast
+            };
+            // Un Wiener local : là où l'énergie du voisinage (le carré des coefficients,
+            // flouté à la taille de l'échelle) dépasse à peine celle du bruit, le
+            // coefficient s'efface ; une texture ou un contour, bien plus énergiques, restent.
+            let t = 3.0 * strength * keep * sigma * noise;
+            if t > 0.0 {
+                let energy = atrous_reference(&fine.zip(&fine, |a, b| a * b), step);
+                fine.data.par_iter_mut().zip(&energy.data).for_each(|(v, e)| {
+                    *v *= ((e - t * t) / e.max(1e-12)).max(0.0);
+                });
+            }
+            out.data.par_iter_mut().zip(&fine.data).for_each(|(o, f)| *o += f);
+            coarse = smooth;
+        }
+        out.data.par_iter_mut().zip(&coarse.data).for_each(|(o, c)| *o += c);
+        out
+    }
+
+    fn atrous_reference(p: &Plane, step: usize) -> Plane {
+        const K: [f32; 5] = [1.0 / 16.0, 4.0 / 16.0, 6.0 / 16.0, 4.0 / 16.0, 1.0 / 16.0];
+        let (w, h) = (p.width, p.height);
+        let reflect = |i: isize, n: usize| -> usize {
+            let n = n as isize;
+            let i = if i < 0 { -i } else { i };
+            (if i >= n { 2 * (n - 1) - i } else { i }).clamp(0, n - 1) as usize
+        };
+        let tap = |v: [f32; 5]| K[0] * (v[0] + v[4]) + K[1] * (v[1] + v[3]) + K[2] * v[2];
+        let mut rows = Plane::new(w, h);
+        rows.data.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
+            let src = &p.data[yy * w..(yy + 1) * w];
+            for (x, o) in row.iter_mut().enumerate() {
+                // L'intérieur, sans réflexion ; les bords la prennent.
+                *o = if x >= 2 * step && x + 2 * step < w {
+                    tap(std::array::from_fn(|k| src[x + k * step - 2 * step]))
+                } else {
+                    tap(std::array::from_fn(|k| {
+                        src[reflect(x as isize + (k as isize - 2) * step as isize, w)]
+                    }))
+                };
+            }
+        });
+        let mut out = Plane::new(w, h);
+        out.data.par_chunks_mut(w).enumerate().for_each(|(yy, row)| {
+            let lines: [&[f32]; 5] = std::array::from_fn(|k| {
+                let l = reflect(yy as isize + (k as isize - 2) * step as isize, h) * w;
+                &rows.data[l..l + w]
+            });
+            for (x, o) in row.iter_mut().enumerate() {
+                *o = tap(std::array::from_fn(|k| lines[k][x]));
+            }
+        });
+        out
+    }
+
+    fn median_abs_reference(data: &[f32]) -> f32 {
+        let every = (data.len() >> 18).max(1);
+        let mut v: Vec<f32> = data.iter().step_by(every).map(|x| x.abs()).collect();
+        if v.is_empty() {
+            return 0.0;
+        }
+        let mid = v.len() / 2;
+        *v.select_nth_unstable_by(mid, f32::total_cmp).1
+    }
+
+    #[test]
+    fn fused_wavelets_give_the_same_pixels() {
+        let (noisy, _) = scene();
+        for (w, h) in [(noisy.width, noisy.height), (37, 23), (9, 9)] {
+            let mut y = Plane::new(w, h);
+            for (i, v) in y.data.iter_mut().enumerate() {
+                *v = noisy.data[i % noisy.data.len()][1];
+            }
+            for (strength, detail, contrast) in [(0.5, 0.5, 0.3), (1.0, 0.0, 1.0), (0.0, 0.2, 0.2)] {
+                let a = wavelet_denoise(&y, strength, detail, contrast);
+                let b = wavelet_denoise_reference(&y, strength, detail, contrast);
+                assert!(
+                    a.data.iter().zip(&b.data).all(|(p, q)| p.to_bits() == q.to_bits()),
+                    "{w}×{h}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn wavelets_beat_the_guided_filter() {
         let (clean, noisy) = scene();
@@ -651,6 +802,32 @@ mod tests {
             }
         }
         -10.0 * (sum / n).log10()
+    }
+
+    #[test]
+    fn row_convolution_in_lanes_gives_the_same_values() {
+        for w in [1, 7, 8, 13, 64, 101] {
+            let h = 3;
+            let src: Vec<f32> = (0..w * h)
+                .map(|i| ((i * 37 % 101) as f32 / 50.0 - 0.7).powi(3))
+                .collect();
+            for sigma in [0.5, 0.8, 1.7, 3.0] {
+                let k = gaussian_kernel(sigma);
+                let r = k.len() / 2;
+                let mut dst = vec![0.0; w * h];
+                convolve_rows(&src, &mut dst, w, &k, |i, v| v * 1.5 + i as f32 * 1e-3);
+                for y in 0..h {
+                    for x in 0..w {
+                        let at = |j: usize| {
+                            let sx = (x + j).saturating_sub(r).min(w - 1);
+                            src[y * w + sx] * 1.5 + (y * w + sx) as f32 * 1e-3
+                        };
+                        let want: f32 = k.iter().enumerate().map(|(j, kj)| kj * at(j)).sum();
+                        assert_eq!(dst[y * w + x].to_bits(), want.to_bits(), "{w} {sigma} {x}");
+                    }
+                }
+            }
+        }
     }
 
     #[test]
