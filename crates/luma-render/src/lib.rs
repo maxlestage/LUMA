@@ -590,6 +590,32 @@ mod tests {
     }
 
     #[test]
+    fn export_enlarges_only_when_asked() {
+        let p = photo();
+        let mut settings = Settings::default();
+        settings.crop.left = 0.25;
+        settings.crop.right = 0.75;
+        let dir = std::env::temp_dir().join(format!("luma-export-big-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let size = |enlarge: bool| {
+            let options = export::Options {
+                format: export::Format::Png,
+                resize: Some(export::Resize::LongEdge(128)),
+                enlarge,
+                ..export::Options::default()
+            };
+            let out = dir.join(format!("{enlarge}.png"));
+            export::develop(&p, &settings, &out, &options, &Default::default()).unwrap();
+            let img = image::open(&out).unwrap();
+            (img.width(), img.height())
+        };
+        // 24 × 64 une fois recadrée : gardée telle quelle, ou agrandie à 128 px.
+        assert_eq!(size(false), (24, 64));
+        assert_eq!(size(true), (48, 128));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn sources_are_cached_and_oriented() {
         let p = photo();
         assert_eq!(p.full_size(), (48, 64));

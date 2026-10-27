@@ -160,6 +160,9 @@ pub struct Options {
     pub metadata: MetadataOptions,
     /// Un JPEG allégé pour le web (chrominance 4:2:0, tables de Huffman de l'image).
     pub web: bool,
+    /// Agrandir l'image quand la taille demandée dépasse la pleine définition (jusqu'à
+    /// quatre fois chaque côté, 200 Mpx au plus), au lieu de s'arrêter à sa taille.
+    pub enlarge: bool,
 }
 
 impl Default for Options {
@@ -177,6 +180,7 @@ impl Default for Options {
             logo: None,
             metadata: MetadataOptions::default(),
             web: false,
+            enlarge: false,
         }
     }
 }
@@ -289,7 +293,8 @@ impl OutputSharpen {
     }
 }
 
-/// La taille d'un export, toujours sans agrandir l'image ni changer ses proportions.
+/// La taille d'un export, sans changer ses proportions (et sans agrandir l'image, sauf
+/// avec [`Resize::fit`] qui le permet).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Resize {
     /// Le grand côté, en pixels.
@@ -306,6 +311,12 @@ impl Resize {
     /// Les dimensions d'une image `width × height` après redimensionnement : jamais plus
     /// grandes, proportions gardées.
     pub fn apply(self, width: usize, height: usize) -> (usize, usize) {
+        self.fit(width, height, false)
+    }
+
+    /// Comme [`Resize::apply`] ; avec `enlarge`, une taille demandée plus grande que
+    /// l'image l'agrandit, jusqu'à quatre fois chaque côté et 200 Mpx.
+    pub fn fit(self, width: usize, height: usize, enlarge: bool) -> (usize, usize) {
         let (w, h) = (width.max(1) as f64, height.max(1) as f64);
         let scale = match self {
             Resize::LongEdge(n) => n as f64 / w.max(h),
@@ -313,8 +324,18 @@ impl Resize {
             Resize::Fit { width: fw, height: fh } => (fw as f64 / w).min(fh as f64 / h),
             Resize::Megapixels(m) => (f64::from(m) * 1e6 / (w * h)).sqrt(),
         };
-        if scale.is_nan() || scale >= 1.0 {
+        if scale.is_nan() || scale == 1.0 || (scale > 1.0 && !enlarge) {
             return (width, height);
+        }
+        if scale > 1.0 {
+            let most = 4.0f64.min((200e6 / (w * h)).sqrt()).max(1.0);
+            if scale > most {
+                // Arrondi vers le bas : le plafond n'est jamais dépassé.
+                return (
+                    ((w * most).floor() as usize).max(1),
+                    ((h * most).floor() as usize).max(1),
+                );
+            }
         }
         let out = |v: f64| ((v * scale).round() as usize).max(1);
         // Le côté visé est tenu exactement (l'arrondi de l'autre suit).
@@ -682,7 +703,7 @@ pub fn develop(
             let frac = fx.min(fy);
             let (w, h) = photo.full_size();
             let (cw, ch) = ((w as f32 * fx).round() as usize, (h as f32 * fy).round() as usize);
-            let (tw, th) = r.apply(cw.max(1), ch.max(1));
+            let (tw, th) = r.fit(cw.max(1), ch.max(1), options.enlarge);
             let pre = (tw.max(th) as f32 / frac).ceil() as usize;
             if pre >= w.max(h) { Size::Full } else { Size::Fit(pre) }
         }
@@ -692,8 +713,10 @@ pub fn develop(
         .map_err(|e| e.to_string())?;
     let mut image = rendered.image;
     if let Some(r) = options.resize {
-        let (w, h) = r.apply(image.width, image.height);
-        if (w, h) != (image.width, image.height) {
+        let (w, h) = r.fit(image.width, image.height, options.enlarge);
+        if w > image.width || h > image.height {
+            image = luma_image::enlarge::enlarge(&image, w, h);
+        } else if (w, h) != (image.width, image.height) {
             image = image.resize_area(w, h);
         }
     }
@@ -817,6 +840,8 @@ struct StoredPreset {
     metadata: Option<StoredMetadata>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     web: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    enlarge: bool,
 }
 
 /// Les métadonnées, seulement si elles diffèrent de celles d'un export ordinaire.
@@ -897,6 +922,7 @@ impl StoredPreset {
                 copyright: o.metadata.copyright.clone(),
             }),
             web: o.web,
+            enlarge: o.enlarge,
         }
     }
 
@@ -964,6 +990,7 @@ impl StoredPreset {
                         copyright: m.copyright.filter(|c| !c.trim().is_empty()),
                     }),
                 web: self.web,
+                enlarge: self.enlarge,
             },
         })
     }
@@ -1080,6 +1107,9 @@ pub fn describe(o: &Options) -> String {
         .as_ref()
         .map_or_else(|| "LÜMA/".to_owned(), |d| d.display().to_string());
     let mut out = format!("{format}, {space}, {size}, {folder}");
+    if o.enlarge && o.resize.is_some() {
+        out += ", agrandie au besoin";
+    }
     if let Some(sh) = o.sharpen {
         out += &format!(", {}", sh.describe());
     }
@@ -1279,6 +1309,12 @@ mod tests {
             .apply(w, h),
             (w, h)
         );
+        // Agrandir, sur demande : jusqu'à quatre fois chaque côté et 200 Mpx.
+        assert_eq!(Resize::LongEdge(9000).fit(w, h, true), (9000, 6000));
+        assert_eq!(Resize::LongEdge(2048).fit(w, h, true), (2048, 1365));
+        assert_eq!(Resize::LongEdge(4000).fit(800, 600, true), (3200, 2400));
+        let (bw, bh) = Resize::Megapixels(500.0).fit(w, h, true);
+        assert!(bw * bh <= 200_000_000 && bw * bh > 199_000_000, "{bw} × {bh}");
     }
 
     #[test]
@@ -1471,6 +1507,7 @@ mod tests {
                     ..MetadataOptions::default()
                 },
                 web: true,
+                enlarge: true,
                 ..Options::default()
             },
         };
@@ -1541,6 +1578,12 @@ mod tests {
             describe(&builtin()[3].options),
             "TIFF 16 bits, ProPhoto RGB, pleine définition, LÜMA/"
         );
+        let big = Options {
+            resize: Some(Resize::LongEdge(12000)),
+            enlarge: true,
+            ..Options::default()
+        };
+        assert_eq!(describe(&big), "JPEG 92, sRGB, 12000 px, LÜMA/, agrandie au besoin");
     }
 
     #[test]
