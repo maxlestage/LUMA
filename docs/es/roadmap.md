@@ -23,7 +23,7 @@ Es una estimación, no una garantía.
 - workspace de Cargo (`crates/`), regla «100 % Rust» verificada en CI sobre el grafo de
   dependencias real;
 - lectura de RAW Bayer, X‑Trans y DNG lineal (ProRAW), color en el sentido DNG,
-  interpolación cromática Malvar‑He‑Cutler y X‑Trans;
+  interpolación cromática direccional (Bayer) y X‑Trans;
 - módulo Revelar completo, panel por panel (véase
   [`fonctions.md`](fonctions.md)), lectura y escritura de XMP `crs:`;
 - exportación JPEG, PNG, TIFF de 8/16 bits en sRGB o Display P3 con perfil ICC;

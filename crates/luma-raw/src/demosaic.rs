@@ -1,7 +1,11 @@
 //! Dématriçage et réduction des mosaïques de capteur.
 //!
-//! - Bayer : Malvar‑He‑Cutler (2004), des filtres linéaires 5×5 corrigés par le
-//!   gradient : net, sans fausses couleurs marquées, et rapide (une seule passe).
+//! - Bayer : directionnel ([`bayer`]). Le vert d'abord, estimé en ligne et en colonne
+//!   (moyenne des verts voisins corrigée par la courbure de la couleur du pixel,
+//!   Hamilton‑Adams) et pondéré par la régularité de chaque direction : il suit les
+//!   contours au lieu de les croiser, sans « fermeture éclair ». Puis rouge et bleu par
+//!   les différences de couleur au vert, qui varient lentement. Malvar‑He‑Cutler (2004,
+//!   filtres linéaires 5×5, une seule passe) reste disponible ([`bayer_mhc`]).
 //! - X‑Trans : le vert d'abord (moyenne des verts voisins), puis rouge et bleu par
 //!   interpolation des différences de couleur, pondérée par la distance.
 //! - Réduction : chaque bloc du motif devient un pixel, sans interpolation.
@@ -24,6 +28,92 @@ fn reflect(i: isize, n: usize) -> usize {
         i
     };
     i.clamp(0, n - 1) as usize
+}
+
+/// Le dématriçage directionnel d'une mosaïque de Bayer (voir l'en‑tête du module).
+pub fn bayer(raw: &[f32], w: usize, h: usize, cfa: &Cfa) -> RgbImage {
+    if w < 5 || h < 5 {
+        return bayer_mhc(raw, w, h, cfa);
+    }
+    // 1. Le vert partout.
+    let mut green = vec![0.0f32; w * h];
+    green.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+        let rows: [&[f32]; 5] = std::array::from_fn(|k| {
+            let yy = reflect(y as isize + k as isize - 2, h);
+            &raw[yy * w..(yy + 1) * w]
+        });
+        for (x, g) in row.iter_mut().enumerate() {
+            let interior = x >= 2 && x + 2 < w;
+            // Au bord, les voisins se lisent par réflexion ; ailleurs, directement.
+            let at = |dx: isize, dy: isize| -> f32 {
+                let r = rows[(dy + 2) as usize];
+                if interior {
+                    r[(x as isize + dx) as usize]
+                } else {
+                    r[reflect(x as isize + dx, w)]
+                }
+            };
+            let c = at(0, 0);
+            if cfa.color(x, y) == 1 {
+                *g = c;
+                continue;
+            }
+            // En ligne et en colonne : la moyenne des deux verts, corrigée par la courbure
+            // de la couleur du pixel (rouge ou bleu, un pixel sur deux).
+            let (gl, gr, gu, gd) = (at(-1, 0), at(1, 0), at(0, -1), at(0, 1));
+            let curve_h = 2.0 * c - at(-2, 0) - at(2, 0);
+            let curve_v = 2.0 * c - at(0, -2) - at(0, 2);
+            let est_h = 0.5 * (gl + gr) + 0.25 * curve_h;
+            let est_v = 0.5 * (gu + gd) + 0.25 * curve_v;
+            // La régularité de chaque direction : l'écart des verts et la courbure.
+            let grad_h = (gl - gr).abs() + curve_h.abs() + 1e-6;
+            let grad_v = (gu - gd).abs() + curve_v.abs() + 1e-6;
+            let (wh, wv) = (1.0 / (grad_h * grad_h), 1.0 / (grad_v * grad_v));
+            *g = ((est_h * wh + est_v * wv) / (wh + wv)).max(0.0);
+        }
+    });
+    // 2. Rouge et bleu, par les différences au vert (couleur − vert) de leurs voisins.
+    let mut out = RgbImage::new(w, h);
+    out.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+        let rows: [(&[f32], &[f32]); 3] = std::array::from_fn(|k| {
+            let yy = reflect(y as isize + k as isize - 1, h);
+            (&raw[yy * w..(yy + 1) * w], &green[yy * w..(yy + 1) * w])
+        });
+        for (x, px) in row.iter_mut().enumerate() {
+            let interior = x >= 1 && x + 1 < w;
+            let diff = |dx: isize, dy: isize| -> f32 {
+                let (r, g) = rows[(dy + 1) as usize];
+                let i = if interior {
+                    (x as isize + dx) as usize
+                } else {
+                    reflect(x as isize + dx, w)
+                };
+                r[i] - g[i]
+            };
+            let (own, g) = (rows[1].0[x], rows[1].1[x]);
+            let color = cfa.color(x, y);
+            let rgb = if color == 1 {
+                // Vert : rouge et bleu sont l'un dans la ligne, l'autre dans la colonne.
+                let row_d = 0.5 * (diff(-1, 0) + diff(1, 0));
+                let col_d = 0.5 * (diff(0, -1) + diff(0, 1));
+                if cfa.color(x + 1, y) == 0 {
+                    [g + row_d, g, g + col_d]
+                } else {
+                    [g + col_d, g, g + row_d]
+                }
+            } else {
+                // Rouge ou bleu : l'autre couleur est aux quatre coins.
+                let corners = 0.25 * (diff(-1, -1) + diff(1, -1) + diff(-1, 1) + diff(1, 1));
+                if color == 0 {
+                    [own, g, g + corners]
+                } else {
+                    [g + corners, g, own]
+                }
+            };
+            *px = rgb.map(|v| v.max(0.0));
+        }
+    });
+    out
 }
 
 pub fn bayer_mhc(raw: &[f32], w: usize, h: usize, cfa: &Cfa) -> RgbImage {
@@ -252,6 +342,84 @@ mod tests {
                 assert!((0..3).all(|c| (a[c] - b[c]).abs() < 1e-4), "{x},{y}: {a:?} vs {b:?}");
             }
         }
+    }
+
+    #[test]
+    fn directional_keeps_flat_colors_and_ramps() {
+        for pattern in ["RGGB", "BGGR", "GRBG", "GBRG"] {
+            let cfa = Cfa::parse(pattern, 2, 2).unwrap();
+            let img = RgbImage::from_fn(16, 12, |_, _| [0.6, 0.3, 0.1]);
+            for p in &bayer(&mosaic(&img, &cfa), 16, 12, &cfa).data {
+                assert!(
+                    (p[0] - 0.6).abs() < 1e-5 && (p[1] - 0.3).abs() < 1e-5 && (p[2] - 0.1).abs() < 1e-5,
+                    "{pattern} {p:?}"
+                );
+            }
+            let ramp = RgbImage::from_fn(32, 32, |x, y| [x as f32 / 32.0, 0.5, y as f32 / 32.0]);
+            let out = bayer(&mosaic(&ramp, &cfa), 32, 32, &cfa);
+            for y in 4..28 {
+                for x in 4..28 {
+                    let (a, b) = (out.pixel(x, y), ramp.pixel(x, y));
+                    assert!(
+                        (0..3).all(|c| (a[c] - b[c]).abs() < 1e-4),
+                        "{pattern} {x},{y}: {a:?} vs {b:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Des contours nets (verticaux, horizontaux, en biais) et des rayures fines : là où
+    /// un dématriçage fait ses « fermetures éclair » et ses fausses couleurs.
+    fn edges(w: usize, h: usize) -> RgbImage {
+        RgbImage::from_fn(w, h, |x, y| {
+            let (fx, fy) = (x as f32, y as f32);
+            let mut v = if (x / 7) % 2 == 0 { 0.8 } else { 0.15 };
+            if y > h / 3 {
+                v = if ((fx + 0.6 * fy) / 9.0).floor() as i32 % 2 == 0 {
+                    0.7
+                } else {
+                    0.1
+                };
+            }
+            if y > 2 * h / 3 {
+                v = if (y / 5) % 2 == 0 { 0.9 } else { 0.2 };
+            }
+            // Des aplats colorés, qui changent tous les 40 pixels.
+            let tint = [[1.0, 0.6, 0.3], [0.4, 0.7, 1.0], [0.9, 0.9, 0.9]][(x / 40) % 3];
+            [v * tint[0], v * tint[1], v * tint[2]]
+        })
+    }
+
+    fn error(a: &RgbImage, b: &RgbImage) -> f64 {
+        let (w, h) = (a.width, a.height);
+        let mut sum = 0.0;
+        let mut n = 0;
+        for y in 3..h - 3 {
+            for x in 3..w - 3 {
+                for c in 0..3 {
+                    sum += ((a.pixel(x, y)[c] - b.pixel(x, y)[c]) as f64).powi(2);
+                    n += 1;
+                }
+            }
+        }
+        sum / n as f64
+    }
+
+    #[test]
+    fn directional_beats_linear_filters_on_edges() {
+        let cfa = Cfa::parse("RGGB", 2, 2).unwrap();
+        let truth = edges(240, 180);
+        let raw = mosaic(&truth, &cfa);
+        let (fine, linear) = (bayer(&raw, 240, 180, &cfa), bayer_mhc(&raw, 240, 180, &cfa));
+        let (e_fine, e_linear) = (error(&fine, &truth), error(&linear, &truth));
+        let psnr = |e: f64| 10.0 * (1.0 / e).log10();
+        assert!(
+            e_fine < 0.7 * e_linear,
+            "directionnel {:.2} dB, linéaire {:.2} dB",
+            psnr(e_fine),
+            psnr(e_linear)
+        );
     }
 
     #[test]

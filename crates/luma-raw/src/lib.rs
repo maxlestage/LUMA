@@ -854,7 +854,7 @@ impl RawPhoto {
     /// du boîtier » décochée).
     pub fn demosaic_uncorrected(&self) -> RgbImage {
         match &self.mosaic {
-            Mosaic::Bayer(cfa) => demosaic::bayer_mhc(&self.data, self.width, self.height, cfa),
+            Mosaic::Bayer(cfa) => demosaic::bayer(&self.data, self.width, self.height, cfa),
             Mosaic::XTrans(cfa) => demosaic::xtrans(&self.data, self.width, self.height, cfa),
             Mosaic::Linear => RgbImage {
                 width: self.width,

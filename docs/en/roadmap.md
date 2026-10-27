@@ -23,7 +23,7 @@ This is an estimate, not a guarantee.
 - Cargo workspace (`crates/`), "100% Rust" rule verified in CI against the actual
   dependency graph;
 - reading Bayer, X‑Trans and linear DNG (ProRAW) RAW files, DNG-style colour,
-  Malvar‑He‑Cutler and X‑Trans demosaicing;
+  directional (Bayer) and X‑Trans demosaicing;
 - complete Develop module, panel by panel (see
   [`fonctions.md`](fonctions.md)), reading and writing `crs:` XMP;
 - JPEG, PNG, 8/16-bit TIFF export in sRGB or Display P3 with an ICC profile;
