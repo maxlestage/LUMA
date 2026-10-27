@@ -114,6 +114,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Printing (“Print…”, `luma print`): a PDF at the paper's exact size (A4, A3, A3+, A5, US Letter, 10 × 15 to 20 × 30 cm, or custom), portrait or landscape, margins, one photo per page or a contact sheet (grid, spacing, name under each photo), photos whole or filling their cell, resolution, output sharpening for matte or glossy paper; pages converted to the printer's RGB profile (the soft-proofing one, black point compensated) | ✅ |
 | Photo book as a PDF (“Book, slideshow, gallery…”, `luma book`): cover (first photo, title, subtitle), pages of one, two or four photos according to their orientation, 20 × 20, 30 × 30, A4, 21 × 28, A3 formats; full-screen slideshow in the app (auto-advance, pause, arrows) and exported slideshow (`luma slideshow`): a self-contained folder, index.html and JPEGs, crossfade, keyboard, swipe | ✅ |
 | Static web gallery (`luma gallery`, and from the app): grid of thumbnails loaded as they scroll in, photo shown large in one click (arrows, swipe, Esc), title, description, captions; JPEG optimized for the web (4:2:0 chroma and Huffman tables computed for the image: 9 to 29% lighter), in the Web preset and `--web` | ✅ |
+| Basic video (`luma video`): a LÜMA film, an XMP preset or settings applied to every frame of a Motion JPEG AVI video (the format of many cameras), saved back in the same format, same size and same frame rate, the sound copied as is; in pure Rust, with no native dependency | ✅ |
 
 ## Export
 
