@@ -40,6 +40,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Color Grading | Shadows, midtones, highlights, global; blending, balance | ✅ |
 | | Split toning (shadows and highlights, balance; `crs:SplitToning*` read and written) | ✅ |
 | | Channel mixer: each output channel made from the photo's three channels (−200 to +200%) | ✅ |
+| | Camera profile measured on a ColorChecker chart (“Profile from a chart”, `luma colorchecker -o profile.xmp`), as a preset | ✅ |
 | Detail | Sharpening: amount, radius, detail, masking | ✅ |
 | | Deconvolution sharpening (“Deconvolution” box, Richardson-Lucy), without AI | ✅ |
 | | Luminance and colour noise reduction | ✅ |

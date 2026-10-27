@@ -120,6 +120,12 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Perfil de cámara**: fotografía una carta ColorChecker, recórtala al justo y luego
+  «Perfil desde una carta» (Mezclador de canales) o
+  `luma colorchecker carta.ARW -o perfil.xmp`: LÜMA calcula la corrección que hace
+  exactos sus 24 colores (de 3,8 a 0,02 de error en nuestras pruebas), con el blanco
+  neutro. Guardada como ajuste preestablecido, se aplica a todas las fotos de esa
+  cámara.
 - **Apilado de enfoque** (Fusión, «Enfoque», o `luma merge --stack focus`): las tomas
   cuyo enfoque avanza, en macro o en paisaje, se convierten en una sola foto nítida del
   primer plano al fondo. Cada toma se alinea con su vecina, y LÜMA toma lo más nítido de

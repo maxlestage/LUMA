@@ -122,6 +122,11 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Profil de boîtier** : photographiez une charte ColorChecker, recadrez-la au plus
+  juste, puis « Profil depuis une charte » (Mélangeur de couches) ou
+  `luma colorchecker charte.ARW -o profil.xmp` : LÜMA calcule la correction qui rend
+  ses 24 couleurs exactes (de 3,8 à 0,02 d'écart sur nos essais), le blanc restant
+  neutre. Enregistrée en préréglage, elle se pose sur toutes les photos de ce boîtier.
 - **Empilement de mise au point** (Fusion, « Mise au point », ou
   `luma merge --stack focus`) : des poses dont la mise au point avance, en macro ou en
   paysage, deviennent une seule photo nette du premier plan au fond. Chaque pose est
