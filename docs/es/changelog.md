@@ -119,6 +119,10 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Fusión HDR** (Fusión, «HDR», o `luma merge --stack hdr`): las tomas en
+  horquillado, incluso a pulso, se convierten en un único DNG donde las sombras y el
+  cielo conservan su detalle. LÜMA mide por sí mismo la diferencia de exposición entre
+  tomas, y lo que se movió de una a otra (follaje, transeúntes) no deja fantasmas.
 - **Altas luces reconstruidas**: la casilla «Reconstruir las altas luces» (Luz, bajo
   Tono) devuelve a un canal saturado por el sensor el color de sus vecinos; un cielo
   quemado vuelve a ser anaranjado, una toalla blanca recupera su textura. Un píxel
