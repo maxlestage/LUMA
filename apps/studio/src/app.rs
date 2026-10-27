@@ -536,6 +536,13 @@ pub struct Studio {
     proofing: Proofing,
     zoom: bool,
     compare: Option<Compare>,
+    /// Les rafales et séries d'exposition du film, repliées derrière leur première photo.
+    stacking: bool,
+    stacks: Vec<luma_library::stacks::Stack>,
+    /// La pile de chaque photo (sa place dans `stacks`).
+    stack_of: HashMap<PathBuf, usize>,
+    /// Les piles dépliées, par leur première photo.
+    unfolded: std::collections::HashSet<PathBuf>,
     compare_tag: u64,
     /// Le tri en plein écran (F) : la photo seule, notée au clavier.
     culling: bool,
@@ -768,6 +775,10 @@ impl Studio {
             proofing: Proofing::default(),
             zoom: false,
             compare: None,
+            stacking: true,
+            stacks: Vec::new(),
+            stack_of: HashMap::new(),
+            unfolded: Default::default(),
             compare_tag: 0,
             culling: false,
             compact: false,
@@ -916,6 +927,7 @@ impl Studio {
             } else {
                 Some(0)
             });
+        self.find_stacks();
         match index {
             Some(i) => self.select(i),
             None => {
@@ -1067,6 +1079,7 @@ impl Studio {
     }
 
     fn refresh_catalog_lists(&mut self) {
+        self.find_stacks();
         let mut folders: BTreeMap<PathBuf, usize> = BTreeMap::new();
         for e in self.catalog.entries() {
             if let Some(d) = e.path.parent() {
@@ -1239,8 +1252,109 @@ impl Studio {
                         .keyword_filter
                         .as_ref()
                         .is_none_or(|k| m.keywords.iter().any(|w| fold(w) == fold(k)))
+                    && !self.folded_away(&self.folder[*i])
             })
             .collect()
+    }
+
+    /// La pile de la photo ouverte : la déplier, et fusionner une série d'exposition.
+    fn stack_panel(&mut self, ui: &mut Ui, path: &Path) {
+        let Some(&k) = self.stack_of.get(path) else {
+            return;
+        };
+        let stack = &self.stacks[k];
+        let n = stack.photos.len();
+        let bracket = stack.kind == luma_library::stacks::Kind::Bracket;
+        let text = if bracket {
+            trf("Série d'exposition de {n} photos", &[("n", &n)])
+        } else {
+            trf("Rafale de {n} photos", &[("n", &n)])
+        };
+        let open = self.unfolded.contains(&stack.photos[0]);
+        let members: BTreeSet<usize> = stack
+            .photos
+            .iter()
+            .filter_map(|p| self.folder.iter().position(|f| f == p))
+            .collect();
+        ui.horizontal_wrapped(|ui| {
+            ui.label(RichText::new(text).size(11.5).color(theme::DIM));
+            if self.stacking
+                && ui
+                    .small_button(if open {
+                        tr("Replier (S)")
+                    } else {
+                        tr("Déplier (S)")
+                    })
+                    .clicked()
+            {
+                self.toggle_stack(path);
+            }
+            if bracket
+                && ui
+                    .small_button(tr("Fusionner la série"))
+                    .on_hover_text(tr("Ouvre l'outil Fusion avec les photos de la série"))
+                    .clicked()
+            {
+                self.selected = members;
+                self.set_tool(Tool::Merge);
+            }
+        });
+    }
+
+    /// Une photo cachée dans une pile repliée (toutes sauf la première).
+    fn folded_away(&self, path: &Path) -> bool {
+        self.stacking
+            && self.stack_of.get(path).is_some_and(|&k| {
+                let cover = &self.stacks[k].photos[0];
+                cover != path && !self.unfolded.contains(cover)
+            })
+    }
+
+    /// Les piles du film (rafales et séries d'exposition), d'après la photothèque.
+    fn find_stacks(&mut self) {
+        let entries: Vec<&luma_library::Entry> = self
+            .folder
+            .iter()
+            .filter_map(|p| self.catalog.get(p))
+            .collect();
+        self.stacks = luma_library::stacks::stacks(entries);
+        self.stack_of = self
+            .stacks
+            .iter()
+            .enumerate()
+            .flat_map(|(k, s)| s.photos.iter().map(move |p| (p.clone(), k)))
+            .collect();
+    }
+
+    /// Les piles du film.
+    pub fn stacks(&self) -> &[luma_library::stacks::Stack] {
+        &self.stacks
+    }
+
+    /// Empile (ou non) les rafales et les séries d'exposition.
+    pub fn set_stacking(&mut self, on: bool) {
+        self.stacking = on;
+    }
+
+    /// Déplie ou replie la pile de cette photo.
+    pub fn toggle_stack(&mut self, path: &Path) {
+        if let Some(&k) = self.stack_of.get(path) {
+            let cover = self.stacks[k].photos[0].clone();
+            if !self.unfolded.remove(&cover) {
+                self.unfolded.insert(cover.clone());
+            }
+            // Repliée, la photo ouverte devient sa couverture.
+            if !self.unfolded.contains(&cover)
+                && self.current_path() != Some(cover.as_path())
+                && self
+                    .stack_of
+                    .get(self.current_path().unwrap_or(Path::new("")))
+                    == Some(&k)
+                && let Some(i) = self.folder.iter().position(|p| *p == cover)
+            {
+                self.select(i);
+            }
+        }
     }
 
     /// Les mots‑clés du dossier et leur nombre de photos, par ordre alphabétique (sans
@@ -2015,6 +2129,8 @@ impl Studio {
                     action = Some("culling");
                 } else if i.consume_key(Modifiers::NONE, Key::C) {
                     action = Some("compare");
+                } else if i.consume_key(Modifiers::NONE, Key::S) {
+                    action = Some("stack");
                 } else if i.consume_key(Modifiers::NONE, Key::L) {
                     action = Some("loupe");
                 } else if i.consume_key(Modifiers::NONE, Key::A) {
@@ -2169,6 +2285,11 @@ impl Studio {
                     self.compare = None;
                 } else {
                     self.start_compare();
+                }
+            }
+            "stack" => {
+                if let Some(p) = self.current_path().map(Path::to_path_buf) {
+                    self.toggle_stack(&p);
                 }
             }
             "loupe" => {
@@ -4502,6 +4623,17 @@ impl Studio {
             .color(theme::DIM),
         );
         ui.add_space(14.0);
+        let mut stacking = self.stacking;
+        if ui
+            .checkbox(&mut stacking, tr("Empiler les rafales et les séries (S)"))
+            .on_hover_text(tr(
+                "Les photos d'un même boîtier à moins de deux secondes d'écart, repliées derrière la première",
+            ))
+            .changed()
+        {
+            self.stacking = stacking;
+        }
+        ui.add_space(10.0);
         section_title(ui, tr("Filtre"));
         ui.label(
             RichText::new(tr("Note minimale"))
@@ -4761,6 +4893,7 @@ impl Studio {
                 }
             }
         });
+        self.stack_panel(ui, &path);
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr("Libellé")).color(theme::DIM).size(11.5));
             if let Some(n) = label_dots(ui, &meta.label) {
@@ -4927,6 +5060,42 @@ impl Studio {
                                 paint_edits(painter, photo, e, true);
                             }
                             paint_meta(painter, rect, &meta);
+                            if self.stacking
+                                && let Some(&k) = self.stack_of.get(path)
+                                && self.stacks[k].photos[0] == *path
+                            {
+                                let stack = &self.stacks[k];
+                                let text = match stack.kind {
+                                    luma_library::stacks::Kind::Burst => {
+                                        trf("Rafale ×{n}", &[("n", &stack.photos.len())])
+                                    }
+                                    luma_library::stacks::Kind::Bracket => {
+                                        trf("Série ×{n}", &[("n", &stack.photos.len())])
+                                    }
+                                };
+                                // Ouverte, la pastille prend le liseré de l'accent.
+                                let open = self.unfolded.contains(path);
+                                let galley = painter.layout_no_wrap(
+                                    text,
+                                    egui::FontId::proportional(10.5),
+                                    theme::TEXT,
+                                );
+                                let chip = Rect::from_min_size(
+                                    pos2(rect.max.x - 12.0 - galley.size().x, rect.min.y + 22.0),
+                                    galley.size(),
+                                )
+                                .expand2(vec2(5.0, 2.0));
+                                painter.rect_filled(chip, 6.0, Color32::from_black_alpha(160));
+                                if open {
+                                    painter.rect_stroke(
+                                        chip,
+                                        6.0,
+                                        egui::Stroke::new(1.0, theme::ACCENT),
+                                        egui::StrokeKind::Outside,
+                                    );
+                                }
+                                painter.galley(chip.min + vec2(5.0, 2.0), galley, theme::TEXT);
+                            }
                             painter.with_clip_rect(rect.shrink(6.0)).text(
                                 pos2(rect.min.x + 12.0, rect.min.y + 6.0),
                                 egui::Align2::LEFT_TOP,

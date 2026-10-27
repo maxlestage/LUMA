@@ -12,6 +12,7 @@
 
 pub mod collections;
 pub mod query;
+pub mod stacks;
 mod store;
 pub mod watch;
 
