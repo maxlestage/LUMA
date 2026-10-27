@@ -526,6 +526,24 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn an_exported_jpeg_is_read_back_like_a_raw() {
+        // Exporté avec sa position, puis rouvert : la photothèque y retrouve tout.
+        let o = MetadataOptions {
+            keep_gps: true,
+            ..MetadataOptions::default()
+        };
+        let e = Embedded::new(&photo(), &o, 16, 16);
+        let jpeg = crate::jpeg::encode(&[100; 16 * 16 * 3], 16, 16, 90, &e.exif, &[]).unwrap();
+        let info = luma_raw::exif::parse(luma_raw::exif::find(&jpeg).unwrap()).unwrap();
+        let was = photo();
+        assert_eq!((info.make, info.model), (was.make, was.model));
+        let (g, w) = (info.exif.gps.unwrap(), was.exif.gps.unwrap());
+        assert!((g.latitude - w.latitude).abs() < 1e-9 && (g.longitude - w.longitude).abs() < 1e-9);
+        assert_eq!(g.altitude, w.altitude);
+        assert_eq!(Exif { gps: None, ..info.exif }, Exif { gps: None, ..was.exif });
+    }
+
+    #[test]
     fn gps_is_kept_on_request() {
         let o = MetadataOptions {
             keep_gps: true,
