@@ -102,6 +102,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Color DNG: dos matrices interpoladas según la temperatura | ✅ |
 | Pipeline en coma flotante de 32 bits, espacio de trabajo Rec. 2020 lineal | ✅ |
 | Altas luces saturadas en el sensor reproducidas neutras (sin cielos rosados) | ✅ |
+| Altas luces reconstruidas: un canal saturado toma el color de sus vecinos (casilla «Reconstruir las altas luces», `--set highlights.reconstruction=on`) | ✅ |
 | Orientación EXIF | ✅ |
 | Perfiles ICC leídos (versiones 2 y 4): matriz y curvas, tablas lut8, lut16, A→B y B→A de impresoras y papeles, cuatro intenciones de reproducción (`luma icc`) | ✅ |
 | Prueba en pantalla: la vista previa tal como se imprimirá con un perfil de impresora, intención perceptual o colorimétrica relativa (histograma incluido) | ✅ |

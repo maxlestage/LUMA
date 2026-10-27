@@ -119,6 +119,11 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Altas luces reconstruidas**: la casilla «Reconstruir las altas luces» (Luz, bajo
+  Tono) devuelve a un canal saturado por el sensor el color de sus vecinos; un cielo
+  quemado vuelve a ser anaranjado, una toalla blanca recupera su textura. Un píxel
+  donde todo se satura queda blanco. También en la línea de comandos
+  (`--set highlights.reconstruction=on`).
 - **Enfoque por deconvolución**: la casilla «Deconvolución» de Enfoque deshace el
   desenfoque del objetivo en lugar de acentuar los bordes; vuelve el detalle real, sin
   halos (1,6 dB mejor que la máscara de enfoque en nuestras pruebas). Visible al 100 %
