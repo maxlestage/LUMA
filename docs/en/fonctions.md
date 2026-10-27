@@ -41,6 +41,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Split toning (shadows and highlights, balance; `crs:SplitToning*` read and written) | ✅ |
 | | Channel mixer: each output channel made from the photo's three channels (−200 to +200%) | ✅ |
 | Detail | Sharpening: amount, radius, detail, masking | ✅ |
+| | Deconvolution sharpening (“Deconvolution” box, Richardson-Lucy), without AI | ✅ |
 | | Luminance and colour noise reduction | ✅ |
 | | Advanced noise reduction (wavelets, “Wavelets” box), without AI | ✅ |
 | Lens Corrections | Lateral chromatic aberration estimated from the photo, distortion, vignetting (amount, midpoint), purple and green defringe | ✅ |

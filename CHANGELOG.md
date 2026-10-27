@@ -121,6 +121,10 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Accentuation par déconvolution** : la case « Déconvolution » de l'Accentuation
+  défait le flou de l'objectif au lieu d'en creuser les contours ; du vrai détail
+  revient, sans halo (1,6 dB de mieux que le masque flou sur nos essais). Visible à
+  100 % et à l'export ; aussi en ligne de commande (`--set sharpen.deconvolution=on`).
 - **Réduction du bruit par ondelettes** : la case « Ondelettes » du Détail lisse la
   luminance échelle par échelle, chacune selon le bruit mesuré sur la photo ; à force
   égale, plus de texture et de contours gardés que le filtre habituel (3,7 dB de mieux

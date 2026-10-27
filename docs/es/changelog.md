@@ -119,6 +119,10 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Enfoque por deconvolución**: la casilla «Deconvolución» de Enfoque deshace el
+  desenfoque del objetivo en lugar de acentuar los bordes; vuelve el detalle real, sin
+  halos (1,6 dB mejor que la máscara de enfoque en nuestras pruebas). Visible al 100 %
+  y al exportar; también en la línea de comandos (`--set sharpen.deconvolution=on`).
 - **Reducción de ruido por ondículas**: la casilla «Ondículas» de Detalle suaviza la
   luminancia escala por escala, cada una según el ruido medido en la foto; con la misma
   intensidad, conserva más textura y contornos que el filtro habitual (3,7 dB mejor en
