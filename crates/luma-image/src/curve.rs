@@ -15,6 +15,9 @@ pub struct Filmic {
     d: f32,
     b: f32,
     c: f32,
+    /// La luminance de scène qui devient le blanc : au-delà, la courbe vaut 1 (sa
+    /// formule y passerait par un pôle, puis en négatif).
+    hdr_max: f32,
     /// Plancher des noirs (curseur Noirs) : > 0 bouche, < 0 relève.
     black: f32,
 }
@@ -35,7 +38,9 @@ impl Filmic {
         let d = 0.96;
         // La luminance de scène qui devient le blanc : le blanc du capteur, avec de la
         // marge pour une épaule douce. Les Blancs la rapprochent ou l'éloignent.
-        let hdr_max = 1.2 * (-whites / 100.0 * 1.4).exp2();
+        // Gardée nettement au-dessus du gris moyen, sans quoi la courbe dégénère (les
+        // Blancs adaptés vont jusqu'à +200).
+        let hdr_max = (1.2 * (-whites / 100.0 * 1.4).exp2()).max(Self::MID_IN * 1.5);
         let (mi, mo) = (Self::MID_IN, Self::MID_OUT);
         let (ma, hm) = (mi.powf(a), hdr_max.powf(a));
         let (mad, hmd) = (ma.powf(d), hm.powf(d));
@@ -46,6 +51,7 @@ impl Filmic {
             d,
             b,
             c,
+            hdr_max,
             black: -blacks / 100.0 * 0.025,
         }
     }
@@ -55,8 +61,12 @@ impl Filmic {
         if x <= 0.0 {
             return 0.0;
         }
-        let xa = x.powf(self.a);
-        let y = (xa / (xa.powf(self.d) * self.b + self.c)).min(1.0);
+        let y = if x >= self.hdr_max {
+            1.0
+        } else {
+            let xa = x.powf(self.a);
+            (xa / (xa.powf(self.d) * self.b + self.c)).min(1.0)
+        };
         if self.black > 0.0 {
             // Noirs bouchés : on retire un plancher, réparti sur les ombres.
             ((y - self.black) / (1.0 - self.black)).max(0.0)
@@ -271,6 +281,27 @@ pub fn parametric(c: &ToneCurve) -> Lut {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn filmic_never_falls_back_or_goes_negative() {
+        // Les Blancs adaptés vont jusqu'à +200, le profil de rendu change le contraste.
+        for whites in (-100..=200).step_by(5) {
+            for contrast in (-100..=100).step_by(25) {
+                for look in [0.7, 1.0, 1.4] {
+                    let f = Filmic::with_look(contrast as f32, whites as f32, 0.0, look);
+                    let mut last = 0.0;
+                    for i in 1..=4000 {
+                        let y = f.apply(i as f32 / 1000.0);
+                        assert!(
+                            y >= last - 1e-6 && y <= 1.0,
+                            "Blancs {whites}, Contraste {contrast}, profil {look} : {y} après {last}"
+                        );
+                        last = y;
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn filmic_keeps_mid_gray_and_reaches_white() {

@@ -302,7 +302,18 @@ pub fn panorama(frames: &dyn Frames, projection: Projection, progress: &Progress
     let all = bounds.iter().fold((f64::MAX, f64::MAX, f64::MIN, f64::MIN), |a, b| {
         (a.0.min(b.0), a.1.min(b.1), a.2.max(b.2), a.3.max(b.3))
     });
+    if ![all.0, all.1, all.2, all.3].iter().all(|v| v.is_finite()) {
+        return Err(Error::Decode(
+            "les photos n'ont pas pu être placées sur le panorama".into(),
+        ));
+    }
     let (mut ow, mut oh) = ((all.2 - all.0).ceil() as usize + 1, (all.3 - all.1).ceil() as usize + 1);
+    // Avant toute réduction : réduit, un panorama démesuré passerait sous la limite.
+    if projection == Projection::Perspective && (ow > 8 * w || oh > 8 * h) {
+        return Err(Error::Decode(
+            "trop large pour la perspective : choisissez la projection cylindrique ou sphérique".into(),
+        ));
+    }
     // Au plus 150 Mpx (et 40 000 px de côté) : au‑delà, le panorama est réduit.
     let max_px = 150_000_000f64;
     let mut scale = 1.0f64;
@@ -311,13 +322,9 @@ pub fn panorama(frames: &dyn Frames, projection: Projection, progress: &Progress
             .sqrt()
             .min(40_000.0 / ow as f64)
             .min(40_000.0 / oh as f64);
-        ow = (ow as f64 * scale) as usize;
-        oh = (oh as f64 * scale) as usize;
-    }
-    if projection == Projection::Perspective && (ow > 8 * w || oh > 8 * h) {
-        return Err(Error::Decode(
-            "trop large pour la perspective : choisissez la projection cylindrique ou sphérique".into(),
-        ));
+        // Un côté démesuré (une photo qui vise le zénith) ne réduit pas l'autre à rien.
+        ow = ((ow as f64 * scale) as usize).max(1);
+        oh = ((oh as f64 * scale) as usize).max(1);
     }
     let world = |x: usize, y: usize| -> Point { (all.0 + x as f64 / scale, all.1 + y as f64 / scale) };
 

@@ -574,6 +574,10 @@ impl Worker {
         std::thread::spawn(move || {
             let total = jobs.len() * targets.len();
             let mut taken = std::collections::HashSet::new();
+            luma_render::export::reserve_sources(
+                &mut taken,
+                jobs.iter().map(|j| j.source.as_path()),
+            );
             let mut done = 0;
             for (k, job) in jobs.into_iter().enumerate() {
                 let photo = match job.photo {
@@ -616,7 +620,7 @@ fn render_loop(
     repaint: Arc<dyn Fn() + Send + Sync>,
 ) {
     // Le GPU, s'il y en a un (LUMA_GPU=0 pour tout faire sur le processeur).
-    let gpu = if std::env::var("LUMA_GPU").is_ok_and(|v| v == "0") {
+    let mut gpu = if std::env::var("LUMA_GPU").is_ok_and(|v| v == "0") {
         None
     } else {
         luma_gpu::Gpu::new()
@@ -638,54 +642,32 @@ fn render_loop(
         };
         let (w, h) = (base.image.width, base.image.height);
         let layers = luma_image::look_layers(&job.settings);
-        let (mut rgba, on_gpu) = match &gpu {
-            Some(g)
-                if g.can_finish(&job.settings, w, h, base.scale)
-                    && layers
-                        .iter()
-                        .all(|(_, s, _)| g.can_finish(s, w, h, base.scale)) =>
-            {
-                let mut rgba = g.finish(
-                    &base.image,
-                    base.id,
-                    base.scale,
-                    &job.settings,
-                    OutputSpace::Srgb,
-                );
-                // Les films des masques : chacun rendu sur le GPU (depuis sa propre base
-                // s'il touche aux hautes lumières, aux ombres ou à la clarté), puis fondu
-                // selon la zone du masque.
-                for (mask, look, k) in &layers {
-                    let own = if luma_image::needs_own_base(&job.settings, look) {
-                        job.photo.base(look, job.size, &cancel, &mut timings).ok()
-                    } else {
-                        None
-                    };
-                    let b = own
-                        .as_ref()
-                        .filter(|b| (b.image.width, b.image.height) == (w, h))
-                        .unwrap_or(&base);
-                    let alt = g.finish(&b.image, b.id, b.scale, look, OutputSpace::Srgb);
-                    let weights = luma_image::local::weights_on(mask, &base.image);
-                    for ((o, a), wt) in rgba
-                        .as_chunks_mut::<4>()
-                        .0
-                        .iter_mut()
-                        .zip(alt.as_chunks::<4>().0)
-                        .zip(&weights.data)
-                    {
-                        let t = (wt * k).clamp(0.0, 1.0);
-                        if t > 0.0 {
-                            for c in 0..3 {
-                                o[c] = (f32::from(o[c]) + (f32::from(a[c]) - f32::from(o[c])) * t)
-                                    .round() as u8;
-                            }
-                        }
-                    }
-                }
-                (rgba, true)
-            }
-            _ => {
+        let usable = gpu.as_ref().filter(|g| {
+            g.can_finish(&job.settings, w, h, base.scale)
+                && layers
+                    .iter()
+                    .all(|(_, s, _)| g.can_finish(s, w, h, base.scale))
+        });
+        let finished = usable.and_then(|g| {
+            finish_on_gpu(
+                g,
+                &job.photo,
+                &job.settings,
+                job.size,
+                &base,
+                &layers,
+                &cancel,
+                &mut timings,
+            )
+        });
+        if usable.is_some() && finished.is_none() {
+            // Le GPU ne répond plus : le processeur finit, cette fois et les suivantes.
+            crate::journal("le GPU ne répond plus : rendu sur le processeur");
+            gpu = None;
+        }
+        let (mut rgba, on_gpu) = match finished {
+            Some(rgba) => (rgba, true),
+            None => {
                 let photo = &job.photo;
                 let Ok(image) = luma_image::finish_layers(
                     &base.image,
@@ -903,6 +885,74 @@ fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() 
 fn duplicate_fits(photo: &Photo) -> bool {
     let (w, h) = photo.full_size();
     !cfg!(target_os = "ios") || w * h <= 25_000_000
+}
+
+/// Finit sur le GPU : le développement, puis les films des masques, chacun rendu sur le
+/// GPU (depuis sa propre base s'il touche aux hautes lumières, aux ombres ou à la
+/// clarté) et fondu selon la zone du masque. `None` si le GPU ne répond plus.
+#[allow(clippy::too_many_arguments)]
+fn finish_on_gpu(
+    g: &luma_gpu::Gpu,
+    photo: &Photo,
+    settings: &Settings,
+    size: Size,
+    base: &luma_render::Base,
+    layers: &[(&luma_project::Mask, Settings, f32)],
+    cancel: &Cancel,
+    timings: &mut luma_core::Timings,
+) -> Option<Vec<u8>> {
+    let (w, h) = (base.image.width, base.image.height);
+    let mut rgba = g.finish(
+        &base.image,
+        base.id,
+        base.scale,
+        settings,
+        OutputSpace::Srgb,
+    )?;
+    for (mask, look, k) in layers {
+        let own = if luma_image::needs_own_base(settings, look) {
+            photo.base(look, size, cancel, timings).ok()
+        } else {
+            None
+        };
+        let b = own
+            .as_ref()
+            .filter(|b| (b.image.width, b.image.height) == (w, h))
+            .unwrap_or(base);
+        let alt = g.finish(&b.image, b.id, b.scale, look, OutputSpace::Srgb)?;
+        let weights = luma_image::local::weights_on(mask, &base.image);
+        // Fondu en lumière linéaire, comme `finish_layers` (l'export) : les octets sRGB
+        // décodés, mélangés, réencodés.
+        let (decode, encode) = srgb_luts();
+        for ((o, a), wt) in rgba
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(alt.as_chunks::<4>().0)
+            .zip(&weights.data)
+        {
+            let t = (wt * k).clamp(0.0, 1.0);
+            if t > 0.0 {
+                for c in 0..3 {
+                    let (lo, la) = (decode[o[c] as usize], decode[a[c] as usize]);
+                    o[c] = (encode.get(lo + (la - lo) * t) * 255.0).round() as u8;
+                }
+            }
+        }
+    }
+    Some(rgba)
+}
+
+/// Les tables du sRGB : décodage des 256 octets, encodage interpolé.
+fn srgb_luts() -> &'static ([f32; 256], luma_color::EncodeLut) {
+    static LUTS: std::sync::OnceLock<([f32; 256], luma_color::EncodeLut)> =
+        std::sync::OnceLock::new();
+    LUTS.get_or_init(|| {
+        (
+            std::array::from_fn(|i| luma_color::srgb_decode(i as f32 / 255.0)),
+            luma_color::EncodeLut::new(luma_color::srgb_encode),
+        )
+    })
 }
 
 #[cfg(test)]

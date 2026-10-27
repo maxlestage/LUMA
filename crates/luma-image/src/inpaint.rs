@@ -230,7 +230,8 @@ pub fn fill(img: &mut RgbImage, cx: f32, cy: f32, r: f32, feather: f32, opacity:
     let y0 = (cy - reach).floor().max(0.0) as usize;
     let x1 = ((cx + reach).ceil() as usize).min(w);
     let y1 = ((cy + reach).ceil() as usize).min(h);
-    let (ww, wh) = (x1 - x0, y1 - y0);
+    // Un disque hors de la photo (centre jusqu'à 1,5) : fenêtre vide.
+    let (ww, wh) = (x1.saturating_sub(x0), y1.saturating_sub(y0));
     if ww < 16 || wh < 16 {
         return;
     }
@@ -359,6 +360,16 @@ pub fn fill(img: &mut RgbImage, cx: f32, cy: f32, r: f32, feather: f32, opacity:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_disc_outside_the_photo_changes_nothing() {
+        let (clean, _) = scene();
+        for (cx, cy) in [(300.0, 80.0), (100.0, 240.0), (-100.0, -100.0)] {
+            let mut img = clean.clone();
+            fill(&mut img, cx, cy, 2.0, 0.5, 1.0);
+            assert_eq!(img.data, clean.data);
+        }
+    }
 
     /// Des rayures et un dégradé, et la même image avec un « objet » rouge dessus.
     fn scene() -> (RgbImage, RgbImage) {
