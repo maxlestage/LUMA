@@ -13,6 +13,10 @@
 //!   n'est ni saturé ni noyé dans le bruit, les plus exposées comptant le plus. Ce qui a
 //!   bougé entre les poses (feuillage, passants) est pris à la pose de référence seule :
 //!   pas de fantômes.
+//! - **Mise au point** : des poses dont la mise au point avance (macro, paysage du
+//!   premier plan à l'infini), alignées (la focale « respire » d'une pose à l'autre) ;
+//!   chaque pixel est pris aux poses où l'image est la plus nette (contraste local du
+//!   laplacien), en fondu doux pour ne pas laisser de couture.
 
 use std::sync::Arc;
 
@@ -30,6 +34,7 @@ pub enum StackMode {
     Maximum,
     Stars,
     Hdr,
+    Focus,
 }
 
 impl StackMode {
@@ -40,6 +45,7 @@ impl StackMode {
             StackMode::Maximum => "Maximum",
             StackMode::Stars => "Étoiles",
             StackMode::Hdr => "HDR",
+            StackMode::Focus => "Mise au point",
         }
     }
 }
@@ -198,16 +204,36 @@ fn align(
                 .par_iter()
                 .map(|img| features::detect(&features::luminance(img), 1500))
                 .collect();
-            for i in 0..n {
-                if i == reference {
-                    continue;
-                }
-                cancel.check()?;
-                progress(0.3 + 0.1 * i as f32 / n as f32, "Alignement");
-                let pairs = features::matches(&feats[reference], &feats[i]);
-                small_models[i] = ransac(&pairs, Model::Homography, 2.0, 800)
+            let fit = |a: usize, b: usize| {
+                let pairs = features::matches(&feats[a], &feats[b]);
+                ransac(&pairs, Model::Homography, 2.0, 800)
                     .filter(|(_, inl)| inl.len() >= 15)
-                    .map(|(h, _)| h);
+                    .map(|(h, _)| h)
+            };
+            if mode == StackMode::Focus {
+                // En mise au point, deux poses éloignées n'ont presque rien de net en
+                // commun : chacune s'aligne sur sa voisine vers la référence, et les
+                // alignements s'enchaînent (référence → voisine → pose).
+                let order: Vec<(usize, usize)> = (reference + 1..n)
+                    .map(|i| (i, i - 1))
+                    .chain((0..reference).rev().map(|i| (i, i + 1)))
+                    .collect();
+                for (k, (i, neighbour)) in order.into_iter().enumerate() {
+                    cancel.check()?;
+                    progress(0.3 + 0.1 * k as f32 / n as f32, "Alignement");
+                    small_models[i] = small_models[neighbour]
+                        .zip(fit(neighbour, i))
+                        .map(|(to_neighbour, step)| to_neighbour.then(&step));
+                }
+            } else {
+                for (i, model) in small_models.iter_mut().enumerate() {
+                    if i == reference {
+                        continue;
+                    }
+                    cancel.check()?;
+                    progress(0.3 + 0.1 * i as f32 / n as f32, "Alignement");
+                    *model = fit(reference, i);
+                }
             }
             for (m, sm) in models.iter_mut().zip(&small_models) {
                 *m = sm.map(to_full);
@@ -248,14 +274,15 @@ pub fn stack(
     if n < 2 {
         return Err(Error::Decode("il faut au moins deux photos".into()));
     }
-    // Le HDR s'aligne toujours : il lui faut aussi les gains d'exposition.
+    // Le HDR s'aligne toujours (il lui faut aussi les gains d'exposition), la mise au
+    // point aussi (la focale « respire » d'une pose à l'autre).
     let Aligned {
         models,
         width: w,
         height: h,
         reference,
         gains,
-    } = if align_frames || matches!(mode, StackMode::Stars | StackMode::Hdr) {
+    } = if align_frames || matches!(mode, StackMode::Stars | StackMode::Hdr | StackMode::Focus) {
         align(frames, n / 2, mode, progress, cancel)?
     } else {
         let first = frames.load(0)?;
@@ -448,6 +475,7 @@ pub fn stack(
                 data,
             }
         }
+        StackMode::Focus => focus(frames, &used, &models, w, h, &mut count, &step, cancel)?,
         StackMode::Hdr => {
             let img = frames.load(reference)?;
             hdr(
@@ -524,6 +552,84 @@ fn hdr(
                     }
                     for c in 0..3 {
                         a[c] += weight * v[c];
+                    }
+                    a[3] += weight;
+                }
+            });
+    }
+    let data = acc
+        .into_par_iter()
+        .map(|a| {
+            if a[3] > 0.0 {
+                [a[0] / a[3], a[1] / a[3], a[2] / a[3]]
+            } else {
+                [0.0; 3]
+            }
+        })
+        .collect();
+    Ok(RgbImage {
+        width: w,
+        height: h,
+        data,
+    })
+}
+
+/// L'empilement de mise au point : chaque pose alignée, puis pondérée pixel par pixel
+/// par sa netteté (le laplacien de la luminance perçue, en valeur absolue, moyenné sur
+/// quelques pixels), à la puissance quatre : la pose la plus nette l'emporte nettement,
+/// mais les transitions restent douces.
+#[allow(clippy::too_many_arguments)]
+fn focus(
+    frames: &dyn Frames,
+    used: &[usize],
+    models: &[Option<Homography>],
+    w: usize,
+    h: usize,
+    count: &mut [u16],
+    step: &(dyn Fn(usize, &str) + Sync),
+    cancel: &Cancel,
+) -> Result<RgbImage> {
+    // La portée de la mesure : assez large pour couvrir un bord flou, à l'échelle de
+    // l'image.
+    let reach = (w.max(h) as f32 / 800.0).max(1.5);
+    let mut acc = vec![[0.0f32; 4]; w * h];
+    for (k, &i) in used.iter().enumerate() {
+        cancel.check()?;
+        step(k, "Empilement de mise au point");
+        let img = frames.load(i)?;
+        let m = models[i].expect("alignée");
+        let warped = RgbImage::from_fn(w, h, |x, y| {
+            m.apply((x as f64, y as f64))
+                .and_then(|(u, v)| sample(&img, u, v))
+                .unwrap_or([-1.0; 3])
+        });
+        let perceived = luma_core::Plane::from_rgb(&warped, |p| (p[0] + 2.0 * p[1] + p[2]).max(0.0).sqrt());
+        let mut edges = luma_core::Plane::new(w, h);
+        edges.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+            let at = |x: usize, y: usize| perceived.data[y.min(h - 1) * w + x.min(w - 1)];
+            for (x, e) in row.iter_mut().enumerate() {
+                let lap = 4.0 * at(x, y)
+                    - at(x.saturating_sub(1), y)
+                    - at(x + 1, y)
+                    - at(x, y.saturating_sub(1))
+                    - at(x, y + 1);
+                *e = lap.abs();
+            }
+        });
+        let sharpness = edges.blur(reach);
+        acc.par_chunks_mut(w)
+            .zip(count.par_chunks_mut(w))
+            .enumerate()
+            .for_each(|(y, (row, cnt))| {
+                for (x, a) in row.iter_mut().enumerate() {
+                    let p = warped.data[y * w + x];
+                    if p[0] < 0.0 {
+                        continue;
+                    }
+                    cnt[x] += 1;
+                    let weight = (sharpness.data[y * w + x] + 1e-4).powi(4);
+                    for c in 0..3 {
+                        a[c] += weight * p[c];
                     }
                     a[3] += weight;
                 }
