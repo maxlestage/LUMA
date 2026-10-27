@@ -666,26 +666,55 @@ impl RawPhoto {
         };
 
         // Niveaux : le noir dépend de la position dans le motif, en coordonnées capteur.
+        // Le noir et l'écart noir → blanc de chaque position et de chaque couche sont
+        // calculés une fois (les mêmes valeurs, dans le même ordre : les mêmes pixels), et
+        // les entiers du capteur lus tels quels, sans copie en flottants au préalable.
         let black = &raw.blacklevel;
         let black_levels = black.as_vec();
         let whites = raw.whitelevel.as_vec();
-        let full_width = raw.width;
-        let source = raw.data.as_f32();
-        let mut data = vec![0.0f32; width * height * cpp];
-        data.par_chunks_mut(width * cpp).enumerate().for_each(|(y, row)| {
-            let sy = y + oy;
-            for x in 0..width {
-                let sx = x + ox;
+        let (bw, bh) = (black.width.max(1), black.height.max(1));
+        let mut levels = Vec::with_capacity(bw * bh * cpp);
+        for py in 0..bh {
+            for px in 0..bw {
                 for c in 0..cpp {
-                    let bi =
-                        ((sy % black.height) * black.width + (sx % black.width)) * black.cpp + c.min(black.cpp - 1);
+                    let bi = (py * black.width + px) * black.cpp + c.min(black.cpp - 1);
                     let b = black_levels.get(bi).copied().unwrap_or(0.0);
                     let w = whites.get(c).or(whites.first()).copied().unwrap_or(65535.0);
-                    let v = source[(sy * full_width + sx) * cpp + c];
-                    row[x * cpp + c] = ((v - b) / (w - b).max(1.0)).max(0.0);
+                    levels.push((b, (w - b).max(1.0)));
                 }
             }
-        });
+        }
+        let full_width = raw.width;
+        let mut data = vec![0.0f32; width * height * cpp];
+        let normalize = |row: &mut [f32], y: usize, value: &dyn Fn(usize) -> f32| {
+            let sy = y + oy;
+            let row_levels = &levels[(sy % bh) * bw * cpp..(sy % bh + 1) * bw * cpp];
+            let start = sy * full_width * cpp + ox * cpp;
+            let mut px = ox % bw;
+            for (x, out) in row.chunks_exact_mut(cpp).enumerate() {
+                let at = start + x * cpp;
+                for (c, o) in out.iter_mut().enumerate() {
+                    let (b, range) = row_levels[px * cpp + c];
+                    *o = ((value(at + c) - b) / range).max(0.0);
+                }
+                px += 1;
+                if px == bw {
+                    px = 0;
+                }
+            }
+        };
+        match &raw.data {
+            rawler::RawImageData::Integer(source) => {
+                data.par_chunks_mut(width * cpp)
+                    .enumerate()
+                    .for_each(|(y, row)| normalize(row, y, &|i| f32::from(source[i])));
+            }
+            rawler::RawImageData::Float(source) => {
+                data.par_chunks_mut(width * cpp)
+                    .enumerate()
+                    .for_each(|(y, row)| normalize(row, y, &|i| source[i]));
+            }
+        }
 
         let mut matrices: Vec<(f32, Mat3)> = raw
             .color_matrix
