@@ -13,7 +13,8 @@ The professional photo library, step by step.
   export in 1.8 s instead of 2.4. Then the tone rendering step, computed eight pixels
   at a time: 1.8 to 1.9 times faster (NEF 160 → 85 ms), byte-for-byte identical files.
   Then colour (profile and Saturation), the same way: three times faster (NEF 147 →
-  48 ms).
+  48 ms). Then JPEG coding, another 13 to 15% shorter (24 MP: 200 → 175 ms), same
+  bytes.
 
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
