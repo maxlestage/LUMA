@@ -105,7 +105,8 @@ pub enum Event {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MergeKind {
     Stack(luma_merge::StackMode, bool),
-    Panorama(luma_merge::Projection),
+    /// La projection, et les bords étirés pour remplir le rectangle (au lieu d'être rognés).
+    Panorama(luma_merge::Projection, bool),
 }
 
 /// Une fusion à faire : les RAW, le type, le rognage automatique, la taille.
@@ -473,11 +474,14 @@ impl Worker {
                                 luma_merge::StackMode::Focus => "Mise-au-point",
                             },
                         ),
-                        MergeKind::Panorama(p) => (
-                            luma_merge::panorama(&frames, p, &progress, &cancel)
-                                .map_err(|e| e.to_string())?,
-                            "Pano",
-                        ),
+                        MergeKind::Panorama(p, warp) => {
+                            let mut merged = luma_merge::panorama(&frames, p, &progress, &cancel)
+                                .map_err(|e| e.to_string())?;
+                            if warp {
+                                merged.warp_edges();
+                            }
+                            (merged, "Pano")
+                        }
                     };
                     let reference = &job.paths[job.paths.len() / 2];
                     let template =
