@@ -179,6 +179,10 @@ The professional photo library, step by step.
   exported at another size or recompressed, found by its fingerprint and shown group
   by group. **In batch**: with several photos selected, the rating, flag and label go
   to all of them.
+- **Opening twice as fast**: sensor levels (black, white) normalized straight from
+  its integers, on all cores, with no prior copy to floats; NEF 145 → 67 ms, ARW
+  143 → 65, RW2 131 → 65, RAF 169 → 73, DNG 285 → 158, CR3 547 → 399, bit-identical
+  data.
 
 ## 0.2.0 — October 2026
 
