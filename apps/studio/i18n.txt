@@ -3376,3 +3376,21 @@ es = Plantilla «{name}» guardada
 fr = Modèle « {name} » appliqué à {n} photo(s)
 en = Template “{name}” applied to {n} photo(s)
 es = Plantilla «{name}» aplicada a {n} foto(s)
+
+# ----- Mesure au point -----
+
+fr = Survolez la photo : RVB et Lab du point
+en = Hover over the photo: RGB and Lab at the point
+es = Pase el puntero sobre la foto: RGB y Lab del punto
+
+fr = R|mesure
+en = R
+es = R
+
+fr = V|mesure
+en = G
+es = V
+
+fr = B|mesure
+en = B
+es = A
