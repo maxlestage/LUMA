@@ -528,6 +528,8 @@ pub struct Studio {
     /// des nouveaux noms pour ce modèle.
     rename_open: bool,
     rename_template: String,
+    /// Le nom du prochain instantané, en cours de saisie.
+    snapshot_name: String,
     rename_preview: Option<(String, Result<luma_render::rename::Plan, String>)>,
     /// Les champs des informations (IPTC) en cours de saisie, et les photos qu'ils visent.
     info_edit: HashMap<&'static str, String>,
@@ -838,6 +840,7 @@ impl Studio {
             paste_open: false,
             rename_open: false,
             rename_template: "{date}_{séquence}".into(),
+            snapshot_name: String::new(),
             rename_preview: None,
             info_edit: HashMap::new(),
             info_for: Vec::new(),
@@ -4684,6 +4687,106 @@ impl Studio {
         }
     }
 
+    /// Les instantanés de la photo ouverte.
+    pub fn snapshots(&self) -> Vec<luma_project::xmp::Snapshot> {
+        self.current_meta().snapshots
+    }
+
+    /// Un instantané des réglages du moment, rangé dans le XMP de la photo ouverte ; son
+    /// nom par défaut est « Instantané 1 », « Instantané 2 »…
+    pub fn take_snapshot(&mut self, name: Option<&str>) {
+        let Some(path) = self.current_path().map(Path::to_path_buf) else {
+            return;
+        };
+        let n = self.current_meta().snapshots.len() + 1;
+        let name = name
+            .map(str::trim)
+            .filter(|n| !n.is_empty())
+            .map_or_else(|| trf("Instantané {n}", &[("n", &n)]), str::to_owned);
+        let snap = luma_project::xmp::Snapshot::new(&name, &self.settings);
+        self.edit_meta(&[path], |m| m.snapshots.push(snap.clone()));
+    }
+
+    /// Revient aux réglages d'un instantané (une étape de l'historique, qu'on peut
+    /// annuler).
+    pub fn apply_snapshot(&mut self, k: usize) {
+        let Some(snap) = self.current_meta().snapshots.get(k).cloned() else {
+            return;
+        };
+        if let Some(s) = snap.settings() {
+            self.settings = s;
+            self.touch();
+            self.commit(trf("Instantané : {name}", &[("name", &snap.name)]));
+        }
+    }
+
+    pub fn delete_snapshot(&mut self, k: usize) {
+        if let Some(path) = self.current_path().map(Path::to_path_buf) {
+            self.edit_meta(&[path], |m| {
+                if k < m.snapshots.len() {
+                    m.snapshots.remove(k);
+                }
+            });
+        }
+    }
+
+    /// Le panneau des instantanés : en créer un, y revenir d'un clic, le retirer.
+    fn snapshots_panel(&mut self, ui: &mut Ui) {
+        let snaps = self.snapshots();
+        let (mut apply, mut delete, mut take) = (None, None, false);
+        egui::CollapsingHeader::new(RichText::new(tr("Instantanés")).strong())
+            .id_salt("instantanes")
+            .default_open(false)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.snapshot_name)
+                            .hint_text(tr("Nom de l'instantané"))
+                            .desired_width(ui.available_width() - 70.0),
+                    );
+                    take = ui
+                        .small_button(tr("Créer"))
+                        .on_hover_text(tr("Garde les réglages du moment, pour y revenir d'un clic"))
+                        .clicked();
+                });
+                for (k, s) in snaps.iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        if ui
+                            .small_button("×")
+                            .on_hover_text(tr("Retirer cet instantané"))
+                            .clicked()
+                        {
+                            delete = Some(k);
+                        }
+                        if ui
+                            .selectable_label(false, RichText::new(&s.name).size(12.0))
+                            .on_hover_text(tr("Revenir à ces réglages"))
+                            .clicked()
+                        {
+                            apply = Some(k);
+                        }
+                    });
+                }
+                if snaps.is_empty() {
+                    ui.label(
+                        RichText::new(tr("Aucun instantané pour cette photo."))
+                            .size(11.0)
+                            .color(theme::DIM),
+                    );
+                }
+            });
+        if take {
+            let name = std::mem::take(&mut self.snapshot_name);
+            self.take_snapshot(Some(&name));
+        }
+        if let Some(k) = apply {
+            self.apply_snapshot(k);
+        }
+        if let Some(k) = delete {
+            self.delete_snapshot(k);
+        }
+    }
+
     /// Le nombre de films : les préréglages intégrés, mes pellicules, mes préréglages.
     fn film_count(&self) -> usize {
         PRESETS.len() + self.luts.len() + self.user_presets.len()
@@ -8071,6 +8174,7 @@ impl Studio {
         if self.tool == Tool::Light {
             ui.add_space(8.0);
             self.history_panel(ui);
+            self.snapshots_panel(ui);
         }
         for label in commits {
             self.touch();

@@ -264,6 +264,33 @@ fn batch_rename() {
     assert_eq!(s.studio().rename_photos(&again).unwrap(), 0);
 }
 
+/// Les instantanés : les réglages d'un moment, gardés dans le XMP, retrouvés d'un clic
+/// (une étape de l'historique), puis retirés.
+#[test]
+fn snapshots() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("instantanes") else {
+        return;
+    };
+    let path = s.studio().current_path().unwrap().to_path_buf();
+    s.studio().settings.exposure = 0.6;
+    s.studio().take_snapshot(Some("Lumineuse"));
+    s.studio().settings.exposure = -1.0;
+    s.studio().take_snapshot(None);
+    let names: Vec<String> = s.studio().snapshots().into_iter().map(|n| n.name).collect();
+    assert_eq!(names, ["Lumineuse", "Instantané 2"]);
+    s.studio().apply_snapshot(0);
+    assert_eq!(s.studio().settings.exposure, 0.6);
+    s.wait();
+    s.studio().flush_xmp();
+    let meta = luma_studio::worker::read_meta(&path);
+    assert_eq!(meta.snapshots.len(), 2);
+    assert_eq!(meta.snapshots[1].settings().unwrap().exposure, -1.0);
+    s.studio().delete_snapshot(0);
+    s.studio().flush_xmp();
+    assert_eq!(luma_studio::worker::read_meta(&path).snapshots.len(), 1);
+}
+
 #[test]
 fn library_ratings_and_flags() {
     let _gpu = one_at_a_time();

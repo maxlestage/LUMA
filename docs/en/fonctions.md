@@ -74,7 +74,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
 | | Sync a selection (Shift+Cmd+S): the open photo's adjustments to the other selected photos, group by group; auto white balance in batch, each photo its own | ✅ |
 | | Default adjustments per camera and from an ISO (the most precise wins), starting point for photos without XMP; import film given to arriving photos (watched folder, tethered camera) | ✅ |
-| | Snapshots, sync across multiple photos | ⏳ |
+| | Named snapshots, stored in the XMP, restored in one click (a history step); sync across multiple photos | ✅ |
 | | iPhone and iPad: smaller preview during a gesture (12 times faster), memory watched, caches freed before the system closes the app | ✅ |
 | | Histogram, clipping indicator (J), before/after (`\`), 1:1 zoom | ✅ |
 | | Waveform, RGB parade, vectorscope (Shift+J) | ✅ |

@@ -29,7 +29,8 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 10] = [
+const META_KEYS: [&str; 11] = [
+    "luma:Snapshots",
     "xmp:Rating",
     "xmp:Label",
     "luma:Pick",
@@ -74,6 +75,30 @@ pub struct Meta {
     pub creator: String,
     pub rights: String,
     pub location: Location,
+    /// Les instantanés : des états des réglages, nommés, qu'on retrouve d'un clic.
+    pub snapshots: Vec<Snapshot>,
+}
+
+/// Un instantané : un nom et les réglages d'un moment (en JSON, le format des
+/// réglages de LÜMA), rangés dans le XMP (`luma:Snapshots`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Snapshot {
+    pub name: String,
+    pub settings: String,
+}
+
+impl Snapshot {
+    pub fn new(name: &str, settings: &Settings) -> Snapshot {
+        Snapshot {
+            name: name.trim().to_owned(),
+            settings: serde_json::to_string(settings).unwrap_or_default(),
+        }
+    }
+
+    /// Les réglages de l'instantané (ceux qui manquent prennent leur valeur par défaut).
+    pub fn settings(&self) -> Option<Settings> {
+        serde_json::from_str(&self.settings).ok()
+    }
 }
 
 /// Le lieu de la prise de vue.
@@ -271,6 +296,11 @@ pub fn read_meta(text: &str) -> Meta {
             state: place(&values, 2),
             country: place(&values, 3),
         },
+        snapshots: values
+            .meta
+            .get("luma:Snapshots")
+            .and_then(|j| serde_json::from_str(j).ok())
+            .unwrap_or_default(),
     }
 }
 
@@ -906,6 +936,10 @@ fn open_document(meta: &Meta, settings: bool) -> String {
     if meta.flag == Flag::Pick {
         out.push_str("    luma:Pick=\"True\"\n");
     }
+    if !meta.snapshots.is_empty() {
+        let json = serde_json::to_string(&meta.snapshots).unwrap_or_default();
+        out.push_str(&format!("    luma:Snapshots=\"{}\"\n", escape(&json)));
+    }
     out
 }
 
@@ -973,6 +1007,43 @@ pub fn color_index(name: &str) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+    /// Les instantanés font l'aller‑retour par le XMP, avec ou sans réglages, masques et
+    /// guillemets compris ; le reste des métadonnées n'en souffre pas.
+    #[test]
+    fn snapshots_round_trip() {
+        let mut a = Settings {
+            exposure: 0.8,
+            ..Settings::default()
+        };
+        a.masks.push(crate::Mask::full());
+        let b = Settings {
+            contrast: -20.0,
+            ..Settings::default()
+        };
+        let meta = Meta {
+            rating: 3,
+            title: "Le \"phare\" & la mer".into(),
+            snapshots: vec![Snapshot::new("Avant le ciel", &a), Snapshot::new("N&B <doux>", &b)],
+            ..Meta::default()
+        };
+        for text in [write_with_meta(&b, &meta), write_meta(&meta)] {
+            let back = read_meta(&text);
+            assert_eq!(back, meta);
+            assert_eq!(back.snapshots[0].settings().unwrap(), a);
+            assert_eq!(back.snapshots[1].settings().unwrap().contrast, -20.0);
+        }
+        // Sans instantané, rien d'écrit.
+        assert!(!write_meta(&Meta::default()).contains("Snapshots"));
+        assert!(
+            Snapshot {
+                name: "x".into(),
+                settings: "pas du json".into()
+            }
+            .settings()
+            .is_none()
+        );
+    }
+
     use super::*;
 
     /// Un extrait de sidecar XMP, tel qu'on en trouve à côté des RAW.
