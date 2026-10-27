@@ -202,6 +202,11 @@ La photothèque professionnelle, étape par étape.
   choisies) : les réglages de la photo ouverte vont aux autres, groupe par groupe
   (recadrage et masques laissés à chacune par défaut). **Balance auto en lot** : chaque
   photo choisie reçoit sa propre balance automatique.
+- **Réglages par défaut par boîtier et par ISO** (« Réglages par défaut… », outil
+  Lumière) : les réglages de la photo ouverte deviennent le point de départ des photos
+  de ce boîtier sans XMP, à tout ISO ou à partir de son ISO (la règle la plus précise
+  l'emporte ; recadrage et masques exceptés). **Film d'import** : choisi dans le
+  dossier surveillé, il est donné à chaque photo qui arrive.
 
 ## 0.2.0 — octobre 2026
 

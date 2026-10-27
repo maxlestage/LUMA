@@ -7,6 +7,7 @@
 //! [`xmp`]).
 
 pub mod copies;
+pub mod defaults;
 pub mod masks;
 pub mod paste;
 pub mod presets;

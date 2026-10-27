@@ -73,6 +73,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Copiar y pegar selectivo de ajustes («Pegar…», Alt+Mayús+Cmd+V): catorce grupos a elegir, recorte y máscaras propios de cada foto por defecto | ✅ |
 | | Sincronizar una selección (Mayús+Cmd+S): los ajustes de la foto abierta a las demás fotos elegidas, grupo por grupo; balance automático en lote, cada foto el suyo | ✅ |
+| | Ajustes predeterminados por cámara y a partir de un ISO (gana el más preciso), punto de partida de las fotos sin XMP; película de importación para las fotos que llegan (carpeta vigilada, cámara conectada) | ✅ |
 | | Instantáneas, sincronización en varias fotos | ⏳ |
 | | iPhone y iPad: vista previa reducida durante un gesto (12 veces más rápida), memoria vigilada, cachés liberadas antes de que el sistema cierre la app | ✅ |
 | | Histograma, indicador de recorte (J), antes/después (`\`), zoom 1:1 | ✅ |

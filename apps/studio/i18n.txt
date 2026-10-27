@@ -3204,3 +3204,53 @@ es = Balance auto
 fr = Chaque photo choisie reçoit sa propre balance automatique
 en = Each selected photo gets its own automatic white balance
 es = Cada foto elegida recibe su propio balance automático
+
+# ----- Réglages par défaut -----
+
+fr = Réglages par défaut non enregistrés : {error}
+en = Default adjustments not saved: {error}
+es = Ajustes predeterminados no guardados: {error}
+
+fr = Réglages par défaut du {camera} à partir d'ISO {iso}
+en = Default adjustments for the {camera} from ISO {iso}
+es = Ajustes predeterminados de la {camera} a partir de ISO {iso}
+
+fr = Réglages par défaut du {camera}
+en = Default adjustments for the {camera}
+es = Ajustes predeterminados de la {camera}
+
+fr = Réglages par défaut du {camera} retirés
+en = Default adjustments for the {camera} removed
+es = Ajustes predeterminados de la {camera} quitados
+
+fr = Réglages par défaut…
+en = Default adjustments…
+es = Ajustes predeterminados…
+
+fr = Pour le {camera}
+en = For the {camera}
+es = Para la {camera}
+
+fr = Pour le {camera} à partir d'ISO {iso}
+en = For the {camera} from ISO {iso}
+es = Para la {camera} a partir de ISO {iso}
+
+fr = Retirer ceux de ce boîtier
+en = Remove this camera's
+es = Quitar los de esta cámara
+
+fr = Les réglages actuels deviennent le point de départ des photos de ce boîtier qui n'en ont pas encore (recadrage et masques exceptés)
+en = The current adjustments become the starting point for this camera's photos that have none yet (except crop and masks)
+es = Los ajustes actuales pasan a ser el punto de partida de las fotos de esta cámara que aún no tienen (salvo recorte y máscaras)
+
+fr = Ce boîtier a ses réglages par défaut
+en = This camera has its default adjustments
+es = Esta cámara tiene sus ajustes predeterminados
+
+fr = À l'arrivée
+en = On arrival
+es = Al llegar
+
+fr = Aucun film
+en = No film
+es = Ninguna película

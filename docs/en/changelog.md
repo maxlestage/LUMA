@@ -192,6 +192,11 @@ The professional photo library, step by step.
   the open photo's adjustments go to the others, group by group (crop and masks left
   to each one by default). **Batch auto balance**: each selected photo gets its own
   automatic white balance.
+- **Default adjustments per camera and ISO** (“Default adjustments…”, Light tool): the
+  open photo's adjustments become the starting point for this camera's photos without
+  XMP, at any ISO or from its ISO (the most precise rule wins; crop and masks
+  excepted). **Import film**: chosen in the watched folder, it is given to each
+  arriving photo.
 
 ## 0.2.0 — October 2026
 

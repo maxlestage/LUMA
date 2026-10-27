@@ -522,6 +522,9 @@ pub struct Studio {
     /// La fenêtre « Coller une partie des réglages » et les groupes cochés (gardés
     /// d'une fois sur l'autre).
     paste_open: bool,
+    /// Les réglages par défaut par boîtier et par ISO, et le film donné à l'arrivée.
+    defaults: luma_project::defaults::Defaults,
+    defaults_path: Option<PathBuf>,
     /// La fenêtre des groupes sert à synchroniser la sélection, pas à coller.
     syncing: bool,
     /// Les photos du lot dont la balance automatique est attendue.
@@ -779,6 +782,10 @@ impl Studio {
             history_pos: 0,
             clipboard: None,
             paste_open: false,
+            defaults: crate::dialogs::presets_dir()
+                .map(|d| luma_project::defaults::Defaults::load(&d.join(DEFAULTS_FILE)))
+                .unwrap_or_default(),
+            defaults_path: None,
             syncing: false,
             auto_pending: 0,
             paste_groups: luma_project::paste::default_groups(),
@@ -1054,6 +1061,14 @@ impl Studio {
             .iter()
             .filter_map(|&i| self.folder.get(i).cloned())
             .collect();
+        // Le film d'import, aux photos arrivées qui n'ont pas encore de réglages.
+        if let Some(settings) = self.import_settings() {
+            for p in &new {
+                if read_sidecar(p).is_none() {
+                    let _ = write_sidecar(p, &settings, &Meta::default());
+                }
+            }
+        }
         for p in &new {
             if self.folder.contains(p) {
                 continue;
@@ -1679,7 +1694,7 @@ impl Studio {
                     match result {
                         Ok((photo, sidecar)) => {
                             let from_xmp = sidecar.is_some();
-                            let defaults = photo.default_settings();
+                            let defaults = self.defaults_for(&photo);
                             self.settings = sidecar.map(|s| *s).unwrap_or_else(|| defaults.clone());
                             self.history = vec![(tr("Importation").into(), defaults)];
                             if from_xmp {
@@ -2199,7 +2214,140 @@ impl Studio {
     fn default_settings(&self) -> Settings {
         self.photo
             .as_ref()
-            .map_or_else(Settings::default, |p| p.default_settings())
+            .map_or_else(Settings::default, |p| self.defaults_for(p))
+    }
+
+    /// Les réglages de départ d'une photo : ceux de son boîtier (et de son ISO) s'il y a
+    /// une règle, sinon ceux de LÜMA.
+    fn defaults_for(&self, photo: &Photo) -> Settings {
+        let raw = photo.raw();
+        if raw.rendered {
+            return photo.default_settings();
+        }
+        self.defaults
+            .for_photo(&camera_name(&raw.make, &raw.model), raw.exif.iso)
+            .cloned()
+            .unwrap_or_else(|| photo.default_settings())
+    }
+
+    /// Le fichier des réglages par défaut (les essais en prennent un à eux) ; sinon
+    /// celui de LÜMA, à côté des préréglages.
+    pub fn use_defaults_file(&mut self, path: PathBuf) {
+        self.defaults = luma_project::defaults::Defaults::load(&path);
+        self.defaults_path = Some(path);
+    }
+
+    fn save_defaults(&mut self) {
+        let path = self
+            .defaults_path
+            .clone()
+            .or_else(|| crate::dialogs::presets_dir().map(|d| d.join(DEFAULTS_FILE)));
+        if let Some(path) = path {
+            if let Err(e) = self.defaults.save(&path) {
+                self.status = trf(
+                    "Réglages par défaut non enregistrés : {error}",
+                    &[("error", &e)],
+                );
+            }
+            self.defaults_path = Some(path);
+        }
+    }
+
+    /// Fait des réglages de la photo ouverte ceux de son boîtier, à partir de son ISO ou
+    /// à tout ISO.
+    pub fn set_camera_defaults(&mut self, with_iso: bool) {
+        let Some(photo) = &self.photo else { return };
+        let raw = photo.raw();
+        let camera = camera_name(&raw.make, &raw.model);
+        let iso = raw.exif.iso.filter(|_| with_iso);
+        self.defaults.set(&camera, iso, &self.settings);
+        self.status = match iso {
+            Some(iso) => trf(
+                "Réglages par défaut du {camera} à partir d'ISO {iso}",
+                &[("camera", &camera), ("iso", &iso)],
+            ),
+            None => trf("Réglages par défaut du {camera}", &[("camera", &camera)]),
+        };
+        self.save_defaults();
+    }
+
+    /// Retire les réglages par défaut du boîtier de la photo ouverte.
+    pub fn clear_camera_defaults(&mut self) {
+        let Some(photo) = &self.photo else { return };
+        let raw = photo.raw();
+        let camera = camera_name(&raw.make, &raw.model);
+        self.defaults.clear(&camera);
+        self.status = trf(
+            "Réglages par défaut du {camera} retirés",
+            &[("camera", &camera)],
+        );
+        self.save_defaults();
+    }
+
+    /// Le film donné aux photos qui arrivent (dossier surveillé, boîtier relié), par son
+    /// nom ; `None` : aucun.
+    pub fn set_import_preset(&mut self, name: Option<String>) {
+        self.defaults.import_preset = name;
+        self.save_defaults();
+    }
+
+    /// Les réglages de départ d'une photo arrivée, avec le film d'import s'il y en a un.
+    fn import_settings(&self) -> Option<Settings> {
+        let name = self.defaults.import_preset.as_deref()?;
+        let k = (0..self.film_count()).find(|&k| self.film_key(k) == name)?;
+        Some(self.film_applied(k, &Settings::default(), 1.0))
+    }
+
+    /// Le menu des réglages par défaut du boîtier de la photo ouverte.
+    fn defaults_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
+        let Some(photo) = &self.photo else { return };
+        let raw = photo.raw();
+        if raw.rendered {
+            return;
+        }
+        let camera = camera_name(&raw.make, &raw.model);
+        let iso = raw.exif.iso;
+        let has = self.defaults.rules.iter().any(|r| r.camera == camera);
+        let mut action = None;
+        ui.horizontal_wrapped(|ui| {
+            ui.menu_button(tr("Réglages par défaut…"), |ui| {
+                if ui
+                    .button(trf("Pour le {camera}", &[("camera", &camera)]))
+                    .clicked()
+                {
+                    action = Some(0);
+                    ui.close();
+                }
+                if let Some(iso) = iso
+                    && ui
+                        .button(trf("Pour le {camera} à partir d'ISO {iso}", &[("camera", &camera), ("iso", &iso)]))
+                        .clicked()
+                {
+                    action = Some(1);
+                    ui.close();
+                }
+                if has && ui.button(tr("Retirer ceux de ce boîtier")).clicked() {
+                    action = Some(2);
+                    ui.close();
+                }
+            })
+            .response
+            .on_hover_text(tr(
+                "Les réglages actuels deviennent le point de départ des photos de ce boîtier qui n'en ont pas encore (recadrage et masques exceptés)",
+            ));
+            if has {
+                ui.label(RichText::new(tr("Ce boîtier a ses réglages par défaut")).size(11.0).color(theme::DIM));
+            }
+        });
+        match action {
+            Some(0) => self.set_camera_defaults(false),
+            Some(1) => self.set_camera_defaults(true),
+            Some(2) => self.clear_camera_defaults(),
+            _ => {}
+        }
+        if action.is_some() {
+            commits.clear();
+        }
     }
 
     fn request_render(&mut self, viewport_px: f32, pressed: bool) {
@@ -4253,6 +4401,14 @@ impl Studio {
         }
     }
 
+    /// Le nom du film `k`, tel qu'enregistré (celui des films intégrés n'est pas traduit).
+    fn film_key(&self, k: usize) -> &str {
+        match self.film(k) {
+            Film::Builtin(p) => p.name,
+            Film::Lut(n) | Film::Mine(n, _) => n,
+        }
+    }
+
     /// Le nom affiché du film `k` (les films intégrés aux noms français sont traduits).
     fn film_name(&self, k: usize) -> &str {
         match self.film(k) {
@@ -4998,7 +5154,7 @@ impl Studio {
         section_title(ui, tr("Dossier surveillé"));
         let mut stop = false;
         let mut follow = self.watch_follow;
-        if let Some((dir, n)) = self.watching() {
+        if let Some((dir, n)) = self.watching().map(|(d, n)| (d.to_path_buf(), n)) {
             let name = dir.file_name().map_or_else(
                 || dir.display().to_string(),
                 |n| n.to_string_lossy().into_owned(),
@@ -5015,6 +5171,33 @@ impl Studio {
                 .color(theme::DIM),
             );
             ui.checkbox(&mut follow, tr("Ouvrir chaque nouvelle photo"));
+            // Enregistré sous son nom propre, affiché traduit.
+            let names: Vec<(String, String)> = (0..self.film_count())
+                .map(|k| (self.film_key(k).to_owned(), self.film_name(k).to_owned()))
+                .collect();
+            let mut chosen = self.defaults.import_preset.clone();
+            let shown = chosen
+                .as_ref()
+                .and_then(|c| names.iter().find(|(key, _)| key == c))
+                .map_or_else(|| tr("Aucun film").to_owned(), |(_, name)| name.clone());
+            ui.horizontal(|ui| {
+                ui.label(
+                    RichText::new(tr("À l'arrivée"))
+                        .size(11.5)
+                        .color(theme::DIM),
+                );
+                egui::ComboBox::from_id_salt("film-import")
+                    .selected_text(shown)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut chosen, None, tr("Aucun film"));
+                        for (key, name) in &names {
+                            ui.selectable_value(&mut chosen, Some(key.clone()), name);
+                        }
+                    });
+            });
+            if chosen != self.defaults.import_preset {
+                self.set_import_preset(chosen);
+            }
             let dir = dir.to_path_buf();
             self.tether_panel(ui, &dir);
             stop = ui.button(tr("Arrêter la surveillance")).clicked();
@@ -6887,6 +7070,7 @@ impl Studio {
                     let l = self.fields(ui, &PRESENCE);
                     keep(l, &mut commits);
                 });
+            self.defaults_panel(ui, &mut commits);
         }
 
         if self.tool == Tool::Light {
@@ -7608,6 +7792,18 @@ fn clamp_center(c: &mut Compare) {
     let half = 0.5 / c.zoom;
     c.center.x = c.center.x.clamp(half, 1.0 - half);
     c.center.y = c.center.y.clamp(half, 1.0 - half);
+}
+
+/// Le fichier des réglages par défaut, dans le dossier des préréglages.
+const DEFAULTS_FILE: &str = "Réglages par défaut.json";
+
+/// Le boîtier, marque comprise (« Sony ILCE-7M3 »), comme dans la photothèque.
+fn camera_name(make: &str, model: &str) -> String {
+    if model.starts_with(make) {
+        model.to_owned()
+    } else {
+        format!("{make} {model}").trim().to_owned()
+    }
 }
 
 /// Les cinq pastilles de libellé ; rend celle cliquée (un clic sur la pastille choisie
