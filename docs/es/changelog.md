@@ -4,6 +4,11 @@
 
 La fototeca profesional, paso a paso.
 
+- **LÜMA para Linux**: el mismo motor y el mismo resultado que en Mac, con la misma
+  suscripción. Un archivo que se instala sin contraseña (`./install.sh`, con su
+  lanzador en el menú de aplicaciones y los RAW que se abren con «Abrir con»), o un
+  paquete `.deb` para Debian y Ubuntu; x86_64, Ubuntu 22.04, Debian 12, Fedora 36 o
+  posterior, con un controlador gráfico Vulkan. Incluye la línea de comandos `luma`.
 - **Más rápido**: la reducción de ruido de color (activa por defecto) es tres veces
   más rápida sin cambiar un solo píxel; la exportación a resolución completa tarda
   entre un 25 y un 30 % menos, y la vista previa con ajustes intensos responde un 25 %
