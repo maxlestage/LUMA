@@ -3764,3 +3764,77 @@ es = Galería
 fr = Galerie prête : {n} photos, {file} (à mettre en ligne telle quelle)
 en = Gallery ready: {n} photos, {file} (to put online as is)
 es = Galería lista: {n} fotos, {file} (para publicar tal cual)
+
+# ----- L'import depuis une carte -----
+
+fr = Importer une carte…
+en = Import a card…
+es = Importar una tarjeta…
+
+fr = Copie les photos d'une carte mémoire dans la photothèque, rangées par date, et sur un second disque
+en = Copies the photos from a memory card into the library, sorted by date, and to a second disk
+es = Copia las fotos de una tarjeta de memoria en la fototeca, ordenadas por fecha, y en un segundo disco
+
+fr = Depuis
+en = From
+es = Desde
+
+fr = Carte {name}
+en = Card {name}
+es = Tarjeta {name}
+
+fr = Aucune carte trouvée
+en = No card found
+es = No se encontró ninguna tarjeta
+
+fr = {n} photos
+en = {n} photos
+es = {n} fotos
+
+fr = Importer depuis…
+en = Import from…
+es = Importar desde…
+
+fr = Vers
+en = To
+es = Hacia
+
+fr = Choisissez la photothèque
+en = Choose the library
+es = Elija la fototeca
+
+fr = Importer dans…
+en = Import into…
+es = Importar en…
+
+fr = Rangement
+en = Folders
+es = Carpetas
+
+fr = Noms d'origine ; ou {date}_{séquence}…
+en = Original names; or {date}_{séquence}…
+es = Nombres originales; o {date}_{séquence}…
+
+fr = Second disque
+en = Second disk
+es = Segundo disco
+
+fr = Sauvegarder aussi dans…
+en = Also back up to…
+es = Guardar también en…
+
+fr = Chaque copie est relue et comparée à l'original ; le RAW, son JPEG et son XMP gardent un même nom ; une photo déjà importée est sautée ; la carte n'est jamais modifiée.
+en = Each copy is read back and compared with the original; the RAW, its JPEG and its XMP keep the same name; a photo already imported is skipped; the card is never modified.
+es = Cada copia se relee y se compara con el original; el RAW, su JPEG y su XMP conservan el mismo nombre; una foto ya importada se omite; la tarjeta nunca se modifica.
+
+fr = Import : {done} sur {n}
+en = Importing: {done} of {n}
+es = Importando: {done} de {n}
+
+fr = Importer {n} photos
+en = Import {n} photos
+es = Importar {n} fotos
+
+fr = {n} photos importées et vérifiées dans {file}
+en = {n} photos imported and verified in {file}
+es = {n} fotos importadas y verificadas en {file}
