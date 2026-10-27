@@ -58,6 +58,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Calibración | Matiz de las sombras, tono y saturación de los primarios | ✅ |
 | Herramientas | Recorte y enderezado (ángulo libre), herramienta en pantalla con proporciones bloqueadas (R) | ✅ |
 | | Guías de recorte: tercios, proporción áurea, diagonales, triángulos áureos, espiral áurea, cuadrícula (O para cambiar, Mayús+O para girar) | ✅ |
+| | Enderezado automático (Mayús+R): horizonte y verticales leídos con una transformada de Hough; nada en caso de duda (primer plano, líneas de fuga) | ✅ |
 | | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad | ✅ |
 | | Máscaras restringidas a un rango de luminancia (mínimo, máximo, suavizado) o de color (tono, anchura, suavizado; grises excluidos), leído sobre la foto; zona visible (O) | ✅ |
 | | Pincel que sigue los bordes: cada toque solo pinta los tonos cercanos a su centro, la zona se detiene en los contornos de la foto | ✅ |

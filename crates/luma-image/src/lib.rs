@@ -24,6 +24,7 @@ pub mod detail;
 pub mod dust;
 pub mod effects;
 pub mod geometry;
+pub mod horizon;
 pub mod lens;
 pub mod local;
 pub mod retouch;

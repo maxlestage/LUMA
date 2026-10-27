@@ -114,6 +114,9 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Enderezado automático** (Mayús+R, o «Enderezar automáticamente» en el recorte):
+  LÜMA lee el horizonte y las verticales de la foto y la endereza; en caso de duda (un
+  primer plano hecho de líneas de fuga), no toca nada.
 - **Guías de recorte**: tercios, proporción áurea, diagonales, triángulos áureos,
   espiral áurea y cuadrícula; O pasa a la guía siguiente durante el recorte, Mayús+O
   gira la espiral y los triángulos.

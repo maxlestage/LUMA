@@ -169,7 +169,7 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
 | Maj+Cmd+E | Exporter : la photo ou toutes celles du filtre ; JPEG, PNG ou TIFF 8/16 bits ; sRGB, Display P3, Rec. 2020 ou ProPhoto ; taille ; dossier |
 | G, D | Bibliothèque, Développement |
 | 0 à 5 ; P, X, U | Note ; retenir, rejeter, retirer le drapeau (enregistrés dans le XMP, `xmp:Rating`) |
-| R | Outil Recadrage : poignées, guides (O : tiers, nombre d'or, diagonales, triangles, spirale, grille ; Maj+O tourne), proportions verrouillées ; Entrée valide, Échap annule |
+| R | Outil Recadrage : poignées, guides (O : tiers, nombre d'or, diagonales, triangles, spirale, grille ; Maj+O tourne), proportions verrouillées ; Maj+R redresse d'après l'horizon ; Entrée valide, Échap annule |
 | W | Pipette de balance des blancs (cliquer un gris) ; le menu Balance propose aussi Auto et des préréglages (lumière du jour, nuageux, tungstène…) |
 | M, Maj+M, K | Masque : dégradé linéaire, dégradé radial, pinceau (Option gomme) ; O montre la zone ; chaque masque a ses curseurs |
 | Q | Correcteur : un clic sur une tache, la source se choisit d'elle-même ; on tire la zone ou sa source |
