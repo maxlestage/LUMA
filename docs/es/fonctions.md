@@ -126,7 +126,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 |---|---|
 | JPEG (calidad), PNG y TIFF de 8 o 16 bits | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, con perfil ICC incrustado | ✅ |
-| Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar nunca (`--resize`) | ✅ |
+| Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar por defecto (`--resize`) | ✅ |
+| Ampliación si es necesario («Ampliar si es necesario», `--enlarge`): Lanczos sin halos, hasta cuatro veces cada lado y 200 MP, para copias grandes; sin IA | ✅ |
 | Ventana Exportar: formato, calidad, profundidad de bits, espacio de color, tamaño, carpeta; exportación de todas las fotos del filtro | ✅ |
 | Exportación a varios ajustes preestablecidos a la vez (ventana Exportar: casillas, usar, guardar; `luma export --preset A --preset B`) | ✅ |
 | Ajustes preestablecidos de exportación (formato, calidad, profundidad, espacio, tamaño, carpeta): web, resolución completa, pantalla P3, impresión, y los suyos; `luma export-preset`, `luma develop --preset` | ✅ |
