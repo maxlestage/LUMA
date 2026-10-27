@@ -1300,6 +1300,25 @@ fn wavelet_noise_reduction() {
 }
 
 #[test]
+fn deconvolution_sharpening() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("deconvolution") else {
+        return;
+    };
+    s.studio().tool = luma_studio::app::Tool::Detail;
+    s.wait();
+    assert!(!s.studio().settings.detail.sharpen_deconvolution);
+    // La case de l'Accentuation : cochée, puis décochée par Annuler.
+    s.harness.get_by_label("Déconvolution").click();
+    s.wait();
+    assert!(s.studio().settings.detail.sharpen_deconvolution);
+    assert!(s.studio().has_image());
+    s.capture("deconvolution");
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert!(!s.studio().settings.detail.sharpen_deconvolution, "annulée");
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {

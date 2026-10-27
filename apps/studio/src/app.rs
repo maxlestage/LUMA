@@ -9176,6 +9176,19 @@ impl Studio {
                     sub_title(ui, tr("Accentuation"));
                     let l = self.fields(ui, &SHARPEN);
                     keep(l, &mut commits);
+                    if ui
+                        .checkbox(&mut self.settings.detail.sharpen_deconvolution, tr("Déconvolution"))
+                        .on_hover_text(tr(
+                            "Défait le flou de l'objectif au lieu d'en creuser les contours : plus de vrai détail, sans halo ; visible à 100 % et à l'export",
+                        ))
+                        .changed()
+                    {
+                        commits.push(if self.settings.detail.sharpen_deconvolution {
+                            tr("Accentuation par déconvolution").into()
+                        } else {
+                            tr("Accentuation par masque flou").into()
+                        });
+                    }
                     sub_title(ui, tr("Réduction du bruit"));
                     let l = self.fields(ui, &NOISE);
                     keep(l, &mut commits);

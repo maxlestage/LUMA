@@ -2742,11 +2742,13 @@ en = Dense black and white, strong clarity, dark skies.
 es = Blanco y negro denso, claridad fuerte, cielos oscuros.
 
 # Images déjà développées (JPEG, PNG…).
+
 fr = Ouvrir une photo
 en = Open a photo
 es = Abrir una foto
 
 # Le cache.
+
 fr = Cache
 en = Cache
 es = Caché
@@ -3764,3 +3766,19 @@ es = Galería
 fr = Galerie prête : {n} photos, {file} (à mettre en ligne telle quelle)
 en = Gallery ready: {n} photos, {file} (to put online as is)
 es = Galería lista: {n} fotos, {file} (para publicar tal cual)
+
+fr = Déconvolution
+en = Deconvolution
+es = Deconvolución
+
+fr = Défait le flou de l'objectif au lieu d'en creuser les contours : plus de vrai détail, sans halo ; visible à 100 % et à l'export
+en = Undoes the lens blur instead of digging into edges: more real detail, no halo; visible at 100% and on export
+es = Deshace el desenfoque del objetivo en lugar de acentuar los bordes: más detalle real, sin halo; visible al 100 % y al exportar
+
+fr = Accentuation par déconvolution
+en = Deconvolution sharpening
+es = Enfoque por deconvolución
+
+fr = Accentuation par masque flou
+en = Unsharp-mask sharpening
+es = Enfoque por máscara de enfoque
