@@ -108,6 +108,9 @@ The professional photo library, step by step.
   LÜMA picks the part of the photo that replaces it. Healing keeps its texture and
   takes the light from the edge of the area; clone makes an exact copy. Area and
   source move with the mouse; size, feather, opacity. Saved in the XMP.
+- **Channel mixer** (Color tool): each red, green or blue channel made from a mix of
+  the photo's three channels, from −200 to +200%; saved in the XMP and in presets,
+  without slowing the render.
 - **Moiré and defringe with the brush**: two more sliders in every mask. “Moiré”
   softens the false colours of a fabric or a grid, “Defringe” removes coloured fringes
   along edges; brightness does not move.

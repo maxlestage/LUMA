@@ -610,6 +610,8 @@ pub struct Studio {
     pub selected_mask: Option<usize>,
     /// La partie combinée en cours de réglage : (masque, partie) ; aucune pour la forme principale.
     pub selected_part: Option<(usize, usize)>,
+    /// La couche de sortie montrée par le mélangeur de couches (0 rouge, 1 vert, 2 bleu).
+    mixer_tab: usize,
     /// L'outil de retouche actif (Q) : un clic sur la photo pose une retouche.
     pub retouch: Option<luma_project::SpotKind>,
     /// La retouche choisie.
@@ -737,6 +739,11 @@ fn interactive_size(viewport_px: f32) -> Size {
 }
 
 impl Studio {
+    /// L'histogramme du dernier rendu (rouge, vert, bleu).
+    pub fn histogram(&self) -> [[u32; 256]; 3] {
+        self.histogram
+    }
+
     /// Une image de photo est affichée.
     pub fn has_image(&self) -> bool {
         self.texture.is_some()
@@ -824,6 +831,7 @@ impl Studio {
             crop_tool: None,
             selected_mask: None,
             selected_part: None,
+            mixer_tab: 0,
             retouch: None,
             selected_spot: None,
             spot_radius: 0.02,
@@ -3917,6 +3925,81 @@ impl Studio {
         });
     }
 
+    /// Le mélangeur de couches : un onglet par couche de sortie, et la part de chacune
+    /// des trois couches de la photo.
+    fn mixer_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
+        egui::CollapsingHeader::new(RichText::new(tr("Mélangeur de couches")).strong())
+            .id_salt("Mélangeur de couches")
+            .default_open(!self.settings.channel_mixer.is_identity())
+            .show(ui, |ui| {
+                let outputs = [tr("Rouge"), tr("Vert"), tr("Bleu")];
+                ui.horizontal(|ui| {
+                    for (k, name) in outputs.iter().enumerate() {
+                        ui.selectable_value(&mut self.mixer_tab, k, *name);
+                    }
+                    if !self.settings.channel_mixer.is_identity()
+                        && ui.button(tr("Réinitialiser")).clicked()
+                    {
+                        self.settings.channel_mixer = luma_project::ChannelMixer::default();
+                        commits.push(tr("Mélangeur de couches réinitialisé").into());
+                    }
+                });
+                let out = self.mixer_tab.min(2);
+                let mixer = &mut self.settings.channel_mixer;
+                let row = match out {
+                    0 => &mut mixer.red,
+                    1 => &mut mixer.green,
+                    _ => &mut mixer.blue,
+                };
+                let specs = [
+                    SliderSpec {
+                        label: "Rouge",
+                        min: -200.0,
+                        max: 200.0,
+                        default: 0.0,
+                        decimals: 0,
+                        track: Track::Plain,
+                        log: false,
+                    },
+                    SliderSpec {
+                        label: "Vert",
+                        min: -200.0,
+                        max: 200.0,
+                        default: 0.0,
+                        decimals: 0,
+                        track: Track::Plain,
+                        log: false,
+                    },
+                    SliderSpec {
+                        label: "Bleu",
+                        min: -200.0,
+                        max: 200.0,
+                        default: 0.0,
+                        decimals: 0,
+                        track: Track::Plain,
+                        log: false,
+                    },
+                ];
+                for (k, mut spec) in specs.into_iter().enumerate() {
+                    // La couche elle‑même est à 100 % par défaut.
+                    if k == out {
+                        spec.default = 100.0;
+                    }
+                    let c = widgets::slider(ui, &spec, &mut row[k]);
+                    if c.committed {
+                        commits.push(trf(
+                            "Mélangeur, couche {out} : {source} {value} %",
+                            &[
+                                ("out", &outputs[out].to_lowercase()),
+                                ("source", &tr(spec.label).to_lowercase()),
+                                ("value", &format_value(row[k], 0, false)),
+                            ],
+                        ));
+                    }
+                }
+            });
+    }
+
     /// L'historique (outil Lumière).
     fn history_panel(&mut self, ui: &mut Ui) {
         let mut restore = None;
@@ -6795,6 +6878,7 @@ impl Studio {
                 let l = self.fields(ui, &CALIBRATION);
                 keep(l, &mut commits);
             });
+            self.mixer_panel(ui, &mut commits);
         }
 
         if self.tool == Tool::Geometry {

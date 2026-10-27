@@ -29,12 +29,13 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 9] = [
+const META_KEYS: [&str; 10] = [
     "xmp:Rating",
     "xmp:Label",
     "luma:Pick",
     "luma:Masks",
     "luma:Spots",
+    "luma:ChannelMixer",
     "luma:Lut",
     "luma:LutAmount",
     "luma:Film",
@@ -356,6 +357,7 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         && values.lists.keys().all(|k| k == SUBJECT)
         && !values.meta.contains_key("luma:Masks")
         && !values.meta.contains_key("luma:Spots")
+        && !values.meta.contains_key("luma:ChannelMixer")
         && !values.meta.contains_key("luma:Lut")
         && !values.meta.contains_key("luma:Film")
     {
@@ -444,6 +446,16 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
         && let Ok(spots) = serde_json::from_str(json)
     {
         s.spots = spots;
+    }
+    // Le mélangeur de couches : trois lignes de trois pour cent.
+    if let Some(json) = values.meta.get("luma:ChannelMixer")
+        && let Ok(rows) = serde_json::from_str::<[[f32; 3]; 3]>(json)
+    {
+        s.channel_mixer = crate::ChannelMixer {
+            red: rows[0],
+            green: rows[1],
+            blue: rows[2],
+        };
     }
     // Le film mesuré (LUT 3D), et le nom du film appliqué : nom et intensité.
     let look = |name: &str, amount: &str| {
@@ -650,6 +662,11 @@ pub fn write_with_meta(settings: &Settings, meta: &Meta) -> String {
     if !s.masks.is_empty() {
         let json = serde_json::to_string(&s.masks).unwrap_or_default();
         out.push_str(&format!("    luma:Masks=\"{}\"\n", escape(&json)));
+    }
+    if !s.channel_mixer.is_identity() {
+        let m = &s.channel_mixer;
+        let json = serde_json::to_string(&[m.red, m.green, m.blue]).unwrap_or_default();
+        out.push_str(&format!("    luma:ChannelMixer=\"{}\"\n", escape(&json)));
     }
     if !s.spots.is_empty() {
         let json = serde_json::to_string(&s.spots).unwrap_or_default();
@@ -901,6 +918,24 @@ mod tests {
         // Sans l'étiquette, les corrections du boîtier restent actives.
         let without = text.replace("crs:LensProfileEnable=\"0\"", "");
         assert!(read(&without).unwrap().lens.camera);
+    }
+
+    #[test]
+    fn channel_mixer_round_trip() {
+        let mut s = Settings::default();
+        s.channel_mixer.red = [80.0, 30.0, -10.0];
+        s.channel_mixer.blue = [0.0, 20.0, 80.0];
+        let text = write(&s);
+        assert!(text.contains("luma:ChannelMixer="), "{text}");
+        assert_eq!(read(&text).unwrap().channel_mixer, s.channel_mixer);
+        // Le mélangeur va dans les préréglages : c'est un rendu, pas une retouche de photo.
+        let preset = write_preset("Mélange", "LÜMA", &s);
+        assert!(preset.contains("luma:ChannelMixer="));
+        // Neutre : rien d'écrit.
+        assert!(!write(&Settings::default()).contains("ChannelMixer"));
+        // Hors des bornes : ramené.
+        s.channel_mixer.green = [500.0, f32::NAN, -900.0];
+        assert_eq!(s.clamped().channel_mixer.green, [200.0, 0.0, -200.0]);
     }
 
     #[test]

@@ -39,6 +39,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Mélange noir et blanc (±3 IL, `crs:GrayMixer*`) | ✅ |
 | | Outil de ciblage direct (T) : glisser sur une couleur de la photo règle cette couleur en teinte, saturation ou luminance | ✅ |
 | Étalonnage des couleurs | Ombres, tons moyens, hautes lumières, global ; fusion, balance | ✅ |
+| | Virage partiel (ombres et hautes lumières, balance ; `crs:SplitToning*` lu et écrit) | ✅ |
+| | Mélangeur de couches : chaque couche de sortie faite des trois couches de la photo (−200 à +200 %) | ✅ |
 | Détail | Accentuation : gain, rayon, détail, masquage | ✅ |
 | | Réduction du bruit de luminance et de couleur | ✅ |
 | | Réduction du bruit avancée (moyennes non locales, ondelettes), sans IA | ⏳ |

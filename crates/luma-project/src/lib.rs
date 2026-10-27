@@ -240,6 +240,37 @@ pub struct Calibration {
     pub blue_saturation: f32,
 }
 
+/// Le mélangeur de couches : chaque couche de sortie (rouge, vert, bleu) faite d'un
+/// mélange des trois couches de la photo, en pour cent (−200 à +200). Par défaut, chaque
+/// couche est elle‑même à 100 %.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ChannelMixer {
+    pub red: [f32; 3],
+    pub green: [f32; 3],
+    pub blue: [f32; 3],
+}
+
+impl Default for ChannelMixer {
+    fn default() -> Self {
+        Self {
+            red: [100.0, 0.0, 0.0],
+            green: [0.0, 100.0, 0.0],
+            blue: [0.0, 0.0, 100.0],
+        }
+    }
+}
+
+impl ChannelMixer {
+    pub fn is_identity(&self) -> bool {
+        *self == ChannelMixer::default()
+    }
+
+    /// La matrice du mélange (lignes : rouge, vert, bleu de sortie), en fractions.
+    pub fn matrix(&self) -> [[f32; 3]; 3] {
+        [self.red, self.green, self.blue].map(|row| row.map(|v| v / 100.0))
+    }
+}
+
 /// Panneau Corrections de l'objectif (réglages manuels).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -368,6 +399,9 @@ pub struct Settings {
     pub detail: Detail,
     pub effects: Effects,
     pub calibration: Calibration,
+    /// Mélangeur de couches.
+    #[serde(skip_serializing_if = "ChannelMixer::is_identity")]
+    pub channel_mixer: ChannelMixer,
     pub crop: Crop,
     pub lens: Lens,
     pub transform: Transform,
@@ -406,6 +440,7 @@ impl Default for Settings {
             detail: Detail::default(),
             effects: Effects::default(),
             calibration: Calibration::default(),
+            channel_mixer: ChannelMixer::default(),
             crop: Crop::default(),
             lens: Lens::default(),
             transform: Transform::default(),
@@ -459,6 +494,12 @@ impl Settings {
         clamp(&mut s.transform.scale, 50.0, 150.0);
         for spot in &mut s.spots {
             spot.clamp();
+        }
+        let mixer = &mut s.channel_mixer;
+        for row in [&mut mixer.red, &mut mixer.green, &mut mixer.blue] {
+            for v in row.iter_mut() {
+                clamp(v, -200.0, 200.0);
+            }
         }
         for m in &mut s.masks {
             m.local.clamp();
