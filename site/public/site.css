@@ -331,7 +331,7 @@ html.js.hydrated .reveal:not(.in) { opacity: 0; transform: translateY(40px); fil
   transform: translate(calc(var(--pad-w) * (-.004 - .02 * var(--lift))), calc(var(--pad-w) * (.004 + .03 * var(--lift)))) rotate(-34deg);
   filter: blur(calc(var(--pad-w) * (.004 + .012 * var(--lift)))); }
 .apple-copy { position: absolute; left: var(--gutter); top: 50%; transform: translateY(-50%); width: min(420px, 38vw); }
-.apple-logo { width: 16px; height: 16px; }
+.apple-logo, .linux-logo { width: 16px; height: 16px; }
 .apple-panels { position: relative; min-height: 300px; }
 .apple-panel { position: absolute; inset: 0 auto auto 0; opacity: 0; transform: translateY(30px); filter: blur(6px); transition: opacity .7s var(--ease-out), transform .8s var(--ease-out), filter .7s; pointer-events: none; }
 .apple-panel.on { opacity: 1; transform: none; filter: none; pointer-events: auto; }
@@ -478,7 +478,7 @@ html.js.hydrated .cap-group:not(.in) .cap-check { transform: scale(0) rotate(-90
 .footer-apps { display: flex; flex-wrap: wrap; gap: 10px; }
 .store { display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 13px; border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); transition: background .25s, box-shadow .25s; }
 .store:hover { background: var(--panel-2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
-.store .apple-logo { width: 20px; height: 20px; display: block; }
+.store .apple-logo, .store .linux-logo { width: 20px; height: 20px; display: block; }
 .store small { display: block; font-size: .68rem; color: var(--muted); line-height: 1.1; }
 .store strong { display: block; font-size: 1rem; font-weight: 600; line-height: 1.15; }
 .store-soon { opacity: .55; cursor: default; }
@@ -642,9 +642,11 @@ html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(11
 
 /* ----- Tarifs : LÜMA Premium ----- */
 .pricing { padding: clamp(80px, 12vw, 160px) var(--gutter); max-width: 1100px; margin: 0 auto; }
-.download { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin: 34px 0 40px; }
+.download { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px 40px; margin: 34px 0 40px; }
+.download-option { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
 .download .btn { display: inline-flex; align-items: center; gap: 10px; }
-.download .apple-logo { width: 18px; height: 18px; display: block; }
+.download .apple-logo, .download .linux-logo { width: 18px; height: 18px; display: block; }
+.download-note a { color: inherit; text-decoration: underline; }
 .download-note { color: var(--muted); font-size: .9rem; max-width: 420px; }
 .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
 .plan { position: relative; padding: 30px; border-radius: 26px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 10px; }
