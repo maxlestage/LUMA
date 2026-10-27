@@ -22,6 +22,9 @@ La photothèque professionnelle, étape par étape.
   Puis les exports TIFF et PNG en 16 bits : l'image
   écrite directement en octets, sur tous les cœurs, sans seconde copie : 20 à 28 % plus
   courts (24 Mpx : 372 → 299 ms) et 144 Mo de mémoire en moins, mêmes octets.
+  Puis la réduction du bruit par ondelettes, sans image neuve à chaque échelle : 1,8 fois
+  plus rapide (24 Mpx : 1,17 → 0,65 s), et l'accentuation par déconvolution, huit pixels
+  à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels.
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
