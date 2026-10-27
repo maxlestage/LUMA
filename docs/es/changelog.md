@@ -26,6 +26,9 @@ La fototeca profesional, paso a paso.
   Después la reducción de ruido por ondículas, sin imagen nueva en cada escala: 1,8
   veces más rápida (24 Mpx: 1,17 → 0,65 s), y el enfoque por deconvolución, ocho píxeles
   a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles.
+- **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
+  el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
+  una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
   focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en

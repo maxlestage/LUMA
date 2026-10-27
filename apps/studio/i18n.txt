@@ -175,9 +175,9 @@ fr = Fusion impossible : {error}
 en = Merge failed: {error}
 es = No se pudo combinar: {error}
 
-fr = Pellicule mesurée : « {name} » (écart numérique → film {before}, avec le film {after})
-en = Film measured: “{name}” (digital → film difference {before}, with the film {after})
-es = Película medida: «{name}» (diferencia digital → película {before}, con la película {after})
+fr = Pellicule mesurée : « {name} » (écart du numérique au film {before}, avec le film {after})
+en = Film measured: “{name}” (digital-to-film difference {before}, with the film {after})
+es = Película medida: «{name}» (diferencia de lo digital a la película {before}, con la película {after})
 
 fr = Mesure impossible : {error}
 en = Measurement failed: {error}
@@ -2533,7 +2533,7 @@ fr = Une diapositive développée comme un négatif : jaunes et verts, ombres bl
 en = Slide film developed as a negative: yellows and greens, blue shadows, strong contrast.
 es = Una diapositiva revelada como negativo: amarillos y verdes, sombras azules, contraste fuerte.
 
-fr = Tourner de jour pour faire la nuit : sous‑exposé, bleu, peu saturé.
+fr = Tourner de jour pour faire la nuit : sous-exposé, bleu, peu saturé.
 en = Shooting by day to make night: underexposed, blue, desaturated.
 es = Rodar de día para simular la noche: subexpuesta, azul, poco saturada.
 
@@ -2665,7 +2665,7 @@ fr = Inspiré d'Ilford Ortho Plus : aveugle au rouge, lèvres et peaux sombres, 
 en = Inspired by Ilford Ortho Plus: red-blind, dark lips and skin, white skies.
 es = Inspirada en Ilford Ortho Plus: ciega al rojo, labios y piel oscuros, cielos blancos.
 
-fr = L'instantané carré des années 80 : chaud, délavé, ombres vert‑cyan.
+fr = L'instantané carré des années 80 : chaud, délavé, ombres vert-cyan.
 en = The square instant photo of the 1980s: warm, faded, green-cyan shadows.
 es = La instantánea cuadrada de los años 80: cálida, desvaída, sombras verde cian.
 
