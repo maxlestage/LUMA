@@ -18,6 +18,7 @@
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
 //! luma slideshow <photo>… -o dossier un diaporama autonome (index.html et JPEG)
 //! luma gallery <photo>… -o dossier  une galerie web statique, prête à mettre en ligne
+//! luma video <in.avi> -o out.avi    un film ou un préréglage sur une vidéo (Motion JPEG)
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! luma match-colors <réf> <autre>   les couleurs d'un boîtier accordées sur un autre
 //! luma licence-keys                 une paire de clés pour signer les licences
@@ -130,6 +131,12 @@ USAGE
       grand d'un clic, flèches, glissement du doigt, Échap), photos/ et vignettes/ en
       JPEG allégés pour le web. À mettre en ligne tel quel. La légende de chaque photo
       est son titre (informations IPTC), sinon son nom.
+  luma video <vidéo.avi> -o sortie.avi [--film nom[:intensité]] [--xmp f.xmp]
+             [--set nom=valeur]… [--lut film.cube[:intensité]] [--quality 1-100]
+      Applique un film (l'un des 100 de LÜMA, par son nom : « Portra 400 »), un
+      préréglage XMP ou des réglages à chaque image d'une vidéo AVI en Motion JPEG
+      (celle de nombreux appareils photo), puis l'enregistre au même format : même
+      taille, même rythme, le son recopié tel quel. Pour une vidéo courte (1 Go au plus).
   luma import [carte|dossier] --to dossier [--folders \"{année}/{année}-{mois}-{jour}\"]
               [--name modèle] [--backup second-disque] [--dry-run] [--catalog f.lumacat]
       Importe les photos d'une carte mémoire (sans carte donnée : la carte montée, celle
@@ -1573,6 +1580,91 @@ fn bounded<T: std::str::FromStr + PartialOrd>(option: &str, v: Option<String>, l
         .ok_or_else(|| format!("{option} : valeur hors des bornes"))
 }
 
+/// `luma video` : un film ou des réglages sur chaque image d'une vidéo.
+fn video(args: Vec<String>) -> Result<(), String> {
+    use luma_render::video;
+    // --film se lit ici, le reste comme pour develop.
+    let (mut film, mut rest) = (None, Vec::new());
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        if a == "--film" {
+            film = Some(it.next().ok_or("--film attend un nom")?);
+        } else {
+            rest.push(a);
+        }
+    }
+    let a = parse(rest.into_iter())?;
+    let [input] = a.positional.as_slice() else {
+        return Err("il faut une vidéo (une seule)".into());
+    };
+    let input = Path::new(input);
+    let out = a.output.clone().ok_or("il faut un fichier de sortie (-o sortie.avi)")?;
+    if out == input {
+        return Err("la sortie doit être un autre fichier que la vidéo".into());
+    }
+    let bytes = std::fs::read(input).map_err(|e| format!("{} : {e}", input.display()))?;
+    let mut clip = video::read(&bytes).map_err(|e| format!("{} : {e}", input.display()))?;
+    drop(bytes);
+    // Les réglages : ceux d'une image déjà développée, sauf réglages complets donnés.
+    let mut settings = if a.xmp.is_some() || a.settings.is_some() {
+        load_settings(&a, None)?
+    } else {
+        let mut s = Settings::for_rendered();
+        for set in &a.sets {
+            s.set(set)?;
+        }
+        // --lut : lu comme pour develop, posé sur ces réglages.
+        if a.lut.is_some() {
+            s.lut = load_settings(&a, None)?.lut;
+        }
+        s
+    };
+    if let Some(spec) = &film {
+        let (name, amount) = match spec.rsplit_once(':') {
+            Some((n, v)) if v.replace(',', ".").parse::<f32>().is_ok() => {
+                (n, v.replace(',', ".").parse::<f32>().unwrap_or(100.0))
+            }
+            _ => (spec.as_str(), 100.0),
+        };
+        let preset = luma_project::presets::find(name)
+            .ok_or_else(|| format!("film inconnu « {name} » (luma presets les liste tous)"))?;
+        settings = preset.applied(&settings, (amount / 100.0).clamp(0.0, 1.0));
+    }
+    let quality = a.quality.unwrap_or(90).clamp(1, 100);
+    let start = Instant::now();
+    let total = clip.frame_count();
+    video::develop(
+        &mut clip,
+        quality,
+        &Cancel::new(),
+        &mut |raw| {
+            Photo::new(raw)
+                .render(&settings, Size::Full, &Cancel::new())
+                .map(|r| r.image)
+                .map_err(|e| e.to_string())
+        },
+        &mut |k, n| {
+            if k % 25 == 0 || k == n {
+                eprint!("\rimage {k} sur {n}");
+            }
+        },
+    )?;
+    eprintln!();
+    let written = video::write(&clip)?;
+    std::fs::write(&out, &written).map_err(|e| format!("{} : {e}", out.display()))?;
+    println!(
+        "{} : {total} images ({} × {}, {:.2} images/s, {:.1} s), {:.1} Mo, en {:.1} s",
+        out.display(),
+        clip.width,
+        clip.height,
+        clip.fps(),
+        clip.seconds(),
+        written.len() as f64 / 1e6,
+        start.elapsed().as_secs_f64()
+    );
+    Ok(())
+}
+
 /// Le livre photo, en PDF.
 fn book(args: Vec<String>) -> Result<(), String> {
     use luma_render::book::{self, Book};
@@ -2139,6 +2231,15 @@ fn main() -> ExitCode {
             _ => gallery(args.collect()),
         };
         return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "video" {
+        return match video(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");
