@@ -74,7 +74,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Manchas del sensor: vista de manchas (el polvo como puntos oscuros), «Quitar el polvo» con un clic | ✅ |
 | | Ojos rojos: un círculo en el ojo, la pupila roja vuelve a ser negra, la piel se queda | ✅ |
 | | Muaré y desflecado (aberración cromática local) con el pincel, en cada máscara | ✅ |
-| | Eliminar | ⏳ |
+| | Eliminar: un círculo sobre lo que molesta (cable, transeúnte, basura), rellenado con trozos de la foto de alrededor, textura incluida, sin IA | ✅ |
 | | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Copiar y pegar selectivo de ajustes («Pegar…», Alt+Mayús+Cmd+V): catorce grupos a elegir, recorte y máscaras propios de cada foto por defecto | ✅ |
 | | Sincronizar una selección (Mayús+Cmd+S): los ajustes de la foto abierta a las demás fotos elegidas, grupo por grupo; balance automático en lote, cada foto el suyo | ✅ |

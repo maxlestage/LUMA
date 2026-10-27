@@ -73,7 +73,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Sensor spots: spot view (dust as dark dots), “Remove dust” in one click | ✅ |
 | | Red eye: a circle on the eye, the red pupil turns black again, the skin stays | ✅ |
 | | Moiré and defringe (local chromatic aberration) with the brush, in every mask | ✅ |
-| | Remove | ⏳ |
+| | Remove: a circle over what is in the way (wire, passer-by, litter), filled with pieces of the surrounding photo, texture included, without AI | ✅ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
 | | Sync a selection (Shift+Cmd+S): the open photo's adjustments to the other selected photos, group by group; auto white balance in batch, each photo its own | ✅ |

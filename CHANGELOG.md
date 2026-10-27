@@ -126,6 +126,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Supprimer** (Retouche, à côté du correcteur) : un cercle sur ce qui gêne, un fil, un
+  passant, un déchet, et LÜMA le remplace par des morceaux de la photo qui l'entourent,
+  texture et grain compris. Sans IA : seulement la photo elle-même.
 - **Bords du panorama déformés** (Fusion, Panorama, « Déformer les bords », ou
   `luma merge --pano … --warp`) : au lieu de rogner les bords irréguliers d'un
   panorama, LÜMA les étire doucement pour remplir tout le rectangle ; on garde toute la
