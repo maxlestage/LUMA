@@ -121,6 +121,10 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Réduction du bruit par ondelettes** : la case « Ondelettes » du Détail lisse la
+  luminance échelle par échelle, chacune selon le bruit mesuré sur la photo ; à force
+  égale, plus de texture et de contours gardés que le filtre habituel (3,7 dB de mieux
+  sur nos essais), pour environ deux fois son temps. Sans IA.
 - **Verticales automatiques** (Maj+V, ou le bouton de la Transformation) : un
   bâtiment photographié en visant vers le haut retrouve des murs droits ; LÜMA
   mesure où ses verticales se rejoignent et règle la Verticale en conséquence.

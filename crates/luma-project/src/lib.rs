@@ -167,6 +167,10 @@ pub struct Detail {
     pub luminance_nr: f32,
     pub luminance_nr_detail: f32,
     pub luminance_nr_contrast: f32,
+    /// Luminance par ondelettes (plus fin, environ deux fois plus lent) plutôt que par le filtre
+    /// guidé ; faux par défaut, ce qui garde le rendu des photos déjà réglées.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub luminance_nr_wavelets: bool,
     /// Réduction du bruit de couleur : 0 à 100, détail, lissage.
     pub color_nr: f32,
     pub color_nr_detail: f32,
@@ -184,6 +188,7 @@ impl Default for Detail {
             luminance_nr: 0.0,
             luminance_nr_detail: 50.0,
             luminance_nr_contrast: 0.0,
+            luminance_nr_wavelets: false,
             color_nr: 25.0,
             color_nr_detail: 50.0,
             color_nr_smoothness: 50.0,
