@@ -469,6 +469,7 @@ impl Worker {
                                 luma_merge::StackMode::Median => "Mediane",
                                 luma_merge::StackMode::Maximum => "Maximum",
                                 luma_merge::StackMode::Mean => "Empilement",
+                                luma_merge::StackMode::Hdr => "HDR",
                             },
                         ),
                         MergeKind::Panorama(p) => (
