@@ -446,13 +446,37 @@ impl Logo {
         ))
     }
 
+    /// Le logo lu une seule fois pour tout un export par lot : le dernier fichier lu
+    /// est gardé, tant que sa taille et sa date ne changent pas.
+    pub fn load_cached(&self) -> Result<std::sync::Arc<LogoImage>, String> {
+        type Kept = Option<(
+            (std::path::PathBuf, u64, std::time::SystemTime),
+            std::sync::Arc<LogoImage>,
+        )>;
+        static LAST: std::sync::Mutex<Kept> = std::sync::Mutex::new(None);
+        let meta = std::fs::metadata(&self.path).map_err(|e| format!("logo {} : {e}", self.path.display()))?;
+        let key = (
+            self.path.clone(),
+            meta.len(),
+            meta.modified().unwrap_or(std::time::UNIX_EPOCH),
+        );
+        if let Some((k, logo)) = LAST.lock().expect("logo").as_ref()
+            && *k == key
+        {
+            return Ok(logo.clone());
+        }
+        let logo = std::sync::Arc::new(self.load()?);
+        *LAST.lock().expect("logo") = Some((key, logo.clone()));
+        Ok(logo)
+    }
+
     /// Pose le logo sur l'image (linéaire, à sa taille finale).
     pub fn apply(&self, img: &mut RgbImage) -> Result<(), String> {
         let opacity = self.opacity.clamp(0.0, 1.0);
         if opacity <= 0.0 || img.width < 8 || img.height < 8 {
             return Ok(());
         }
-        let logo = self.load()?;
+        let logo = self.load_cached()?;
         logo.apply(img, self.position, self.size, opacity);
         Ok(())
     }
@@ -779,6 +803,26 @@ mod tests {
             Logo::new(&path).describe(),
             "logo logo.png, en bas à droite, 12 %, 80 %"
         );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_batch_reads_its_logo_once() {
+        let dir = std::env::temp_dir().join(format!("luma-logo-lot-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("signature.png");
+        image::RgbaImage::from_pixel(8, 4, image::Rgba([255, 255, 255, 200]))
+            .save(&path)
+            .unwrap();
+        let logo = Logo::new(&path);
+        let (a, b) = (logo.load_cached().unwrap(), logo.load_cached().unwrap());
+        assert!(std::sync::Arc::ptr_eq(&a, &b), "une seule lecture");
+        assert_eq!(a.data, logo.load().unwrap().data, "le même logo qu'une lecture directe");
+        // Le fichier change : il est relu.
+        image::RgbaImage::from_pixel(16, 4, image::Rgba([0, 0, 0, 255]))
+            .save(&path)
+            .unwrap();
+        assert_eq!(logo.load_cached().unwrap().width, 16);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
