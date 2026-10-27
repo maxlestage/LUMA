@@ -574,6 +574,9 @@ pub struct Studio {
     /// Les photos importées depuis Photos déjà vues (voir `watch_imports`).
     imports_seen: usize,
     imports_failed: usize,
+    /// Les touchers reçus du système (diagnostic sur iPhone) et le dernier.
+    touches: usize,
+    last_touch: Option<egui::Pos2>,
     /// Jusqu'à quand guetter les photos d'un import Photos (il en arrive une à une).
     imports_until: f64,
     /// Le bouton « Importer des photos » (iPhone, iPad) est affiché : vrai là où le
@@ -835,6 +838,8 @@ impl Studio {
             memory_check: 0.0,
             imports_seen: 0,
             imports_failed: 0,
+            touches: 0,
+            last_touch: None,
             imports_until: 0.0,
             photos_button: luma_apple::photos::AVAILABLE,
             import_asks: 0,
@@ -3173,6 +3178,9 @@ impl Studio {
         self.handle_events(&ctx);
         self.watch_memory(&ctx);
         self.watch_imports(&ctx);
+        if TOUCH {
+            self.track_touches(&ctx);
+        }
         // Les vignettes libérées qui se sont affichées vides : on les relit.
         for p in self.shown_missing.take() {
             if self.evicted.remove(&p) {
@@ -5935,6 +5943,35 @@ impl Studio {
         .fill(theme::ACCENT)
         .corner_radius(24.0);
         let r = ui.put(rect, button);
+        // Un doigt levé sur le bouton suffit, même si egui n'y a pas vu de clic (un
+        // doigt bouge un peu, ou l'appui a duré) : le toucher brut du système compte.
+        let lifted = ui.input(|i| {
+            i.events.iter().any(|e| match e {
+                egui::Event::Touch {
+                    phase: egui::TouchPhase::End,
+                    pos,
+                    ..
+                } => rect.expand(12.0).contains(*pos),
+                _ => false,
+            })
+        });
+        if TOUCH {
+            // Diagnostic, le temps de vérifier l'import sur un vrai iPhone.
+            let text = match self.last_touch {
+                Some(p) => format!(
+                    "touchers reçus : {} · dernier à {:.0}, {:.0}",
+                    self.touches, p.x, p.y
+                ),
+                None => "touchers reçus : 0".to_owned(),
+            };
+            ui.painter().text(
+                pos2(rect.center().x, rect.max.y + 14.0),
+                egui::Align2::CENTER_TOP,
+                text,
+                egui::FontId::proportional(11.0),
+                theme::DIM,
+            );
+        }
         // Pour les essais sur simulateur : où toucher (en points), une fois.
         static SHOWN: std::sync::Once = std::sync::Once::new();
         SHOWN.call_once(|| {
@@ -5944,10 +5981,50 @@ impl Studio {
                 rect.center().y
             ))
         });
-        if r.clicked() {
-            crate::journal("bouton importer : touché");
+        if r.clicked() || lifted {
+            crate::journal(&format!(
+                "bouton importer : touché (clic {}, doigt levé {lifted})",
+                r.clicked()
+            ));
             self.act("open");
         }
+    }
+
+    /// Note les touchers que le système transmet (les 40 premiers dans le journal).
+    fn track_touches(&mut self, ctx: &egui::Context) {
+        let screen = ctx.content_rect();
+        let ppp = ctx.pixels_per_point();
+        ctx.input(|i| {
+            for e in &i.events {
+                let (what, pos) = match e {
+                    egui::Event::Touch { phase, pos, .. } => (format!("toucher {phase:?}"), *pos),
+                    egui::Event::PointerButton { pressed, pos, .. } => (
+                        format!("pointeur {}", if *pressed { "appuyé" } else { "relâché" }),
+                        *pos,
+                    ),
+                    _ => continue,
+                };
+                if matches!(
+                    e,
+                    egui::Event::Touch {
+                        phase: egui::TouchPhase::Start,
+                        ..
+                    }
+                ) {
+                    self.touches += 1;
+                    self.last_touch = Some(pos);
+                }
+                if self.touches <= 40 {
+                    crate::journal(&format!(
+                        "{what} à {:.0}, {:.0} (écran {:.0}×{:.0} points, ×{ppp})",
+                        pos.x,
+                        pos.y,
+                        screen.width(),
+                        screen.height()
+                    ));
+                }
+            }
+        });
     }
 
     fn viewer(&mut self, ui: &mut Ui) {
