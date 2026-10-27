@@ -156,6 +156,10 @@ La fototeca profesional, paso a paso.
   desactivarlo), Esc para salir. Las etiquetas se escriben en el XMP con los nombres
   del formato, que leen los demás programas de fotos, y se buscan en francés, inglés
   o español.
+- **Comparación** (C): 2 a 4 fotos lado a lado o en cuadrícula (las elegidas, si no
+  la foto abierta y la siguiente), cada una revelada con sus ajustes; el zoom y el
+  desplazamiento son comunes a todas, la lupa (L) amplía el mismo punto de cada una,
+  un clic abre la foto.
 
 ## 0.2.0 — octubre de 2026
 
