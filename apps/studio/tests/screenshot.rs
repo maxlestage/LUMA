@@ -1387,6 +1387,65 @@ fn colors_matched_to_another_photo() {
 }
 
 #[test]
+fn guided_upright() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("redressement-guide") else {
+        return;
+    };
+    s.studio().tool = luma_studio::app::Tool::Geometry;
+    s.wait();
+    s.harness.get_by_label("Redressement guidé").click();
+    s.wait();
+    assert!(s.studio().guiding);
+    // Une arête presque verticale, tracée en glissant sur la photo (penchée de 3 %).
+    let drag = |s: &mut Session, a: egui::Pos2, b: egui::Pos2| {
+        let events = [
+            egui::Event::PointerMoved(a),
+            egui::Event::PointerButton {
+                pos: a,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: NONE,
+            },
+            egui::Event::PointerMoved(a.lerp(b, 0.5)),
+            egui::Event::PointerMoved(b),
+            egui::Event::PointerButton {
+                pos: b,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: NONE,
+            },
+        ];
+        for e in events {
+            s.harness.input_mut().events.push(e);
+            s.harness.step();
+        }
+        s.wait();
+    };
+    drag(&mut s, egui::pos2(500.0, 220.0), egui::pos2(512.0, 620.0));
+    assert_eq!(s.studio().guides.len(), 1);
+    assert!(s.studio().guides[0].vertical);
+    let r = s.studio().settings.transform.rotate;
+    assert!(r.abs() > 0.5, "rotation {r}");
+    assert_eq!(
+        s.studio().settings.transform.vertical,
+        0.0,
+        "une ligne : la rotation seule"
+    );
+    // Une deuxième verticale, qui converge vers le haut : la Verticale s'en mêle.
+    drag(&mut s, egui::pos2(850.0, 620.0), egui::pos2(830.0, 220.0));
+    assert_eq!(s.studio().guides.len(), 2);
+    assert!(s.studio().settings.transform.vertical != 0.0);
+    s.capture("redressement-guide");
+    // Terminé : les lignes s'effacent, la Transformation reste.
+    s.harness.get_by_label("Terminer le tracé").click();
+    s.wait();
+    assert!(!s.studio().guiding && s.studio().guides.is_empty());
+    assert!(s.studio().settings.transform.vertical != 0.0);
+    s.capture("redressement-guide-fini");
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {
