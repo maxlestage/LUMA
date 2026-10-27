@@ -791,7 +791,7 @@ fn thumbnail_loop(
             Err(TryRecvError::Disconnected) => return,
             Err(TryRecvError::Empty) => {
                 if let Some(p) = pending.pop_front() {
-                    render_thumbnail(&p, &sender, &repaint);
+                    guarded(&p, || render_thumbnail(&p, &sender, &repaint));
                     continue;
                 }
                 match queue.recv() {
@@ -800,18 +800,28 @@ fn thumbnail_loop(
                 }
             }
         };
-        if saved_thumbnail(&path, &sender, &repaint) {
-            continue;
-        }
-        // Une photo retouchée attend son vrai rendu : l'aperçu intégré au RAW la
-        // montrerait sans ses retouches.
-        let edited =
-            read_sidecar(&path).is_some_and(|s| luma_project::presets::summary(&s).is_edited());
-        if !edited && quick_thumbnail(&path, &sender, &repaint) {
-            pending.push_back(path);
-        } else {
-            render_thumbnail(&path, &sender, &repaint);
-        }
+        guarded(&path, || {
+            if saved_thumbnail(&path, &sender, &repaint) {
+                return;
+            }
+            // Une photo retouchée attend son vrai rendu : l'aperçu intégré au RAW la
+            // montrerait sans ses retouches.
+            let edited =
+                read_sidecar(&path).is_some_and(|s| luma_project::presets::summary(&s).is_edited());
+            if !edited && quick_thumbnail(&path, &sender, &repaint) {
+                pending.push_back(path.clone());
+            } else {
+                render_thumbnail(&path, &sender, &repaint);
+            }
+        });
+    }
+}
+
+/// Une vignette à l'abri : un fichier qui fait échouer le décodeur n'arrête pas le fil
+/// des vignettes (sinon plus aucune n'arriverait jusqu'à la fin de la séance).
+fn guarded(path: &Path, f: impl FnOnce()) {
+    if std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).is_err() {
+        eprintln!("LÜMA : vignette de {} : échec du décodage", path.display());
     }
 }
 
@@ -878,12 +888,28 @@ fn thumbnail_file(path: &Path) -> Option<PathBuf> {
 /// La vignette rendue par LÜMA, avec les réglages de la photo ; enregistrée pour les
 /// visites suivantes.
 fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() + Send + Sync>) {
-    let Ok(photo) = crate::dialogs::open_photo(path) else {
-        return;
+    // Une vignette impossible (fichier illisible, rendu en échec) le dit, au lieu de
+    // laisser la case vide sans raison.
+    let photo = match crate::dialogs::open_photo(path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!(
+                "LÜMA : vignette de {} : ouverture impossible ({e})",
+                path.display()
+            );
+            return;
+        }
     };
     let settings = read_sidecar(path).unwrap_or_else(|| photo.default_settings());
-    let Ok(r) = photo.render(&settings, Size::Fit(320), &Cancel::new()) else {
-        return;
+    let r = match photo.render(&settings, Size::Fit(320), &Cancel::new()) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!(
+                "LÜMA : vignette de {} : rendu impossible ({e})",
+                path.display()
+            );
+            return;
+        }
     };
     let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
     if let Some(file) = thumbnail_file(path) {
