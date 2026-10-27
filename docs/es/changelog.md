@@ -13,7 +13,8 @@ La fototeca profesional, paso a paso.
   2,6 veces más rápida, archivos idénticos byte a byte; una exportación a resolución
   completa de 24 Mpx en 1,8 s en lugar de 2,4. Después la etapa de renderizado,
   calculada de ocho en ocho píxeles: de 1,8 a 1,9 veces más rápida (NEF 160 → 85 ms),
-  archivos idénticos byte a byte.
+  archivos idénticos byte a byte. Después el color (perfil y Saturación), igual: tres
+  veces más rápido (NEF 147 → 48 ms).
 
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
