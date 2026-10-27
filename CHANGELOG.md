@@ -157,6 +157,10 @@ La photothèque professionnelle, étape par étape.
   pour le reste (rétablir, copier, coller, réinitialiser, langue) ; un bouton « Avant »
   qui dit ce qu'il montre ; chaque outil nommé sous son icône ; dans la feuille des
   outils, les curseurs d'abord.
+- **« Importer des photos » sur iPhone et iPad** : le sélecteur de Photos s'ouvre
+  depuis la fenêtre de LÜMA elle‑même, et non plus depuis une fenêtre cherchée parmi
+  celles de l'app (sur un appareil, celle du clavier ou de TestFlight ne montre rien) ;
+  s'il ne s'affiche pas, LÜMA le dit au lieu de rester muette.
 - **LÜMA Premium dans l'App Store** (iPhone et iPad) : les deux abonnements à leur
   prix App Store, « S'abonner » et « Restaurer les achats » ; chaque achat et
   renouvellement ouvre Premium. Sur iPhone et iPad, seul l'App Store vend
