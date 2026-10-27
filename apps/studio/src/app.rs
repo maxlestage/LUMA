@@ -29,6 +29,7 @@ use luma_render::{Photo, Size};
 use crate::crop;
 use crate::i18n::{tr, trf};
 use crate::icons::{self, Icon};
+use crate::liquifying;
 use crate::masking;
 use crate::retouching;
 use crate::widgets::{self, Change, SliderSpec, Track, format_value, theme};
@@ -766,6 +767,11 @@ pub struct Studio {
     mixer_tab: usize,
     /// L'outil de retouche actif (Q) : un clic sur la photo pose une retouche.
     pub retouch: Option<luma_project::SpotKind>,
+    /// La fluidité : le pinceau choisi (pousser, gonfler, dégonfler), sa taille (en
+    /// fraction de la largeur) et sa force.
+    pub liquify: Option<luma_project::WarpKind>,
+    pub liquify_radius: f32,
+    pub liquify_strength: f32,
     /// La retouche choisie.
     pub selected_spot: Option<usize>,
     /// Le rayon des nouvelles retouches, en fraction de la largeur.
@@ -1081,6 +1087,9 @@ impl Studio {
             guide_start: None,
             mixer_tab: 0,
             retouch: None,
+            liquify: None,
+            liquify_radius: 0.06,
+            liquify_strength: 50.0,
             selected_spot: None,
             spot_radius: 0.02,
             show_dust: false,
@@ -4468,6 +4477,8 @@ impl Studio {
                     self.export_open = false;
                 } else if self.paste_open {
                     self.paste_open = false;
+                } else if self.liquify.is_some() {
+                    self.liquify = None;
                 } else if self.retouch.is_some() || self.selected_spot.is_some() || self.show_dust {
                     self.retouch = None;
                     self.selected_spot = None;
@@ -4498,7 +4509,35 @@ impl Studio {
                     self.zoom = false;
                     self.selected_mask = None;
                     self.crop_tool = None;
+                    self.liquify = None;
                 }
+            }
+            "liquify_push" | "liquify_bloat" | "liquify_pucker" if self.photo.is_some() => {
+                use luma_project::WarpKind;
+                let kind = match action {
+                    "liquify_bloat" => WarpKind::Bloat,
+                    "liquify_pucker" => WarpKind::Pucker,
+                    _ => WarpKind::Push,
+                };
+                // Le même bouton une seconde fois : le pinceau se range.
+                self.liquify = if self.liquify == Some(kind) {
+                    None
+                } else {
+                    Some(kind)
+                };
+                if self.liquify.is_some() {
+                    self.set_tool(Tool::Masks);
+                    self.zoom = false;
+                    self.selected_mask = None;
+                    self.selected_spot = None;
+                    self.retouch = None;
+                    self.crop_tool = None;
+                }
+            }
+            "liquify_clear" if !self.settings.liquify.is_empty() => {
+                self.settings.liquify.clear();
+                self.commit(tr("Fluidité effacée").into());
+                self.touch();
             }
             "mask_linear" | "mask_radial" | "mask_brush" | "mask_full" | "mask_sky"
                 if self.photo.is_some() =>
@@ -4520,6 +4559,7 @@ impl Studio {
                 self.selected_mask = Some(self.settings.masks.len() - 1);
                 self.retouch = None;
                 self.selected_spot = None;
+                self.liquify = None;
                 self.commit(label);
                 self.touch();
             }
@@ -8859,6 +8899,24 @@ impl Studio {
                 let name = tr(&self.settings.masks[i].name).to_lowercase();
                 self.commit(trf("Masque : {mask}", &[("mask", &name)]));
             }
+        } else if let Some(kind) = self.liquify.filter(|_| self.tool == Tool::Masks) {
+            let target = fit(rect.shrink(18.0), iw, ih);
+            painter.image(t.id(), target, uv, Color32::WHITE);
+            self.edit_label(&painter, target);
+            let c = liquifying::edit(
+                ui,
+                target,
+                &mut self.settings.liquify,
+                kind,
+                self.liquify_radius,
+                self.liquify_strength,
+            );
+            if c.changed {
+                self.touch();
+            }
+            if c.committed {
+                self.commit(tr("Fluidité").into());
+            }
         } else if self.tool == Tool::Masks
             && (self.retouch.is_some() || self.selected_spot.is_some())
         {
@@ -8981,6 +9039,8 @@ impl Studio {
                 }
                 _ => tr("Masque : tirer les poignées, O pour voir le masque, Échap pour quitter"),
             });
+        } else if self.tool == Tool::Masks && self.liquify.is_some() {
+            badges.push(tr("Fluidité : glissez sur la photo, Échap pour quitter"));
         } else if self.tool == Tool::Masks && self.retouch.is_some() {
             badges.push(tr(
                 "Retouche : cliquez une tache, tirez la zone ou sa source, Échap pour quitter",
@@ -9153,7 +9213,7 @@ impl Studio {
     /// celle qui est choisie.
     fn retouch_panel(&mut self, ui: &mut Ui, commits: &mut Vec<String>) {
         use luma_project::SpotKind;
-        let open = self.retouch.is_some() || self.selected_spot.is_some();
+        let open = self.retouch.is_some() || self.selected_spot.is_some() || self.liquify.is_some();
         egui::CollapsingHeader::new(RichText::new(tr("Retouche")).strong())
             .id_salt("Retouche")
             .open(open.then_some(true))
@@ -9221,6 +9281,57 @@ impl Studio {
                     track: Track::Plain,
                     log: false,
                 };
+                // La fluidité : trois pinceaux qui déforment la photo.
+                ui.label(RichText::new(tr("Fluidité")).size(12.0).color(theme::DIM));
+                ui.horizontal_wrapped(|ui| {
+                    use luma_project::WarpKind;
+                    for (kind, label, hint, action) in [
+                        (
+                            WarpKind::Push,
+                            tr("Pousser"),
+                            tr("Glissez : la photo suit le pinceau"),
+                            "liquify_push",
+                        ),
+                        (
+                            WarpKind::Bloat,
+                            tr("Gonfler"),
+                            tr("Cliquez ou glissez : la zone grandit depuis son centre"),
+                            "liquify_bloat",
+                        ),
+                        (
+                            WarpKind::Pucker,
+                            tr("Dégonfler"),
+                            tr("Cliquez ou glissez : la zone se resserre vers son centre"),
+                            "liquify_pucker",
+                        ),
+                    ] {
+                        if ui
+                            .selectable_label(self.liquify == Some(kind), label)
+                            .on_hover_text(hint)
+                            .clicked()
+                        {
+                            self.act(action);
+                        }
+                    }
+                    let n = self.settings.liquify.len();
+                    if n > 0
+                        && ui
+                            .button(tr("Effacer|fluidité"))
+                            .on_hover_text(trf(
+                                "Retire les {n} coups de pinceau de la fluidité",
+                                &[("n", &n.to_string())],
+                            ))
+                            .clicked()
+                    {
+                        self.act("liquify_clear");
+                    }
+                });
+                if self.liquify.is_some() {
+                    let mut size = self.liquify_radius * 100.0;
+                    widgets::slider(ui, &spec("Taille", 1.0, 30.0, 6.0, 1), &mut size);
+                    self.liquify_radius = size / 100.0;
+                    widgets::slider(ui, &spec("Force", 1.0, 100.0, 50.0, 0), &mut self.liquify_strength);
+                }
                 let selected = self
                     .selected_spot
                     .filter(|&i| i < self.settings.spots.len());
@@ -9483,6 +9594,7 @@ impl Studio {
                     if s.is_some() {
                         self.retouch = None;
                         self.selected_spot = None;
+                        self.liquify = None;
                     }
                 }
                 let Some(i) = self
