@@ -524,6 +524,11 @@ pub struct Studio {
     /// La fenêtre « Coller une partie des réglages » et les groupes cochés (gardés
     /// d'une fois sur l'autre).
     paste_open: bool,
+    /// La fenêtre « Renommer », son modèle (gardé d'une fois sur l'autre) et l'aperçu
+    /// des nouveaux noms pour ce modèle.
+    rename_open: bool,
+    rename_template: String,
+    rename_preview: Option<(String, Result<luma_render::rename::Plan, String>)>,
     /// Les champs des informations (IPTC) en cours de saisie, et les photos qu'ils visent.
     info_edit: HashMap<&'static str, String>,
     info_for: Vec<PathBuf>,
@@ -831,6 +836,9 @@ impl Studio {
             history_pos: 0,
             clipboard: None,
             paste_open: false,
+            rename_open: false,
+            rename_template: "{date}_{séquence}".into(),
+            rename_preview: None,
             info_edit: HashMap::new(),
             info_for: Vec::new(),
             templates: crate::dialogs::presets_dir()
@@ -1442,6 +1450,180 @@ impl Studio {
     }
 
     /// Les photos choisies, sauf celle ouverte (la source d'une synchronisation).
+    /// Les photos à renommer : celles qui sont choisies (la photo ouverte comprise), sinon
+    /// la photo ouverte ; dans l'ordre du film.
+    fn rename_targets(&self) -> Vec<PathBuf> {
+        let mut rows: BTreeSet<usize> = self.selected.clone();
+        rows.extend(self.current);
+        rows.iter()
+            .filter_map(|i| self.folder.get(*i).cloned())
+            .collect()
+    }
+
+    /// Le plan du renommage de ces photos selon `template` : ce que la photothèque sait
+    /// de chacune (sinon son en‑tête, lu tout de suite), sa note et son libellé du moment.
+    fn rename_plan(&self, template: &str) -> Result<luma_render::rename::Plan, String> {
+        let fields: Vec<(PathBuf, luma_render::export::NameFields)> = self
+            .rename_targets()
+            .into_iter()
+            .map(|p| {
+                let source = luma_project::copies::source(&p);
+                let entry = self
+                    .catalog
+                    .get(&source)
+                    .cloned()
+                    .unwrap_or_else(|| luma_library::entry_of(&source));
+                let meta = self.meta.get(&p).cloned().unwrap_or_default();
+                let f = luma_render::export::NameFields::of_details(
+                    &p,
+                    &entry.date,
+                    &entry.make,
+                    &entry.model,
+                    &entry.lens,
+                    entry.iso,
+                    meta.rating,
+                    &meta.label,
+                );
+                (p, f)
+            })
+            .collect();
+        luma_render::rename::plan(&fields, template)
+    }
+
+    /// Renomme les photos choisies (sinon la photo ouverte) d'après `template` : leurs
+    /// fichiers, XMP et copies virtuelles ; le film, la photothèque et les vignettes
+    /// suivent. Rend le nombre de photos renommées.
+    pub fn rename_photos(&mut self, template: &str) -> Result<usize, String> {
+        // Les réglages en attente vont au XMP avant qu'il change de nom.
+        self.flush_xmp();
+        let plan = self.rename_plan(template)?;
+        if plan.files.is_empty() {
+            return Ok(0);
+        }
+        luma_render::rename::apply(&plan)?;
+        for m in &plan.photos {
+            self.catalog.rename(&m.from, &m.to);
+            for map in [&mut self.thumbs] {
+                if let Some(t) = map.remove(&m.from) {
+                    map.insert(m.to.clone(), t);
+                }
+            }
+            if let Some(v) = self.meta.remove(&m.from) {
+                self.meta.insert(m.to.clone(), v);
+            }
+            if let Some(v) = self.edits.remove(&m.from) {
+                self.edits.insert(m.to.clone(), v);
+            }
+        }
+        if let Some(file) = &self.catalog_path {
+            let _ = self.catalog.save(file);
+        }
+        self.refresh_catalog_lists();
+        let current = self.current_path().map(|p| plan.renamed(p));
+        let photos: Vec<PathBuf> = self.folder.iter().map(|p| plan.renamed(p)).collect();
+        let status = self.status.clone();
+        self.show_photos(photos, current, status);
+        self.rename_preview = None;
+        Ok(plan.photos.len())
+    }
+
+    /// La fenêtre « Renommer » : le modèle, ses repères, les premiers noms obtenus.
+    fn rename_window(&mut self, ctx: &egui::Context) {
+        let mut open = self.rename_open;
+        let mut go = false;
+        let count = self.rename_targets().len();
+        egui::Window::new(trf("Renommer {n} photos", &[("n", &count)]))
+            .id(egui::Id::unique("fenetre-renommer"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_width(380.0);
+                ui.label(RichText::new(tr("Modèle")).size(11.5).color(theme::DIM));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.rename_template)
+                        .desired_width(f32::INFINITY),
+                );
+                let tokens: Vec<String> = luma_render::export::tokens()
+                    .map(|t| format!("{{{t}}}"))
+                    .collect();
+                ui.label(
+                    RichText::new(tokens.join(" "))
+                        .size(10.5)
+                        .color(theme::DIM),
+                );
+                ui.add_space(6.0);
+                let stale = self
+                    .rename_preview
+                    .as_ref()
+                    .is_none_or(|(t, _)| *t != self.rename_template);
+                if stale {
+                    let plan = self.rename_plan(&self.rename_template);
+                    self.rename_preview = Some((self.rename_template.clone(), plan));
+                }
+                let mut ready = false;
+                match self.rename_preview.as_ref().map(|(_, p)| p) {
+                    Some(Ok(plan)) => {
+                        ready = !plan.files.is_empty();
+                        let name = |p: &Path| {
+                            p.file_name()
+                                .map(|n| n.to_string_lossy().into_owned())
+                                .unwrap_or_default()
+                        };
+                        for m in plan.photos.iter().take(5) {
+                            ui.label(
+                                RichText::new(format!("{}  →  {}", name(&m.from), name(&m.to)))
+                                    .size(11.0)
+                                    .monospace(),
+                            );
+                        }
+                        if plan.photos.len() > 5 {
+                            ui.label(
+                                RichText::new(trf(
+                                    "… et {n} autres",
+                                    &[("n", &(plan.photos.len() - 5))],
+                                ))
+                                .size(11.0)
+                                .color(theme::DIM),
+                            );
+                        }
+                        if !ready {
+                            ui.label(
+                                RichText::new(tr("Les noms ne changent pas."))
+                                    .size(11.0)
+                                    .color(theme::DIM),
+                            );
+                        }
+                    }
+                    Some(Err(e)) => {
+                        ui.colored_label(Color32::from_rgb(255, 120, 100), e);
+                    }
+                    None => {}
+                }
+                ui.add_space(8.0);
+                ui.label(
+                    RichText::new(tr(
+                        "Le RAW et le JPEG d'une même prise gardent un même nom ; le XMP et les copies virtuelles suivent.",
+                    ))
+                    .size(10.5)
+                    .color(theme::DIM),
+                );
+                ui.add_space(6.0);
+                go = ui
+                    .add_enabled(ready, egui::Button::new(tr("Renommer")))
+                    .clicked();
+            });
+        if go {
+            let template = self.rename_template.clone();
+            match self.rename_photos(&template) {
+                Ok(n) => self.status = trf("{n} photos renommées", &[("n", &n)]),
+                Err(e) => self.status = trf("Renommage impossible : {error}", &[("error", &e)]),
+            }
+        }
+        self.rename_open = open && !go;
+    }
+
     fn sync_targets(&self) -> Vec<PathBuf> {
         let current = self.current_path().map(Path::to_path_buf);
         self.selected
@@ -1546,6 +1728,13 @@ impl Studio {
                 .clicked()
             {
                 self.auto_balance_selected();
+            }
+            if ui
+                .small_button(tr("Renommer…"))
+                .on_hover_text(tr("Renommer les photos choisies d'après un modèle"))
+                .clicked()
+            {
+                self.rename_open = true;
             }
         });
         ui.add_space(6.0);
@@ -3402,6 +3591,9 @@ impl Studio {
         }
         if self.paste_open && allowed {
             self.paste_window(&ctx);
+        }
+        if self.rename_open && allowed {
+            self.rename_window(&ctx);
         }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
@@ -5544,6 +5736,13 @@ impl Studio {
                     .clicked()
             {
                 self.delete_copy();
+            }
+            if ui
+                .small_button(tr("Renommer…"))
+                .on_hover_text(tr("Renommer les photos choisies d'après un modèle"))
+                .clicked()
+            {
+                self.rename_open = true;
             }
         });
         let meta = self.current_meta();

@@ -12,6 +12,7 @@
 //! luma presets [dossier]            exporte les 100 films en préréglages XMP
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
+//! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
 //! luma colorchecker <raw>           la fidélité des couleurs, sur la photo d'une charte
 //! luma licence-keys                 une paire de clés pour signer les licences
 //! ```
@@ -85,6 +86,12 @@ USAGE
       Surveille un dossier (prise de vue en connexion, carte copiée) : chaque photo
       arrivée, une fois complète, entre dans la photothèque et s'affiche (boîtier,
       objectif, réglages). Relevé toutes les secondes par défaut ; Ctrl+C pour arrêter.
+  luma rename <photo>… --name modèle [--dry-run] [--catalog f.lumacat]
+      Renomme les photos d'après un modèle, dans l'ordre de prise de vue : les repères de
+      --name de l'export ({date}_{séquence}, {boîtier}-{nom}…). Le RAW et le JPEG d'une
+      même prise gardent un même nom ; le XMP et les copies virtuelles suivent ; un nom
+      déjà pris reçoit -2. Au moindre échec, tout revient comme avant. --dry-run montre
+      les nouveaux noms sans rien renommer. La photothèque suit.
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -1280,6 +1287,62 @@ fn watch(args: Vec<String>) -> Result<(), String> {
     }
 }
 
+/// Renomme des photos par lot.
+fn rename(args: Vec<String>) -> Result<(), String> {
+    let mut template = None;
+    let mut dry = false;
+    let mut file = None;
+    let mut photos = Vec::new();
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--name" => template = Some(it.next().ok_or("--name : modèle attendu")?),
+            "--dry-run" | "-n" => dry = true,
+            "--catalog" => file = Some(PathBuf::from(it.next().ok_or("--catalog : fichier attendu")?)),
+            _ => photos.push(PathBuf::from(a)),
+        }
+    }
+    let template = template.ok_or("il faut un modèle (--name \"{date}_{séquence}\")")?;
+    if photos.is_empty() {
+        return Err("aucune photo à renommer".into());
+    }
+    // Dans l'ordre de prise de vue, comme la photothèque les range.
+    let mut entries: Vec<luma_library::Entry> = photos.iter().map(|p| luma_library::entry_of(p)).collect();
+    entries.sort_by(|a, b| a.date.cmp(&b.date).then_with(|| a.path.cmp(&b.path)));
+    let fields: Vec<(PathBuf, export::NameFields)> = entries
+        .iter()
+        .map(|e| {
+            let f =
+                export::NameFields::of_details(&e.path, &e.date, &e.make, &e.model, &e.lens, e.iso, e.rating, &e.label);
+            (e.path.clone(), f)
+        })
+        .collect();
+    let plan = luma_render::rename::plan(&fields, &template)?;
+    for m in &plan.photos {
+        let name = |p: &Path| {
+            p.file_name()
+                .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+        };
+        println!("{}\t→ {}", name(&m.from), name(&m.to));
+    }
+    if dry || plan.files.is_empty() {
+        if plan.files.is_empty() {
+            eprintln!("rien à renommer");
+        }
+        return Ok(());
+    }
+    luma_render::rename::apply(&plan)?;
+    eprintln!("{} fichiers renommés", plan.files.len());
+    if let Some(file) = file.or_else(luma_library::default_path).filter(|f| f.is_file()) {
+        let mut catalog = luma_library::Catalog::load(&file);
+        for m in &plan.photos {
+            catalog.rename(&m.from, &m.to);
+        }
+        catalog.save(&file).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Décrit un profil ICC.
 fn icc(path: &Path) -> Result<(), String> {
     use luma_color::profile::{Class, Intent, Pcs, Profile, Space, xyz_to_lab};
@@ -1460,6 +1523,15 @@ fn main() -> ExitCode {
             }
         }
         return if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE };
+    }
+    if command == "rename" {
+        return match rename(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
     }
     if command == "catalog" {
         return match catalog(args.collect()) {

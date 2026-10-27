@@ -427,6 +427,33 @@ impl NameFields {
         }
     }
 
+    /// Ce que la photothèque sait d'une photo, sans l'ouvrir : la date de prise de vue
+    /// (`AAAA-MM-JJTHH:MM:SS`, celle du catalogue), le boîtier, l'objectif, l'ISO, la note
+    /// et le libellé.
+    #[allow(clippy::too_many_arguments)]
+    pub fn of_details(
+        source: &Path,
+        date: &str,
+        make: &str,
+        model: &str,
+        lens: &str,
+        iso: Option<u32>,
+        rating: u8,
+        label: &str,
+    ) -> NameFields {
+        let mut f = NameFields::of_file(source);
+        if let Some(d) = exif_date(date) {
+            f.date = Some(d);
+        }
+        f.make = make.trim().to_owned();
+        f.model = model.trim().to_owned();
+        f.lens = lens.trim().to_owned();
+        f.iso = iso;
+        f.rating = rating;
+        f.label = label.to_owned();
+        f
+    }
+
     /// Tout ce que l'on sait d'une photo ouverte : son EXIF, sa note et son libellé.
     pub fn of_photo(source: &Path, photo: &Photo, meta: &luma_project::xmp::Meta, sequence: usize) -> NameFields {
         let raw = photo.raw();
@@ -445,8 +472,9 @@ impl NameFields {
     }
 }
 
-/// Une date EXIF (`2026:10:26 14:03:00`, ou avec des tirets) en ses six nombres.
-fn exif_date(s: &str) -> Option<[u32; 6]> {
+/// Une date EXIF (`2026:10:26 14:03:00`, ou avec des tirets, comme celles du
+/// catalogue) en ses six nombres.
+pub fn exif_date(s: &str) -> Option<[u32; 6]> {
     let mut n = [0u32; 6];
     let mut parts = s.split(|c: char| !c.is_ascii_digit()).filter(|p| !p.is_empty());
     for (i, v) in n.iter_mut().enumerate() {

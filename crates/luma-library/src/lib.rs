@@ -296,6 +296,27 @@ impl Catalog {
         update
     }
 
+    /// Une photo renommée (renommage par lot) : son entrée et sa place dans les
+    /// collections manuelles suivent, sans rien relire.
+    pub fn rename(&mut self, from: &Path, to: &Path) {
+        if let Some(mut e) = self.entries.remove(from) {
+            e.path = to.to_path_buf();
+            let (_, modified) = stamp(to);
+            if modified != 0 {
+                e.modified = modified;
+            }
+            e.sidecar = stamp(&xmp::sidecar_path(to)).1;
+            self.entries.insert(to.to_path_buf(), e);
+        }
+        for c in &mut self.collections {
+            if let Content::Manual(list) = &mut c.content {
+                for p in list.iter_mut().filter(|p| *p == from) {
+                    *p = to.to_path_buf();
+                }
+            }
+        }
+    }
+
     /// Relit le XMP d'une photo (après un changement de note ou de mots‑clés dans l'app).
     pub fn refresh_meta(&mut self, path: &Path) {
         if let Some(e) = self.entries.get_mut(path) {
@@ -353,6 +374,14 @@ fn read_meta(sidecar: &Path) -> Meta {
     std::fs::read_to_string(sidecar)
         .map(|t| xmp::read_meta(&t))
         .unwrap_or_default()
+}
+
+/// Ce que le catalogue retient d'une photo, lu tout de suite (sans passer par le
+/// catalogue).
+pub fn entry_of(path: &Path) -> Entry {
+    let (size, modified) = stamp(path);
+    let sidecar = stamp(&xmp::sidecar_path(path)).1;
+    read_entry(path.to_path_buf(), size, modified, sidecar)
 }
 
 fn read_entry(path: PathBuf, size: u64, modified: u64, sidecar: u64) -> Entry {
@@ -442,6 +471,31 @@ mod tests {
         // La plus petite image PNG valide n'est pas nécessaire : seul le nom compte ici,
         // l'en‑tête d'une image développée n'étant pas lu.
         std::fs::write(path, b"\x89PNG\r\n\x1a\n").unwrap();
+    }
+
+    /// Une photo renommée garde son entrée (note, date) et sa place dans une collection
+    /// manuelle.
+    #[test]
+    fn renamed_photo_keeps_entry_and_collections() {
+        let dir = temp("renommage");
+        png(&dir.join("a.png"));
+        let mut cat = Catalog::default();
+        cat.add_folder(&dir, false);
+        let mut c = Collection::manual("Choix");
+        c.content = Content::Manual(vec![dir.join("a.png")]);
+        cat.collections.push(c);
+        let date = cat.get(&dir.join("a.png")).unwrap().date.clone();
+        std::fs::rename(dir.join("a.png"), dir.join("b.png")).unwrap();
+        cat.rename(&dir.join("a.png"), &dir.join("b.png"));
+        assert!(cat.get(&dir.join("a.png")).is_none());
+        let e = cat.get(&dir.join("b.png")).unwrap();
+        assert_eq!((e.path.clone(), e.date.clone()), (dir.join("b.png"), date));
+        assert_eq!(cat.collections[0].content, Content::Manual(vec![dir.join("b.png")]));
+        // Rien à relire ensuite : le fichier renommé est à jour.
+        let u = cat.add_folder(&dir, false);
+        assert_eq!((u.added, u.removed, u.unchanged), (0, 0, 1));
+        assert_eq!(entry_of(&dir.join("b.png")).path, dir.join("b.png"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
