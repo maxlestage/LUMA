@@ -855,9 +855,9 @@ fr = Le développement RAW complet, sur le GPU
 en = Full raw development, on the GPU
 es = Revelado RAW completo, en la GPU
 
-fr = 100 films, vos préréglages, et vos pellicules mesurées
-en = 100 films, your presets, and your measured film stocks
-es = 100 películas, tus ajustes preestablecidos y tus películas medidas
+fr = 150 films, vos préréglages, et vos pellicules mesurées
+en = 150 films, your presets, and your measured film stocks
+es = 150 películas, tus ajustes preestablecidos y tus películas medidas
 
 fr = Masques, films empilés, recadrage et géométrie
 en = Masks, stacked films, crop and geometry
@@ -4258,3 +4258,289 @@ es = Colores igualados: error de {before} a {after}
 fr = Couleurs non accordées : {error}
 en = Colors not matched: {error}
 es = Colores no igualados: {error}
+
+# ----- Les 50 films de la deuxième série -----
+
+fr = Inspiré de Kodak Kodacolor 200 : la pellicule des albums de famille des années 80, chaude et un peu passée.
+en = Inspired by Kodak Kodacolor 200: the film of 1980s family albums, warm and slightly faded.
+es = Inspirada en Kodak Kodacolor 200: la película de los álbumes familiares de los 80, cálida y algo desvaída.
+
+fr = Inspiré de Kodak Portra 160VC : la Portra aux couleurs vives, peaux justes et ciels francs.
+en = Inspired by Kodak Portra 160VC: the vivid-colour Portra, true skin and bold skies.
+es = Inspirada en Kodak Portra 160VC: la Portra de colores vivos, piel fiel y cielos francos.
+
+fr = Inspiré de Kodak Portra 400VC : chaleur de la Portra 400 et saturation plus franche.
+en = Inspired by Kodak Portra 400VC: the warmth of Portra 400 with bolder saturation.
+es = Inspirada en Kodak Portra 400VC: la calidez de la Portra 400 con una saturación más franca.
+
+fr = Inspiré de Kodak Ektachrome 64 : diapositive des années 70, bleus froids et magentas discrets.
+en = Inspired by Kodak Ektachrome 64: 1970s slide film, cold blues and subtle magentas.
+es = Inspirada en Kodak Ektachrome 64: diapositiva de los 70, azules fríos y magentas discretos.
+
+fr = Inspiré de Fujicolor 100 Industrial : la pellicule des pharmacies japonaises, verts tendres et blancs crème.
+en = Inspired by Fujicolor 100 Industrial: the Japanese drugstore film, soft greens and creamy whites.
+es = Inspirada en Fujicolor 100 Industrial: la película de las farmacias japonesas, verdes tiernos y blancos crema.
+
+fr = Inspiré de Fujifilm Superia Venus 800 : sensible et nerveux, ombres vertes et grain marqué.
+en = Inspired by Fujifilm Superia Venus 800: fast and punchy, green shadows and marked grain.
+es = Inspirada en Fujifilm Superia Venus 800: sensible y nerviosa, sombras verdes y grano marcado.
+
+fr = Inspiré de Fujifilm Sensia 100 : diapositive grand public, nette, verts et bleus vifs sans excès.
+en = Inspired by Fujifilm Sensia 100: consumer slide film, crisp, vivid greens and blues without excess.
+es = Inspirada en Fujifilm Sensia 100: diapositiva de consumo, nítida, verdes y azules vivos sin exceso.
+
+fr = Inspiré d'Agfa Precisa 100 : diapositive froide, cyans profonds, peaux pâles.
+en = Inspired by Agfa Precisa 100: cool slide film, deep cyans, pale skin.
+es = Inspirada en Agfa Precisa 100: diapositiva fría, cianes profundos, piel pálida.
+
+fr = Inspiré d'Agfa Portrait 160 : négatif de studio, peaux rosées, contraste très doux.
+en = Inspired by Agfa Portrait 160: studio negative, rosy skin, very soft contrast.
+es = Inspirada en Agfa Portrait 160: negativo de estudio, piel rosada, contraste muy suave.
+
+fr = Inspiré de Konica VX 200 : couleurs franches, verts jaunes, magentas tirés.
+en = Inspired by Konica VX 200: bold colours, yellowish greens, pushed magentas.
+es = Inspirada en Konica VX 200: colores francos, verdes amarillentos, magentas forzados.
+
+fr = Inspiré de Kodak E100VS : diapositive très saturée, rouges éclatants, noirs denses.
+en = Inspired by Kodak E100VS: very saturated slide film, brilliant reds, dense blacks.
+es = Inspirada en Kodak E100VS: diapositiva muy saturada, rojos brillantes, negros densos.
+
+fr = Inspiré de Harman Phoenix 200 : nouvelle émulsion capricieuse, contraste fort, halos orangés.
+en = Inspired by Harman Phoenix 200: a temperamental new emulsion, strong contrast, orange halation.
+es = Inspirada en Harman Phoenix 200: una emulsión nueva y caprichosa, contraste fuerte, halos anaranjados.
+
+fr = Inspiré de Lomochrome Purple : les verts deviennent violets, les bleus verdissent.
+en = Inspired by Lomochrome Purple: greens turn purple, blues turn green.
+es = Inspirada en Lomochrome Purple: los verdes se vuelven violetas, los azules verdean.
+
+fr = Inspiré de Lomochrome Metropolis : couleurs éteintes, contraste dur, rouges et jaunes préservés.
+en = Inspired by Lomochrome Metropolis: muted colours, hard contrast, reds and yellows kept.
+es = Inspirada en Lomochrome Metropolis: colores apagados, contraste duro, rojos y amarillos conservados.
+
+fr = Inspiré de Kodak Aerochrome : l'infrarouge couleur, feuillages rouges et ciels profonds.
+en = Inspired by Kodak Aerochrome: colour infrared, red foliage and deep skies.
+es = Inspirada en Kodak Aerochrome: infrarrojo en color, follaje rojo y cielos profundos.
+
+fr = Inspiré d'Eastman EXR 200T : négatif cinéma des années 90, tungstène, ombres bleutées et peaux chaudes.
+en = Inspired by Eastman EXR 200T: 1990s cinema negative, tungsten, bluish shadows and warm skin.
+es = Inspirada en Eastman EXR 200T: negativo de cine de los 90, tungsteno, sombras azuladas y piel cálida.
+
+fr = Inspiré de Fujifilm Eterna 400T : tungstène sensible, couleurs sobres, ombres cyan.
+en = Inspired by Fujifilm Eterna 400T: fast tungsten, restrained colours, cyan shadows.
+es = Inspirada en Fujifilm Eterna 400T: tungsteno sensible, colores sobrios, sombras cian.
+
+fr = Inspiré de Fujifilm F-64D : négatif lumière du jour très fin, verts profonds, rendu limpide.
+en = Inspired by Fujifilm F-64D: very fine daylight negative, deep greens, clear rendering.
+es = Inspirada en Fujifilm F-64D: negativo de luz día muy fino, verdes profundos, render límpido.
+
+fr = Inspiré d'Agfa XTR 250 : négatif cinéma européen, tons chauds et doux, verts olive.
+en = Inspired by Agfa XTR 250: European cinema negative, warm soft tones, olive greens.
+es = Inspirada en Agfa XTR 250: negativo de cine europeo, tonos cálidos y suaves, verdes oliva.
+
+fr = Super 16
+en = Super 16
+es = Super 16
+
+fr = Le 16 mm des séries et des documentaires : grain épais, contraste doux, couleurs un peu passées.
+en = The 16 mm of TV series and documentaries: thick grain, soft contrast, slightly faded colours.
+es = El 16 mm de las series y los documentales: grano grueso, contraste suave, colores algo desvaídos.
+
+fr = 70 mm
+en = 70 mm
+es = 70 mm
+
+fr = Le grand format des épopées : image limpide, couleurs riches, grain invisible.
+en = The large format of epics: clear image, rich colours, invisible grain.
+es = El gran formato de las epopeyas: imagen límpida, colores ricos, grano invisible.
+
+fr = Néon
+en = Neon
+es = Neón
+
+fr = La ville la nuit : magentas et cyans électriques, noirs profonds.
+en = The city at night: electric magentas and cyans, deep blacks.
+es = La ciudad de noche: magentas y cianes eléctricos, negros profundos.
+
+fr = Épouvante
+en = Horror
+es = Terror
+
+fr = Le film d'horreur : couleurs vidées, verts malades, ombres lourdes.
+en = The horror film: drained colours, sickly greens, heavy shadows.
+es = La película de terror: colores vaciados, verdes enfermizos, sombras pesadas.
+
+fr = Romance
+en = Romance
+es = Romance
+
+fr = La comédie romantique : peaux lumineuses, pastels chauds, ombres ouvertes.
+en = The romantic comedy: glowing skin, warm pastels, open shadows.
+es = La comedia romántica: piel luminosa, pasteles cálidos, sombras abiertas.
+
+fr = Documentaire
+en = Documentary
+es = Documental
+
+fr = L'image vraie du reportage : couleurs justes mais retenues, contraste net.
+en = The true image of reportage: accurate but restrained colours, crisp contrast.
+es = La imagen verdadera del reportaje: colores fieles pero contenidos, contraste nítido.
+
+fr = Été indien
+en = Indian Summer
+es = Veranillo de San Martín
+
+fr = L'automne doux des films américains : orangés dorés, ciels voilés.
+en = The gentle autumn of American films: golden oranges, hazy skies.
+es = El otoño suave del cine americano: naranjas dorados, cielos velados.
+
+fr = Thriller urbain
+en = Urban Thriller
+es = Thriller urbano
+
+fr = Le polar d'aujourd'hui : verts et cyans froids, peaux ternes, ombres denses.
+en = The modern crime thriller: cold greens and cyans, dull skin, dense shadows.
+es = El policíaco de hoy: verdes y cianes fríos, piel apagada, sombras densas.
+
+fr = Inspiré d'Ilford Delta 400 : noir et blanc moderne à grain fin, gris riches.
+en = Inspired by Ilford Delta 400: modern fine-grain black and white, rich greys.
+es = Inspirada en Ilford Delta 400: blanco y negro moderno de grano fino, grises ricos.
+
+fr = Inspiré de Kentmere 400 : noir et blanc économique, contraste doux, grain présent.
+en = Inspired by Kentmere 400: budget black and white, soft contrast, visible grain.
+es = Inspirada en Kentmere 400: blanco y negro económico, contraste suave, grano visible.
+
+fr = Inspiré d'Ilford SFX 200 : sensible au rouge lointain, ciels sombres et feuillages clairs.
+en = Inspired by Ilford SFX 200: extended red sensitivity, dark skies and light foliage.
+es = Inspirada en Ilford SFX 200: sensibilidad al rojo lejano, cielos oscuros y follaje claro.
+
+fr = Inspiré de Fomapan 100 : noir et blanc tchèque au charme ancien, hautes lumières douces.
+en = Inspired by Fomapan 100: Czech black and white with old-world charm, soft highlights.
+es = Inspirada en Fomapan 100: blanco y negro checo con encanto antiguo, altas luces suaves.
+
+fr = Inspiré de Rollei RPX 25 : très lent, piqué extrême, noirs profonds.
+en = Inspired by Rollei RPX 25: very slow, extreme sharpness, deep blacks.
+es = Inspirada en Rollei RPX 25: muy lenta, nitidez extrema, negros profundos.
+
+fr = Inspiré de Bergger Pancro 400 : deux émulsions, latitude immense, gris veloutés.
+en = Inspired by Bergger Pancro 400: two emulsions, huge latitude, velvety greys.
+es = Inspirada en Bergger Pancro 400: dos emulsiones, latitud enorme, grises aterciopelados.
+
+fr = Inspiré d'Adox CHS 100 II : émulsion d'autrefois, orthopanchromatique, contraste charnu.
+en = Inspired by Adox CHS 100 II: an emulsion of old, ortho-panchromatic, full-bodied contrast.
+es = Inspirada en Adox CHS 100 II: emulsión de antaño, ortopancromática, contraste carnoso.
+
+fr = Inspiré de Kodak T-Max P3200 : la nuit en noir et blanc, grain énorme, noirs bouchés.
+en = Inspired by Kodak T-Max P3200: the night in black and white, huge grain, blocked blacks.
+es = Inspirada en Kodak T-Max P3200: la noche en blanco y negro, grano enorme, negros empastados.
+
+fr = Inspiré d'Ilford Pan 400 : noir et blanc simple et franc, ciels légèrement assombris.
+en = Inspired by Ilford Pan 400: plain, honest black and white, slightly darkened skies.
+es = Inspirada en Ilford Pan 400: blanco y negro sencillo y franco, cielos ligeramente oscurecidos.
+
+fr = Inspiré de Kodak Verichrome Pan : le noir et blanc des familles, gris tendres et larges.
+en = Inspired by Kodak Verichrome Pan: the family black and white, tender, wide greys.
+es = Inspirada en Kodak Verichrome Pan: el blanco y negro familiar, grises tiernos y amplios.
+
+fr = Polaroid i-Type
+en = Polaroid i-Type
+es = Polaroid i-Type
+
+fr = L'instantané d'aujourd'hui : couleurs franches mais douces, blancs crème.
+en = Today's instant film: bold but soft colours, creamy whites.
+es = El instantáneo de hoy: colores francos pero suaves, blancos crema.
+
+fr = Polaroid Spectra
+en = Polaroid Spectra
+es = Polaroid Spectra
+
+fr = Le grand Polaroid des années 90 : magentas, ombres bleutées, contraste mou.
+en = The wide Polaroid of the 1990s: magentas, bluish shadows, soft contrast.
+es = El Polaroid ancho de los 90: magentas, sombras azuladas, contraste blando.
+
+fr = Instax Wide
+en = Instax Wide
+es = Instax Wide
+
+fr = L'instantané large de Fujifilm : net, frais, verts et bleus lumineux.
+en = Fujifilm's wide instant film: crisp, fresh, luminous greens and blues.
+es = El instantáneo ancho de Fujifilm: nítido, fresco, verdes y azules luminosos.
+
+fr = Impossible Project
+en = Impossible Project
+es = Impossible Project
+
+fr = Les premiers films Polaroid relancés : teintes imprévisibles, sépia verdâtre, bords sombres.
+en = The first relaunched Polaroid films: unpredictable tints, greenish sepia, dark edges.
+es = Las primeras películas Polaroid relanzadas: tintes imprevisibles, sepia verdoso, bordes oscuros.
+
+fr = Instamatic
+en = Instamatic
+es = Instamatic
+
+fr = L'appareil de poche Kodak : petit format 126, couleurs saturées et virées au rouge.
+en = The Kodak pocket camera: small 126 format, saturated colours shifted to red.
+es = La cámara de bolsillo Kodak: formato pequeño 126, colores saturados virados al rojo.
+
+fr = Polaroid 669
+en = Polaroid 669
+es = Polaroid 669
+
+fr = Le Polaroid à décoller : tons froids et pastel, ombres bleu-vert.
+en = Peel-apart Polaroid: cool pastel tones, blue-green shadows.
+es = El Polaroid despegable: tonos fríos y pastel, sombras azul verdosas.
+
+fr = Pastel
+en = Pastel
+es = Pastel
+
+fr = Doux et lumineux : couleurs poudrées, aucun noir profond.
+en = Soft and bright: powdery colours, no deep blacks.
+es = Suave y luminoso: colores empolvados, ningún negro profundo.
+
+fr = Automne
+en = Autumn
+es = Otoño
+
+fr = Les couleurs de l'automne exaltées : oranges et rouges profonds, verts éteints.
+en = Autumn colours enhanced: deep oranges and reds, muted greens.
+es = Los colores del otoño exaltados: naranjas y rojos profundos, verdes apagados.
+
+fr = Hiver
+en = Winter
+es = Invierno
+
+fr = Lumière froide et claire : bleus glacés, blancs nets, peu de couleur.
+en = Cold, clear light: icy blues, crisp whites, little colour.
+es = Luz fría y clara: azules helados, blancos nítidos, poco color.
+
+fr = Printemps
+en = Spring
+es = Primavera
+
+fr = Frais et tendre : verts jeunes, roses clairs, lumière douce.
+en = Fresh and tender: young greens, light pinks, soft light.
+es = Fresco y tierno: verdes jóvenes, rosas claros, luz suave.
+
+fr = Brume
+en = Mist
+es = Bruma
+
+fr = Une image voilée de brume : contraste effacé, lointains bleutés.
+en = An image veiled in mist: faded contrast, bluish distances.
+es = Una imagen velada por la bruma: contraste borrado, lejanías azuladas.
+
+fr = Contre-jour
+en = Backlight
+es = Contraluz
+
+fr = Le soleil dans l'objectif : hautes lumières dorées, ombres ouvertes et chaudes.
+en = The sun in the lens: golden highlights, open, warm shadows.
+es = El sol en el objetivo: altas luces doradas, sombras abiertas y cálidas.
+
+fr = Bichromie
+en = Duotone
+es = Bicromía
+
+fr = Deux couleurs seulement : ombres bleu nuit, lumières ambrées.
+en = Two colours only: midnight-blue shadows, amber highlights.
+es = Solo dos colores: sombras azul noche, luces ámbar.

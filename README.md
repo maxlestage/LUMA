@@ -25,7 +25,7 @@ et enregistre les réglages dans un fichier XMP à côté de la photo.
 | `luma-library` | La photothèque : catalogue local (date de prise de vue, boîtier, objectif, ISO, note, mots‑clés), mis à jour sans relire ce qui n'a pas changé |
 | `luma-render` | Une photo ouverte : sources et « bases » (étapes de voisinage, celle de la photo et celles des films de masques) en cache, rendu annulable |
 | `luma-merge` | Empilements, panoramas (coins, RANSAC, projections, fondus), DNG ; mesure d'une vraie pellicule en LUT 3D |
-| `luma-gpu` | Les étapes par pixel (rendu, couleur, LUT 3D, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test, les 100 films compris |
+| `luma-gpu` | Les étapes par pixel (rendu, couleur, LUT 3D, effets, encodage) en WGSL sur wgpu : Metal, Vulkan ; comparées au processeur à chaque test, les 150 films compris |
 | `luma-brand` | La marque, dessinée par le code : le logo (anneau de lumière en croissant et « LÜMA »), les icônes du Mac, de l'iPhone, de l'iPad et du site, le fond « éclipse » de l'app |
 | `luma-licence` | LÜMA Premium : 14 jours d'essai, abonnements au mois et à l'an, clés de licence (voir [docs/premium.md](docs/premium.md)) |
 | `luma-cli` | `luma` : info, développement et export, XMP, mesures, fusion, mesure d'une pellicule |
@@ -48,7 +48,7 @@ target/release/luma print ~/Photos/*.ARW --grid 4x5 --captions -o planche.pdf  #
 target/release/luma book ~/Photos/Islande/*.ARW --title "Islande" -o livre.pdf  # livre photo
 target/release/luma slideshow ~/Photos/Islande/*.ARW -o ~/Sites/islande     # diaporama autonome
 target/release/luma gallery ~/Photos/Islande/*.ARW -o ~/Sites/galerie --title "Islande"  # galerie web
-target/release/luma presets ~/Desktop                                   # les 100 films en préréglages XMP
+target/release/luma presets ~/Desktop                                   # les 150 films en préréglages XMP
 ```
 
 ### Vérifier
@@ -121,7 +121,7 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   - *Panorama* : perspective, cylindrique ou sphérique, exposition compensée, fondu.
   Le résultat est un **DNG** (un vrai RAW) ; le **rognage automatique** est proposé
   comme un recadrage ordinaire, qu'on garde, modifie ou retire.
-- **Films** : 100 looks, avec leur aperçu sur la photo et une intensité réglable.
+- **Films** : 150 looks, avec leur aperçu sur la photo et une intensité réglable.
   *Pellicules couleur* (Portra 160/400/800, Ektar, Gold, ColorPlus, UltraMax,
   Fujicolor C200, Superia, Pro 400H, Velvia, Provia, Astia, Kodachrome, Ektachrome,
   Agfa, Lomography…), *Cinéma* (CineStill 800T, 400D, 50D ; Kodak Vision3 50D, 250D,
@@ -132,7 +132,7 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   Fomapan, infrarouge), *Instantanés et vintage* (Polaroid, Instax, jetable, Lomo,
   Holga, pellicule périmée, sépia, cyanotype, daguerréotype) et *Créatifs*. Chaque
   émulsion a sa signature (croisement des couches, mélange noir et blanc spectral :
-  l'orthochromatique ne voit pas le rouge, le Retro 80S assombrit le bleu). Les 100 films
+  l'orthochromatique ne voit pas le rouge, le Retro 80S assombrit le bleu). Les 150 films
   sont vérifiés par la machine à chaque test : rendus sur une mire et mesurés en OKLab,
   chacun se distingue du rendu neutre et de tous les autres, aucun n'écrase l'image ; la
   planche‑contact est publiée par la CI.
