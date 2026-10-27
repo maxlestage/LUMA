@@ -261,6 +261,7 @@ pub fn summary(s: &Settings) -> Summary {
         || own.exposure != d.exposure
         || own.contrast != d.contrast
         || own.highlights != d.highlights
+        || own.highlight_reconstruction != d.highlight_reconstruction
         || own.shadows != d.shadows
         || own.whites != d.whites
         || own.blacks != d.blacks
