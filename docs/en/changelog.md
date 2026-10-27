@@ -119,6 +119,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Select sky** (Masks, Masking): one click and the sky becomes a mask, clouds
+  included, following the edges of trees and roofs; a lake reflecting it stays out.
+  No AI: only the colours and texture of the photo.
 - **Remove** (Retouch, next to healing): a circle over what is in the way, a wire, a
   passer-by, litter, and LÜMA replaces it with pieces of the surrounding photo, texture
   and grain included. No AI: only the photo itself.

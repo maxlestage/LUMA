@@ -66,6 +66,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Verticales automatiques (Maj+V) : le point de fuite des verticales mesuré, la Verticale de la Transformation réglée pour les rendre parallèles | ✅ |
 | | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté | ✅ |
 | | Masques restreints à une plage de luminance (minimum, maximum, fondu) ou de couleur (teinte, largeur, fondu ; gris laissés), lue sur la photo ; zone affichée (O) | ✅ |
+| | Masque « Ciel » (« Sélectionner le ciel ») : ciel et nuages trouvés sur la photo, bords suivis, reflets dans l'eau laissés ; sans IA | ✅ |
 | | Pinceau qui suit les bords : chaque touche ne peint que les tons proches de son centre, la zone s'arrête aux contours de la photo | ✅ |
 | | Combinaisons de masques : ajouter, soustraire, intersection d'autres formes (chacune inversable) | ✅ |
 | | Zone du masque affichée (O) en rouge, vert, bleu, blanc ou blanc sur noir, opacité de 10 à 100 % | ✅ |
