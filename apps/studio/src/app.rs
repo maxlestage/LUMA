@@ -614,6 +614,9 @@ pub struct Studio {
     pub selected_mask: Option<usize>,
     /// La partie combinée en cours de réglage : (masque, partie) ; aucune pour la forme principale.
     pub selected_part: Option<(usize, usize)>,
+    /// Le guide de composition du recadrage, et son quart de tour (0 à 3).
+    pub crop_guide: crop::Guide,
+    pub crop_turn: u8,
     /// La couche de sortie montrée par le mélangeur de couches (0 rouge, 1 vert, 2 bleu).
     mixer_tab: usize,
     /// L'outil de retouche actif (Q) : un clic sur la photo pose une retouche.
@@ -837,6 +840,8 @@ impl Studio {
             crop_tool: None,
             selected_mask: None,
             selected_part: None,
+            crop_guide: crop::Guide::default(),
+            crop_turn: 0,
             mixer_tab: 0,
             retouch: None,
             selected_spot: None,
@@ -2209,6 +2214,8 @@ impl Studio {
                     action = Some("eyedropper");
                 } else if i.consume_key(Modifiers::NONE, Key::T) {
                     action = Some("targeting");
+                } else if i.consume_key(Modifiers::SHIFT, Key::O) {
+                    action = Some("guide_turn");
                 } else if i.consume_key(Modifiers::NONE, Key::O) {
                     action = Some("mask_overlay");
                 } else if i.consume_key(Modifiers::NONE, Key::Delete)
@@ -2441,6 +2448,9 @@ impl Studio {
                 self.commit(label);
                 self.touch();
             }
+            // Pendant le recadrage, O change de guide de composition.
+            "mask_overlay" if self.crop_tool.is_some() => self.crop_guide = self.crop_guide.next(),
+            "guide_turn" => self.crop_turn = (self.crop_turn + 1) % 4,
             "mask_overlay" => self.show_mask = !self.show_mask,
             "eyedropper" => self.eyedropper = !self.eyedropper && self.photo.is_some(),
             "targeting" => {
@@ -5485,7 +5495,8 @@ impl Studio {
             painter.image(t.id(), target, uv, Color32::WHITE);
             let aspect = crop::ASPECTS[tool.aspect].1;
             // Le rendu peut avoir un temps de retard : le cadre suit l'image affichée.
-            let c = crop::edit(ui, target, &mut self.settings.crop, aspect);
+            let (guide, turn) = (self.crop_guide, self.crop_turn);
+            let c = crop::edit(ui, target, &mut self.settings.crop, aspect, guide, turn);
             if c.changed {
                 self.touch();
             }
@@ -6992,6 +7003,28 @@ impl Studio {
                                     w as f32 / h as f32,
                                 );
                                 self.xmp_due = Some(0.0);
+                            }
+                        });
+                        // Le guide de composition (O ; Maj+O tourne la spirale et les
+                        // triangles).
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(tr("Guide")).color(theme::DIM));
+                            egui::ComboBox::from_id_salt("guide")
+                                .selected_text(tr(self.crop_guide.name()))
+                                .show_ui(ui, |ui| {
+                                    for g in crop::Guide::ALL {
+                                        ui.selectable_value(&mut self.crop_guide, g, tr(g.name()));
+                                    }
+                                })
+                                .response
+                                .on_hover_text(tr("O : guide suivant, Maj+O : tourner"))
+                                .accessible_name(tr("Guide"));
+                            if matches!(
+                                self.crop_guide,
+                                crop::Guide::Spiral | crop::Guide::Triangles
+                            ) && ui.button(tr("Tourner")).clicked()
+                            {
+                                self.crop_turn = (self.crop_turn + 1) % 4;
                             }
                         });
                     }

@@ -1103,6 +1103,46 @@ fr = Moiré
 en = Moiré
 es = Muaré
 
+fr = Guide
+en = Overlay
+es = Guía
+
+fr = Aucun guide
+en = No overlay
+es = Sin guía
+
+fr = Tiers
+en = Thirds
+es = Tercios
+
+fr = Nombre d'or
+en = Golden ratio
+es = Proporción áurea
+
+fr = Diagonales
+en = Diagonals
+es = Diagonales
+
+fr = Triangles d'or
+en = Golden triangles
+es = Triángulos áureos
+
+fr = Spirale d'or
+en = Golden spiral
+es = Espiral áurea
+
+fr = Grille
+en = Grid
+es = Cuadrícula
+
+fr = Tourner
+en = Rotate
+es = Girar
+
+fr = O : guide suivant, Maj+O : tourner
+en = O: next overlay, Shift+O: rotate
+es = O: siguiente guía, Mayús+O: girar
+
 fr = Mélangeur de couches
 en = Channel mixer
 es = Mezclador de canales

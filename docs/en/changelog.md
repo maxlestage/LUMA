@@ -108,6 +108,9 @@ The professional photo library, step by step.
   LÜMA picks the part of the photo that replaces it. Healing keeps its texture and
   takes the light from the edge of the area; clone makes an exact copy. Area and
   source move with the mouse; size, feather, opacity. Saved in the XMP.
+- **Crop overlays**: thirds, golden ratio, diagonals, golden triangles, golden spiral
+  and grid; O switches to the next overlay while cropping, Shift+O rotates the spiral
+  and the triangles.
 - **Channel mixer** (Color tool): each red, green or blue channel made from a mix of
   the photo's three channels, from −200 to +200%; saved in the XMP and in presets,
   without slowing the render.

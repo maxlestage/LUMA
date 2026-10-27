@@ -114,6 +114,9 @@ La fototeca profesional, paso a paso.
   LÜMA elige la parte de la foto que lo sustituye. El corrector conserva su textura y
   toma la luz del borde de la zona; el tampón hace una copia exacta. Zona y fuente se
   mueven con el ratón; tamaño, difuminado, opacidad. Guardados en el XMP.
+- **Guías de recorte**: tercios, proporción áurea, diagonales, triángulos áureos,
+  espiral áurea y cuadrícula; O pasa a la guía siguiente durante el recorte, Mayús+O
+  gira la espiral y los triángulos.
 - **Mezclador de canales** (herramienta Color): cada canal rojo, verde o azul hecho de
   una mezcla de los tres canales de la foto, de −200 a +200 %; guardado en el XMP y
   en los ajustes preestablecidos, sin ralentizar el renderizado.
