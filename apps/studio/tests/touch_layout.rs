@@ -10,6 +10,7 @@ use luma_studio::Studio;
 use luma_studio::app::{Module, Tool};
 
 fn capture(name: &str, size: [f32; 2]) {
+    luma_studio::force_touch(true);
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus/_DSC0009.ARW");
     if !src.exists() {
         eprintln!("corpus absent (scripts/fetch-corpus.sh) : capture ignorée");

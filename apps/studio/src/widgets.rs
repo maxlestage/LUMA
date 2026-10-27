@@ -781,6 +781,57 @@ pub fn pill(ui: &mut egui::Ui, text: &str) {
     p.galley(rect.center() - galley.size() / 2.0, galley, theme::ACCENT);
 }
 
+/// Des onglets côte à côte, de même largeur, qui tiennent toujours dans la largeur
+/// disponible (le texte rapetisse s'il le faut). `on` dit lesquels sont allumés ;
+/// `tips` donne la bulle de chaque onglet (vide : aucune). Rend celui qui est touché.
+pub fn segments(
+    ui: &mut egui::Ui,
+    labels: &[&str],
+    on: &[bool],
+    tips: &[&str],
+    size: f32,
+) -> Option<usize> {
+    let n = labels.len().max(1) as f32;
+    let h = if crate::touch() { 36.0 } else { 24.0 };
+    let (row, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), h), egui::Sense::hover());
+    let w = row.width() / n;
+    let mut hit = None;
+    for (k, label) in labels.iter().enumerate() {
+        let cell =
+            egui::Rect::from_min_size(row.min + egui::vec2(w * k as f32, 0.0), egui::vec2(w, h));
+        let id = ui.scope_id().with(("segment", k, *label));
+        let mut resp = ui.interact(cell, id, egui::Sense::click());
+        if let Some(tip) = tips.get(k).filter(|t| !t.is_empty()) {
+            resp = resp.on_hover_text(*tip);
+        }
+        let lit = on.get(k).copied().unwrap_or(false);
+        let p = ui.painter();
+        if lit {
+            p.rect_filled(
+                cell.shrink(1.0),
+                8.0,
+                egui::Color32::from_rgb(0x3a, 0x2f, 0x1e),
+            );
+        } else if resp.hovered() {
+            p.rect_filled(cell.shrink(1.0), 8.0, theme::SECTION);
+        }
+        let color = if lit { theme::TEXT } else { theme::DIM };
+        let mut font = egui::FontId::proportional(size);
+        let mut galley = p.layout_no_wrap((*label).to_owned(), font.clone(), color);
+        if galley.size().x > w - 8.0 {
+            font.size = (size * (w - 8.0) / galley.size().x).max(7.0);
+            galley = p.layout_no_wrap((*label).to_owned(), font, color);
+        }
+        p.galley(cell.center() - galley.size() / 2.0, galley, color);
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Tab, true, lit, *label));
+        if resp.clicked() {
+            hit = Some(k);
+        }
+    }
+    hit
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

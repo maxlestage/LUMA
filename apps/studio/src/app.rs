@@ -6236,8 +6236,17 @@ impl Studio {
         } else {
             (44.0, 44.0)
         };
-        let label = if horizontal { 14.0 } else { 0.0 };
+        // Les noms sous les icônes, s'ils ont la place de ne pas se toucher (sinon,
+        // en paysage sur iPhone, les icônes seules).
+        let named = horizontal && width >= 40.0;
+        let font = if width >= 50.0 { 10.5 } else { 9.5 };
+        let label = if named { 14.0 } else { 0.0 };
         let mut draw = |ui: &mut Ui| {
+            if horizontal {
+                // Les outils au milieu de la barre (sur iPad, elle est plus large qu'eux).
+                let rest = ui.available_width() - width * Tool::ALL.len() as f32;
+                ui.add_space((rest / 2.0).max(0.0).floor());
+            }
             for tool in Tool::ALL {
                 let (cell, r) =
                     ui.allocate_exact_size(vec2(width, size + label), egui::Sense::click());
@@ -6265,12 +6274,12 @@ impl Studio {
                     theme::DIM
                 };
                 icons::paint(p, tool.icon(), rect.shrink(size * 0.27), color);
-                if horizontal {
+                if named {
                     p.text(
                         pos2(cell.center().x, cell.max.y),
                         egui::Align2::CENTER_BOTTOM,
                         tool.short_name(),
-                        egui::FontId::proportional(10.0),
+                        egui::FontId::proportional(font),
                         color,
                     );
                 }
@@ -7845,32 +7854,27 @@ impl Studio {
                 .on_hover_text(tr("Clic ou J : afficher l'écrêtage"));
             return;
         }
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 2.0;
-            for s in Scope::ALL {
-                let name = match s {
-                    Scope::Histogram => tr("Histogramme"),
-                    Scope::Waveform => tr("Forme d'onde"),
-                    Scope::Parade => tr("Parade RVB"),
-                    Scope::Vectorscope => tr("Vectorscope"),
-                };
-                let selected = self.scope == s;
-                let text = RichText::new(name).size(10.5).color(if selected {
-                    theme::TEXT
-                } else {
-                    theme::DIM
-                });
-                if ui
-                    .selectable_label(selected, text)
-                    .on_hover_text(tr("Maj+J : instrument suivant"))
-                    .clicked()
-                    && !selected
-                {
-                    self.scope = s;
-                    self.scope_texture = None;
-                }
-            }
-        });
+        let names: Vec<&str> = Scope::ALL
+            .iter()
+            .map(|s| match s {
+                Scope::Histogram => tr("Histogramme"),
+                Scope::Waveform => tr("Forme d'onde"),
+                Scope::Parade => tr("Parade RVB"),
+                Scope::Vectorscope => tr("Vectorscope"),
+            })
+            .collect();
+        let on: Vec<bool> = Scope::ALL.iter().map(|&s| s == self.scope).collect();
+        if let Some(k) = widgets::segments(
+            ui,
+            &names,
+            &on,
+            &[tr("Maj+J : instrument suivant"); 4],
+            10.5,
+        ) && Scope::ALL[k] != self.scope
+        {
+            self.scope = Scope::ALL[k];
+            self.scope_texture = None;
+        }
         ui.add_space(2.0);
         match (&self.scope_texture, self.scope) {
             (Some(texture), scope) if scope != Scope::Histogram => {
@@ -10257,25 +10261,34 @@ impl Studio {
                 .id_salt("Mélangeur de couleurs")
                 .default_open(true)
                 .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        for (i, name) in [tr("Teinte|mélangeur"), tr("Saturation"), tr("Luminance")]
-                            .into_iter()
-                            .enumerate()
-                        {
-                            ui.selectable_value(&mut self.hsl_tab, i, name);
-                        }
-                        let on = self.targeting;
-                        if ui
-                            .selectable_label(on, tr("Ciblage"))
-                            .on_hover_text(tr(
-                                "Ciblage direct (T) : glissez sur une couleur de la photo, vers le haut ou le bas, pour régler cette couleur dans l'onglet choisi.",
-                            ))
-                            .clicked()
-                        {
-                            self.targeting = !on;
+                    let names = [
+                        tr("Teinte|mélangeur"),
+                        tr("Saturation"),
+                        tr("Luminance"),
+                        tr("Ciblage"),
+                    ];
+                    let on = [
+                        self.hsl_tab == 0,
+                        self.hsl_tab == 1,
+                        self.hsl_tab == 2,
+                        self.targeting,
+                    ];
+                    let tips = [
+                        "",
+                        "",
+                        "",
+                        tr(
+                            "Ciblage direct (T) : glissez sur une couleur de la photo, vers le haut ou le bas, pour régler cette couleur dans l'onglet choisi.",
+                        ),
+                    ];
+                    match widgets::segments(ui, &names, &on, &tips, 12.5) {
+                        Some(3) => {
+                            self.targeting = !self.targeting;
                             self.eyedropper = false;
                         }
-                    });
+                        Some(i) => self.hsl_tab = i,
+                        None => {}
+                    }
                     let kind =
                         [tr("Teinte|mélangeur"), tr("Saturation"), tr("Luminance")][self.hsl_tab];
                     for (i, name) in HSL_NAMES.iter().enumerate() {
