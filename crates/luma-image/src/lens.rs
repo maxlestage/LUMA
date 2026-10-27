@@ -107,6 +107,102 @@ impl Mapping {
     }
 }
 
+/// Une ligne tracée sur la photo qui devrait être verticale (ou horizontale), entre deux
+/// points en coordonnées normalisées (par la demi‑diagonale, centre en 0) de la photo
+/// avant la Transformation.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Guide {
+    pub a: (f32, f32),
+    pub b: (f32, f32),
+    pub vertical: bool,
+}
+
+/// Où un point de la photo avant la Transformation se retrouve après (l'inverse de
+/// [`Mapping`], sans l'échelle ni les proportions, qui ne changent pas ce qui est
+/// vertical ou horizontal).
+fn forward(t: &Transform, center: (f32, f32), (x, y): (f32, f32)) -> Option<(f32, f32)> {
+    let rt = rotation(t);
+    let q = [x + center.0, y + center.1, FOCAL];
+    // L'inverse d'une rotation est sa transposée.
+    let d = [
+        rt[0][0] * q[0] + rt[1][0] * q[1] + rt[2][0] * q[2],
+        rt[0][1] * q[0] + rt[1][1] * q[1] + rt[2][1] * q[2],
+        rt[0][2] * q[0] + rt[1][2] * q[1] + rt[2][2] * q[2],
+    ];
+    (d[2] > 1e-3).then(|| (d[0] / d[2] * FOCAL, d[1] / d[2] * FOCAL))
+}
+
+/// L'écart des guides à la verticale ou à l'horizontale une fois `t` appliquée : la somme
+/// des carrés des sinus de leurs angles.
+fn guide_error(t: &Transform, guides: &[Guide]) -> f32 {
+    let probe = Mapping::new(&Lens::default(), t);
+    guides
+        .iter()
+        .map(
+            |g| match (forward(t, probe.center, g.a), forward(t, probe.center, g.b)) {
+                (Some(a), Some(b)) => {
+                    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+                    let len2 = (dx * dx + dy * dy).max(1e-12);
+                    if g.vertical { dx * dx / len2 } else { dy * dy / len2 }
+                }
+                _ => 1.0,
+            },
+        )
+        .sum()
+}
+
+/// Le redressement guidé : la Verticale, l'Horizontale et la Rotation qui rendent les
+/// guides verticaux ou horizontaux ; le reste de `start` (proportions, échelle) est
+/// gardé. Une seule ligne ne règle que la rotation ; deux verticales (ou deux
+/// horizontales) libèrent aussi la Verticale (ou l'Horizontale), qui en fixe la fuite.
+pub fn guided(guides: &[Guide], start: &Transform) -> Transform {
+    let verticals = guides.iter().filter(|g| g.vertical).count();
+    let horizontals = guides.len() - verticals;
+    let mut t = Transform {
+        vertical: if verticals >= 2 { start.vertical } else { 0.0 },
+        horizontal: if horizontals >= 2 { start.horizontal } else { 0.0 },
+        ..start.clone()
+    };
+    if guides.is_empty() {
+        return t;
+    }
+    let free: Vec<usize> = [(0, verticals >= 2), (1, horizontals >= 2), (2, true)]
+        .iter()
+        .filter(|(_, on)| *on)
+        .map(|(k, _)| *k)
+        .collect();
+    let get = |t: &Transform, k: usize| [t.vertical, t.horizontal, t.rotate][k];
+    let set = |t: &mut Transform, k: usize, v: f32| match k {
+        0 => t.vertical = v.clamp(-100.0, 100.0),
+        1 => t.horizontal = v.clamp(-100.0, 100.0),
+        _ => t.rotate = v.clamp(-10.0, 10.0),
+    };
+    let mut best = guide_error(&t, guides);
+    let mut step = 8.0f32;
+    for _ in 0..600 {
+        if step < 1e-3 {
+            break;
+        }
+        let mut better = false;
+        for &k in &free {
+            for sign in [1.0, -1.0] {
+                let mut u = t.clone();
+                // La rotation est en degrés (−10 à 10), les perspectives en centièmes.
+                let scale = if k == 2 { 0.25 } else { 1.0 };
+                set(&mut u, k, get(&t, k) + sign * step * scale);
+                let e = guide_error(&u, guides);
+                if e < best {
+                    (t, best, better) = (u, e, true);
+                }
+            }
+        }
+        if !better {
+            step /= 2.0;
+        }
+    }
+    t
+}
+
 /// Corrige la géométrie et le vignetage de l'objectif. `ca` : l'échelle relative des
 /// couches rouge et bleue (voir [`estimate_ca`]), `(0, 0)` pour ne rien corriger.
 /// `None` s'il n'y a rien à faire.
@@ -254,6 +350,65 @@ pub fn defringe(img: &mut RgbImage, lens: &Lens, scale: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Des lignes droites photographiées à travers une Transformation connue : leurs
+    /// extrémités dans la photo d'origine (là où [`Mapping`] va les chercher).
+    fn seen_through(t: &Transform, a: (f32, f32), b: (f32, f32), vertical: bool) -> Guide {
+        let m = Mapping::new(&Lens::default(), t);
+        Guide {
+            a: m.map(a.0, a.1).unwrap(),
+            b: m.map(b.0, b.1).unwrap(),
+            vertical,
+        }
+    }
+
+    #[test]
+    fn guides_find_the_transform_back() {
+        // Un bâtiment photographié en visant vers le haut, un peu penché : ses arêtes
+        // (droites une fois la photo corrigée) tracées sur la photo telle quelle.
+        let truth = Transform {
+            vertical: -40.0,
+            horizontal: 12.0,
+            rotate: 2.5,
+            ..Transform::default()
+        };
+        let guides = [
+            seen_through(&truth, (-0.4, -0.3), (-0.4, 0.35), true),
+            seen_through(&truth, (0.45, -0.25), (0.45, 0.3), true),
+            seen_through(&truth, (-0.3, 0.4), (0.35, 0.4), false),
+            seen_through(&truth, (-0.25, -0.4), (0.3, -0.4), false),
+        ];
+        let t = guided(&guides, &Transform::default());
+        assert!((t.vertical - truth.vertical).abs() < 1.0, "{t:?}");
+        assert!((t.horizontal - truth.horizontal).abs() < 1.0, "{t:?}");
+        assert!((t.rotate - truth.rotate).abs() < 0.1, "{t:?}");
+        assert!(guide_error(&t, &guides) < 1e-5);
+        // Une seule ligne : la rotation seule, la perspective reste à zéro.
+        let one = guided(
+            &[seen_through(
+                &Transform {
+                    rotate: -3.0,
+                    ..Transform::default()
+                },
+                (0.0, -0.4),
+                (0.0, 0.4),
+                true,
+            )],
+            &Transform::default(),
+        );
+        assert_eq!((one.vertical, one.horizontal), (0.0, 0.0));
+        assert!((one.rotate + 3.0).abs() < 0.05, "{one:?}");
+        // Les proportions et l'échelle déjà réglées restent.
+        let kept = guided(
+            &guides,
+            &Transform {
+                scale: 120.0,
+                aspect: 10.0,
+                ..Transform::default()
+            },
+        );
+        assert_eq!((kept.scale, kept.aspect), (120.0, 10.0));
+    }
 
     #[test]
     fn nothing_to_do_by_default() {
