@@ -253,6 +253,9 @@ The professional photo library, step by step.
   zoom with the wheel or two fingers, tap a group to see its photos. Open tile base
   map, downloaded by the system and kept on the device; offline, those already kept.
 
+- **Phone photos at their date and on the map**: the EXIF of developed images (JPEG,
+  HEIC, AVIF, PNG, WebP, TIFF) is read like a RAW's — capture date, camera, lens,
+  settings, GPS position. Photos already in the library are read again once.
 - **Scopes** (above the histogram, or Shift+J): **waveform** (luminance, column by
   column), **RGB parade** (each channel on its own) and **vectorscope** (hue and
   saturation, with the 75% primary targets and the skin‑tone line), computed on the

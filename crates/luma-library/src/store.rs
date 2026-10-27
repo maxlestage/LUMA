@@ -18,7 +18,11 @@ use std::path::PathBuf;
 use crate::{Catalog, Collection, Entry};
 
 pub(crate) const MAGIC: &[u8; 8] = b"LUMACAT\0";
-const VERSION: u64 = 2;
+const VERSION: u64 = 3;
+
+/// La version d'avant l'EXIF des images développées (JPEG, HEIC…) : même contenu, ces
+/// images seules relues à la prochaine mise à jour (leur date, leur position).
+const WITHOUT_IMAGE_EXIF: u64 = 2;
 
 /// La version d'avant la position GPS : encore lue, ses photos relues à la prochaine
 /// mise à jour de leur dossier.
@@ -101,13 +105,13 @@ fn encode_as(cat: &Catalog, version: u64) -> Vec<u8> {
         real(&mut body, e.aperture);
         real(&mut body, e.exposure_time);
         real(&mut body, e.focal_length);
-        match e.gps.filter(|_| version == VERSION) {
+        match e.gps.filter(|_| version >= WITHOUT_IMAGE_EXIF) {
             Some([lat, lon]) => {
                 body.push(1);
                 body.extend_from_slice(&lat.to_le_bytes());
                 body.extend_from_slice(&lon.to_le_bytes());
             }
-            None if version == VERSION => body.push(0),
+            None if version >= WITHOUT_IMAGE_EXIF => body.push(0),
             None => {}
         }
         body.push(e.rating);
@@ -196,7 +200,7 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
         return None;
     }
     let version = r.varint()?;
-    if version != VERSION && version != WITHOUT_GPS {
+    if !(WITHOUT_GPS..=VERSION).contains(&version) {
         return None;
     }
     let count = usize::try_from(r.varint()?).ok()?;
@@ -229,7 +233,7 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
         let (make, model, lens, label) = (owned()?, owned()?, owned()?, owned()?);
         let iso = r.optional()?;
         let (aperture, exposure_time, focal_length) = (r.real()?, r.real()?, r.real()?);
-        let gps = if version == VERSION { r.gps()? } else { None };
+        let gps = if version >= WITHOUT_IMAGE_EXIF { r.gps()? } else { None };
         let (rating, flag) = (r.byte()?, r.byte()? as i8);
         let n = usize::try_from(r.varint()?).ok()?;
         let mut keywords = Vec::with_capacity(n.min(64));
@@ -240,8 +244,12 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
             path: path.clone(),
             size,
             // Sans date, une photo d'avant la position GPS est relue (et sa position
-            // avec elle).
-            modified: if version == VERSION { modified } else { 0 },
+            // avec elle) ; de même une image développée d'avant la lecture de son EXIF.
+            modified: if version == VERSION || (version == WITHOUT_IMAGE_EXIF && !luma_raw::raster::is_raster(&path)) {
+                modified
+            } else {
+                0
+            },
             sidecar,
             date,
             make,
@@ -337,6 +345,23 @@ mod tests {
             assert_eq!((e.gps, e.modified), (None, 0), "relue à la prochaine mise à jour");
             assert_eq!((e.rating, &e.keywords, &e.lens), (was.rating, &was.keywords, &was.lens));
         }
+    }
+
+    #[test]
+    fn developed_images_are_reread_once() {
+        let mut cat = sample();
+        let mut jpeg = cat.entries().next().unwrap().clone();
+        jpeg.path = PathBuf::from("/photos/IMG_0042.HEIC");
+        jpeg.modified = 1_700_000_500;
+        cat.insert(jpeg.clone());
+        let read = decode(&encode_as(&cat, WITHOUT_IMAGE_EXIF)).unwrap();
+        for e in read.entries() {
+            let raw = e.path != jpeg.path;
+            assert_eq!(e.modified == 0, !raw, "{}", e.path.display());
+            assert_eq!(e.gps, cat.get(&e.path).unwrap().gps);
+        }
+        // Une fois relue et réécrite, plus rien à relire.
+        assert_eq!(decode(&encode(&cat)).unwrap(), cat);
     }
 
     #[test]
