@@ -274,9 +274,9 @@ fr = Ranger
 en = Organize
 es = Ordenar
 
-fr = Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche, carte et renommage par lot : vos photos se retrouvent en un instant.
-en = Every folder you open joins the photo library. Ratings, flags, keywords, collections, search, map and batch renaming: your photos turn up in an instant.
-es = Cada carpeta que abres entra en la fototeca. Valoraciones, banderas, palabras clave, colecciones, búsqueda, mapa y renombrado por lotes: encuentras tus fotos al instante.
+fr = Chaque carte importée, chaque dossier ouvert entre dans la photothèque, sauvegardé sur un second disque si vous voulez. Notes, drapeaux, mots‑clés, collections, recherche, carte et renommage par lot : vos photos se retrouvent en un instant.
+en = Every card you import and every folder you open joins the photo library, backed up to a second disk if you like. Ratings, flags, keywords, collections, search, map and batch renaming: your photos turn up in an instant.
+es = Cada tarjeta que importas y cada carpeta que abres entra en la fototeca, con copia en un segundo disco si quieres. Valoraciones, banderas, palabras clave, colecciones, búsqueda, mapa y renombrado por lotes: encuentras tus fotos al instante.
 
 fr = Développer
 en = Develop
