@@ -43,6 +43,9 @@ pub struct Merged {
     /// Le nombre de photos utilisées, et celles écartées (impossibles à aligner).
     pub used: usize,
     pub skipped: Vec<usize>,
+    /// L'exposition (IL) à ajouter au développement : une fusion HDR est ramenée sous le
+    /// blanc du capteur pour tenir dans le DNG, puis réexposée d'autant.
+    pub exposure: f32,
 }
 
 impl Merged {
@@ -54,6 +57,32 @@ impl Merged {
             crop,
             used,
             skipped,
+            exposure: 0.0,
+        }
+    }
+
+    /// Ramène l'image sous 1 (le plus clair des pixels, à un dix‑millième près, devient
+    /// le blanc du capteur) et note l'exposition qui la rend à son niveau.
+    pub fn fit_exposure(&mut self) {
+        let mut v: Vec<f32> = self
+            .image
+            .data
+            .iter()
+            .step_by(3)
+            .map(|p| p[0].max(p[1]).max(p[2]))
+            .collect();
+        if v.is_empty() {
+            return;
+        }
+        let at = ((v.len() as f64 * 0.9999) as usize).min(v.len() - 1);
+        let top = *v.select_nth_unstable_by(at, f32::total_cmp).1;
+        if top > 1.0 {
+            let k = 1.0 / top;
+            self.image
+                .data
+                .iter_mut()
+                .for_each(|p| *p = p.map(|c| (c * k).min(1.0)));
+            self.exposure = top.log2();
         }
     }
 
@@ -67,6 +96,7 @@ impl Merged {
             self.image.height,
             &self.image.data,
             template,
+            self.exposure,
             "LÜMA",
         )?;
         let xmp = path.with_extension("xmp");

@@ -28,13 +28,15 @@ fn srational(v: f32) -> SRational {
 
 /// Écrit `rgb` (couleurs caméra linéaires, 1 = blanc du capteur, `width × height`
 /// pixels) dans un DNG, avec la couleur et la balance de `template` (la photo de
-/// référence de la fusion).
+/// référence de la fusion). `exposure` (IL) s'ajoute à l'exposition de base de
+/// `template` : celle d'une fusion HDR, ramenée sous le blanc du capteur.
 pub fn write_linear_dng(
     path: &Path,
     width: usize,
     height: usize,
     rgb: &[[f32; 3]],
     template: &RawPhoto,
+    exposure: f32,
     software: &str,
 ) -> Result<()> {
     if rgb.len() != width * height || width == 0 {
@@ -78,7 +80,10 @@ pub fn write_linear_dng(
         DngTag::UniqueCameraModel,
         format!("{} {}", template.make, template.model).as_str(),
     );
-    root.add_tag(DngTag::BaselineExposure, srational(template.baseline_exposure));
+    root.add_tag(
+        DngTag::BaselineExposure,
+        srational(template.baseline_exposure + exposure),
+    );
     root.add_tag(ExifTag::Orientation, 1u16);
     root.add_tag(TiffCommonTag::Software, software);
     dng.close().map_err(err)?;
@@ -115,7 +120,7 @@ mod tests {
         let dir = std::env::temp_dir().join("luma-dng-test");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("fusion.dng");
-        write_linear_dng(&path, w, h, &rgb, &template, "LÜMA test").unwrap();
+        write_linear_dng(&path, w, h, &rgb, &template, 0.0, "LÜMA test").unwrap();
         let back = RawPhoto::open(&path).unwrap();
         assert_eq!((back.width, back.height), (w, h));
         assert!(matches!(back.mosaic, Mosaic::Linear));
@@ -130,5 +135,9 @@ mod tests {
         assert!((back.baseline_exposure - 0.5).abs() < 1e-4);
         assert_eq!(back.matrices.len(), 2);
         assert!((back.matrices[0].1[1][1] - 1.1).abs() < 1e-4);
+        // Une fusion HDR ramenée sous le blanc : son exposition s'ajoute à celle de base.
+        let hdr = dir.join("fusion-hdr.dng");
+        write_linear_dng(&hdr, w, h, &rgb, &template, 2.25, "LÜMA test").unwrap();
+        assert!((RawPhoto::open(&hdr).unwrap().baseline_exposure - 2.75).abs() < 1e-4);
     }
 }
