@@ -127,12 +127,12 @@ pub const STEPS: [(&str, &str, &str); 4] = [
     (
         "01",
         "Ranger",
-        "Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections et recherche : vos photos se retrouvent en un instant.",
+        "Chaque dossier ouvert entre dans la photothèque. Notes, drapeaux, mots‑clés, collections, recherche et renommage par lot : vos photos se retrouvent en un instant.",
     ),
     (
         "02",
         "Développer",
-        "Lumière, couleur, courbes, détails, corrections d'objectif : chaque réglage s'affiche aussitôt, et l'original reste intact.",
+        "Lumière, couleur, courbes, détails, corrections d'objectif : chaque réglage s'affiche aussitôt, mesuré par la forme d'onde et le vectorscope, et l'original reste intact.",
     ),
     (
         "03",
