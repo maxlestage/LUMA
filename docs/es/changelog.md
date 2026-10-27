@@ -132,6 +132,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Ampliar si es necesario** (Exportar, Dimensiones, o `--enlarge`): un tamaño mayor
+  que la foto la amplía, hasta cuatro veces cada lado, nítida y sin halos alrededor de
+  los contornos; para copias grandes. Sin IA.
 - **Licuar** (Retoque): Empujar, Inflar y Desinflar con un pincel, con su tamaño y su
   fuerza; para enderezar una línea, afinar una forma o corregir un pliegue. Cada trazo
   se guarda en el XMP y se puede deshacer. Sin IA.
