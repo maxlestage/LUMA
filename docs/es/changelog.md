@@ -26,6 +26,9 @@ La fototeca profesional, paso a paso.
   Después la reducción de ruido por ondículas, sin imagen nueva en cada escala: 1,8
   veces más rápida (24 Mpx: 1,17 → 0,65 s), y el enfoque por deconvolución, ocho píxeles
   a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles.
+- **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
+  el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
+  una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
   focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en
@@ -129,6 +132,12 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Ampliar si es necesario** (Exportar, Dimensiones, o `--enlarge`): un tamaño mayor
+  que la foto la amplía, hasta cuatro veces cada lado, nítida y sin halos alrededor de
+  los contornos; para copias grandes. Sin IA.
+- **Licuar** (Retoque): Empujar, Inflar y Desinflar con un pincel, con su tamaño y su
+  fuerza; para enderezar una línea, afinar una forma o corregir un pliegue. Cada trazo
+  se guarda en el XMP y se puede deshacer. Sin IA.
 - **Seleccionar el cielo** (Máscaras, Enmascarado): un clic y el cielo se convierte
   en una máscara, nubes incluidas, siguiendo los bordes de árboles y tejados; un lago
   que lo refleja queda fuera. Sin IA: solo los colores y la textura de la foto.

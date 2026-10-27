@@ -24,6 +24,9 @@ The professional photo library, step by step.
   Then wavelet noise reduction, without a new image at each scale: 1.8 times faster
   (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
   shorter (0.83 → 0.60 s), same pixels.
+- **No more empty boxes on screen**: two film descriptions and the “Film measured”
+  message contained characters missing from the app's font; a test now checks every
+  text of the interface, in all three languages.
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and
@@ -122,6 +125,12 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Enlarge if needed** (Export, Dimensions, or `--enlarge`): a size larger than the
+  photo enlarges it, up to four times each side, sharp and without halos around edges;
+  for large prints. No AI.
+- **Liquify** (Retouch): Push, Bloat and Pucker with a brush, with its size and
+  strength; to straighten a line, refine a shape or fix a fold. Every stroke is kept in
+  the XMP and can be undone. No AI.
 - **Select sky** (Masks, Masking): one click and the sky becomes a mask, clouds
   included, following the edges of trees and roofs; a lake reflecting it stays out.
   No AI: only the colours and texture of the photo.

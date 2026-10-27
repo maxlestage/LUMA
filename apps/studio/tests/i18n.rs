@@ -215,6 +215,44 @@ fn every_text_of_the_interface_is_translated() {
 }
 
 #[test]
+fn every_text_has_its_letters_in_the_font() {
+    // La police de l'app n'a pas tous les caractères (le trait d'union insécable, par
+    // exemple) : un caractère qui manque s'afficherait en carré vide.
+    let ctx = egui::Context::default();
+    // Une image pour charger les polices ; ses textures ne vont nulle part.
+    ctx.run_ui(egui::RawInput::default(), |_| {})
+        .textures_delta
+        .clear();
+    let catalog = i18n::catalog();
+    let font = egui::FontId::proportional(14.0);
+    let mut missing: Vec<String> = Vec::new();
+    for (from, t) in texts() {
+        let fr = t.split('|').next().unwrap_or(&t).to_owned();
+        for (lang, shown) in [
+            ("fr", fr),
+            ("en", catalog.get(Lang::En, &t).to_owned()),
+            ("es", catalog.get(Lang::Es, &t).to_owned()),
+        ] {
+            let absent: String = shown
+                .chars()
+                .filter(|&c| !ctx.fonts_mut(|f| f.has_glyph(&font, c)))
+                .collect();
+            if !absent.is_empty() {
+                missing.push(format!("{from} ({lang}) : {absent:?} dans {shown:?}"));
+            }
+        }
+    }
+    missing.sort();
+    missing.dedup();
+    assert!(
+        missing.is_empty(),
+        "{} textes avec des caractères absents de la police :\n{}",
+        missing.len(),
+        missing.join("\n")
+    );
+}
+
+#[test]
 fn the_holes_are_kept() {
     let catalog = i18n::catalog();
     let mut wrong = Vec::new();

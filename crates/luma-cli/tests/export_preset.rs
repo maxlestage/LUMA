@@ -78,6 +78,13 @@ fn presets_listed_created_and_deleted() {
     assert!(!ok && out.contains("taille inconnue"), "{out}");
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", "0"]);
     assert!(ok && out.contains("pleine définition"), "{out}");
+    // Agrandir au besoin : dit dans la liste, retiré par --no-enlarge.
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", "12000", "--enlarge"]);
+    assert!(ok && out.contains("12000 px, LÜMA/, agrandie au besoin"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--no-enlarge"]);
+    assert!(ok && !out.contains("agrandie"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", "0"]);
+    assert!(ok && out.contains("pleine définition"), "{out}");
 
     // L'accentuation de sortie.
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--output-sharpen", "matte:high"]);

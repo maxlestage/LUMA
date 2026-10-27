@@ -25,6 +25,9 @@ La photothèque professionnelle, étape par étape.
   Puis la réduction du bruit par ondelettes, sans image neuve à chaque échelle : 1,8 fois
   plus rapide (24 Mpx : 1,17 → 0,65 s), et l'accentuation par déconvolution, huit pixels
   à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels.
+- **Plus de carré vide à l'écran** : deux descriptions de films et le message
+  « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
+  essai vérifie désormais chaque texte de l'interface, dans les trois langues.
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
@@ -131,6 +134,12 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Agrandir au besoin** (Exporter, Dimensions, ou `--enlarge`) : une taille plus grande
+  que la photo l'agrandit, jusqu'à quatre fois chaque côté, nette et sans halo autour
+  des contours ; pour les grands tirages. Sans IA.
+- **Fluidité** (Retouche) : Pousser, Gonfler et Dégonfler au pinceau, avec sa taille et sa
+  force ; pour redresser une ligne, affiner une forme ou corriger un pli. Chaque coup
+  est gardé dans le XMP et s'annule. Sans IA.
 - **Sélectionner le ciel** (Masques, Masquage) : un clic, et le ciel devient un
   masque, nuages compris, bords des arbres et des toits suivis ; un lac qui le reflète
   reste à part. Sans IA : seulement les couleurs et la texture de la photo.
