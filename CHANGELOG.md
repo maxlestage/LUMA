@@ -30,7 +30,10 @@ La photothèque professionnelle, étape par étape.
   courts (24 Mpx : 372 → 299 ms) et 144 Mo de mémoire en moins, mêmes octets.
   Puis la réduction du bruit par ondelettes, sans image neuve à chaque échelle : 1,8 fois
   plus rapide (24 Mpx : 1,17 → 0,65 s), et l'accentuation par déconvolution, huit pixels
-  à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels.
+  à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels. Puis le filtre qui suit
+  les contours (Ombres, Hautes lumières, Clarté, bords des masques et du ciel), sans
+  plans intermédiaires : presque deux fois plus rapide (24 Mpx : 87 → 47 ms), mêmes
+  valeurs.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
