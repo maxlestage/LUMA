@@ -19,7 +19,9 @@ La photothèque professionnelle, étape par étape.
   Panasonic), huit pixels à la fois : 30 % plus rapides (ARW 24 Mpx : 385 → 270 ms),
   mêmes fichiers octet pour octet. Puis la Vibrance, de même : l'étape couleur 2,7 fois
   plus rapide quand elle est réglée (NEF 372 → 136 ms), mêmes octets.
-
+  Puis les exports TIFF et PNG en 16 bits : l'image
+  écrite directement en octets, sur tous les cœurs, sans seconde copie : 20 à 28 % plus
+  courts (24 Mpx : 372 → 299 ms) et 144 Mo de mémoire en moins, mêmes octets.
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
