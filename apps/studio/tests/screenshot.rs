@@ -2079,3 +2079,45 @@ fn import_from_a_memory_card() {
         "{shown:?}"
     );
 }
+
+#[test]
+fn custom_shortcuts_and_hidden_panels() {
+    use luma_studio::keys::Combo;
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("raccourcis") else {
+        return;
+    };
+    let file = s.dir.join("Raccourcis.txt");
+    s.studio().use_keys_file(file.clone());
+    // B pour la Bibliothèque : G ne fait plus rien, B y va.
+    assert_eq!(s.studio().set_shortcut("library", Combo::new(Key::B)), None);
+    s.keys(&[(NONE, Key::G)]);
+    assert_eq!(s.studio().module, Module::Develop);
+    s.keys(&[(NONE, Key::B)]);
+    assert_eq!(s.studio().module, Module::Library);
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "library = B\n");
+    // La fenêtre attend une touche : Maj+F pour le tri en plein écran, que F perd.
+    s.studio().listen_shortcut("culling");
+    s.keys(&[(Modifiers::SHIFT, Key::F)]);
+    assert_eq!(
+        s.studio().keymap.get("culling"),
+        [Combo {
+            shift: true,
+            ..Combo::new(Key::F)
+        }]
+    );
+    s.keys(&[(NONE, Key::F)]);
+    assert!(!s.studio().is_culling(), "F seul ne fait plus rien");
+    // Tab masque les panneaux, et les remontre.
+    s.keys(&[(NONE, Key::Tab)]);
+    assert!(s.studio().hide_panels);
+    s.capture("panneaux-masques");
+    s.keys(&[(NONE, Key::Tab)]);
+    assert!(!s.studio().hide_panels);
+    s.studio().open_shortcuts();
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    s.harness.get_by_label("Raccourcis clavier");
+    s.capture("raccourcis");
+}

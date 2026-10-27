@@ -16,8 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use egui::{
-    Color32, ColorImage, Key, Modifiers, Rect, RichText, TextureHandle, TextureOptions, Ui, pos2,
-    vec2,
+    Color32, ColorImage, Key, Rect, RichText, TextureHandle, TextureOptions, Ui, pos2, vec2,
 };
 use luma_color::OutputSpace;
 use luma_image::scopes::Scope;
@@ -596,6 +595,16 @@ pub struct Studio {
     playing: Option<Playing>,
     import_open: bool,
     pub import: Import,
+    /// Les raccourcis clavier, et leur fichier (sinon celui du dossier de LÜMA).
+    pub keymap: crate::keys::Keymap,
+    keys_path: Option<PathBuf>,
+    keys_open: bool,
+    /// La commande dont la fenêtre des raccourcis attend les nouvelles touches.
+    keys_listening: Option<&'static str>,
+    /// Ce qu'a fait le dernier changement (une touche reprise à une autre commande).
+    keys_note: Option<String>,
+    /// Les panneaux masqués (Tab) : la photo prend toute la place.
+    pub hide_panels: bool,
     /// La galerie web.
     pub gallery: luma_render::gallery::Gallery,
     /// Le livre photo.
@@ -929,6 +938,14 @@ impl Studio {
             playing: None,
             import_open: false,
             import: Default::default(),
+            keymap: crate::dialogs::app_dir()
+                .map(|d| crate::keys::Keymap::load(&d.join("Raccourcis.txt")))
+                .unwrap_or_default(),
+            keys_path: None,
+            keys_open: false,
+            keys_listening: None,
+            keys_note: None,
+            hide_panels: false,
             gallery: Default::default(),
             book: Default::default(),
             rename_template: "{date}_{séquence}".into(),
@@ -3487,6 +3504,14 @@ impl Studio {
                     ui.close();
                 }
             }
+            if !TOUCH {
+                ui.separator();
+                ui.label(RichText::new(tr("Clavier")).small().color(theme::DIM));
+                if ui.button(tr("Raccourcis clavier…")).clicked() {
+                    self.keys_open = true;
+                    ui.close();
+                }
+            }
             ui.separator();
             ui.label(RichText::new(tr("Cache")).small().color(theme::DIM));
             let used = crate::dialogs::duplicates_dir()
@@ -3505,8 +3530,8 @@ impl Studio {
             }
         });
         menu.response
-            .on_hover_text(tr("Langue et cache"))
-            .accessible_name(tr("Langue et cache"));
+            .on_hover_text(tr("Langue, clavier et cache"))
+            .accessible_name(tr("Langue, clavier et cache"));
         if clear {
             self.clear_cache();
         }
@@ -3856,122 +3881,202 @@ impl Studio {
     }
 
     fn shortcuts(&mut self, ctx: &egui::Context) {
-        let typing = ctx.memory(|m| m.focused().is_some());
-        let playing = self.playing.is_some();
-        let cmd_shift = Modifiers::COMMAND | Modifiers::SHIFT;
-        let mut action: Option<&str> = None;
-        ctx.input_mut(|i| {
-            if i.consume_key(cmd_shift, Key::Z) {
-                action = Some("redo");
-            } else if i.consume_key(Modifiers::COMMAND, Key::Z) {
-                action = Some("undo");
-            } else if i.consume_key(cmd_shift, Key::C) {
-                action = Some("copy");
-            } else if i.consume_key(cmd_shift | Modifiers::ALT, Key::V) {
-                action = Some("paste_some");
-            } else if i.consume_key(cmd_shift, Key::V) {
-                action = Some("paste");
-            } else if i.consume_key(cmd_shift, Key::S) {
-                action = Some("sync");
-            } else if i.consume_key(cmd_shift, Key::R) {
-                action = Some("reset");
-            } else if i.consume_key(cmd_shift, Key::E) {
-                action = Some("export");
-            } else if i.consume_key(Modifiers::COMMAND, Key::O) {
-                action = Some("open");
-            } else if !typing {
-                let digits = [
-                    Key::Num0,
-                    Key::Num1,
-                    Key::Num2,
-                    Key::Num3,
-                    Key::Num4,
-                    Key::Num5,
-                ];
-                let labels = [Key::Num6, Key::Num7, Key::Num8, Key::Num9];
-                if let Some(n) = digits
-                    .iter()
-                    .position(|k| i.consume_key(Modifiers::NONE, *k))
-                {
-                    action = Some(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n]);
-                } else if let Some(n) = labels
-                    .iter()
-                    .position(|k| i.consume_key(Modifiers::NONE, *k))
-                {
-                    action = Some(["label0", "label1", "label2", "label3"][n]);
-                } else if i.consume_key(Modifiers::NONE, Key::F) {
-                    action = Some("culling");
-                } else if i.consume_key(Modifiers::NONE, Key::C) {
-                    action = Some("compare");
-                } else if i.consume_key(Modifiers::NONE, Key::S) {
-                    action = Some("stack");
-                } else if i.consume_key(Modifiers::NONE, Key::L) {
-                    action = Some("loupe");
-                } else if i.consume_key(Modifiers::NONE, Key::A) {
-                    action = Some("auto_advance");
-                } else if i.consume_key(Modifiers::NONE, Key::Space) {
-                    action = Some(if playing { "slideshow_pause" } else { "next" });
-                } else if i.consume_key(Modifiers::SHIFT, Key::M) {
-                    action = Some("mask_radial");
-                } else if i.consume_key(Modifiers::NONE, Key::M) {
-                    action = Some("mask_linear");
-                } else if i.consume_key(Modifiers::NONE, Key::K) {
-                    action = Some("mask_brush");
-                } else if i.consume_key(Modifiers::NONE, Key::Q) {
-                    action = Some("retouch");
-                } else if i.consume_key(Modifiers::NONE, Key::W) {
-                    action = Some("eyedropper");
-                } else if i.consume_key(Modifiers::NONE, Key::T) {
-                    action = Some("targeting");
-                } else if i.consume_key(Modifiers::SHIFT, Key::O) {
-                    action = Some("guide_turn");
-                } else if i.consume_key(Modifiers::NONE, Key::O) {
-                    action = Some("mask_overlay");
-                } else if i.consume_key(Modifiers::NONE, Key::Delete)
-                    || i.consume_key(Modifiers::NONE, Key::Backspace)
-                {
-                    action = Some("mask_delete");
-                } else if i.consume_key(Modifiers::NONE, Key::G) {
-                    action = Some("library");
-                } else if i.consume_key(Modifiers::NONE, Key::D)
-                    || i.consume_key(Modifiers::NONE, Key::E)
-                {
-                    action = Some("develop");
-                } else if i.consume_key(Modifiers::NONE, Key::P) {
-                    action = Some("pick");
-                } else if i.consume_key(Modifiers::NONE, Key::X) {
-                    action = Some("reject");
-                } else if i.consume_key(Modifiers::NONE, Key::U) {
-                    action = Some("unflag");
-                } else if i.consume_key(Modifiers::SHIFT, Key::R) {
-                    action = Some("auto_level");
-                } else if i.consume_key(Modifiers::SHIFT, Key::V) {
-                    action = Some("auto_vertical");
-                } else if i.consume_key(Modifiers::NONE, Key::R) {
-                    action = Some("crop");
-                } else if i.consume_key(Modifiers::NONE, Key::Enter) {
-                    action = Some("crop_done");
-                } else if i.consume_key(Modifiers::NONE, Key::Escape) {
-                    action = Some("crop_cancel");
-                } else if i.consume_key(Modifiers::NONE, Key::Backslash) {
-                    action = Some("before");
-                } else if i.consume_key(Modifiers::NONE, Key::ArrowLeft) {
-                    action = Some("prev");
-                } else if i.consume_key(Modifiers::NONE, Key::ArrowRight) {
-                    action = Some("next");
-                } else if i.consume_key(Modifiers::SHIFT, Key::J) {
-                    // Avant J seul, qui accepterait aussi Maj+J.
-                    action = Some("scope");
-                } else if i.consume_key(Modifiers::NONE, Key::J) {
-                    action = Some("clipping");
-                } else if i.consume_key(Modifiers::NONE, Key::Z) {
-                    action = Some("zoom");
+        // Une saisie de texte en cours garde ses touches (sauf les raccourcis avec Cmd).
+        let typing = ctx.text_edit_focused();
+        // La fenêtre des raccourcis attend une touche : elle la prend, rien ne s'exécute.
+        if let Some(id) = self.keys_listening {
+            let pressed = ctx.input(|i| {
+                i.events.iter().find_map(|e| match e {
+                    egui::Event::Key {
+                        key,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } => Some((*key, *modifiers)),
+                    _ => None,
+                })
+            });
+            if let Some((key, m)) = pressed {
+                self.keys_listening = None;
+                if key != Key::Escape || m.any() {
+                    let combo = crate::keys::Combo {
+                        key,
+                        command: m.command,
+                        shift: m.shift,
+                        alt: m.alt,
+                    };
+                    self.keys_note = self.keymap.set(id, combo).map(|lost| {
+                        trf(
+                            "« {action} » n'a plus ce raccourci",
+                            &[("action", &crate::keys::label(lost))],
+                        )
+                    });
+                    self.save_keys();
                 }
+                ctx.input_mut(|i| i.events.clear());
             }
+            return;
+        }
+        let playing = self.playing.is_some();
+        let keymap = &self.keymap;
+        let action = ctx.input_mut(|i| keymap.find(i, typing)).map(|a| match a {
+            "space" if playing => "slideshow_pause",
+            "space" => "next",
+            a => a,
         });
         if let Some(a) = action {
             self.act(a);
         }
+    }
+
+    /// Le fichier des raccourcis : « Raccourcis.txt » dans le dossier de LÜMA.
+    fn keys_file(&self) -> Option<PathBuf> {
+        self.keys_path
+            .clone()
+            .or_else(|| Some(crate::dialogs::app_dir()?.join("Raccourcis.txt")))
+    }
+
+    /// Lit les raccourcis de ce fichier, et les y garde (les essais).
+    pub fn use_keys_file(&mut self, path: PathBuf) {
+        self.keymap = crate::keys::Keymap::load(&path);
+        self.keys_path = Some(path);
+    }
+
+    fn save_keys(&mut self) {
+        if let Some(f) = self.keys_file()
+            && let Err(e) = self.keymap.save(&f)
+        {
+            self.status = e.to_string();
+        }
+    }
+
+    /// Change le raccourci d'une commande (comme si on avait appuyé sur ces touches dans
+    /// la fenêtre des raccourcis).
+    pub fn set_shortcut(
+        &mut self,
+        id: &'static str,
+        combo: crate::keys::Combo,
+    ) -> Option<&'static str> {
+        let lost = self.keymap.set(id, combo);
+        self.save_keys();
+        lost
+    }
+
+    /// Ouvre la fenêtre des raccourcis clavier.
+    pub fn open_shortcuts(&mut self) {
+        self.keys_open = true;
+    }
+
+    /// Attend la prochaine touche pour cette commande.
+    pub fn listen_shortcut(&mut self, id: &'static str) {
+        self.keys_listening = Some(id);
+    }
+
+    /// La fenêtre « Raccourcis clavier » : chaque commande, ses touches ; « Changer »
+    /// attend une touche, une touche déjà prise passe à la nouvelle commande.
+    fn keys_window(&mut self, ctx: &egui::Context) {
+        let mut open = self.keys_open;
+        let mut change = None;
+        let mut clear = None;
+        let mut reset: Option<Option<&'static str>> = None;
+        egui::Window::new(tr("Raccourcis clavier"))
+            .id(egui::Id::unique("fenetre-raccourcis"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .default_height(520.0)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_width(470.0);
+                if let Some(id) = self.keys_listening {
+                    ui.label(
+                        RichText::new(trf(
+                            "Appuyez sur les touches pour « {action} » (Échap : annuler)",
+                            &[("action", &crate::keys::label(id))],
+                        ))
+                        .color(theme::ACCENT),
+                    );
+                } else if let Some(n) = &self.keys_note {
+                    ui.label(RichText::new(n.clone()).color(theme::DIM));
+                } else {
+                    ui.label(
+                        RichText::new(tr(
+                            "Cliquez sur une commande, puis appuyez sur ses nouvelles touches.",
+                        ))
+                        .color(theme::DIM),
+                    );
+                }
+                ui.add_space(6.0);
+                egui::ScrollArea::vertical()
+                    .max_height(440.0)
+                    .show(ui, |ui| {
+                        egui::Grid::new("raccourcis")
+                            .num_columns(3)
+                            .striped(true)
+                            .spacing([12.0, 4.0])
+                            .show(ui, |ui| {
+                                for a in crate::keys::ACTIONS {
+                                    ui.label(tr(a.label));
+                                    let combos: Vec<String> = self
+                                        .keymap
+                                        .get(a.id)
+                                        .iter()
+                                        .map(crate::keys::Combo::label)
+                                        .collect();
+                                    let text = if combos.is_empty() {
+                                        tr("Aucun").to_owned()
+                                    } else {
+                                        combos.join(&format!(" {} ", tr("ou")))
+                                    };
+                                    let listening = self.keys_listening == Some(a.id);
+                                    if ui
+                                        .selectable_label(
+                                            listening,
+                                            RichText::new(text).monospace(),
+                                        )
+                                        .on_hover_text(tr("Changer le raccourci"))
+                                        .clicked()
+                                    {
+                                        change = Some(a.id);
+                                    }
+                                    ui.horizontal(|ui| {
+                                        if !self.keymap.get(a.id).is_empty()
+                                            && ui.small_button(tr("Retirer")).clicked()
+                                        {
+                                            clear = Some(a.id);
+                                        }
+                                        if self.keymap.get(a.id) != a.defaults
+                                            && ui.small_button(tr("Par défaut")).clicked()
+                                        {
+                                            reset = Some(Some(a.id));
+                                        }
+                                    });
+                                    ui.end_row();
+                                }
+                            });
+                    });
+                ui.add_space(6.0);
+                if ui.button(tr("Tout remettre par défaut")).clicked() {
+                    reset = Some(None);
+                }
+            });
+        if let Some(id) = change {
+            self.keys_note = None;
+            self.keys_listening = Some(id);
+        }
+        if let Some(id) = clear {
+            self.keymap.clear(id);
+            self.save_keys();
+        }
+        if let Some(r) = reset {
+            self.keymap.reset(r);
+            self.keys_note = None;
+            self.save_keys();
+        }
+        if !open {
+            self.keys_listening = None;
+        }
+        self.keys_open = open;
     }
 
     fn act(&mut self, action: &str) {
@@ -4074,6 +4179,7 @@ impl Studio {
                 self.culling = false;
                 self.playing = None;
             }
+            "panels" => self.hide_panels = !self.hide_panels,
             "slideshow_pause" => {
                 if let Some(p) = &mut self.playing {
                     p.paused = !p.paused;
@@ -4739,6 +4845,11 @@ impl Studio {
             });
             self.island(ui, bar, |s, ui| s.rail(ui, true));
             self.island(ui, sheet, |s, ui| s.inspector(ui));
+        } else if self.hide_panels {
+            // Tab : la photo seule, sous la barre du haut.
+            let stage =
+                Rect::from_min_max(pos2(full.min.x + m, top.max.y + m), full.max - vec2(m, m));
+            self.stage(ui, stage);
         } else {
             let rail_h = Tool::ALL.len() as f32 * 60.0 + 28.0;
             let rail = Rect::from_min_size(pos2(full.min.x + m, top.max.y + m), vec2(68.0, rail_h));
@@ -4778,6 +4889,9 @@ impl Studio {
         }
         if self.import_open && allowed {
             self.import_window(&ctx);
+        }
+        if self.keys_open {
+            self.keys_window(&ctx);
         }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
