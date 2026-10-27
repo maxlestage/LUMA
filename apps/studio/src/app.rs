@@ -469,6 +469,7 @@ enum Output {
     Print,
     Book,
     Slideshow,
+    Gallery,
 }
 
 /// Le diaporama dans l'app : depuis quand la photo est montrée, et la pause.
@@ -560,6 +561,8 @@ pub struct Studio {
     /// Le diaporama : ses réglages (pour l'app comme pour l'export), et la lecture.
     pub show: luma_render::slideshow::Slideshow,
     playing: Option<Playing>,
+    /// La galerie web.
+    pub gallery: luma_render::gallery::Gallery,
     /// Le livre photo.
     pub book: luma_render::book::Book,
     rename_template: String,
@@ -889,6 +892,7 @@ impl Studio {
             outputs_open: false,
             show: Default::default(),
             playing: None,
+            gallery: Default::default(),
             book: Default::default(),
             rename_template: "{date}_{séquence}".into(),
             snapshot_name: String::new(),
@@ -1758,6 +1762,10 @@ impl Studio {
                         "Diaporama prêt : {n} photos, {file} (ouvrir index.html)",
                         &[("n", &n), ("file", &file)],
                     ),
+                    Output::Gallery => trf(
+                        "Galerie prête : {n} photos, {file} (à mettre en ligne telle quelle)",
+                        &[("n", &n), ("file", &file)],
+                    ),
                 };
                 if p.output == Output::Print {
                     self.print_open = false;
@@ -1961,15 +1969,70 @@ impl Studio {
         });
     }
 
-    /// La fenêtre « Livre et diaporama » : le diaporama (dans l'app ou exporté) et le
-    /// livre photo.
+    /// Exporte la galerie web des photos (en arrière‑plan) dans le dossier `dir` ; la
+    /// légende de chaque photo est son titre, sinon son nom.
+    pub fn export_gallery(&mut self, dir: PathBuf) {
+        self.flush_xmp();
+        let photos: Vec<(PathBuf, String)> = self
+            .output_targets()
+            .into_iter()
+            .map(|p| {
+                let title = self
+                    .meta
+                    .get(&p)
+                    .map(|m| m.title.trim().to_owned())
+                    .unwrap_or_default();
+                let caption = if title.is_empty() {
+                    file_name(&p)
+                } else {
+                    title
+                };
+                (p, caption)
+            })
+            .collect();
+        if photos.is_empty() {
+            return;
+        }
+        let g = self.gallery.clone();
+        let (send, done) = std::sync::mpsc::channel();
+        let placed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = placed.clone();
+        let total = photos.len();
+        let job = move || -> Result<(PathBuf, usize), String> {
+            let mut entries = Vec::with_capacity(photos.len());
+            for (p, caption) in photos {
+                let photo = crate::dialogs::open_photo(&p).map_err(|e| e.to_string())?;
+                let settings =
+                    crate::worker::read_sidecar(&p).unwrap_or_else(|| photo.default_settings());
+                let r = photo
+                    .render(&settings, Size::Fit(g.size), &luma_core::Cancel::new())
+                    .map_err(|e| e.to_string())?;
+                entries.push(luma_render::gallery::entry(&r.image, &g, caption)?);
+                counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+            luma_render::gallery::write(&dir, &g, &entries)?;
+            Ok((dir.join("index.html"), entries.len()))
+        };
+        std::thread::spawn(move || {
+            let _ = send.send(job());
+        });
+        self.printing = Some(Printing {
+            done,
+            placed,
+            total,
+            output: Output::Gallery,
+        });
+    }
+
+    /// La fenêtre « Livre, diaporama et galerie » : le diaporama (dans l'app ou exporté),
+    /// le livre photo et la galerie web.
     fn outputs_window(&mut self, ctx: &egui::Context) {
         use luma_render::book::{self, FORMATS};
         let mut open = self.outputs_open;
         let photos = self.output_targets();
         let n = photos.len();
-        let (mut play, mut export, mut make) = (false, false, false);
-        egui::Window::new(trf("Livre et diaporama : {n} photos", &[("n", &n)]))
+        let (mut play, mut export, mut make, mut web) = (false, false, false, false);
+        egui::Window::new(trf("Livre, diaporama et galerie : {n} photos", &[("n", &n)]))
             .id(egui::Id::unique("fenetre-livre"))
             .open(&mut open)
             .collapsible(false)
@@ -2052,6 +2115,22 @@ impl Studio {
                 );
                 make = ui
                     .add_enabled(self.printing.is_none() && n > 0, egui::Button::new(tr("Créer le livre (PDF)…")))
+                    .clicked();
+                ui.add_space(12.0);
+                section_title(ui, tr("Galerie web"));
+                let g = &mut self.gallery;
+                egui::Grid::new("galerie").num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
+                    ui.label(RichText::new(tr("Titre")).color(theme::DIM));
+                    ui.text_edit_singleline(&mut g.title);
+                    ui.end_row();
+                    ui.label(RichText::new(tr("Description")).color(theme::DIM));
+                    ui.text_edit_singleline(&mut g.description);
+                    ui.end_row();
+                });
+                ui.checkbox(&mut g.captions, tr("La légende de chaque photo (son titre, sinon son nom)"));
+                web = ui
+                    .add_enabled(self.printing.is_none() && n > 0, egui::Button::new(tr("Exporter la galerie…")))
+                    .on_hover_text(tr("Une page web et ses photos, allégées pour le web : à mettre en ligne telle quelle"))
                     .clicked();
                 if let Some(p) = &self.printing {
                     let done = p.placed.load(std::sync::atomic::Ordering::Relaxed);
@@ -2567,8 +2646,8 @@ impl Studio {
                 self.print_open = true;
             }
             if ui
-                .small_button(tr("Livre et diaporama…"))
-                .on_hover_text(tr("Un diaporama (dans l'app ou exporté) et un livre photo en PDF"))
+                .small_button(tr("Livre, diaporama, galerie…"))
+                .on_hover_text(tr("Un diaporama (dans l'app ou exporté), un livre photo en PDF et une galerie web"))
                 .clicked()
             {
                 self.outputs_open = true;
@@ -5202,9 +5281,9 @@ impl Studio {
         }
         ui.add_space(16.0);
         if ui
-            .button(tr("Livre et diaporama…"))
+            .button(tr("Livre, diaporama, galerie…"))
             .on_hover_text(tr(
-                "Un diaporama (dans l'app ou exporté) et un livre photo en PDF",
+                "Un diaporama (dans l'app ou exporté), un livre photo en PDF et une galerie web",
             ))
             .clicked()
         {
