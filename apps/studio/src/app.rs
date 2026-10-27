@@ -803,6 +803,8 @@ pub struct Studio {
     pub licence: crate::licence::Licence,
     /// L'écran Premium est ouvert (il l'est toujours quand l'essai est fini).
     pub premium_open: bool,
+    /// La mise en page pour le doigt (iPhone, iPad) ; réglable pour les essais.
+    pub touch_layout: bool,
     previews: Vec<Option<TextureHandle>>,
     previews_tag: u64,
     previews_for: Option<PathBuf>,
@@ -1092,6 +1094,7 @@ impl Studio {
             brand: None,
             licence: crate::licence::Licence::load(),
             premium_open: false,
+            touch_layout: TOUCH,
             previews: Vec::new(),
             previews_tag: 0,
             previews_for: None,
@@ -4918,14 +4921,18 @@ impl Studio {
         let full = screen.intersect(ctx.content_rect());
         // iPhone (ou fenêtre étroite) : la photo en haut, la barre d'outils, puis
         // l'inspecteur en feuille.
-        let compact = full.width() < 820.0;
+        // iPhone en portrait, et aussi en paysage (peu de hauteur) : la mise en page
+        // compacte. Sur iPad, celle de l'ordinateur, mais la barre du haut compacte
+        // (ses commandes dans « ••• ») : au doigt, pas de rangée de petits mots.
+        let compact = full.width() < 820.0 || (self.touch_layout && full.height() < 600.0);
         self.compact = compact;
+        let compact_top = compact || self.touch_layout;
         let m = if compact { 8.0 } else { 14.0 };
         let top = Rect::from_min_size(full.min + vec2(m, m), vec2(full.width() - 2.0 * m, 50.0));
         // Au tri en plein écran, la photo prend tout, la barre du haut aussi.
         let culling = self.culling && self.current.is_some();
         if !culling {
-            self.island(ui, top, |s, ui| s.top_island(ui, compact));
+            self.island(ui, top, |s, ui| s.top_island(ui, compact_top));
         }
         // Rien à retoucher encore : l'accueil prend tout l'écran.
         let welcome = compact && self.folder.is_empty() && self.texture.is_none();
@@ -4936,6 +4943,22 @@ impl Studio {
         } else if welcome {
             let stage = Rect::from_min_max(pos2(full.min.x, top.max.y + m), full.max);
             self.stage(ui, stage);
+        } else if compact && full.width() > full.height() {
+            // iPhone en paysage : la photo à gauche, les outils et leur panneau à droite.
+            let split = full.min.x + full.width() * 0.56;
+            let stage =
+                Rect::from_min_max(pos2(full.min.x, top.max.y + m), pos2(split, full.max.y));
+            let bar = Rect::from_min_size(
+                pos2(split + m, top.max.y + m),
+                vec2(full.max.x - split - 2.0 * m, 70.0),
+            );
+            let sheet = Rect::from_min_max(
+                pos2(split + m, bar.max.y + m),
+                pos2(full.max.x - m, full.max.y - m),
+            );
+            self.stage(ui, stage);
+            self.island(ui, bar, |s, ui| s.rail(ui, true));
+            self.island(ui, sheet, |s, ui| s.inspector(ui));
         } else if compact {
             // La bibliothèque donne plus de place à la grille qu'à la photo seule.
             let share = if self.module == Module::Library {
@@ -7364,6 +7387,8 @@ impl Studio {
                     b
                 )
             }
+            // Au doigt, rien ne survole la photo : pas de mesure à proposer.
+            None if TOUCH => return,
             None => tr("Survolez la photo : RVB et Lab du point").to_owned(),
         };
         ui.label(RichText::new(line).size(10.5).monospace().color(theme::DIM));
