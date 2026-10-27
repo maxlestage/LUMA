@@ -3596,6 +3596,15 @@ impl Studio {
         if !luma_apple::photos::AVAILABLE {
             return;
         }
+        // Le sélecteur demandé est‑il bien venu à l'écran ? Sinon, la fenêtre de
+        // secours le présente (voir luma_apple::photos::watch).
+        if let Some(what) = luma_apple::photos::watch() {
+            crate::journal(&format!("importer : {what}"));
+            self.import_result = Some(what.to_owned());
+        }
+        if luma_apple::photos::pending() {
+            ctx.request_repaint_after(std::time::Duration::from_millis(200));
+        }
         let failed = luma_apple::photos::failed();
         if failed != self.imports_failed {
             crate::journal(&format!("import : {failed} échec(s)"));
@@ -4455,7 +4464,7 @@ impl Studio {
                         .and_then(luma_apple::photos::pick);
                     crate::journal(&format!("importer : {opened:?}"));
                     self.import_result = Some(match &opened {
-                        Ok(from) => format!("Photos ouvert ({from})"),
+                        Ok(from) => format!("Photos demandé depuis {from}"),
                         Err(why) => format!("Photos refusé : {why}"),
                     });
                     // Le choix dans Photos prend son temps, et la copie des fichiers aussi.
