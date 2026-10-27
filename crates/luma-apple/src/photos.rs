@@ -90,7 +90,7 @@ mod ios {
     use objc2_photos_ui::{
         PHPickerConfiguration, PHPickerConfigurationAssetRepresentationMode, PHPickerFilter, PHPickerResult,
     };
-    use objc2_ui_kit::{UIApplication, UIView, UIViewController, UIWindowScene};
+    use objc2_ui_kit::{UIApplication, UIView, UIViewController, UIWindow, UIWindowScene};
 
     use super::{CHOSEN, FAILED, IMPORTED, VIEW, free_name};
 
@@ -119,6 +119,12 @@ mod ios {
                 let _: () = unsafe {
                     msg_send![picker, dismissViewControllerAnimated: true, completion: None::<&Block<dyn Fn()>>]
                 };
+                // La fenêtre de secours, s'il a fallu l'ouvrir, s'en va avec lui.
+                PRESENTER.with(|w| {
+                    if let Some(w) = w.borrow_mut().take() {
+                        w.setHidden(true);
+                    }
+                });
                 CHOSEN.fetch_add(results.count(), Ordering::Release);
                 for result in results {
                     load(&result, self.ivars().dest.clone());
@@ -130,6 +136,9 @@ mod ios {
     thread_local! {
         /// Le délégué du sélecteur en cours : le sélecteur ne le retient pas.
         static DELEGATE: RefCell<Option<Retained<Delegate>>> = const { RefCell::new(None) };
+        /// La fenêtre de secours qui présente le sélecteur quand la fenêtre de LÜMA ne
+        /// le peut pas (voir `pick`).
+        static PRESENTER: RefCell<Option<Retained<UIWindow>>> = const { RefCell::new(None) };
     }
 
     /// Copie le fichier d'origine d'une photo choisie dans `dest`.
@@ -240,25 +249,65 @@ mod ios {
         // SAFETY: PHPickerViewController est un UIViewController de PhotosUI, créé par
         // son initialiseur documenté, avec un délégué qui répond à
         // `picker:didFinishPicking:` et qu'on retient (DELEGATE).
-        unsafe {
+        let picker: Retained<AnyObject> = unsafe {
             let alloc: Allocated<AnyObject> = msg_send![class, alloc];
             let picker: Retained<AnyObject> = msg_send![alloc, initWithConfiguration: &*config];
             let _: () = msg_send![&picker, setDelegate: &*delegate];
-            let _: () =
-                msg_send![&top, presentViewController: &*picker, animated: true, completion: None::<&Block<dyn Fn()>>];
-        }
+            picker
+        };
         DELEGATE.with(|d| *d.borrow_mut() = Some(delegate));
-        // UIKit refuse sans rien dire (un message dans la console) de présenter depuis
-        // un contrôleur hors de l'écran : on vérifie que le sélecteur est bien là.
-        // (Ce qui est présenté n'est pas toujours de la classe exacte du sélecteur : un
-        // conteneur du système peut l'envelopper ; tout contrôleur présenté compte.)
-        let shown = top.presentedViewController().is_some();
         let name = top.class().name().to_string_lossy().into_owned();
-        if shown {
-            Ok(name)
+        // UIKit refuse sans rien dire (un message dans la console) de présenter depuis
+        // un contrôleur hors de l'écran : on vérifie que quelque chose est présenté.
+        // (Ce n'est pas toujours la classe exacte du sélecteur : un conteneur du système
+        // peut l'envelopper ; tout contrôleur présenté compte.)
+        if present(&top, &picker) {
+            return Ok(name);
+        }
+        // Secours : une fenêtre à nous, au‑dessus de tout, avec son propre contrôleur.
+        let fallback = presenter(mtm, &top).ok_or("fenêtre de secours impossible")?;
+        if present(&fallback, &picker) {
+            Ok(format!("{name}, puis fenêtre de secours"))
         } else {
+            PRESENTER.with(|w| {
+                if let Some(w) = w.borrow_mut().take() {
+                    w.setHidden(true);
+                }
+            });
             Err("le sélecteur ne s'affiche pas")
         }
+    }
+
+    /// Présente `picker` depuis `from` ; vrai si quelque chose est bien présenté.
+    fn present(from: &UIViewController, picker: &AnyObject) -> bool {
+        // SAFETY: `picker` est un UIViewController neuf ; `from` un contrôleur de l'app,
+        // sur le fil principal.
+        unsafe {
+            let _: () =
+                msg_send![from, presentViewController: picker, animated: true, completion: None::<&Block<dyn Fn()>>];
+        }
+        from.presentedViewController().is_some()
+    }
+
+    /// Une fenêtre de secours au‑dessus de tout, dans la scène de LÜMA, avec un
+    /// contrôleur vide qui présentera le sélecteur ; retenue jusqu'à sa fermeture.
+    fn presenter(mtm: MainThreadMarker, near: &UIViewController) -> Option<Retained<UIViewController>> {
+        let scene = near
+            .viewIfLoaded()
+            .and_then(|v| v.window())
+            .and_then(|w| w.windowScene());
+        let window: Retained<UIWindow> = match scene {
+            // SAFETY: initialiseurs documentés de UIWindow, sur le fil principal.
+            Some(scene) => unsafe { msg_send![UIWindow::alloc(mtm), initWithWindowScene: &*scene] },
+            // SAFETY: idem, sans scène (l'écran entier par défaut).
+            None => unsafe { msg_send![UIWindow::alloc(mtm), init] },
+        };
+        let controller = UIViewController::new(mtm);
+        window.setWindowLevel(1.0);
+        window.setRootViewController(Some(&controller));
+        window.makeKeyAndVisible();
+        PRESENTER.with(|w| *w.borrow_mut() = Some(window));
+        Some(controller)
     }
 }
 
