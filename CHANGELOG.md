@@ -307,6 +307,10 @@ La photothèque professionnelle, étape par étape.
   galerie… » passe dans « ••• ») ; l'histogramme seul dans le panneau Photos. Après
   une mise à jour de l'app, les photos suivent le nouveau dossier de l'app au lieu
   d'apparaître dans un second « Documents ».
+- **iPhone et iPad : le toucher tombe juste** : l'image a enfin la taille de l'écran
+  (elle était faite pour la zone sûre puis étirée de 11 % en hauteur) ; le bas des
+  panneaux s'affiche (Instantanés, sous l'historique), le doigt fait défiler le
+  panneau et touche ce qu'il vise. La barre du haut contient ses boutons de 40 points.
 
 ## 0.2.0 — octobre 2026
 

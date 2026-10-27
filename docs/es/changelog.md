@@ -303,6 +303,10 @@ La fototeca profesional, paso a paso.
   pase de diapositivas, galería…» pasa a «•••»); solo el histograma en el panel Fotos.
   Tras una actualización de la app, las fotos siguen a la nueva carpeta de la app en
   lugar de aparecer en un segundo «Documents».
+- **iPhone y iPad: el toque cae donde debe**: la imagen por fin tiene el tamaño de la
+  pantalla (estaba hecha para la zona segura y luego estirada un 11 % en altura); se
+  ve el final de los paneles (Instantáneas, bajo el historial), el dedo desplaza el
+  panel y toca lo que apunta. La barra superior contiene sus botones de 40 puntos.
 
 ## 0.2.0 — octubre de 2026
 

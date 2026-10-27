@@ -35,7 +35,7 @@ pub fn apply(ctx: &egui::Context) {
         s.spacing.button_padding = egui::vec2(12.0, 5.0);
         // Au doigt (iPhone, iPad) : des cibles d'au moins 40 points de haut, plus
         // d'espace entre elles, et les menus plus larges.
-        if cfg!(target_os = "ios") {
+        if crate::touch() {
             s.spacing.item_spacing = egui::vec2(8.0, 8.0);
             s.spacing.button_padding = egui::vec2(14.0, 10.0);
             s.spacing.interact_size = egui::vec2(44.0, 40.0);

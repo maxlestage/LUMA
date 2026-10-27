@@ -113,10 +113,6 @@ const fn field(
     }
 }
 
-/// Un écran tactile sans clavier (iPhone, iPad) : toucher pour ouvrir, glisser d'une
-/// photo à l'autre, toucher longuement pour choisir ; pas de raccourcis à annoncer.
-const TOUCH: bool = cfg!(target_os = "ios");
-
 const TONE: [Field; 6] = [
     field("Exposition", -5.0, 5.0, 0.0, 2, |s| &mut s.exposure),
     field("Contraste", -100.0, 100.0, 0.0, 0, |s| &mut s.contrast),
@@ -1097,7 +1093,7 @@ impl Studio {
             brand: None,
             licence: crate::licence::Licence::load(),
             premium_open: false,
-            touch_layout: TOUCH,
+            touch_layout: crate::touch(),
             previews: Vec::new(),
             previews_tag: 0,
             previews_for: None,
@@ -2606,7 +2602,7 @@ impl Studio {
                         );
                     }
                 });
-                if !TOUCH
+                if !crate::touch()
                     && ui.small_button(tr("Choisir un profil ICC…")).clicked()
                     && let Some(path) = crate::dialogs::pick_icc()
                 {
@@ -3550,7 +3546,7 @@ impl Studio {
                     ui.close();
                 }
             }
-            if !TOUCH {
+            if !crate::touch() {
                 ui.separator();
                 ui.label(RichText::new(tr("Espaces de travail")).small().color(theme::DIM));
                 let builtin = crate::workspaces::builtin().len();
@@ -4880,7 +4876,7 @@ impl Studio {
         self.handle_events(&ctx);
         self.watch_memory(&ctx);
         self.watch_imports(&ctx);
-        if TOUCH {
+        if crate::touch() {
             self.track_touches(&ctx);
         }
         // Les vignettes libérées qui se sont affichées vides : on les relit.
@@ -4967,7 +4963,10 @@ impl Studio {
         self.compact = compact;
         let compact_top = compact || self.touch_layout;
         let m = if compact { 8.0 } else { 14.0 };
-        let top = Rect::from_min_size(full.min + vec2(m, m), vec2(full.width() - 2.0 * m, 50.0));
+        // La barre du haut contient ses boutons : au doigt, ils ont 40 points de haut, et
+        // l'îlot 12 points de marge tout autour.
+        let top_h = (ui.spacing().interact_size.y + 24.0).max(50.0);
+        let top = Rect::from_min_size(full.min + vec2(m, m), vec2(full.width() - 2.0 * m, top_h));
         // Au tri en plein écran, la photo prend tout, la barre du haut aussi.
         let culling = self.culling && self.current.is_some();
         if !culling {
@@ -6629,7 +6628,7 @@ impl Studio {
             ("Mes préréglages", (mine..self.film_count()).collect()),
             ("Mes pellicules", (PRESETS.len()..mine).collect()),
         ];
-        if TOUCH || ui.available_width() < 420.0 {
+        if crate::touch() || ui.available_width() < 420.0 {
             sections.extend(own);
         } else {
             sections.splice(0..0, own);
@@ -6727,7 +6726,7 @@ impl Studio {
     /// Mes préréglages : enregistrer le look actuel, importer, tout exporter.
     fn my_presets(&mut self, ui: &mut Ui) {
         ui.label(
-            RichText::new(if TOUCH {
+            RichText::new(if crate::touch() {
                 tr(
                     "En préréglages XMP (.xmp) : touchez longuement un film pour l'exporter seul, \
                     ou tous d'un coup, rangés par famille.",
@@ -6895,8 +6894,8 @@ impl Studio {
         let n = self.selected.len();
         ui.label(
             RichText::new(match n {
-                0 if TOUCH => tr("Dans la bibliothèque, touchez longuement les photos à fusionner, ou prenez tout le dossier.").to_owned(),
-                1 if TOUCH => tr("Une photo choisie : touchez longuement les autres dans la bibliothèque.").to_owned(),
+                0 if crate::touch() => tr("Dans la bibliothèque, touchez longuement les photos à fusionner, ou prenez tout le dossier.").to_owned(),
+                1 if crate::touch() => tr("Une photo choisie : touchez longuement les autres dans la bibliothèque.").to_owned(),
                 0 => tr("Choisissez les photos dans le film : Cmd-clic pour en ajouter une, Maj-clic pour une suite.").to_owned(),
                 1 => tr("Une photo choisie : ajoutez-en d'autres (Cmd-clic, Maj-clic).").to_owned(),
                 n => trf("{n} photos choisies.", &[("n", &n)]),
@@ -7060,7 +7059,7 @@ impl Studio {
                 .and_then(|p| p.parent())
                 .map(|d| d.display().to_string())
                 .unwrap_or_else(|| {
-                    if TOUCH {
+                    if crate::touch() {
                         tr("Aucun")
                     } else {
                         tr("Aucun (Cmd+O)")
@@ -7448,7 +7447,7 @@ impl Studio {
                 )
             }
             // Au doigt, rien ne survole la photo : pas de mesure à proposer.
-            None if TOUCH => return,
+            None if crate::touch() => return,
             None => tr("Survolez la photo : RVB et Lab du point").to_owned(),
         };
         ui.label(RichText::new(line).size(10.5).monospace().color(theme::DIM));
@@ -7463,7 +7462,8 @@ impl Studio {
         };
         section_title(ui, tr("Métadonnées"));
         ui.label(RichText::new(file_name(&path)).strong());
-        ui.horizontal(|ui| {
+        // À la ligne quand la place manque (iPhone, panneau étroit).
+        ui.horizontal_wrapped(|ui| {
             if ui
                 .small_button(tr("Copie virtuelle"))
                 .on_hover_text(tr(
@@ -8072,9 +8072,9 @@ impl Studio {
                                     egui::StrokeKind::Inside,
                                 );
                             }
-                            if TOUCH && r.long_touched() {
+                            if crate::touch() && r.long_touched() {
                                 chosen = Some(i);
-                            } else if r.double_clicked() || (TOUCH && r.clicked()) {
+                            } else if r.double_clicked() || (crate::touch() && r.clicked()) {
                                 open = Some(i);
                             } else if r.clicked() {
                                 clicked = Some(i);
@@ -8170,7 +8170,7 @@ impl Studio {
                                 egui::StrokeKind::Outside,
                             );
                         }
-                        if TOUCH && r.long_touched() {
+                        if crate::touch() && r.long_touched() {
                             chosen = Some(i);
                         } else if r.on_hover_text(file_name(path)).clicked() {
                             clicked = Some(i);
@@ -8244,7 +8244,7 @@ impl Studio {
                 _ => false,
             })
         });
-        if TOUCH {
+        if crate::touch() {
             // Diagnostic, le temps de vérifier l'import sur un vrai iPhone.
             let text = match self.last_touch {
                 Some(p) => format!(
@@ -8462,7 +8462,7 @@ impl Studio {
             let target = fit(rect.shrink(18.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
             self.edit_label(&painter, target);
-            let sense = if self.targeting || TOUCH {
+            let sense = if self.targeting || crate::touch() {
                 egui::Sense::click_and_drag()
             } else {
                 egui::Sense::click()
@@ -8502,7 +8502,7 @@ impl Studio {
                     ));
                     self.touch();
                 }
-            } else if TOUCH && r.drag_stopped() {
+            } else if crate::touch() && r.drag_stopped() {
                 // Glisser du doigt : la photo suivante ou la précédente.
                 let moved = ui.input(|i| {
                     i.pointer
@@ -8531,7 +8531,7 @@ impl Studio {
             badges.push(tr("Rendu…"));
         }
         if self.clipping {
-            badges.push(if TOUCH {
+            badges.push(if crate::touch() {
                 tr("Écrêtage")
             } else {
                 tr("Écrêtage (J)")

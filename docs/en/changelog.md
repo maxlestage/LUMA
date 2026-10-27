@@ -284,6 +284,10 @@ The professional photo library, step by step.
   Slideshow bar fits on one line (“Book, slideshow, gallery…” moves to “•••”); the
   histogram alone in the Photos panel. After an app update, photos follow the app's new
   folder instead of showing up in a second “Documents”.
+- **iPhone and iPad: touches land where they should**: the image finally has the
+  screen's size (it was made for the safe area, then stretched 11% vertically); the
+  bottom of the panels shows (Snapshots, below the history), a finger scrolls the panel
+  and hits what it aims at. The top bar holds its 40‑point buttons.
 
 ## 0.2.0 — October 2026
 
