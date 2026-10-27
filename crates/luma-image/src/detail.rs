@@ -9,7 +9,9 @@
 //!   mesuré sur la plus fine (un Wiener local). Les contours, forts à toutes les
 //!   échelles, restent ; le grain, faible et fin, s'en va.
 //! - L'accentuation est un masque flou sur la luminance perçue, avec un plafond contre
-//!   les halos (Détail) et un masque de contours (Masquage).
+//!   les halos (Détail) et un masque de contours (Masquage). Au choix, une
+//!   déconvolution : Richardson‑Lucy avec un flou gaussien du Rayon, qui défait le flou
+//!   au lieu d'en creuser l'écart ; même plafond, même Masquage.
 //!
 //! Les rayons sont donnés en pixels de l'image pleine définition et ramenés à la
 //! taille rendue (`scale`) : un aperçu réduit n'est pas sur‑traité.
@@ -268,6 +270,15 @@ pub fn sharpen(img: &mut RgbImage, d: &Detail, scale: f32) {
     };
     let perceived = Plane::from_rgb(img, |p| luminance(p).max(0.0).powf(1.0 / 2.2));
     let blurred = perceived.blur(radius);
+    // La déconvolution : l'image nette estimée tient lieu de « v + écart », le Gain en
+    // dose la part, le Détail double le plafond (elle rend du vrai détail, pas un halo).
+    let (amount, limit, sharp) = if d.sharpen_deconvolution {
+        let linear = Plane::from_rgb(img, |p| luminance(p).max(0.0));
+        let sharp = richardson_lucy(&linear, radius);
+        (amount / 1.4, limit * 2.0, Some(sharp.map(|v| v.powf(1.0 / 2.2))))
+    } else {
+        (amount, limit, None)
+    };
     let mask = if d.sharpen_masking > 0.0 {
         let th = d.sharpen_masking / 100.0 * 0.06;
         let edges = blurred.blur(1.0);
@@ -287,12 +298,103 @@ pub fn sharpen(img: &mut RgbImage, d: &Detail, scale: f32) {
     };
     img.data.par_iter_mut().enumerate().for_each(|(i, p)| {
         let v = perceived.data[i];
-        let diff = (v - blurred.data[i]).clamp(-limit, limit);
+        let diff = match &sharp {
+            Some(s) => s.data[i] - v,
+            None => v - blurred.data[i],
+        }
+        .clamp(-limit, limit);
         let m = mask.as_ref().map_or(1.0, |m| m.data[i]);
         let sharp = (v + amount * diff * m).max(0.0);
         let gain = if v > 1e-4 { (sharp / v).powf(2.2) } else { 1.0 };
         p.iter_mut().for_each(|c| *c *= gain);
     });
+}
+
+/// Les itérations de Richardson‑Lucy : assez pour défaire un flou d'un ou deux pixels,
+/// pas assez pour que le bruit monte.
+const RL_ITERATIONS: usize = 10;
+
+/// Richardson‑Lucy sur `observed` (lumière linéaire, où le flou a eu lieu), pour un
+/// flou gaussien `sigma` (symétrique : il est son propre transposé). Deux tampons
+/// seulement, et chaque itération en quatre passes : le flou de l'estimation (lignes,
+/// colonnes), puis celui du rapport observée / floutée, calculé à la volée dans la passe
+/// des lignes, la correction appliquée dans celle des colonnes.
+fn richardson_lucy(observed: &Plane, sigma: f32) -> Plane {
+    const FLOOR: f32 = 1e-4;
+    let (w, h) = (observed.width, observed.height);
+    let kernel = gaussian_kernel(sigma);
+    let mut u = observed.clone();
+    let (mut rows, mut hu) = (vec![0.0; w * h], vec![0.0; w * h]);
+    for _ in 0..RL_ITERATIONS {
+        convolve_rows(&u.data, &mut rows, w, &kernel, |_, v| v);
+        convolve_cols(&rows, &mut hu, w, h, &kernel, |_, _, c| c);
+        let obs = &observed.data;
+        convolve_rows(&hu, &mut rows, w, &kernel, |i, v| obs[i].max(0.0) / v.max(FLOOR));
+        // La correction au carré (Richardson‑Lucy accéléré : le même chemin en deux fois
+        // moins d'itérations), bornée pour qu'un pixel isolé ne s'emballe pas.
+        convolve_cols(&rows, &mut u.data, w, h, &kernel, |_, u, c| {
+            u.max(0.0) * (c * c).clamp(0.5, 2.0)
+        });
+    }
+    u
+}
+
+/// Les poids d'une gaussienne d'écart type `sigma`, sur ±2,5 σ (au moins un pixel),
+/// de somme 1.
+fn gaussian_kernel(sigma: f32) -> Vec<f32> {
+    let r = (2.5 * sigma).ceil().max(1.0) as isize;
+    let k: Vec<f32> = (-r..=r)
+        .map(|i| (-(i * i) as f32 / (2.0 * sigma * sigma)).exp())
+        .collect();
+    let sum: f32 = k.iter().sum();
+    k.iter().map(|v| v / sum).collect()
+}
+
+/// Convolution des lignes de `src` (bords prolongés) ; `pre(i, v)` transforme chaque
+/// valeur lue à l'indice `i` avant de la pondérer.
+fn convolve_rows(src: &[f32], dst: &mut [f32], w: usize, k: &[f32], pre: impl Fn(usize, f32) -> f32 + Sync) {
+    let r = k.len() / 2;
+    dst.par_chunks_mut(w).enumerate().for_each_init(
+        || vec![0.0; w + 2 * r],
+        |line, (y, out)| {
+            let row = &src[y * w..(y + 1) * w];
+            for (x, v) in line.iter_mut().enumerate() {
+                let sx = x.saturating_sub(r).min(w - 1);
+                *v = pre(y * w + sx, row[sx]);
+            }
+            for (x, o) in out.iter_mut().enumerate() {
+                *o = k.iter().zip(&line[x..x + k.len()]).map(|(a, b)| a * b).sum();
+            }
+        },
+    );
+}
+
+/// Convolution des colonnes de `src` (bords prolongés) ; `post(i, ancien, flou)` donne
+/// la valeur écrite dans `dst` à l'indice `i`.
+fn convolve_cols(
+    src: &[f32],
+    dst: &mut [f32],
+    w: usize,
+    h: usize,
+    k: &[f32],
+    post: impl Fn(usize, f32, f32) -> f32 + Sync,
+) {
+    let r = k.len() / 2;
+    dst.par_chunks_mut(w).enumerate().for_each_init(
+        || vec![0.0; w],
+        |acc, (y, out)| {
+            acc.iter_mut().for_each(|a| *a = 0.0);
+            for (j, kj) in k.iter().enumerate() {
+                let sy = (y + j).saturating_sub(r).min(h - 1);
+                for (a, v) in acc.iter_mut().zip(&src[sy * w..(sy + 1) * w]) {
+                    *a += kj * v;
+                }
+            }
+            for (x, (o, a)) in out.iter_mut().zip(acc.iter()).enumerate() {
+                *o = post(y * w + x, *o, *a);
+            }
+        },
+    );
 }
 
 #[cfg(test)]
@@ -516,6 +618,74 @@ mod tests {
         };
         noise_reduction(&mut img, &d, 1.0);
         assert!(variance(&img, 0) < variance(&noisy(), 0) * 0.5);
+    }
+
+    /// Une mire nette (barres de plusieurs largeurs, disque, aplats) et la même floutée
+    /// d'une gaussienne de 1,2 pixel, comme par un objectif un peu mou.
+    fn soft_chart() -> (RgbImage, RgbImage) {
+        let sharp = RgbImage::from_fn(160, 120, |x, y| {
+            let v = if y < 40 {
+                if (x / (3 + x / 40)) % 2 == 0 { 0.6 } else { 0.08 }
+            } else if (x as f32 - 80.0).powi(2) + (y as f32 - 80.0).powi(2) < 600.0 {
+                0.5
+            } else {
+                0.15
+            };
+            [v; 3]
+        });
+        let plane = Plane::from_rgb(&sharp, |p| p[1]).blur(1.2);
+        let soft = RgbImage::from_fn(160, 120, |x, y| [plane.data[y * 160 + x]; 3]);
+        (sharp, soft)
+    }
+
+    /// Le rapport signal sur bruit (dB) en luminance perçue, loin des bords de l'image.
+    fn psnr_perceived(a: &RgbImage, b: &RgbImage) -> f32 {
+        let mut sum = 0.0;
+        let mut n = 0.0;
+        for y in 6..a.height - 6 {
+            for x in 6..a.width - 6 {
+                let i = y * a.width + x;
+                let g = |p: [f32; 3]| p[1].max(0.0).powf(1.0 / 2.2);
+                sum += (g(a.data[i]) - g(b.data[i])).powi(2);
+                n += 1.0;
+            }
+        }
+        -10.0 * (sum / n).log10()
+    }
+
+    #[test]
+    fn deconvolution_undoes_a_soft_lens_better_than_unsharp_masking() {
+        let (sharp, soft) = soft_chart();
+        let best = |deconvolution: bool| {
+            [40.0, 70.0, 100.0, 130.0, 150.0]
+                .iter()
+                .map(|&amount| {
+                    let mut img = soft.clone();
+                    let d = Detail {
+                        sharpen_amount: amount,
+                        sharpen_radius: 1.2,
+                        sharpen_detail: 100.0,
+                        sharpen_deconvolution: deconvolution,
+                        ..Detail::default()
+                    };
+                    sharpen(&mut img, &d, 1.0);
+                    psnr_perceived(&sharp, &img)
+                })
+                .fold(f32::MIN, f32::max)
+        };
+        let before = psnr_perceived(&sharp, &soft);
+        let (unsharp, deconvolved) = (best(false), best(true));
+        eprintln!("flou {before:.2} dB, masque flou {unsharp:.2} dB, déconvolution {deconvolved:.2} dB");
+        assert!(deconvolved > unsharp + 1.0);
+        // Un aplat reste un aplat.
+        let mut flat = RgbImage::from_fn(40, 40, |_, _| [0.3; 3]);
+        let d = Detail {
+            sharpen_amount: 150.0,
+            sharpen_deconvolution: true,
+            ..Detail::default()
+        };
+        sharpen(&mut flat, &d, 1.0);
+        assert!(flat.data.iter().all(|p| (p[1] - 0.3).abs() < 1e-4));
     }
 
     #[test]
