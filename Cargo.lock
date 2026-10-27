@@ -2356,6 +2356,7 @@ dependencies = [
  "luma-raw",
  "luma-render",
  "raw-window-handle",
+ "rayon",
  "rfd",
  "wgpu",
 ]
