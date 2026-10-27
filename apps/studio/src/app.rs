@@ -688,6 +688,8 @@ pub struct Studio {
     /// Les touchers reçus du système (diagnostic sur iPhone) et le dernier.
     touches: usize,
     last_touch: Option<egui::Pos2>,
+    /// Ce qu'a donné la dernière demande d'import (diagnostic sur iPhone).
+    import_result: Option<String>,
     /// Jusqu'à quand guetter les photos d'un import Photos (il en arrive une à une).
     imports_until: f64,
     /// Le bouton « Importer des photos » (iPhone, iPad) est affiché : vrai là où le
@@ -1012,6 +1014,7 @@ impl Studio {
             imports_failed: 0,
             touches: 0,
             last_touch: None,
+            import_result: None,
             imports_until: 0.0,
             photos_button: luma_apple::photos::AVAILABLE,
             import_asks: 0,
@@ -4448,6 +4451,10 @@ impl Studio {
                         .ok_or("dossier Documents introuvable")
                         .and_then(luma_apple::photos::pick);
                     crate::journal(&format!("importer : {opened:?}"));
+                    self.import_result = Some(match &opened {
+                        Ok(from) => format!("Photos ouvert ({from})"),
+                        Err(why) => format!("Photos refusé : {why}"),
+                    });
                     // Le choix dans Photos prend son temps, et la copie des fichiers aussi.
                     self.imports_until = f64::INFINITY;
                     if let Err(why) = opened {
@@ -8122,6 +8129,10 @@ impl Studio {
                     self.touches, p.x, p.y
                 ),
                 None => "touchers reçus : 0".to_owned(),
+            };
+            let text = match &self.import_result {
+                Some(result) => format!("{text}\n{result}"),
+                None => format!("{text}\nimport pas encore demandé"),
             };
             ui.painter().text(
                 pos2(rect.center().x, rect.max.y + 14.0),
