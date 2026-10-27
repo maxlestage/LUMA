@@ -3393,7 +3393,7 @@ impl Studio {
                     match result {
                         Ok((name, before, after)) => {
                             self.status = trf(
-                                "Pellicule mesurée : « {name} » (écart numérique → film {before}, avec le film {after})",
+                                "Pellicule mesurée : « {name} » (écart du numérique au film {before}, avec le film {after})",
                                 &[
                                     ("name", &name),
                                     ("before", &format_value(before, 1, false)),
