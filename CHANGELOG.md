@@ -125,6 +125,10 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Bords du panorama déformés** (Fusion, Panorama, « Déformer les bords », ou
+  `luma merge --pano … --warp`) : au lieu de rogner les bords irréguliers d'un
+  panorama, LÜMA les étire doucement pour remplir tout le rectangle ; on garde toute la
+  scène.
 - **Bords vides rognés** (Géométrie, Transformation) : après une perspective, une
   rotation ou une correction de distorsion, un clic recadre au plus grand cadre sans
   coin noir, aux proportions de la photo.
