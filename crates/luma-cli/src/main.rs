@@ -88,7 +88,9 @@ USAGE
   luma xmp <raw|f.xmp|f.json> [--set nom=valeur]… [-o f.xmp]
   luma bench <raw> [--size N] [--runs N]
   luma merge <raw>… [--stack mean|median|max|stars|hdr|focus | --pano perspective|cylindrical|spherical]
-                    [--no-align] [--no-crop] [--size N] [-o sortie.dng]
+                    [--no-align] [--no-crop] [--warp] [--size N] [-o sortie.dng]
+      --warp (panorama) : les bords irréguliers sont étirés pour remplir le rectangle,
+      au lieu d'être rognés.
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
   luma watch <dossier> [--catalog f.lumacat] [--interval secondes]
@@ -1158,6 +1160,7 @@ fn merge(args: Vec<String>) -> Result<(), String> {
     let mut stack = Some(StackMode::Mean);
     let mut pano = Projection::Cylindrical;
     let (mut align, mut crop, mut size, mut out) = (true, true, Size::Full, None);
+    let mut warp = false;
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         let mut value = || it.next().ok_or_else(|| format!("{a} : valeur attendue"));
@@ -1188,6 +1191,7 @@ fn merge(args: Vec<String>) -> Result<(), String> {
             }
             "--no-align" => align = false,
             "--no-crop" => crop = false,
+            "--warp" => warp = true,
             "--size" => size = Size::Fit(value()?.parse().map_err(|_| "--size : nombre attendu")?),
             "-o" => out = Some(PathBuf::from(value()?)),
             _ => paths.push(PathBuf::from(a)),
@@ -1203,7 +1207,7 @@ fn merge(args: Vec<String>) -> Result<(), String> {
     };
     let progress = |f: f32, label: &str| eprint!("\r  {label:<32} {:>3.0} %", f * 100.0);
     let cancel = Cancel::new();
-    let (merged, suffix) = match stack {
+    let (mut merged, suffix) = match stack {
         Some(mode) => (
             luma_merge::stack(&frames, mode, align, &progress, &cancel).map_err(|e| e.to_string())?,
             mode.name(),
@@ -1213,6 +1217,9 @@ fn merge(args: Vec<String>) -> Result<(), String> {
             "Pano",
         ),
     };
+    if warp && stack.is_none() {
+        merged.warp_edges();
+    }
     eprintln!();
     let template = luma_raw::RawPhoto::open(&paths[paths.len() / 2]).map_err(|e| e.to_string())?;
     let out = out.unwrap_or_else(|| luma_merge::output_path(&paths[0], &suffix.replace('é', "e").replace(' ', "-")));
