@@ -308,8 +308,10 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let (raw, developed) = (dir.join("IMG_0001.CR3"), dir.join("IMG_0002.CR3"));
         // Une photo déjà développée : ses réglages et sa note restent.
-        let mut settings = luma_project::Settings::default();
-        settings.exposure = 0.7;
+        let settings = luma_project::Settings {
+            exposure: 0.7,
+            ..luma_project::Settings::default()
+        };
         let meta = xmp::Meta {
             rating: 4,
             ..xmp::Meta::default()
