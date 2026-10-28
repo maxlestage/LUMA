@@ -1282,6 +1282,60 @@ fn liquify() {
 }
 
 #[test]
+fn traced_removal() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("supprimer-trace") else {
+        return;
+    };
+    // Q ouvre la Retouche ; le premier « Supprimer » est l'outil.
+    s.keys(&[(NONE, Key::Q)]);
+    s.wait();
+    s.harness
+        .get_all_by_label("Supprimer")
+        .next()
+        .unwrap()
+        .click();
+    s.wait();
+    assert_eq!(s.studio().retouch, Some(luma_project::SpotKind::Remove));
+    // Un trait sur la photo, d'un geste.
+    let path: Vec<egui::Pos2> = (0..=12)
+        .map(|i| egui::pos2(380.0 + 30.0 * i as f32, 250.0 + 12.0 * i as f32))
+        .collect();
+    let (a, b) = (path[0], path[path.len() - 1]);
+    let mut events = vec![
+        egui::Event::PointerMoved(a),
+        egui::Event::PointerButton {
+            pos: a,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: NONE,
+        },
+    ];
+    events.extend(path[1..].iter().map(|p| egui::Event::PointerMoved(*p)));
+    events.push(egui::Event::PointerButton {
+        pos: b,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: NONE,
+    });
+    for e in events {
+        s.harness.input_mut().events.push(e);
+        s.harness.step();
+    }
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.spots.len(), 1);
+    let spot = &st.settings.spots[0];
+    assert_eq!(spot.kind, luma_project::SpotKind::Remove);
+    assert!(spot.path.len() >= 3, "{:?}", spot.path);
+    assert!(st.has_image());
+    s.capture("supprimer-trace");
+    // Annulable d'un coup.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert!(s.studio().settings.spots.is_empty());
+}
+
+#[test]
 fn sensor_dust() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("poussieres") else {
