@@ -506,17 +506,17 @@ fr = Faut‑il un compte ou une connexion ?
 en = Do I need an account or an internet connection?
 es = ¿Hace falta una cuenta o una conexión?
 
-fr = Non. LÜMA fonctionne sans compte. Sur Mac et Linux, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.
-en = No. LÜMA works without an account. On Mac and Linux, once a day when there's a connection, the app simply checks that your subscription is active; with no connection, it keeps going.
-es = No. LÜMA funciona sin cuenta. En Mac y Linux, una vez al día si hay conexión, la app simplemente comprueba que la suscripción sigue activa; sin conexión, sigue funcionando.
+fr = Non. LÜMA fonctionne sans compte. Sur Mac, Linux et Windows, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.
+en = No. LÜMA works without an account. On Mac, Linux and Windows, once a day when there's a connection, the app simply checks that your subscription is active; with no connection, it keeps going.
+es = No. LÜMA funciona sin cuenta. En Mac, Linux y Windows, una vez al día si hay conexión, la app simplemente comprueba que la suscripción sigue activa; sin conexión, sigue funcionando.
 
 fr = Que se passe‑t‑il après l'essai ?
 en = What happens after the trial?
 es = ¿Qué pasa después de la prueba?
 
-fr = Tout est ouvert pendant l'essai : 14 jours sur Mac et Linux, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.
-en = Everything is unlocked during the trial: 14 days on Mac and Linux, one month on iPhone and iPad. After that, LÜMA Premium lets you keep developing (a subscription on Mac and Linux, a one-time purchase on iPhone and iPad); your files and your adjustments remain yours either way.
-es = Todo está disponible durante la prueba: 14 días en Mac y Linux, un mes en iPhone y iPad. Después, LÜMA Premium te permite seguir revelando (una suscripción en Mac y Linux, una compra única en iPhone y iPad); tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
+fr = Tout est ouvert pendant l'essai : 14 jours sur Mac, Linux et Windows, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.
+en = Everything is unlocked during the trial: 14 days on Mac, Linux and Windows, one month on iPhone and iPad. After that, LÜMA Premium lets you keep developing (a subscription on Mac and Linux, a one-time purchase on iPhone and iPad); your files and your adjustments remain yours either way.
+es = Todo está disponible durante la prueba: 14 días en Mac, Linux y Windows, un mes en iPhone y iPad. Después, LÜMA Premium te permite seguir revelando (una suscripción en Mac y Linux, una compra única en iPhone y iPad); tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
 
 fr = Où acheter LÜMA ?
 en = Where can I buy LÜMA?
@@ -668,9 +668,9 @@ fr = Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto
 en = JPEG, PNG and 16‑bit TIFF export, in P3 and ProPhoto
 es = Exportación JPEG, PNG y TIFF de 16 bits, en P3 y ProPhoto
 
-fr = Sur Mac et Linux, avec toutes les mises à jour
-en = On Mac and Linux, with every update
-es = En Mac y Linux, con todas las actualizaciones
+fr = Sur Mac, Linux et Windows, avec toutes les mises à jour
+en = On Mac, Linux and Windows, with every update
+es = En Mac, Linux y Windows, con todas las actualizaciones
 
 # ----- Pied de page -------------------------------------------------------------------
 
