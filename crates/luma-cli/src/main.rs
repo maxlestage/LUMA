@@ -44,6 +44,7 @@ USAGE
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille] [--enlarge] [--web]
+                     [--auto-tone]
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
@@ -55,6 +56,8 @@ USAGE
       défaut). --name donne le nom du fichier par un modèle : {nom} {date} {heure}
       {année} {mois} {jour} {séquence} (ou {séquence:2}…) {boîtier} {marque} {objectif}
       {iso} {note} {libellé} ; un « / » crée un sous‑dossier ({année}/{mois}/{nom}).
+      --auto-tone : exposition, contraste, hautes lumières et ombres lus sur
+      l'histogramme de la photo (blancs et noirs remis à zéro), sans IA.
       --web : un JPEG allégé pour le web (chrominance 4:2:0 et tables de Huffman
       calculées pour l'image : de 9 à 29 % plus léger ; le préréglage Web le fait).
       --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
@@ -251,6 +254,8 @@ struct Args {
     web: Option<bool>,
     /// `--enlarge` / `--no-enlarge` : agrandir au‑delà de la pleine définition.
     enlarge: Option<bool>,
+    /// `--auto-tone` : exposition, contraste, hautes lumières et ombres lus sur la photo.
+    auto_tone: bool,
 }
 
 fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
@@ -276,6 +281,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         lut: None,
         web: None,
         enlarge: None,
+        auto_tone: false,
     };
     while let Some(arg) = it.next() {
         let mut value = |name: &str| it.next().ok_or_else(|| format!("{name} attend une valeur"));
@@ -293,6 +299,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--no-web" => a.web = Some(false),
             "--enlarge" => a.enlarge = Some(true),
             "--no-enlarge" => a.enlarge = Some(false),
+            "--auto-tone" => a.auto_tone = true,
             "--name" => a.name = Some(value(&arg)?),
             s if s.starts_with("--watermark") => {
                 let v = if s == "--watermark-dark" {
@@ -610,15 +617,29 @@ fn info(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// Les tons automatiques posés sur les réglages (`--auto-tone`).
+fn auto_tone(photo: &Photo, s: &mut Settings) {
+    let t = photo.auto_tones(s);
+    s.exposure = t.exposure;
+    s.contrast = t.contrast;
+    s.highlights = t.highlights;
+    s.shadows = t.shadows;
+    s.whites = 0.0;
+    s.blacks = 0.0;
+}
+
 fn develop(a: &Args) -> Result<(), String> {
     let [path] = a.positional.as_slice() else {
         return Err("develop : un seul fichier RAW".into());
     };
     let path = Path::new(path);
-    let settings = load_settings(a, Some(path))?;
+    let mut settings = load_settings(a, Some(path))?;
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
+    if a.auto_tone {
+        auto_tone(&photo, &mut settings);
+    }
     if a.presets.len() > 1 {
         return Err("develop : un seul préréglage (luma export pour en utiliser plusieurs)".into());
     }
@@ -947,8 +968,11 @@ fn export_many(a: &Args) -> Result<(), String> {
     for (k, path) in a.positional.iter().enumerate() {
         let path = Path::new(path);
         let result = (|| -> Result<(), String> {
-            let settings = load_settings(a, Some(path))?;
+            let mut settings = load_settings(a, Some(path))?;
             let photo = Photo::open(path).map_err(|e| e.to_string())?;
+            if a.auto_tone {
+                auto_tone(&photo, &mut settings);
+            }
             let meta = sidecar_meta(a, path);
             let fields = export::NameFields::of_photo(path, &photo, &meta, k + 1);
             for o in &targets {
