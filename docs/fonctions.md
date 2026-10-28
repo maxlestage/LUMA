@@ -77,6 +77,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Yeux rouges : un cercle sur l'œil, la pupille rouge redevient noire, la peau reste | ✅ |
 | | Moiré et frange (aberration chromatique locale) au pinceau, dans chaque masque | ✅ |
 | | Suppression : un cercle sur ce qui gêne (fil, passant, déchet), rempli par des morceaux de la photo qui l'entourent, texture comprise, sans IA | ✅ |
+| | Suppression tracée : un trait le long d'un fil, d'une rayure ou d'un câble, effacé d'un seul geste ; sans IA | ✅ |
 | | Fluidité (Retouche) : pousser, gonfler, dégonfler au pinceau (taille, force), coups gardés dans le XMP, annulables ; sans IA | ✅ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |
