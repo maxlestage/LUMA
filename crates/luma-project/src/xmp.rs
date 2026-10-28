@@ -609,6 +609,20 @@ fn leak(name: String) -> &'static str {
 }
 
 /// Les réglages d'un document XMP. Ce qui manque garde sa valeur par défaut.
+/// Les éléments d'une liste JSON (masques, retouches, coups de fluidité), un à un : un
+/// élément illisible (une forme d'une version plus récente, une valeur abîmée) est
+/// sauté, les autres sont gardés — sinon le prochain enregistrement les perdrait tous.
+/// `None` si ce n'est pas une liste.
+fn each<T: serde::de::DeserializeOwned>(json: &str) -> Option<Vec<T>> {
+    let items: Vec<serde_json::Value> = serde_json::from_str(json).ok()?;
+    Some(
+        items
+            .into_iter()
+            .filter_map(|v| serde_json::from_value(v).ok())
+            .collect(),
+    )
+}
+
 pub fn read(text: &str) -> luma_core::Result<Settings> {
     let values = parse_values(text)?;
     // Les mots‑clés et les informations de la photo seuls ne sont pas des réglages.
@@ -699,21 +713,15 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
     }
     // Les masques de LÜMA (ceux rangés dans crs:MaskGroupBasedCorrections ne
     // sont pas encore lus).
-    if let Some(json) = values.meta.get("luma:Masks")
-        && let Ok(masks) = serde_json::from_str(json)
-    {
+    if let Some(masks) = values.meta.get("luma:Masks").and_then(|j| each(j)) {
         s.masks = masks;
     }
     // Les retouches (tampon et correcteur).
-    if let Some(json) = values.meta.get("luma:Spots")
-        && let Ok(spots) = serde_json::from_str(json)
-    {
+    if let Some(spots) = values.meta.get("luma:Spots").and_then(|j| each(j)) {
         s.spots = spots;
     }
     // La fluidité : les coups de pinceau.
-    if let Some(json) = values.meta.get("luma:Liquify")
-        && let Ok(warps) = serde_json::from_str(json)
-    {
+    if let Some(warps) = values.meta.get("luma:Liquify").and_then(|j| each(j)) {
         s.liquify = warps;
     }
     // Le mélangeur de couches : trois lignes de trois pour cent.
@@ -1178,6 +1186,49 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn one_unreadable_mask_spot_or_stroke_keeps_the_others() {
+        // Un masque d'une forme inconnue (écrite par une version plus récente), une
+        // retouche et un coup de fluidité aux valeurs impossibles : seuls eux sont
+        // sautés.
+        let s = Settings {
+            masks: vec![crate::Mask::linear(), crate::Mask::radial()],
+            spots: vec![
+                crate::Spot::new(crate::SpotKind::Heal, (0.3, 0.4), 0.02),
+                crate::Spot::new(crate::SpotKind::Remove, (0.6, 0.6), 0.05),
+            ],
+            liquify: vec![
+                crate::Warp::new(crate::WarpKind::Bloat, (0.5, 0.5), 0.1, 40.0),
+                crate::Warp::new(crate::WarpKind::Pucker, (0.2, 0.2), 0.1, 40.0),
+            ],
+            ..Settings::default()
+        };
+        let q = "&quot;";
+        let text = write(&s)
+            .replacen(
+                &format!("{q}kind{q}:{q}linear{q}"),
+                &format!("{q}kind{q}:{q}spirale{q}"),
+                1,
+            )
+            .replacen(
+                &format!("{q}kind{q}:{q}remove{q}"),
+                &format!("{q}kind{q}:{q}gomme{q}"),
+                1,
+            )
+            .replacen(
+                &format!("{q}kind{q}:{q}pucker{q}"),
+                &format!("{q}kind{q}:{q}tourbillon{q}"),
+                1,
+            );
+        let back = read(&text).unwrap();
+        assert_eq!(back.masks.len(), 1);
+        assert!(matches!(back.masks[0].shape, crate::Shape::Radial { .. }));
+        assert_eq!(back.spots.len(), 1);
+        assert_eq!(back.spots[0].kind, crate::SpotKind::Heal);
+        assert_eq!(back.liquify.len(), 1);
+        assert_eq!(back.liquify[0].kind, crate::WarpKind::Bloat);
+    }
 
     /// Un extrait de sidecar XMP, tel qu'on en trouve à côté des RAW.
     const SIDECAR: &str = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0-c000">

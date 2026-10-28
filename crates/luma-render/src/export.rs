@@ -1290,11 +1290,31 @@ pub struct Presets {
 impl Presets {
     /// Lit le fichier ; vide s'il n'existe pas, est illisible ou d'une autre version.
     pub fn load(path: &Path) -> Presets {
-        let stored: Option<Stored> = std::fs::read(path).ok().and_then(|b| serde_json::from_slice(&b).ok());
-        let user = stored
-            .filter(|s| s.version == VERSION)
-            .map(|s| s.presets.into_iter().filter_map(StoredPreset::preset).collect())
-            .unwrap_or_default();
+        let Ok(bytes) = std::fs::read(path) else {
+            return Presets::default();
+        };
+        // Préréglage par préréglage : un seul abîmé (une valeur impossible, retouchée à
+        // la main) ne fait pas perdre les autres.
+        let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+            // Rien de lisible : le fichier est mis de côté avant que le prochain
+            // enregistrement ne le remplace, l'utilisateur peut le reprendre.
+            let aside = path.with_extension("json.illisible");
+            if !aside.exists() {
+                let _ = std::fs::write(&aside, &bytes);
+            }
+            return Presets::default();
+        };
+        if value.get("version").and_then(serde_json::Value::as_u64) != Some(u64::from(VERSION)) {
+            return Presets::default();
+        }
+        let user = value
+            .get("presets")
+            .and_then(serde_json::Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|p| serde_json::from_value::<StoredPreset>(p.clone()).ok())
+            .filter_map(StoredPreset::preset)
+            .collect();
         Presets { user }
     }
 
@@ -1982,6 +2002,37 @@ mod tests {
         }
         assert_eq!(Format::parse("JPEG"), Some(Format::Jpeg));
         assert_eq!(Format::parse("gif"), None);
+    }
+
+    #[test]
+    fn a_damaged_preset_does_not_lose_the_others() {
+        let dir = std::env::temp_dir().join(format!("luma-prereglages-abimes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("Exports.json");
+        // Deux préréglages ; le second, retouché à la main, a une qualité impossible.
+        std::fs::write(
+            &path,
+            r#"{"version":1,"presets":[
+                {"name":"Bon","format":"jpg","quality":90,"bits":8,"space":"srgb"},
+                {"name":"Abîmé","format":"jpg","quality":300,"bits":8,"space":"srgb"}
+            ]}"#,
+        )
+        .unwrap();
+        let p = Presets::load(&path);
+        assert_eq!(p.user.iter().map(|p| p.name.as_str()).collect::<Vec<_>>(), ["Bon"]);
+        // Un fichier coupé net : rien ne se lit, mais il est mis de côté avant d'être
+        // réécrit, et l'utilisateur peut le reprendre.
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, &text[..text.len() / 2]).unwrap();
+        assert!(Presets::load(&path).user.is_empty());
+        let aside = dir.join("Exports.json.illisible");
+        assert_eq!(std::fs::read_to_string(&aside).unwrap(), text[..text.len() / 2]);
+        // Un fichier absent n'est pas « illisible ».
+        let _ = std::fs::remove_file(&aside);
+        assert!(Presets::load(&dir.join("absent.json")).user.is_empty());
+        assert!(!dir.join("absent.json.illisible").exists());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
