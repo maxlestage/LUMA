@@ -1745,6 +1745,37 @@ fn auto_tone() {
 }
 
 #[test]
+fn mask_duplicate() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("masque-duplique") else {
+        return;
+    };
+    // Maj+M : un dégradé radial, assombri.
+    s.keys(&[(Modifiers::SHIFT, Key::M)]);
+    s.wait();
+    s.studio().settings.masks[0].local.exposure = -1.0;
+    s.wait();
+    s.harness.get_by_label("Dupliquer").click();
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.masks.len(), 2);
+    assert_eq!(st.settings.masks[1], st.settings.masks[0]);
+    assert_eq!(st.selected_mask, Some(1));
+    // La copie inversée : tout le reste, réglages à zéro.
+    s.harness.get_by_label("Dupliquer inversé").click();
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.masks.len(), 3);
+    let (a, b) = (&st.settings.masks[1], &st.settings.masks[2]);
+    assert_eq!(a.shape, b.shape);
+    assert!(b.invert != a.invert && b.local.is_neutral());
+    s.capture("masque-duplique");
+    // Annulable.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.masks.len(), 2);
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {

@@ -4637,6 +4637,34 @@ impl Studio {
                     self.touch();
                 }
             }
+            // Une copie du masque choisi, juste après lui ; inversée, elle prend tout le
+            // reste de la photo (le sol après le ciel), ses réglages remis à zéro.
+            "mask_duplicate" | "mask_duplicate_inverted" => {
+                if let Some(i) = self
+                    .selected_mask
+                    .filter(|&i| i < self.settings.masks.len())
+                {
+                    let mut copy = self.settings.masks[i].clone();
+                    let inverted = action == "mask_duplicate_inverted";
+                    if inverted {
+                        copy.invert = !copy.invert;
+                        copy.local = luma_project::Local::default();
+                        copy.look = None;
+                    }
+                    self.settings.masks.insert(i + 1, copy);
+                    self.selected_mask = Some(i + 1);
+                    self.selected_part = None;
+                    self.commit(
+                        if inverted {
+                            tr("Masque dupliqué et inversé")
+                        } else {
+                            tr("Masque dupliqué")
+                        }
+                        .into(),
+                    );
+                    self.touch();
+                }
+            }
             "open" => {
                 // Sur iPhone et iPad : le sélecteur de Photos ; les photos choisies sont
                 // copiées dans le dossier de LÜMA, relu dès qu'elles arrivent.
@@ -9723,6 +9751,24 @@ impl Studio {
                     }
                     if ui.button(tr("Supprimer")).clicked() {
                         self.act("mask_delete");
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(tr("Dupliquer|masque"))
+                        .on_hover_text(tr("Une copie du masque, ses réglages compris"))
+                        .clicked()
+                    {
+                        self.act("mask_duplicate");
+                    }
+                    if ui
+                        .button(tr("Dupliquer inversé"))
+                        .on_hover_text(tr(
+                            "Une copie inversée, réglages à zéro : tout le reste de la photo (le sol après le ciel)",
+                        ))
+                        .clicked()
+                    {
+                        self.act("mask_duplicate_inverted");
                     }
                 });
                 if self.show_mask {
