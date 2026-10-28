@@ -27,6 +27,7 @@ use luma_project::{Crop, Mask, Profile, Range, Settings, Shape, WhiteBalance};
 use luma_render::{Photo, Size};
 
 use crate::crop;
+use crate::curving;
 use crate::i18n::{tr, trf};
 use crate::icons::{self, Icon};
 use crate::liquifying;
@@ -715,6 +716,8 @@ pub struct Studio {
     xmp_due: Option<f64>,
     grading_tab: usize,
     hsl_tab: usize,
+    /// L'onglet des courbes à points : luminosité, rouge, vert, bleu.
+    curve_channel: usize,
     pub module: Module,
     meta: HashMap<PathBuf, Meta>,
     min_rating: u8,
@@ -1056,6 +1059,7 @@ impl Studio {
             xmp_due: None,
             grading_tab: 0,
             hsl_tab: 0,
+            curve_channel: 0,
             module: Module::Develop,
             meta: HashMap::new(),
             min_rating: 0,
@@ -10539,7 +10543,30 @@ impl Studio {
                 .id_salt("Courbe des tonalités")
                 .default_open(true)
                 .show(ui, |ui| {
-                    curve_preview(ui, &self.settings);
+                    let names = [tr("Luminosité"), tr("Rouge"), tr("Vert"), tr("Bleu")];
+                    let on: [bool; 4] = std::array::from_fn(|i| self.curve_channel == i);
+                    let tip = tr(
+                        "Un clic sur la courbe ajoute un point, glissez-le pour le régler ; un double-clic le retire",
+                    );
+                    if let Some(i) = widgets::segments(ui, &names, &on, &[tip; 4], 12.5) {
+                        self.curve_channel = i;
+                    }
+                    // Sous la courbe de luminosité, en pâle, la paramétrique qui la précède.
+                    let parametric = luma_image::curve::parametric(&self.settings.tone_curve);
+                    let c = &mut self.settings.tone_curve;
+                    let (points, color, under) = match self.curve_channel {
+                        1 => (&mut c.red, Color32::from_rgb(0xf0, 0x6a, 0x6a), None),
+                        2 => (&mut c.green, Color32::from_rgb(0x6a, 0xd8, 0x7a), None),
+                        3 => (&mut c.blue, Color32::from_rgb(0x6a, 0x9a, 0xf0), None),
+                        _ => (&mut c.point, Color32::from_gray(0xe0), Some(&parametric)),
+                    };
+                    let edit = curving::editor(ui, "courbe à points", points, color, under);
+                    if edit.changed {
+                        self.touch();
+                    }
+                    if edit.committed {
+                        commits.push(tr("Courbe à points").into());
+                    }
                     let l = self.fields(ui, &CURVE);
                     keep(l, &mut commits);
                 });
@@ -11050,41 +11077,6 @@ fn hsl_track(tab: usize, band: usize) -> &'static [Color32] {
         all
     });
     &tracks[tab * 8 + band]
-}
-
-/// L'aperçu de la courbe paramétrique et des courbes à points.
-fn curve_preview(ui: &mut Ui, s: &Settings) {
-    let w = ui.available_width();
-    let (rect, _) = ui.allocate_exact_size(vec2(w, w * 0.6), egui::Sense::hover());
-    let p = ui.painter();
-    p.rect_filled(rect, 3.0, Color32::from_gray(0x16));
-    for k in 1..4 {
-        let x = rect.min.x + rect.width() * k as f32 / 4.0;
-        let y = rect.min.y + rect.height() * k as f32 / 4.0;
-        p.line_segment(
-            [pos2(x, rect.min.y), pos2(x, rect.max.y)],
-            egui::Stroke::new(1.0, Color32::from_gray(0x2a)),
-        );
-        p.line_segment(
-            [pos2(rect.min.x, y), pos2(rect.max.x, y)],
-            egui::Stroke::new(1.0, Color32::from_gray(0x2a)),
-        );
-    }
-    let lut = luma_image::curve::parametric(&s.tone_curve)
-        .then(&luma_image::curve::spline(&s.tone_curve.point));
-    let points: Vec<egui::Pos2> = (0..=64)
-        .map(|i| {
-            let x = i as f32 / 64.0;
-            pos2(
-                rect.min.x + x * rect.width(),
-                rect.max.y - lut.get(x) * rect.height(),
-            )
-        })
-        .collect();
-    p.add(egui::Shape::line(
-        points,
-        egui::Stroke::new(1.5, Color32::from_gray(0xe0)),
-    ));
 }
 
 /// Un bouton icône (et texte), sans cadre lourd.

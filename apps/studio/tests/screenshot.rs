@@ -1433,6 +1433,59 @@ fn traced_heal() {
 }
 
 #[test]
+fn point_curve() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("courbe-points") else {
+        return;
+    };
+    // La courbe de luminosité, amenée à l'écran, puis le milieu de la diagonale tiré
+    // vers le haut : un point, des tons moyens éclaircis.
+    s.harness.get_by_label("Courbe à points").scroll_to_me();
+    s.wait();
+    let r = s.harness.get_by_label("Courbe à points").rect();
+    let (a, b) = (r.center(), r.center() - egui::vec2(0.0, 0.2 * r.height()));
+    let mut events = vec![
+        egui::Event::PointerMoved(a),
+        egui::Event::PointerButton {
+            pos: a,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: NONE,
+        },
+    ];
+    events.extend((1..=8).map(|i| egui::Event::PointerMoved(a + (b - a) * i as f32 / 8.0)));
+    events.push(egui::Event::PointerButton {
+        pos: b,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: NONE,
+    });
+    for e in events {
+        s.harness.input_mut().events.push(e);
+        s.harness.step();
+    }
+    s.wait();
+    let point = s.studio().settings.tone_curve.point.clone();
+    assert_eq!(point.len(), 3, "{point:?}");
+    assert!(
+        (point[1].0 - 127.5).abs() < 6.0 && point[1].1 > 165.0,
+        "{point:?}"
+    );
+    assert!(s.studio().has_image());
+    s.capture("courbe-points");
+    // Annulable d'un coup.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.tone_curve.point.len(), 2);
+    // L'onglet Rouge : un clic sur la courbe y ajoute un point.
+    s.harness.get_all_by_label("Rouge").next().unwrap().click();
+    s.wait();
+    s.harness.get_by_label("Courbe à points").click();
+    s.wait();
+    assert_eq!(s.studio().settings.tone_curve.red.len(), 3);
+    assert_eq!(s.studio().settings.tone_curve.point.len(), 2);
+}
+
+#[test]
 fn sensor_dust() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("poussieres") else {
