@@ -139,6 +139,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Auto tone** (Light, Tone, or `--auto-tone`): one click sets exposure, contrast,
+  highlights and shadows from the photo's histogram, a starting point to refine. No
+  AI.
 - **Noise reduction in masks**: smooth lifted shadows or a noisy sky with the brush,
   keeping edges sharp, without softening the rest of the photo.
 - **Sharpness in masks**: bring out the detail of eyes or a material with the brush,

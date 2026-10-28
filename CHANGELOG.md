@@ -151,6 +151,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Tons auto** (Lumière, Tonalité, ou `--auto-tone`) : un clic règle l'exposition, le
+  contraste, les hautes lumières et les ombres d'après l'histogramme de la photo, un
+  point de départ à affiner. Sans IA.
 - **Réduction du bruit dans les masques** : lisser des ombres débouchées ou un ciel
   bruité au pinceau, en gardant les contours nets, sans adoucir le reste de la photo.
 - **Netteté dans les masques** : relever le détail d'un regard ou d'une matière au
