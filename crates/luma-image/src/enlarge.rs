@@ -107,7 +107,10 @@ pub fn enlarge(img: &RgbImage, width: usize, height: usize) -> RgbImage {
             for c in 0..3 {
                 let lo = near.iter().map(|p| p[c]).fold(f32::INFINITY, f32::min);
                 let hi = near.iter().map(|p| p[c]).fold(f32::NEG_INFINITY, f32::max);
-                acc[c] = acc[c].clamp(lo, hi);
+                // Quatre voisins NaN : pas de bornes (et `clamp` paniquerait).
+                if lo <= hi {
+                    acc[c] = acc[c].clamp(lo, hi);
+                }
             }
             *o = acc;
         }
@@ -185,6 +188,21 @@ mod tests {
         let row = &big.data[3 * w * 15..3 * w * 16];
         let soft = row.iter().filter(|p| p[0] > 0.15 && p[0] < 0.85).count();
         assert!(soft <= 3, "{soft} pixels de transition");
+    }
+
+    #[test]
+    fn pixels_that_are_not_numbers_do_not_panic() {
+        // Une zone de NaN (un calcul amont qui a divisé zéro par zéro) : le garde‑fou
+        // n'a plus de bornes, l'agrandissement ne doit pas paniquer pour autant.
+        let mut img = scene(12, 10);
+        for y in 3..7 {
+            for x in 4..8 {
+                img.data[y * 12 + x] = [f32::NAN; 3];
+            }
+        }
+        let big = enlarge(&img, 30, 25);
+        assert_eq!((big.width, big.height), (30, 25));
+        assert!(big.data[0].iter().all(|v| v.is_finite()));
     }
 
     #[test]
