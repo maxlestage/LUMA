@@ -132,7 +132,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | sRGB, Display P3, Rec. 2020, ProPhoto, con perfil ICC incrustado | ✅ |
 | Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar por defecto (`--resize`) | ✅ |
 | Ampliación si es necesario («Ampliar si es necesario», `--enlarge`): Lanczos sin halos, hasta cuatro veces cada lado y 200 MP, para copias grandes; sin IA | ✅ |
-| Tamaño de copia («Copia impresa (cm)», `--resize 30x40cm@300`): el marco en centímetros y la resolución en puntos por pulgada, escrita en el JPEG y el TIFF | ✅ |
+| Tamaño de copia («Copia impresa (cm)», `--resize 30x40cm@300`): el marco en centímetros y la resolución en puntos por pulgada, escrita en el JPEG, el PNG y el TIFF | ✅ |
 | Ventana Exportar: formato, calidad, profundidad de bits, espacio de color, tamaño, carpeta; exportación de todas las fotos del filtro | ✅ |
 | Exportación a varios ajustes preestablecidos a la vez (ventana Exportar: casillas, usar, guardar; `luma export --preset A --preset B`) | ✅ |
 | Ajustes preestablecidos de exportación (formato, calidad, profundidad, espacio, tamaño, carpeta): web, resolución completa, pantalla P3, impresión, y los suyos; `luma export-preset`, `luma develop --preset` | ✅ |

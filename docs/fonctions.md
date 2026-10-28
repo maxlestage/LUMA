@@ -132,7 +132,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
 | Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels, sans agrandir par défaut (`--resize`) | ✅ |
 | Agrandissement au besoin (« Agrandir au besoin », `--enlarge`) : Lanczos sans halo, jusqu'à quatre fois chaque côté et 200 Mpx, pour les grands tirages ; sans IA | ✅ |
-| Taille de tirage (« Tirage (cm) », `--resize 30x40cm@300`) : le cadre en centimètres et la résolution en points par pouce, inscrite dans le JPEG et le TIFF | ✅ |
+| Taille de tirage (« Tirage (cm) », `--resize 30x40cm@300`) : le cadre en centimètres et la résolution en points par pouce, inscrite dans le JPEG, le PNG et le TIFF | ✅ |
 | Fenêtre Exporter : format, qualité, profondeur, espace, taille, dossier ; export de toutes les photos du filtre | ✅ |
 | Export vers plusieurs préréglages à la fois (fenêtre Exporter : cases à cocher, reprendre, enregistrer ; `luma export --preset A --preset B`) | ✅ |
 | Préréglages d'export (format, qualité, profondeur, espace, taille, dossier) : Web, Pleine définition, Écran P3, Impression, et les vôtres ; `luma export-preset`, `luma develop --preset` | ✅ |

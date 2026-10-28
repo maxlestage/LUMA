@@ -175,7 +175,7 @@ La fototeca profesional, paso a paso.
   una vez.
 - **Tamaño de copia** (Exportar, Dimensiones, «Copia impresa (cm)», o
   `--resize 30x40cm@300`): el marco en centímetros y la resolución en puntos por
-  pulgada, escrita en el JPEG y el TIFF para la imprenta.
+  pulgada, escrita en el JPEG, el PNG y el TIFF para la imprenta.
 - **Duplicar una máscara** (Máscaras): una copia, o una copia invertida con los
   ajustes a cero, para ajustar el suelo después del cielo sin volver a trazar la zona.
 - **Eliminación trazada** (Retoque, Eliminar): arrastrar a lo largo de un cable, una
