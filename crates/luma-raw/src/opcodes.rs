@@ -485,43 +485,42 @@ fn vignette(img: &mut RgbImage, frame: Frame, k: &[f64; 5], center: [f64; 2]) {
 
 /// La distorsion : chaque pixel corrigé va chercher sa valeur à l'endroit où l'objectif
 /// l'a posé (interpolation bilinéaire).
+///
+/// L'écart au centre de chaque colonne est calculé une fois, celui de chaque ligne une
+/// fois par ligne, et le rayon une fois par pixel ; le polynôme une fois par pixel
+/// quand les trois couleurs ont les mêmes coefficients (le cas courant), sinon une fois
+/// par couleur. Les mêmes formules dans le même ordre : les mêmes valeurs au bit près.
 fn warp(img: &mut RgbImage, frame: Frame, planes: &[[f64; 6]], center: [f64; 2]) {
     let (cx, cy, m) = frame.center(center);
-    remap(img, |x, y, c| {
-        let (dx, dy) = ((x - cx) / m, (y - cy) / m);
-        let r2 = dx * dx + dy * dy;
-        let k = planes[c.min(planes.len() - 1)];
-        let f = k[0] + r2 * (k[1] + r2 * (k[2] + r2 * k[3]));
-        let sx = dx * f + k[4] * 2.0 * dx * dy + k[5] * (r2 + 2.0 * dx * dx);
-        let sy = dy * f + k[4] * (r2 + 2.0 * dy * dy) + k[5] * 2.0 * dx * dy;
-        (cx + sx * m, cy + sy * m)
-    });
-}
-
-/// Chaque pixel corrigé va chercher sa valeur à l'endroit où l'objectif l'a posé :
-/// `source(x, y, couleur)`, au centre du pixel, donne ce point (interpolation
-/// bilinéaire).
-fn remap(img: &mut RgbImage, source: impl Fn(f64, f64, usize) -> (f64, f64) + Sync) {
     let (w, h) = (img.width, img.height);
     // Comme pour les courbes : une image neuve, pas de copie de la source.
     let src = std::mem::take(&mut img.data);
     let mut out = vec![[0.0f32; 3]; w * h];
-    let sample = |x: f64, y: f64, c: usize| -> f32 {
-        let x = x.clamp(0.0, (w - 1) as f64);
-        let y = y.clamp(0.0, (h - 1) as f64);
-        let (x0, y0) = (x.floor() as usize, y.floor() as usize);
-        let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
-        let (fx, fy) = ((x - x0 as f64) as f32, (y - y0 as f64) as f32);
-        let at = |x: usize, y: usize| src[y * w + x][c];
-        let top = at(x0, y0) + (at(x1, y0) - at(x0, y0)) * fx;
-        let bottom = at(x0, y1) + (at(x1, y1) - at(x0, y1)) * fx;
-        top + (bottom - top) * fy
-    };
+    let columns: Vec<f64> = (0..w).map(|x| (x as f64 + 0.5 - cx) / m).collect();
+    let kinds: [[f64; 6]; 3] = std::array::from_fn(|c| planes[c.min(planes.len() - 1)]);
+    let shared = kinds[1] == kinds[0] && kinds[2] == kinds[0];
+    let (mx, my) = ((w - 1) as f64, (h - 1) as f64);
     out.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
-        for (x, px) in row.iter_mut().enumerate() {
+        let dy = (y as f64 + 0.5 - cy) / m;
+        for (px, &dx) in row.iter_mut().zip(&columns) {
+            let r2 = dx * dx + dy * dy;
+            let mut f = 0.0;
             for (c, v) in px.iter_mut().enumerate() {
-                let (sx, sy) = source(x as f64 + 0.5, y as f64 + 0.5, c);
-                *v = sample(sx - 0.5, sy - 0.5, c);
+                let k = &kinds[c];
+                if c == 0 || !shared {
+                    f = k[0] + r2 * (k[1] + r2 * (k[2] + r2 * k[3]));
+                }
+                let sx = dx * f + k[4] * 2.0 * dx * dy + k[5] * (r2 + 2.0 * dx * dx);
+                let sy = dy * f + k[4] * (r2 + 2.0 * dy * dy) + k[5] * 2.0 * dx * dy;
+                let x = (cx + sx * m - 0.5).clamp(0.0, mx);
+                let y = (cy + sy * m - 0.5).clamp(0.0, my);
+                let (x0, y0) = (x.floor() as usize, y.floor() as usize);
+                let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
+                let (fx, fy) = ((x - x0 as f64) as f32, (y - y0 as f64) as f32);
+                let at = |x: usize, y: usize| src[y * w + x][c];
+                let top = at(x0, y0) + (at(x1, y0) - at(x0, y0)) * fx;
+                let bottom = at(x0, y1) + (at(x1, y1) - at(x0, y1)) * fx;
+                *v = top + (bottom - top) * fy;
             }
         }
     });
@@ -531,6 +530,79 @@ fn remap(img: &mut RgbImage, source: impl Fn(f64, f64, usize) -> (f64, f64) + Sy
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// La distorsion telle qu'écrite avant le calcul du rayon une fois par pixel : la
+    /// version actuelle doit donner exactement les mêmes valeurs.
+    fn warp_reference(img: &mut RgbImage, frame: Frame, planes: &[[f64; 6]], center: [f64; 2]) {
+        let (cx, cy, m) = frame.center(center);
+        let source = |x: f64, y: f64, c: usize| {
+            let (dx, dy) = ((x - cx) / m, (y - cy) / m);
+            let r2 = dx * dx + dy * dy;
+            let k = planes[c.min(planes.len() - 1)];
+            let f = k[0] + r2 * (k[1] + r2 * (k[2] + r2 * k[3]));
+            let sx = dx * f + k[4] * 2.0 * dx * dy + k[5] * (r2 + 2.0 * dx * dx);
+            let sy = dy * f + k[4] * (r2 + 2.0 * dy * dy) + k[5] * 2.0 * dx * dy;
+            (cx + sx * m, cy + sy * m)
+        };
+        let (w, h) = (img.width, img.height);
+        let src = std::mem::take(&mut img.data);
+        let mut out = vec![[0.0f32; 3]; w * h];
+        let sample = |x: f64, y: f64, c: usize| -> f32 {
+            let x = x.clamp(0.0, (w - 1) as f64);
+            let y = y.clamp(0.0, (h - 1) as f64);
+            let (x0, y0) = (x.floor() as usize, y.floor() as usize);
+            let (x1, y1) = ((x0 + 1).min(w - 1), (y0 + 1).min(h - 1));
+            let (fx, fy) = ((x - x0 as f64) as f32, (y - y0 as f64) as f32);
+            let at = |x: usize, y: usize| src[y * w + x][c];
+            let top = at(x0, y0) + (at(x1, y0) - at(x0, y0)) * fx;
+            let bottom = at(x0, y1) + (at(x1, y1) - at(x0, y1)) * fx;
+            top + (bottom - top) * fy
+        };
+        out.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+            for (x, px) in row.iter_mut().enumerate() {
+                for (c, v) in px.iter_mut().enumerate() {
+                    let (sx, sy) = source(x as f64 + 0.5, y as f64 + 0.5, c);
+                    *v = sample(sx - 0.5, sy - 0.5, c);
+                }
+            }
+        });
+        img.data = out;
+    }
+
+    #[test]
+    fn warp_gives_the_same_pixels_as_before() {
+        // Un seul plan, puis trois (aberration chromatique), sur une image de largeur
+        // impaire décalée dans le capteur ; tangentiel compris.
+        let (w, h) = (203, 151);
+        let img = RgbImage {
+            width: w,
+            height: h,
+            data: (0..w * h)
+                .map(|i| {
+                    let v = ((i * 7919) % 1000) as f32 / 1000.0;
+                    [v, v * 0.5 + 0.1, 1.0 - v]
+                })
+                .collect(),
+        };
+        let frame = Frame {
+            x: 12.0,
+            y: 7.0,
+            width: 260.0,
+            height: 190.0,
+        };
+        let one = vec![[1.0, 0.04, -0.02, 0.005, 0.001, -0.002]];
+        let three = vec![
+            [1.001, 0.04, -0.02, 0.005, 0.001, -0.002],
+            [1.0, 0.04, -0.02, 0.005, 0.001, -0.002],
+            [0.999, 0.041, -0.02, 0.004, 0.001, -0.002],
+        ];
+        for planes in [one, three] {
+            let (mut a, mut b) = (img.clone(), img.clone());
+            warp(&mut a, frame, &planes, [0.48, 0.53]);
+            warp_reference(&mut b, frame, &planes, [0.48, 0.53]);
+            assert!(a.data == b.data, "{} plans", planes.len());
+        }
+    }
 
     /// Les corrections en courbes, pixel par pixel, telles qu'écrites avant le calcul par
     /// huit : la version actuelle doit donner exactement les mêmes valeurs.
