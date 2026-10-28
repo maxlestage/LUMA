@@ -5,6 +5,7 @@
 
 pub mod app;
 pub mod crop;
+pub mod curving;
 pub mod dialogs;
 pub mod i18n;
 pub mod icons;
