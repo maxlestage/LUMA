@@ -50,7 +50,8 @@ fi
   "$target/wasm32-unknown-unknown/wasm-release/luma_site.wasm"
 echo "       îlots prêts dans site/pkg"
 
-# Les apps à télécharger (boutons « Télécharger pour Mac » et « pour Linux ») : le dépôt
+# Les apps à télécharger (boutons « Télécharger pour Mac », « pour Linux » et « pour
+# Windows ») : le dépôt
 # est privé, donc ses Releases aussi ; les fichiers de la dernière Release sont récupérés
 # avec le même jeton (qui doit pouvoir lire le dépôt LUMA) et servis par le site sous
 # /download/.
@@ -62,7 +63,8 @@ auth=()
 [ -n "${REPOS_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $REPOS_TOKEN")
 api="https://api.github.com/repos/$repo/releases/latest"
 release=$(curl -sSf "${auth[@]}" -H "Accept: application/vnd.github+json" "$api") || release=""
-for name in LUMA-macos.zip LUMA-linux-x86_64.tar.gz LUMA-linux-amd64.deb; do
+for name in LUMA-macos.zip LUMA-linux-x86_64.tar.gz LUMA-linux-amd64.deb \
+    LUMA-windows-x64.zip LUMA-windows-x64-setup.exe; do
   # L'identifiant de l'asset : la ligne "url" de l'asset précède son nom.
   asset=$(printf '%s' "$release" | tr ',' '\n' | grep -E '"(url|name)"' \
     | awk -v n="$name" '

@@ -1007,11 +1007,15 @@ impl StoredPreset {
 
 /// Le fichier des préréglages d'export, dans le dossier de LÜMA : sur Mac
 /// `~/Library/Application Support/LÜMA/Exports.json`, sur iPhone et iPad
-/// `Library/Application Support/Exports.json`, ailleurs `~/.local/share/luma/exports.json`.
+/// `Library/Application Support/Exports.json`, sur Windows `%APPDATA%\LÜMA\Exports.json`,
+/// ailleurs `~/.local/share/luma/exports.json`.
 /// `LUMA_EXPORT_PRESETS` le remplace.
 pub fn presets_path() -> Option<PathBuf> {
     if let Some(p) = std::env::var_os("LUMA_EXPORT_PRESETS") {
         return Some(PathBuf::from(p));
+    }
+    if cfg!(windows) {
+        return Some(luma_core::windows_dir(false)?.join("Exports.json"));
     }
     let home = PathBuf::from(std::env::var_os("HOME")?);
     Some(if cfg!(target_os = "ios") {

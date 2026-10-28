@@ -1,5 +1,7 @@
 //! `luma-studio [fichier RAW | dossier]` : ouvre LÜMA Studio (sur iPhone et iPad, le
 //! dossier Documents de l'app).
+// Sous Windows, une app à fenêtre : pas de console noire à côté de LÜMA.
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
 use luma_studio::Studio;
 

@@ -1,6 +1,7 @@
 # Une version de LÜMA à télécharger : à chaque étiquette v… (ex. v0.1.0), l'app Mac
 # universelle, l'app iPhone et iPad (non signée, à signer avec un compte Apple
-# Developer), l'app Linux (archive et paquet .deb) et la ligne de commande `luma`
+# Developer), l'app Linux (archive et paquet .deb), l'app Windows (installateur et
+# archive .zip) et la ligne de commande `luma`
 # sont construites et publiées dans une Release GitHub.
 
 name: Release
@@ -79,9 +80,26 @@ jobs:
             target/linux/LUMA-linux-x86_64.tar.gz
             target/linux/LUMA-linux-amd64.deb
 
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: "LÜMA pour Windows (x64), installateur et archive .zip"
+        shell: pwsh
+        run: scripts/bundle-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            target/windows/LUMA-windows-x64-setup.exe
+            target/windows/LUMA-windows-x64.zip
+
   publish:
     name: Publier la Release
-    needs: [apple, linux]
+    needs: [apple, linux, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -95,11 +113,13 @@ jobs:
         run: |
           case "$TAG" in v[0-9]*) ;; *) echo "version invalide : $TAG"; exit 1 ;; esac
           find dist -type f
-          notes="LÜMA ${TAG#v} — sur Mac et Linux, 14 jours d'essai puis LÜMA Premium (19,99 € par mois ou 239,88 € par an) ; sur iPhone et iPad, un mois d'essai puis 89,99 € une fois pour toutes.
+          notes="LÜMA ${TAG#v} — sur Mac, Linux et Windows, 14 jours d'essai puis LÜMA Premium (19,99 € par mois ou 239,88 € par an) ; sur iPhone et iPad, un mois d'essai puis 89,99 € une fois pour toutes.
 
           - **LUMA-macos.zip** : l'app pour Mac (Apple Silicon et Intel, macOS 11+).
           - **LUMA-linux-x86_64.tar.gz** : l'app pour Linux, avec la ligne de commande \`luma\` ; \`./install.sh\` l'installe sans mot de passe.
           - **LUMA-linux-amd64.deb** : la même, pour Debian et Ubuntu (\`sudo apt install ./LUMA-linux-amd64.deb\`).
+          - **LUMA-windows-x64-setup.exe** : l'app pour Windows 10 et 11 (x64), à installer sans mot de passe administrateur.
+          - **LUMA-windows-x64.zip** : la même, avec la ligne de commande \`luma.exe\`, à décompresser n'importe où.
           - **LUMA-ios-device.zip** : l'app pour iPhone et iPad, non signée (à signer pour l'installer).
           - **luma-cli-macos.zip** : la ligne de commande \`luma\` pour Mac."
           files=$(find dist -type f)
