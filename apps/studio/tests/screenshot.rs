@@ -1646,9 +1646,16 @@ fn mask_texture_and_dehaze() {
             .is_some()
     );
     assert!(s.harness.query_all_by_label("Netteté").next().is_some());
+    assert!(
+        s.harness
+            .query_all_by_label("Réduction du bruit")
+            .next()
+            .is_some()
+    );
     let st = s.studio();
     assert_eq!(st.settings.masks.len(), 1);
     st.settings.masks[0].local.sharpness = 40.0;
+    st.settings.masks[0].local.noise = 50.0;
     st.settings.masks[0].local.texture = -60.0;
     st.settings.masks[0].local.dehaze = 50.0;
     s.wait();
