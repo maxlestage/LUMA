@@ -66,8 +66,17 @@ fn capture(name: &str, size: [f32; 2]) {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// Une interface à la fois : plusieurs rendues en même temps sur le GPU logiciel de
+/// Linux (lavapipe) le font parfois planter (SIGSEGV), comme dans `screenshot.rs`.
+fn one_at_a_time() -> std::sync::MutexGuard<'static, ()> {
+    static GPU: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    GPU.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 #[test]
 fn touch_layouts() {
+    let _gpu = one_at_a_time();
     // iPhone 17 Pro Max en paysage (hors encoche), puis iPad en paysage.
     capture("iphone-paysage", [832.0, 420.0]);
     capture("ipad-paysage", [1194.0, 834.0]);
@@ -120,6 +129,7 @@ fn finger(harness: &mut Harness<'static, Option<Studio>>, from: egui::Pos2, to: 
 /// réglage.
 #[test]
 fn finger_scrolls_the_panel() {
+    let _gpu = one_at_a_time();
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus/_DSC0009.ARW");
     if !src.exists() {
         eprintln!("corpus absent (scripts/fetch-corpus.sh) : essai ignoré");
@@ -195,6 +205,7 @@ fn finger_scrolls_the_panel() {
 /// `target/studio-tactile-premium.png`.
 #[test]
 fn premium_sheet_on_iphone() {
+    let _gpu = one_at_a_time();
     luma_studio::force_touch(true);
     let dir = std::env::temp_dir().join("luma-tactile-premium");
     let _ = std::fs::remove_dir_all(&dir);
