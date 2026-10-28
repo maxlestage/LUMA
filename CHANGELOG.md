@@ -82,6 +82,11 @@ La photothèque professionnelle, étape par étape.
   4 secondes), mêmes pixels. Dans l'app, un calcul qui échoue sur une photo singulière
   ne fige plus rien : l'aperçu suivant arrive, l'ouverture, l'export, la fusion ou la
   mesure d'une pellicule disent l'erreur, et un lot d'export continue avec les autres.
+  Plus de réglages perdus d'un coup : un seul masque, une seule retouche ou un seul coup
+  de fluidité illisible dans un XMP (une forme d'une version plus récente, une valeur
+  abîmée) n'efface plus les autres ; un préréglage d'export abîmé ne fait plus perdre
+  les autres, et un fichier de préréglages illisible est gardé de côté
+  (`Exports.json.illisible`) avant d'être remplacé.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).

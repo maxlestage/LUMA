@@ -82,7 +82,11 @@ La fototeca profesional, paso a paso.
   segundos), mismos píxeles. En la app, un cálculo que falla con una foto singular ya
   no congela nada: llega la vista previa siguiente, la apertura, la exportación, la
   fusión o la medición de una película indican el error, y un lote de exportación sigue
-  con las demás.
+  con las demás. Ya no se pierden ajustes de golpe: una sola máscara, un solo retoque o
+  un solo trazo de licuado ilegible en un XMP (una forma de una versión más reciente, un
+  valor dañado) ya no borra los demás; un ajuste preestablecido de exportación dañado ya
+  no hace perder los demás, y un archivo de ajustes ilegible se guarda aparte
+  (`Exports.json.illisible`) antes de reemplazarse.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).

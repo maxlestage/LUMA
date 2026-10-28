@@ -73,7 +73,11 @@ The professional photo library, step by step.
   export (24 MP: 2 minutes → 4 seconds), same pixels. In the app, a computation that
   fails on an unusual photo no longer freezes anything: the next preview arrives,
   opening, export, merge or film measurement report the error, and an export batch goes
-  on with the others.
+  on with the others. No more settings lost all at once: a single unreadable mask,
+  retouch or liquify stroke in an XMP (a shape from a newer version, a damaged value)
+  no longer erases the others; a damaged export preset no longer loses the others, and
+  an unreadable presets file is kept aside (`Exports.json.illisible`) before being
+  replaced.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).
