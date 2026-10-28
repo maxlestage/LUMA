@@ -52,7 +52,9 @@ The professional photo library, step by step.
   (24 MP: 108 → 68 ms), almost twice as fast with a roundness (400 → 210 ms), same
   pixels. Then Remove (circle or stroke): 28% shorter, then another 22% (almost twice
   as fast overall), same pixels. Then enlarging on export: 18% shorter (6 → 24 MP:
-  440 → 360 ms), same pixels.
+  440 → 360 ms), same pixels. Then the maximum JPEG size, found in three encodings
+  most of the time instead of eight: exporting a 24 MP RAW under 2,000 KB 17% shorter
+  (3.95 → 3.3 s), same files.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
@@ -64,7 +66,10 @@ The professional photo library, step by step.
   a shot; restoring the oldest catalogue backup works, and an unreadable catalogue is
   kept in the backups. In the app, the previous photo's preview no longer covers the one
   being opened, feathered masks look as they export, and a GPU that stops responding
-  lets the processor finish the preview.
+  lets the processor finish the preview. Two tests stand guard: damaged RAWs (a cut
+  copy, scrambled bytes, an empty file) open as an image or an error, never a crash, and
+  settings with absurd values (infinite, huge) render to sound pixels, in masks,
+  retouches and liquify too.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).

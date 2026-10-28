@@ -2254,6 +2254,7 @@ dependencies = [
  "luma-project",
  "luma-raw",
  "rayon",
+ "serde_json",
 ]
 
 [[package]]

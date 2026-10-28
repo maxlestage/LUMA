@@ -1019,4 +1019,90 @@ mod tests {
         let lifted = develop_flat(0.18, &s);
         assert!(lifted[0] > Filmic::MID_OUT * 1.4, "{lifted:?}");
     }
+
+    /// Des réglages qui touchent à tout : masques de chaque forme (avec plages),
+    /// retouches de chaque sorte (dont tracées), fluidité, courbes, étalonnage.
+    fn everything() -> Settings {
+        use luma_project::{Mask, Range, Spot, SpotKind, Warp, WarpKind};
+        let mut s = Settings::default();
+        let mut brush = Mask::brush();
+        if let luma_project::Shape::Brush { dabs } = &mut brush.shape {
+            dabs.push(luma_project::Dab {
+                x: 0.4,
+                y: 0.5,
+                radius: 0.1,
+                feather: 50.0,
+                flow: 80.0,
+                erase: false,
+            });
+        }
+        let mut ranged = Mask::radial();
+        ranged.range = Some(Range::luminance());
+        for mut m in [Mask::linear(), ranged, brush, Mask::full(), Mask::sky()] {
+            m.local.exposure = 0.5;
+            m.local.clarity = 20.0;
+            m.local.sharpness = 30.0;
+            m.local.noise = 20.0;
+            m.local.dehaze = 10.0;
+            s.masks.push(m);
+        }
+        for kind in [SpotKind::Clone, SpotKind::Heal, SpotKind::RedEye, SpotKind::Remove] {
+            let mut spot = Spot::new(kind, (0.5, 0.5), 0.1);
+            spot.source = (0.2, 0.3);
+            s.spots.push(spot);
+        }
+        let mut traced = Spot::new(SpotKind::Heal, (0.3, 0.3), 0.05);
+        traced.path = vec![(0.3, 0.3), (0.6, 0.4), (0.7, 0.7)];
+        s.spots.push(traced);
+        let mut warp = Warp::new(WarpKind::Push, (0.5, 0.5), 0.2, 50.0);
+        warp.points.push((0.6, 0.6));
+        s.liquify.push(warp);
+        s.liquify.push(Warp::new(WarpKind::Bloat, (0.3, 0.3), 0.1, 40.0));
+        s.tone_curve.point = vec![(0.0, 0.0), (128.0, 150.0), (255.0, 255.0)];
+        s.color_grading.shadows.saturation = 30.0;
+        s.color_grading.shadows.hue = 220.0;
+        s.detail.luminance_nr = 30.0;
+        s.detail.sharpen_masking = 20.0;
+        s.effects.vignette_amount = -30.0;
+        s.effects.grain_amount = 20.0;
+        s.clarity = 20.0;
+        s.texture = 15.0;
+        s.dehaze = 10.0;
+        s
+    }
+
+    /// Chaque nombre à virgule des réglages en JSON remplacé par `v`.
+    fn spoil(value: &mut serde_json::Value, v: f64) {
+        match value {
+            serde_json::Value::Number(n) if n.is_f64() => {
+                *value = serde_json::Number::from_f64(v).map_or(serde_json::Value::Null, serde_json::Value::Number);
+            }
+            serde_json::Value::Array(a) => a.iter_mut().for_each(|x| spoil(x, v)),
+            serde_json::Value::Object(o) => o.values_mut().for_each(|x| spoil(x, v)),
+            _ => {}
+        }
+    }
+
+    #[test]
+    fn spoiled_settings_never_panic_and_render_finite_pixels() {
+        // Un fichier abîmé ou venu d'ailleurs : chaque valeur à l'infini (au‑delà de
+        // f32), énorme, négative, nulle. Une fois lus, les réglages se rendent sans
+        // panique, vite, en pixels finis.
+        let cam = RgbImage::from_fn(48, 32, |x, y| {
+            let v = 0.02 + 0.9 * (x as f32 / 47.0) * (0.5 + 0.5 * (y as f32 / 31.0));
+            [v, v * 0.8, v * 0.6]
+        });
+        let json = serde_json::to_value(everything()).unwrap();
+        for v in [1e39, -1e39, 1e20, -1e20, 0.0, 1.0, -1.0, 0.5] {
+            let mut spoiled = json.clone();
+            spoil(&mut spoiled, v);
+            let s = Settings::from_json(&spoiled.to_string()).unwrap_or_else(|e| panic!("{v} : {e}"));
+            let start = std::time::Instant::now();
+            let out = develop(&cam, &gray_input(), &s, &Cancel::new(), &mut Timings::default()).unwrap();
+            assert!(start.elapsed().as_secs() < 20, "{v} : {:?}", start.elapsed());
+            assert_eq!((out.width, out.height), (48, 32));
+            let bad = out.data.iter().filter(|p| !p.iter().all(|c| c.is_finite())).count();
+            assert_eq!(bad, 0, "{v} : {bad} pixels non finis");
+        }
+    }
 }
