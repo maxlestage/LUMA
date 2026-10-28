@@ -601,8 +601,15 @@ mod tests {
             Access::Premium { .. }
         ));
         assert!(state.needs_check(RECHECK_HOURS * 3600));
-        // Une clé d'abonnement (vendue par Stripe), non.
-        activate(&mut state, &sign(&claims(30 * DAY), &SEED), Some(&public), 0).unwrap();
+        // Une clé d'abonnement (vendue par Stripe), non. Elle vaut au‑delà de l'essai
+        // (un mois), pour qu'à sa fin seule la règle des clés décide.
+        activate(
+            &mut state,
+            &sign(&claims((TRIAL_DAYS + 30) * DAY), &SEED),
+            Some(&public),
+            0,
+        )
+        .unwrap();
         assert_eq!(
             state.access_with(TRIAL_DAYS * DAY, Some(&public), false),
             Access::Expired { had_key: false }
