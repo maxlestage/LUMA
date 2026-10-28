@@ -254,7 +254,7 @@ function pointer(ctx, x, y, k) {
  * Rend `draw({ t, edit, split })` : `edit` (0 à 1) amène les curseurs du RAW brut à la
  * photo développée, `split` (0 à 1, ou moins pour rien) place la barre avant / après.
  */
-export function macScreen(canvas) {
+export function macScreen(canvas, { chrome = 'mac' } = {}) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height, s = W / 1280;
   const font = (w, px) => `${w} ${px * s}px -apple-system, Inter, sans-serif`;
@@ -266,13 +266,23 @@ export function macScreen(canvas) {
   const b = base.getContext('2d');
   b.fillStyle = '#0d0d12'; b.fillRect(0, 0, W, H);
   b.fillStyle = '#16161d'; b.fillRect(0, 0, W, 38 * s);
-  ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { b.fillStyle = c; b.beginPath(); b.arc((20 + i * 20) * s, 19 * s, 6 * s, 0, 7); b.fill(); });
+  if (chrome === 'windows') {
+    // Réduire, agrandir, fermer : à droite, comme sous Windows.
+    b.strokeStyle = 'rgba(255,255,255,.75)'; b.lineWidth = 1.4 * s;
+    const cy = 19 * s, cx = W - 22 * s, d = 5 * s;
+    b.beginPath(); b.moveTo(cx - d, cy - d); b.lineTo(cx + d, cy + d); b.moveTo(cx + d, cy - d); b.lineTo(cx - d, cy + d); b.stroke();
+    b.strokeRect(cx - 46 * s - d, cy - d, 2 * d, 2 * d);
+    b.beginPath(); b.moveTo(cx - 92 * s - d, cy); b.lineTo(cx - 92 * s + d, cy); b.stroke();
+  } else {
+    ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { b.fillStyle = c; b.beginPath(); b.arc((20 + i * 20) * s, 19 * s, 6 * s, 0, 7); b.fill(); });
+  }
   b.fillStyle = '#fff'; b.font = font(600, 13);
   b.textAlign = 'center'; b.fillText(`LÜMA — ${tr('Islande_0427.ARW')}`, W / 2, 24 * s); b.textAlign = 'left';
   b.font = font(400, 12);
+  const tabs = chrome === 'windows' ? 520 : 420;
   ['Bibliothèque', 'Développement', 'Masques', 'Export'].forEach((t, i) => {
     b.fillStyle = i === 1 ? '#fff' : 'rgba(255,255,255,.4)';
-    b.fillText(tr(t), W - (420 - i * 100) * s, 24 * s);
+    b.fillText(tr(t), W - (tabs - i * 100) * s, 24 * s);
   });
   const fx = 14 * s, fw = 150 * s;
   for (let i = 0; i < 6; i++) {
@@ -283,7 +293,7 @@ export function macScreen(canvas) {
     if (i === 0) { b.strokeStyle = '#fff'; b.lineWidth = 2 * s; roundRect(b, fx, ty, fw, 92 * s, 8 * s); b.stroke(); }
   }
   b.fillStyle = 'rgba(255,255,255,.35)'; b.font = `${10 * s}px ui-monospace, monospace`;
-  b.fillText('f32 · Display P3 · Metal', rx, H - 22 * s);
+  b.fillText(chrome === 'windows' ? 'f32 · sRGB · Direct3D 12' : 'f32 · Display P3 · Metal', rx, H - 22 * s);
   const photo = photoStates(pw, ph, { seed: 3 });
 
   const LIGHT = [['Exposition', 0.18], ['Contraste', 0.22], ['Hautes lumières', -0.56], ['Ombres', 0.34], ['Blancs', 0.08], ['Noirs', -0.12]];

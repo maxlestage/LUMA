@@ -1,62 +1,42 @@
-// Scène 3D de la section Linux et Windows (#bureau) : un écran (boîtier arrondi en verre
-// physique) qui tourne lentement, éclairé par l'environnement, la face avant allumée aux
-// couleurs de LÜMA. Elle évoque LÜMA sur Linux et sur Windows : le même moteur, la même
-// image, hors d'Apple. Chargée à l'approche de la section (scenes.js), et ne tourne que
-// lorsqu'elle est visible.
+// Scène 3D de la section Linux et Windows (#bureau) : un moniteur fin (dalle en aluminium,
+// bords noirs étroits, pied incliné) sur lequel tourne LÜMA, la même interface vivante que
+// sur le Mac (`screen.js` : la souris glisse l'exposition, la barre avant / après balaie
+// la photo), avec la barre de fenêtre de Windows. L'écran reste face au visiteur : il
+// pivote de quelques degrés, suit la souris, et entre en scène au défilement. Chargée à
+// l'approche de la section (scenes.js) ; ne dessine que lorsqu'elle est visible.
 
 import * as THREE from '../vendor/three.module.min.js';
 import { RoomEnvironment } from '../vendor/RoomEnvironment.js';
 import { RoundedBoxGeometry } from '../vendor/RoundedBoxGeometry.js';
+import { macScreen } from './screen.js';
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
+const ease = (t) => 1 - Math.pow(1 - clamp(t), 3);
 
-// La face « écran » : un dégradé aux couleurs du logo, une vignette et trois pistes de
-// réglage, pour rappeler l'éditeur sans rien promettre de précis.
-function screenTexture() {
+// Les proportions : une dalle 16:10 de 5 unités, bords de 0,07.
+const PANEL_W = 5.0;
+const PANEL_H = 3.18;
+const DEPTH = 0.1;
+const BEZEL = 0.07;
+
+/** Une ombre douce posée sous le pied : un dégradé radial sur un plan. */
+function contactShadow() {
   const c = document.createElement('canvas');
-  c.width = 1024;
-  c.height = 672;
+  c.width = c.height = 128;
   const g = c.getContext('2d');
-  g.fillStyle = '#070709';
-  g.fillRect(0, 0, c.width, c.height);
-  const grad = g.createLinearGradient(0, 0, c.width, c.height);
-  grad.addColorStop(0, '#ff6b3d');
-  grad.addColorStop(0.3, '#ffcf4a');
-  grad.addColorStop(0.6, '#4af2c8');
-  grad.addColorStop(0.8, '#4aa8ff');
-  grad.addColorStop(1, '#8b7bff');
-  g.globalAlpha = 0.9;
+  const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(0,0,0,.55)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = grad;
-  g.fillRect(40, 40, c.width - 80, c.height - 230);
-  // Vignette, pour un rendu « photo ».
-  const vig = g.createRadialGradient(c.width / 2, 300, 120, c.width / 2, 300, 620);
-  vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(0,0,0,.45)');
-  g.fillStyle = vig;
-  g.fillRect(40, 40, c.width - 80, c.height - 230);
-  g.globalAlpha = 1;
-  // Le panneau de réglages, en bas : trois pistes.
-  for (let i = 0; i < 3; i++) {
-    const y = c.height - 150 + i * 42;
-    g.fillStyle = 'rgba(255,255,255,.14)';
-    g.fillRect(60, y, c.width - 320, 8);
-    g.fillStyle = '#ffcf4a';
-    const knob = 120 + i * 180;
-    g.fillRect(60, y, knob, 8);
-    g.beginPath();
-    g.arc(60 + knob, y + 4, 11, 0, Math.PI * 2);
-    g.fillStyle = '#fff';
-    g.fill();
-  }
-  // Le mot LÜMA, discret, en haut à gauche.
-  g.fillStyle = 'rgba(255,255,255,.9)';
-  g.font = '600 46px system-ui, -apple-system, Segoe UI, sans-serif';
-  g.fillText('LÜMA', 60, 110);
+  g.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  return tex;
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.4, 1.6),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }),
+  );
+  mesh.rotation.x = -Math.PI / 2;
+  return mesh;
 }
 
 export function initSystems(canvas, { reduced = false } = {}) {
@@ -69,72 +49,91 @@ export function initSystems(canvas, { reduced = false } = {}) {
     return { dispose() {} };
   }
   const mobile = matchMedia('(max-width: 820px)').matches || matchMedia('(pointer: coarse)').matches;
-  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 1.75);
-  renderer.setPixelRatio(dpr);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 2 : 1.75));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
   scene.environment = envTex;
   pmrem.dispose();
 
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-  camera.position.set(0, 0, 8.2);
-
-  const key = new THREE.DirectionalLight(0xffffff, 1.2);
-  key.position.set(4, 5, 6);
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+  const key = new THREE.DirectionalLight(0xffffff, 1.4);
+  key.position.set(3, 6, 8);
   scene.add(key);
-  const rimA = new THREE.PointLight(0xff6b3d, 26, 14);
-  rimA.position.set(-4, 2.5, 2);
-  scene.add(rimA);
-  const rimB = new THREE.PointLight(0x8b7bff, 26, 14);
-  rimB.position.set(4, -2.5, 2);
-  scene.add(rimB);
+  // Deux lueurs aux couleurs du logo, sur les tranches.
+  const warm = new THREE.PointLight(0xff6b3d, 18, 12);
+  warm.position.set(-4.5, 1.5, 1.5);
+  scene.add(warm);
+  const cool = new THREE.PointLight(0x8b7bff, 18, 12);
+  cool.position.set(4.5, -1, 1.5);
+  scene.add(cool);
 
-  // Le boîtier : un écran arrondi, en verre sombre qui prend les reflets de l'environnement.
-  const holder = new THREE.Group();
-  const bodyGeo = new RoundedBoxGeometry(4.6, 3.0, 0.34, 6, 0.18);
-  const bodyMat = new THREE.MeshPhysicalMaterial({
-    color: 0x0b0b12,
-    metalness: 0.2,
-    roughness: 0.22,
-    clearcoat: 1,
-    clearcoatRoughness: 0.18,
-    envMapIntensity: 1.4,
+  // L'écran : l'interface de LÜMA, redessinée à chaque image (30 par seconde suffisent).
+  const display = document.createElement('canvas');
+  display.width = 1280;
+  display.height = 814;
+  const draw = macScreen(display, { chrome: 'windows' });
+  draw({ t: 0 });
+  const screenTex = new THREE.CanvasTexture(display);
+  screenTex.colorSpace = THREE.SRGBColorSpace;
+  screenTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  const monitor = new THREE.Group();
+  // La dalle : le dos en aluminium sombre, la face en verre noir aux bords étroits.
+  const alu = new THREE.MeshPhysicalMaterial({ color: 0x2a2c33, metalness: 0.85, roughness: 0.32, envMapIntensity: 1.2 });
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0x050507, metalness: 0, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.6 });
+  const shellGeo = new RoundedBoxGeometry(PANEL_W, PANEL_H, DEPTH, 5, 0.045);
+  monitor.add(new THREE.Mesh(shellGeo, alu));
+  const frontGeo = new THREE.PlaneGeometry(PANEL_W - 0.02, PANEL_H - 0.02);
+  const front = new THREE.Mesh(frontGeo, glass);
+  front.position.z = DEPTH / 2 + 0.001;
+  monitor.add(front);
+  const screenGeo = new THREE.PlaneGeometry(PANEL_W - 2 * BEZEL, PANEL_H - 2 * BEZEL);
+  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false });
+  const screen = new THREE.Mesh(screenGeo, screenMat);
+  screen.position.z = DEPTH / 2 + 0.002;
+  monitor.add(screen);
+  // Un reflet très léger en travers du verre.
+  const glareGeo = new THREE.PlaneGeometry(PANEL_W - 2 * BEZEL, PANEL_H - 2 * BEZEL);
+  const glareMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.06, roughness: 0.05, metalness: 0, clearcoat: 1, depthWrite: false,
   });
-  holder.add(new THREE.Mesh(bodyGeo, bodyMat));
+  const glare = new THREE.Mesh(glareGeo, glareMat);
+  glare.position.z = DEPTH / 2 + 0.003;
+  monitor.add(glare);
 
-  // La face avant allumée, légèrement devant le boîtier.
-  const screenMat = new THREE.MeshBasicMaterial({ map: screenTexture(), toneMapped: false });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(4.16, 2.56), screenMat);
-  screen.position.z = 0.181;
-  holder.add(screen);
+  // Le pied : une colonne fine, cachée en haut derrière la dalle, sur un socle bas.
+  const standMat = new THREE.MeshPhysicalMaterial({ color: 0x1b1c22, metalness: 0.9, roughness: 0.38, envMapIntensity: 0.9 });
+  const standGeo = new RoundedBoxGeometry(0.42, 2.1, 0.12, 4, 0.05);
+  const stand = new THREE.Mesh(standGeo, standMat);
+  stand.position.set(0, -PANEL_H / 2 - 0.15, -0.22);
+  const footGeo = new RoundedBoxGeometry(1.5, 0.06, 0.95, 5, 0.028);
+  const foot = new THREE.Mesh(footGeo, standMat);
+  foot.position.set(0, -PANEL_H / 2 - 1.2, -0.22);
+  const shadow = contactShadow();
+  shadow.position.set(0, -PANEL_H / 2 - 1.235, -0.2);
 
-  // Un pied discret, pour l'allure d'un moniteur.
-  const stemMat = new THREE.MeshPhysicalMaterial({ color: 0x15151d, metalness: 0.4, roughness: 0.3, envMapIntensity: 1 });
-  const stem = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.7, 0.3, 4, 0.1), stemMat);
-  stem.position.y = -1.78;
-  holder.add(stem);
-  const foot = new THREE.Mesh(new RoundedBoxGeometry(1.8, 0.16, 0.9, 4, 0.07), stemMat);
-  foot.position.y = -2.12;
-  holder.add(foot);
-
+  const holder = new THREE.Group();
+  holder.add(monitor, stand, foot, shadow);
+  holder.position.y = 0.3;
   scene.add(holder);
 
-  const state = { tx: 0, ty: 0, mx: 0, my: 0, spin: 0, visible: false, fade: 0 };
+  const state = { tx: 0, ty: 0, mx: 0, my: 0, visible: false, fade: 0, enter: reduced ? 1 : 0 };
 
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement.clientWidth || window.innerWidth;
-    const h = canvas.clientHeight || Math.round(w * 0.9);
+    const h = canvas.clientHeight || Math.round(w * 0.75);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
+    // Tout le moniteur dans le cadre, quelle que soit la largeur.
+    const fit = Math.max(1, 1.3 / camera.aspect);
+    camera.position.set(0, 0.2, 10 * fit);
+    camera.lookAt(0, -0.25, 0);
     camera.updateProjectionMatrix();
-    const narrow = camera.aspect < 1;
-    holder.scale.setScalar(narrow ? 0.78 : 1);
-    camera.position.z = narrow ? 9.6 : 8.2;
   }
   resize();
   window.addEventListener('resize', resize);
@@ -142,18 +141,25 @@ export function initSystems(canvas, { reduced = false } = {}) {
   if (!reduced) {
     window.addEventListener('pointermove', (e) => {
       const r = canvas.getBoundingClientRect();
-      state.tx = ((e.clientX - r.left) / r.width) * 2 - 1;
-      state.ty = ((e.clientY - r.top) / r.height) * 2 - 1;
+      state.tx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
+      state.ty = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
     }, { passive: true });
   }
 
-  // Ne tourner que lorsque la scène est à l'écran.
+  // L'entrée en scène suit le défilement : le moniteur se redresse et se tourne vers vous.
+  function progress() {
+    const r = canvas.getBoundingClientRect();
+    const vh = window.innerHeight || 800;
+    return clamp((vh - r.top) / (vh * 0.75));
+  }
+
   const io = new IntersectionObserver(([e]) => { state.visible = e.isIntersecting; }, { threshold: 0.05 });
   io.observe(canvas);
   document.addEventListener('visibilitychange', () => { if (document.hidden) state.visible = false; });
 
   const clock = new THREE.Clock();
-  let last = 0;
+  let t = 0;
+  let paint = 0;
   let raf = 0;
   function frame() {
     raf = requestAnimationFrame(frame);
@@ -162,16 +168,28 @@ export function initSystems(canvas, { reduced = false } = {}) {
     canvas.style.opacity = state.fade.toFixed(3);
     if (!show && state.fade < 0.01) { clock.getDelta(); return; }
     const dt = Math.min(clock.getDelta(), 0.05);
-    const t = (last += dt);
+    t += dt;
 
+    if (!reduced) state.enter = lerp(state.enter, progress(), 0.08);
+    const k = ease(state.enter);
     state.mx = lerp(state.mx, state.tx, 0.05);
     state.my = lerp(state.my, state.ty, 0.05);
-    state.spin += dt * (reduced ? 0 : 0.2);
 
-    holder.rotation.y = state.spin * 0.5 + state.mx * 0.4 + (reduced ? -0.35 : Math.sin(t * 0.3) * 0.15 - 0.2);
-    holder.rotation.x = state.my * 0.2 + (reduced ? 0.05 : Math.sin(t * 0.22) * 0.05);
-    holder.position.y = reduced ? 0 : Math.sin(t * 0.6) * 0.08;
+    // De trois quarts à presque de face ; un balancement de quelques degrés, jamais le dos.
+    const sway = reduced ? 0 : Math.sin(t * 0.4) * 0.05;
+    holder.rotation.y = lerp(-0.75, -0.2, k) + sway + state.mx * 0.12;
+    holder.rotation.x = lerp(0.18, 0.04, k) + state.my * 0.05;
+    holder.position.y = 0.3 + lerp(-0.35, 0, k) + (reduced ? 0 : Math.sin(t * 0.8) * 0.03);
 
+    // L'interface vit : l'exposition glisse, puis la barre avant / après balaie la photo.
+    paint += dt;
+    if (paint > 1 / 30) {
+      paint = 0;
+      const cycle = t % 14;
+      const split = cycle > 8 && cycle < 13 ? 0.5 - 0.42 * Math.cos(((cycle - 8) / 5) * Math.PI * 2) : -1;
+      draw({ t: reduced ? 0 : t, edit: clamp(k * 1.2), split });
+      screenTex.needsUpdate = true;
+    }
     renderer.render(scene, camera);
   }
   frame();
@@ -181,10 +199,9 @@ export function initSystems(canvas, { reduced = false } = {}) {
       cancelAnimationFrame(raf);
       io.disconnect();
       window.removeEventListener('resize', resize);
-      bodyGeo.dispose();
-      bodyMat.dispose();
-      screenMat.map.dispose();
-      screenMat.dispose();
+      [shellGeo, frontGeo, screenGeo, glareGeo, standGeo, footGeo].forEach((g) => g.dispose());
+      [alu, glass, standMat, screenMat, glareMat].forEach((m) => m.dispose());
+      screenTex.dispose();
       envTex.dispose();
       renderer.dispose();
     },
