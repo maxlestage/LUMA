@@ -113,7 +113,7 @@ pub fn auto_tones(img: &RgbImage) -> AutoTones {
     let mut ev = (0.18 / key).log2();
     let room = (2.0 / at(0.995)).log2();
     if ev > room {
-        ev = room.max(ev - 1.0);
+        ev = room.max(ev - 1.0).min(room + 1.0);
     }
     let ev = ev.clamp(-3.0, 3.0);
     let g = ev.exp2();
@@ -330,6 +330,19 @@ mod tests {
             let v = lo * (hi / lo).powf(x as f32 / 199.0);
             [v, v, v]
         })
+    }
+
+    #[test]
+    fn auto_exposure_never_pushes_the_top_more_than_a_stop_past_double_white() {
+        // Une nuit : presque tout très sombre, quelques lumières au blanc. Le gris moyen
+        // demanderait près de six IL ; le haut (99,5 %) ne doit pas finir à plus d'un IL
+        // au‑delà du double du blanc (soit quatre fois le blanc).
+        let night = RgbImage::from_fn(200, 100, |x, y| {
+            let v = if (x + y * 200) % 50 == 0 { 1.0 } else { 0.18 / 64.0 };
+            [v, v, v]
+        });
+        let t = auto_tones(&night);
+        assert!(t.exposure > 0.0 && t.exposure <= 2.0 + 0.05, "{t:?}");
     }
 
     #[test]
