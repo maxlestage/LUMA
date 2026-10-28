@@ -55,7 +55,9 @@ La photothèque professionnelle, étape par étape.
   avec une rondeur (400 → 210 ms), mêmes pixels. Puis Supprimer (en cercle ou en
   trait) : 28 % plus court, puis encore 22 % (presque deux fois plus rapide en tout),
   mêmes pixels. Puis l'agrandissement à l'export : 18 % plus court (6 → 24 Mpx :
-  440 → 360 ms), mêmes pixels.
+  440 → 360 ms), mêmes pixels. Puis le poids maximal d'un JPEG, trouvé en trois
+  codages le plus souvent au lieu de huit : l'export sous 2 000 Ko d'un RAW de 24 Mpx
+  17 % plus court (3,95 → 3,3 s), mêmes fichiers.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
