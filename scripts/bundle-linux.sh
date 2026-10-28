@@ -50,7 +50,7 @@ Sur Fedora : sudo dnf install mesa-vulkan-drivers libxkbcommon-x11
 Les fenêtres pour choisir un fichier passent par le portail du bureau
 (xdg-desktop-portal, présent sur GNOME, KDE et les autres bureaux récents).
 
-14 jours d'essai, complet, puis LÜMA Premium : https://maxlestage.github.io/LUMA/
+Un mois d'essai, complet, puis LÜMA Premium : https://maxlestage.github.io/LUMA/
 TXT
 
 tar -C "$out" -czf "$out/$name.tar.gz" "$name"

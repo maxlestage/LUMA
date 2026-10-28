@@ -64,6 +64,8 @@ The professional photo library, step by step.
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
   presets in `%APPDATA%\LÜMA`, caches in `%LOCALAPPDATA%\LÜMA`. Built, installed,
   launched with a real RAW and uninstalled by CI on every push.
+- **A one-month trial everywhere**: on Mac, Linux and Windows too, the full trial now
+  lasts one month (14 days before), as on iPhone and iPad.
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and

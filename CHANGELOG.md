@@ -71,6 +71,8 @@ La photothèque professionnelle, étape par étape.
   Réglages, catalogue et préréglages dans `%APPDATA%\LÜMA`, caches dans
   `%LOCALAPPDATA%\LÜMA`. Fabriqués, installés, lancés avec un vrai RAW et désinstallés
   à chaque push par la CI.
+- **Un mois d'essai partout** : sur Mac, Linux et Windows aussi, l'essai complet dure
+  désormais un mois (14 jours auparavant), comme sur iPhone et iPad.
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
