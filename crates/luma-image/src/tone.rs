@@ -148,24 +148,29 @@ pub fn local_tone(img: &mut RgbImage, s: &Settings) {
     // Les bases d'abord, puis une seule passe qui ajoute chaque terme dans l'ordre
     // (hautes lumières et ombres, clarté, texture) et applique le gain : ni copie de la
     // luminance, ni une passe par curseur.
-    let tones = (hl != 0.0 || sh != 0.0).then(|| {
-        // Base : lisse à l'intérieur des zones, nette sur les contours (écarts > ½ IL).
-        let base = stops.guided(0.02 * diag, 0.25);
-        // Ces curseurs s'adaptent à l'image : ils visent ses
-        // parties claires et sombres à elle (centiles 1, 50 et 99 de la base).
-        let mut sample: Vec<f32> = base.data.iter().step_by(5).copied().collect();
-        let n = sample.len() - 1;
-        let mut q = |p: f32| *sample.select_nth_unstable_by((n as f32 * p) as usize, f32::total_cmp).1;
-        let (lo, mid, hi) = (q(0.01), q(0.5), q(0.99));
-        let (span_hi, span_lo) = ((hi - mid).max(0.5), (mid - lo).max(0.5));
-        // Transitions sur 1,5 fois l'écart ; l'amplitude est plafonnée pour que la
-        // courbe reste croissante (un ton ne passe jamais devant un autre).
-        let k_hi = (hl * 1.3).max(-0.85 * span_hi * 1.2 / 1.5);
-        let k_sh = (sh * 2.2).min(0.85 * span_lo);
-        (base, mid, span_hi, span_lo, k_hi, k_sh)
-    });
-    let clarity_base = (clarity != 0.0).then(|| stops.guided(0.008 * diag, 0.5));
-    let texture_base = (texture != 0.0).then(|| stops.blur(texture_sigma(diag)));
+    // Les trois bases à la fois (chacune déjà parallèle, mais les filtres guidés
+    // travaillent sur des plans réduits qui n'occupent pas tous les cœurs).
+    let tones = || {
+        (hl != 0.0 || sh != 0.0).then(|| {
+            // Base : lisse à l'intérieur des zones, nette sur les contours (écarts > ½ IL).
+            let base = stops.guided(0.02 * diag, 0.25);
+            // Ces curseurs s'adaptent à l'image : ils visent ses
+            // parties claires et sombres à elle (centiles 1, 50 et 99 de la base).
+            let mut sample: Vec<f32> = base.data.iter().step_by(5).copied().collect();
+            let n = sample.len() - 1;
+            let mut q = |p: f32| *sample.select_nth_unstable_by((n as f32 * p) as usize, f32::total_cmp).1;
+            let (lo, mid, hi) = (q(0.01), q(0.5), q(0.99));
+            let (span_hi, span_lo) = ((hi - mid).max(0.5), (mid - lo).max(0.5));
+            // Transitions sur 1,5 fois l'écart ; l'amplitude est plafonnée pour que la
+            // courbe reste croissante (un ton ne passe jamais devant un autre).
+            let k_hi = (hl * 1.3).max(-0.85 * span_hi * 1.2 / 1.5);
+            let k_sh = (sh * 2.2).min(0.85 * span_lo);
+            (base, mid, span_hi, span_lo, k_hi, k_sh)
+        })
+    };
+    let clarity_base = || (clarity != 0.0).then(|| stops.guided(0.008 * diag, 0.5));
+    let texture_base = || (texture != 0.0).then(|| stops.blur(texture_sigma(diag)));
+    let (tones, (clarity_base, texture_base)) = rayon::join(tones, || rayon::join(clarity_base, texture_base));
     // Les hautes lumières démarrent à la médiane (les tons moyens restent en place),
     // les ombres un peu avant (elles remontent aussi les tons sombres moyens).
     let (ramp_hi, ramp_sh) = (|u: f32| smoothstep(0.0, 1.2, u), |u: f32| smoothstep(-0.3, 1.2, u));
