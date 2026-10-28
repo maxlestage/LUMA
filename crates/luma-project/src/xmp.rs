@@ -238,9 +238,11 @@ impl Template {
 
 /// Les modèles de métadonnées d'un fichier (vide s'il n'existe pas ou ne se lit pas).
 pub fn load_templates(path: &std::path::Path) -> Vec<Template> {
+    // Modèle par modèle : un seul abîmé ne fait pas perdre les autres.
     std::fs::read(path)
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
+        .and_then(each_value)
         .unwrap_or_default()
 }
 
@@ -364,7 +366,7 @@ pub fn read_meta(text: &str) -> Meta {
         snapshots: values
             .meta
             .get("luma:Snapshots")
-            .and_then(|j| serde_json::from_str(j).ok())
+            .and_then(|j| each(j))
             .unwrap_or_default(),
     }
 }
@@ -614,7 +616,14 @@ fn leak(name: String) -> &'static str {
 /// sauté, les autres sont gardés — sinon le prochain enregistrement les perdrait tous.
 /// `None` si ce n'est pas une liste.
 fn each<T: serde::de::DeserializeOwned>(json: &str) -> Option<Vec<T>> {
-    let items: Vec<serde_json::Value> = serde_json::from_str(json).ok()?;
+    each_value(serde_json::from_str(json).ok()?)
+}
+
+/// [`each`], depuis une valeur JSON déjà lue (`None` si ce n'est pas une liste).
+pub(crate) fn each_value<T: serde::de::DeserializeOwned>(list: serde_json::Value) -> Option<Vec<T>> {
+    let serde_json::Value::Array(items) = list else {
+        return None;
+    };
     Some(
         items
             .into_iter()
@@ -1186,6 +1195,44 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn a_damaged_snapshot_or_template_does_not_lose_the_others() {
+        // Deux instantanés dans le XMP ; le nom du premier remplacé par un nombre.
+        let meta = Meta {
+            snapshots: vec![
+                Snapshot::new("Avant", &Settings::default()),
+                Snapshot::new("Après", &Settings::default()),
+            ],
+            ..Meta::default()
+        };
+        let q = "&quot;";
+        let text = write_with_meta(&Settings::default(), &meta).replacen(
+            &format!("{q}name{q}:{q}Avant{q}"),
+            &format!("{q}name{q}:7"),
+            1,
+        );
+        let back = read_meta(&text);
+        assert_eq!(
+            back.snapshots.iter().map(|s| s.name.as_str()).collect::<Vec<_>>(),
+            ["Après"]
+        );
+        // Deux modèles de métadonnées ; les mots‑clés du second ne sont pas une liste.
+        let dir = std::env::temp_dir().join(format!("luma-modeles-abimes-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("modeles.json");
+        std::fs::write(
+            &path,
+            r#"[{"name":"Mariage","creator":"Max"},{"name":"Abîmé","keywords":5}]"#,
+        )
+        .unwrap();
+        let templates = load_templates(&path);
+        assert_eq!(
+            templates.iter().map(|t| t.name.as_str()).collect::<Vec<_>>(),
+            ["Mariage"]
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn one_unreadable_mask_spot_or_stroke_keeps_the_others() {
