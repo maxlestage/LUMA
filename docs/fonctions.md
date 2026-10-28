@@ -70,6 +70,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Masque « Ciel » (« Sélectionner le ciel ») : ciel et nuages trouvés sur la photo, bords suivis, reflets dans l'eau laissés ; sans IA | ✅ |
 | | Pinceau qui suit les bords : chaque touche ne peint que les tons proches de son centre, la zone s'arrête aux contours de la photo | ✅ |
 | | Combinaisons de masques : ajouter, soustraire, intersection d'autres formes (chacune inversable) | ✅ |
+| | Dupliquer un masque, ou le dupliquer inversé (réglages à zéro) : le sol après le ciel, sans retracer la zone | ✅ |
 | | Zone du masque affichée (O) en rouge, vert, bleu, blanc ou blanc sur noir, opacité de 10 à 100 % | ✅ |
 | | Lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Correcteur et tampon (Q) : un clic, la source trouvée d'elle-même, zone et source déplaçables ; taille, contour progressif, opacité | ✅ |
