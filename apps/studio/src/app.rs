@@ -486,7 +486,63 @@ pub struct Import {
     /// Les jours de prise de vue de la source, leur nombre de photos, et s'ils sont
     /// choisis ; lus en arrière‑plan (`days_job`).
     pub days: Vec<(String, usize, bool)>,
-    days_job: Option<std::sync::mpsc::Receiver<Vec<(String, usize)>>>,
+    days_job: Option<std::sync::mpsc::Receiver<SourceContents>>,
+    /// Les prises de la source, pour choisir photo par photo.
+    pub shots: Vec<ImportShot>,
+    /// Le choix photo par photo est ouvert.
+    pub pick: bool,
+    /// Les aperçus des prises, lus en arrière‑plan à l'ouverture du choix.
+    previews: HashMap<PathBuf, TextureHandle>,
+    previews_job: Option<std::sync::mpsc::Receiver<Preview>>,
+}
+
+/// L'aperçu d'une prise de la source : son fichier, sa taille et ses pixels RGB.
+type Preview = (PathBuf, [usize; 2], Vec<u8>);
+
+/// Ce qu'on lit des photos d'une source : ses jours de prise de vue et ses prises.
+type SourceContents = (Vec<(String, usize)>, Vec<ImportShot>);
+
+/// Une prise de la source : ses fichiers (le RAW et son JPEG), son jour, et si elle est
+/// à importer.
+#[derive(Clone, Debug)]
+pub struct ImportShot {
+    pub paths: Vec<PathBuf>,
+    pub day: String,
+    pub on: bool,
+}
+
+impl ImportShot {
+    /// Le fichier qui la montre : le RAW s'il y en a un (son aperçu est intégré).
+    pub fn main(&self) -> &Path {
+        self.paths
+            .iter()
+            .find(|p| is_raw(p))
+            .unwrap_or(&self.paths[0])
+    }
+}
+
+/// Les prises des photos, dans l'ordre de prise de vue : les fichiers d'un même dossier
+/// et d'un même nom sans extension ensemble.
+fn shots_of(entries: &[luma_library::Entry]) -> Vec<ImportShot> {
+    let mut sorted: Vec<&luma_library::Entry> = entries.iter().collect();
+    sorted.sort_by(|a, b| (&a.date, &a.path).cmp(&(&b.date, &b.path)));
+    let mut index: HashMap<_, usize> = HashMap::new();
+    let mut shots: Vec<ImportShot> = Vec::new();
+    for e in sorted {
+        let key = luma_library::import::shot(&e.path);
+        match index.get(&key) {
+            Some(&k) => shots[k].paths.push(e.path.clone()),
+            None => {
+                index.insert(key, shots.len());
+                shots.push(ImportShot {
+                    paths: vec![e.path.clone()],
+                    day: e.date.get(..10).unwrap_or(&e.date).to_owned(),
+                    on: true,
+                });
+            }
+        }
+    }
+    shots
 }
 
 impl Import {
@@ -502,21 +558,43 @@ impl Import {
             .collect()
     }
 
-    /// Le nombre de photos à importer : celles des jours choisis.
+    /// Le jour est‑il choisi ?
+    fn day_on(&self, day: &str) -> bool {
+        self.days.iter().all(|d| d.0 != day || d.2)
+    }
+
+    /// Les photos laissées sur la carte : les prises décochées.
+    pub fn skipped(&self) -> Vec<PathBuf> {
+        self.shots
+            .iter()
+            .filter(|s| !s.on)
+            .flat_map(|s| s.paths.iter().cloned())
+            .collect()
+    }
+
+    /// Le nombre de photos à importer : celles des jours choisis, moins celles laissées
+    /// sur la carte.
     pub fn chosen(&self) -> usize {
         if self.days.is_empty() {
             self.found
-        } else {
+        } else if self.shots.is_empty() {
             self.days.iter().filter(|d| d.2).map(|d| d.1).sum()
+        } else {
+            self.shots
+                .iter()
+                .filter(|s| s.on && self.day_on(&s.day))
+                .map(|s| s.paths.len())
+                .sum()
         }
     }
 
     /// Les jours de la source, quand ils sont lus.
     fn receive_days(&mut self) {
         if let Some(rx) = &self.days_job
-            && let Ok(days) = rx.try_recv()
+            && let Ok((days, shots)) = rx.try_recv()
         {
             self.days = days.into_iter().map(|(d, n)| (d, n, true)).collect();
+            self.shots = shots;
             self.days_job = None;
         }
     }
@@ -538,6 +616,10 @@ impl Default for Import {
             found: 0,
             days: Vec::new(),
             days_job: None,
+            shots: Vec::new(),
+            pick: false,
+            previews: HashMap::new(),
+            previews_job: None,
         }
     }
 }
@@ -2363,14 +2445,18 @@ impl Studio {
         let photos = luma_library::import::photos(&source);
         self.import.found = photos.len();
         self.import.source = Some(source);
-        // Les jours de prise de vue, lus en arrière‑plan (l'en‑tête de chaque photo).
+        // Les jours de prise de vue et les prises, lus en arrière‑plan (l'en‑tête de
+        // chaque photo).
         self.import.days.clear();
+        self.import.shots.clear();
+        self.import.previews.clear();
+        self.import.previews_job = None;
         let (send, receive) = std::sync::mpsc::channel();
         self.import.days_job = Some(receive);
         std::thread::spawn(move || {
             let entries: Vec<luma_library::Entry> =
                 photos.iter().map(|p| luma_library::entry_of(p)).collect();
-            let _ = send.send(luma_library::import::days(&entries));
+            let _ = send.send((luma_library::import::days(&entries), shots_of(&entries)));
             crate::wake();
         });
     }
@@ -2378,10 +2464,81 @@ impl Studio {
     /// Attend la fin de la lecture des jours de la source (pour les essais).
     pub fn wait_import_days(&mut self) {
         if let Some(rx) = self.import.days_job.take()
-            && let Ok(days) = rx.recv()
+            && let Ok((days, shots)) = rx.recv()
         {
             self.import.days = days.into_iter().map(|(d, n)| (d, n, true)).collect();
+            self.import.shots = shots;
         }
+    }
+
+    /// Lit en arrière‑plan l'aperçu de chaque prise de la source : celui qui est intégré
+    /// au RAW, sinon l'image réduite. S'arrête quand la source change.
+    fn start_import_previews(&mut self) {
+        if self.import.previews_job.is_some() || !self.import.previews.is_empty() {
+            return;
+        }
+        let paths: Vec<PathBuf> = self
+            .import
+            .shots
+            .iter()
+            .map(|s| s.main().to_path_buf())
+            .collect();
+        let (send, receive) = std::sync::mpsc::channel();
+        self.import.previews_job = Some(receive);
+        std::thread::spawn(move || {
+            for p in paths {
+                let img = luma_raw::RawPhoto::embedded_preview(&p, 160).or_else(|| {
+                    image::open(&p)
+                        .ok()
+                        .map(|i| i.thumbnail(160, 160).to_rgb8())
+                });
+                let Some(img) = img else {
+                    continue;
+                };
+                let size = [img.width() as usize, img.height() as usize];
+                if send.send((p, size, img.into_raw())).is_err() {
+                    return;
+                }
+                crate::wake();
+            }
+        });
+    }
+
+    /// Les aperçus arrivés : au plus une trentaine par image de l'écran.
+    fn receive_import_previews(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.import.previews_job else {
+            return;
+        };
+        for _ in 0..32 {
+            match rx.try_recv() {
+                Ok((path, size, rgb)) => {
+                    let image = ColorImage::from_rgb(size, &rgb);
+                    let name = format!("import {}", path.display());
+                    let texture = ctx.load_texture(name, image, TextureOptions::LINEAR);
+                    self.import.previews.insert(path, texture);
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => return,
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    self.import.previews_job = None;
+                    return;
+                }
+            }
+        }
+        ctx.request_repaint();
+    }
+
+    /// Attend tous les aperçus de la source (pour les essais).
+    pub fn wait_import_previews(&mut self, ctx: &egui::Context) {
+        self.start_import_previews();
+        while self.import.previews_job.is_some() {
+            self.receive_import_previews(ctx);
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+    }
+
+    /// Le nombre d'aperçus lus pour le choix photo par photo.
+    pub fn import_previews(&self) -> usize {
+        self.import.previews.len()
     }
 
     /// Importe en arrière‑plan : lit les photos de la source, fait le plan (rangement,
@@ -2398,6 +2555,7 @@ impl Studio {
             folders: self.import.folders.clone(),
             backup: self.import.backup.clone(),
             days: self.import.chosen_days(),
+            skip: self.import.skipped(),
         };
         let template = Some(self.import.name.trim().to_owned()).filter(|t| !t.is_empty());
         if let Some(t) = &template
@@ -2504,6 +2662,28 @@ impl Studio {
                         });
                         ui.end_row();
                     }
+                    if !self.import.shots.is_empty() {
+                        ui.label(RichText::new(tr("Photos")).color(theme::DIM));
+                        ui.horizontal(|ui| {
+                            ui.checkbox(&mut self.import.pick, tr("Choisir photo par photo"));
+                            if self.import.pick {
+                                if ui.small_button(tr("Toutes")).clicked() {
+                                    self.import.shots.iter_mut().for_each(|s| s.on = true);
+                                }
+                                if ui.small_button(tr("Aucune|photo")).clicked() {
+                                    self.import.shots.iter_mut().for_each(|s| s.on = false);
+                                }
+                            }
+                        });
+                        ui.end_row();
+                    }
+                });
+                if self.import.pick && !self.import.shots.is_empty() {
+                    self.start_import_previews();
+                    self.receive_import_previews(ui.ctx());
+                    self.import_picker(ui);
+                }
+                egui::Grid::new("importer-vers").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
                     ui.label(RichText::new(tr("Vers")).color(theme::DIM));
                     ui.horizontal(|ui| {
                         ui.label(shown(&self.import.dest, "Choisissez la photothèque"));
@@ -2569,6 +2749,76 @@ impl Studio {
             self.start_import();
         }
         self.import_open = open;
+    }
+
+    /// Le choix photo par photo : les aperçus des prises des jours choisis ; un clic
+    /// laisse une photo sur la carte, ou la reprend.
+    fn import_picker(&mut self, ui: &mut Ui) {
+        let tile = vec2(84.0, 64.0);
+        let days: Vec<String> = self
+            .import
+            .days
+            .iter()
+            .filter(|d| d.2)
+            .map(|d| d.0.clone())
+            .collect();
+        let Import {
+            shots, previews, ..
+        } = &mut self.import;
+        egui::ScrollArea::vertical()
+            .id_salt("importer-photos")
+            .max_height(240.0)
+            .show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing = vec2(4.0, 4.0);
+                    for shot in shots.iter_mut() {
+                        if !days.is_empty() && !days.contains(&shot.day) {
+                            continue;
+                        }
+                        let (rect, response) = ui.allocate_exact_size(tile, egui::Sense::click());
+                        let painter = ui.painter_at(rect);
+                        painter.rect_filled(rect, 3.0, Color32::from_gray(0x24));
+                        let tint = if shot.on {
+                            Color32::WHITE
+                        } else {
+                            Color32::from_gray(0x50)
+                        };
+                        if let Some(t) = previews.get(shot.main()) {
+                            let [w, h] = t.size();
+                            let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+                            painter.image(t.id(), fit(rect.shrink(2.0), w, h), uv, tint);
+                        }
+                        // La coche : pleine sur une photo à importer, vide sur une photo
+                        // laissée sur la carte.
+                        let mark = pos2(rect.max.x - 9.0, rect.min.y + 9.0);
+                        if shot.on {
+                            painter.circle_filled(mark, 6.0, theme::ACCENT);
+                            let stroke = egui::Stroke::new(1.5, Color32::BLACK);
+                            painter.line_segment(
+                                [mark + vec2(-3.0, 0.0), mark + vec2(-1.0, 2.5)],
+                                stroke,
+                            );
+                            painter.line_segment(
+                                [mark + vec2(-1.0, 2.5), mark + vec2(3.0, -2.5)],
+                                stroke,
+                            );
+                        } else {
+                            painter.circle_stroke(
+                                mark,
+                                6.0,
+                                egui::Stroke::new(1.2, Color32::from_gray(0xa0)),
+                            );
+                        }
+                        let name = shot
+                            .main()
+                            .file_name()
+                            .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+                        if response.on_hover_text(name).clicked() {
+                            shot.on = !shot.on;
+                        }
+                    }
+                });
+            });
     }
 
     /// La fenêtre « Livre, diaporama et galerie » : le diaporama (dans l'app ou exporté),

@@ -101,6 +101,10 @@ La fototeca profesional, paso a paso.
   pantalla completa de la app pasa de una foto a otra con la misma transición (antes:
   de golpe). La etiqueta «Fundido» de la presentación está ahora bien traducida en
   inglés y en español.
+- **Importación foto a foto**: «Elegir foto a foto» muestra la vista previa de cada
+  foto de la tarjeta (la integrada en el RAW, leída en segundo plano); un clic deja una
+  en la tarjeta, con su JPEG; «Todas», «Ninguna»; junto con los días elegidos (`luma
+  import --skip photo`).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

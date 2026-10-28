@@ -170,7 +170,7 @@ USAGE
       --dry-run montre ce qui serait fait.
   luma import [carte|dossier] --to dossier [--folders \"{année}/{année}-{mois}-{jour}\"]
               [--name modèle] [--backup second-disque] [--dry-run] [--catalog f.lumacat]
-              [--days 2026-10-26,2026-10-27]
+              [--days 2026-10-26,2026-10-27] [--skip photo]…
       Importe les photos d'une carte mémoire (sans carte donnée : la carte montée, celle
       qui a un dossier DCIM) ou d'un dossier : copiées dans --to, rangées par date de
       prise de vue (--folders, vide : tout au même endroit), renommées avec --name (les
@@ -178,7 +178,8 @@ USAGE
       --backup. Chaque copie est relue et comparée à l'original ; le RAW, son JPEG et
       son XMP gardent un même nom ; une photo déjà importée est sautée ; la carte n'est
       jamais modifiée. Les photos importées entrent dans la photothèque. Les jours de
-      prise de vue de la carte s'affichent ; --days n'importe que ceux‑là.
+      prise de vue de la carte s'affichent ; --days n'importe que ceux‑là. --skip laisse
+      une photo sur la carte (avec les autres fichiers de sa prise : son JPEG, son RAW).
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -2175,6 +2176,7 @@ fn import(args: Vec<String>) -> Result<(), String> {
         folders: "{année}/{année}-{mois}-{jour}".into(),
         backup: None,
         days: Vec::new(),
+        skip: Vec::new(),
     };
     let (mut source, mut dest, mut template, mut dry, mut file) = (None, None, None, false, None);
     let mut it = args.into_iter();
@@ -2201,6 +2203,7 @@ fn import(args: Vec<String>) -> Result<(), String> {
                 }
             }
             "--catalog" => file = Some(PathBuf::from(it.next().ok_or("--catalog : fichier attendu")?)),
+            "--skip" => o.skip.push(PathBuf::from(it.next().ok_or("--skip : photo attendue")?)),
             _ => source = Some(PathBuf::from(a)),
         }
     }
