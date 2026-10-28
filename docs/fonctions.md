@@ -64,7 +64,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Guides de recadrage : tiers, nombre d'or, diagonales, triangles d'or, spirale d'or, grille (O pour changer, Maj+O pour tourner) | ✅ |
 | | Redressement automatique (Maj+R) : l'horizon et les verticales lus par une transformée de Hough ; rien dans le doute (photo de près, lignes de fuite) | ✅ |
 | | Verticales automatiques (Maj+V) : le point de fuite des verticales mesuré, la Verticale de la Transformation réglée pour les rendre parallèles | ✅ |
-| | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté, texture, netteté (relevée ou adoucie), correction du voile | ✅ |
+| | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté, texture, netteté (relevée ou adoucie), réduction du bruit, correction du voile | ✅ |
 | | Masques restreints à une plage de luminance (minimum, maximum, fondu) ou de couleur (teinte, largeur, fondu ; gris laissés), lue sur la photo ; zone affichée (O) | ✅ |
 | | Masque « Ciel » (« Sélectionner le ciel ») : ciel et nuages trouvés sur la photo, bords suivis, reflets dans l'eau laissés ; sans IA | ✅ |
 | | Pinceau qui suit les bords : chaque touche ne peint que les tons proches de son centre, la zone s'arrête aux contours de la photo | ✅ |

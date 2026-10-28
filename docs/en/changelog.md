@@ -138,6 +138,8 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Noise reduction in masks**: smooth lifted shadows or a noisy sky with the brush,
+  keeping edges sharp, without softening the rest of the photo.
 - **Sharpness in masks**: bring out the detail of eyes or a material with the brush,
   or soften a background, without touching the rest of the photo.
 - **Directional X‑Trans demosaicing** (Fujifilm): green follows edges instead of
