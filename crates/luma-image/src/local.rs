@@ -266,6 +266,11 @@ fn sharpness_sigma(diag: f32) -> f32 {
     (0.0002 * diag).max(0.8)
 }
 
+/// Le rayon de la réduction du bruit d'un masque (six pixels en pleine définition).
+fn noise_sigma(diag: f32) -> f32 {
+    (0.0008 * diag).max(1.0)
+}
+
 /// Le rayon du flou d'une Netteté négative (une vingtaine de pixels en pleine
 /// définition).
 fn softness_sigma(diag: f32) -> f32 {
@@ -313,6 +318,12 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
         .iter()
         .any(|m| m.local.sharpness < 0.0)
         .then(|| stops.blur(softness_sigma(diag)));
+    // La réduction du bruit : la luminance lissée en suivant les contours (un écart
+    // de plus d'un sixième d'IL reste un contour).
+    let quiet_base = active
+        .iter()
+        .any(|m| m.local.noise > 0.0)
+        .then(|| stops.guided(noise_sigma(diag), 0.02));
     let haze = if active.iter().any(|m| m.local.dehaze != 0.0) {
         crate::tone::haze(img)
     } else {
@@ -327,7 +338,7 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
         let k = |v: f32| v / 100.0;
         let (contrast, hl, sh, wh, bl) = (k(l.contrast), k(l.highlights), k(l.shadows), k(l.whites), k(l.blacks));
         let (temp, tint, sat, clarity) = (k(l.temperature), k(l.tint), k(l.saturation), k(l.clarity));
-        let (texture, dehaze, sharpness) = (k(l.texture), k(l.dehaze), k(l.sharpness));
+        let (texture, dehaze, sharpness, noise) = (k(l.texture), k(l.dehaze), k(l.sharpness), k(l.noise));
         img.data
             .par_iter_mut()
             .enumerate()
@@ -372,6 +383,12 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
                     && let Some(base) = &soft_base
                 {
                     d += -sharpness * (base.data[i] - s);
+                }
+                // Le bruit : la luminance rapprochée de sa version lissée.
+                if noise > 0.0
+                    && let Some(base) = &quiet_base
+                {
+                    d += noise * (base.data[i] - s);
                 }
                 let g = (d * m).clamp(-6.0, 6.0).exp2();
                 // Température (bleu ↔ jaune) et teinte (vert ↔ magenta).
@@ -871,6 +888,34 @@ mod tests {
         let step = |img: &RgbImage| luminance(img.data[120 * w + 121]) - luminance(img.data[120 * w + 118]);
         assert!(step(&soft) < 0.8 * step(&img), "bord {} → {}", step(&img), step(&soft));
         assert_eq!(soft.data[5 * w + 5], img.data[5 * w + 5]);
+    }
+
+    #[test]
+    fn local_noise_reduction_smooths_grain_and_keeps_edges() {
+        // Un grain marqué et un bord franc (gauche sombre, droite claire), partout.
+        let (w, h) = (240, 240);
+        let img = RgbImage::from_fn(w, h, |x, y| {
+            let n = ((x * 73_856_093) ^ (y * 19_349_663)).wrapping_mul(2_654_435_761) as u32;
+            let base = if x < 120 { 0.1 } else { 0.4 };
+            let v = base * (1.0 + 0.3 * ((n >> 8) as f32 / 16_777_216.0 - 0.5));
+            [v, v, v]
+        });
+        let mut quiet = img.clone();
+        apply(
+            &mut quiet,
+            &[disk(Local {
+                noise: 100.0,
+                ..Local::default()
+            })],
+        );
+        let was = local_spread(&img, 100, 120, 12);
+        let now = local_spread(&quiet, 100, 120, 12);
+        assert!(now < 0.5 * was, "grain {was} → {now}");
+        // Le bord reste franc : moyennes de part et d'autre, à quatre pixels.
+        let side = |img: &RgbImage, x0: usize| (110..130).map(|y| luminance(img.data[y * w + x0])).sum::<f32>() / 20.0;
+        let (before, after) = (side(&img, 124) - side(&img, 115), side(&quiet, 124) - side(&quiet, 115));
+        assert!(after > 0.9 * before, "bord {before} → {after}");
+        assert_eq!(quiet.data[5 * w + 5], img.data[5 * w + 5]);
     }
 
     #[test]
