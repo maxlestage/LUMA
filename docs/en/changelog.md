@@ -165,6 +165,8 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Point curves in the app** (Light, Tone curve): lightness, red, green and blue; a
+  click adds a point, drag it, a double-click removes it.
 - **Maximum JPEG size** (Export, “Maximum size”, or `--max-kb 500`): the best quality
   that fits in the size, metadata included, for a website or a form that limits file
   sizes; kept in presets.

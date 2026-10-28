@@ -36,6 +36,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Vibrance, Saturation | ✅ |
 | Courbe des tonalités | Paramétrique (4 régions, 3 séparations) | ✅ |
 | | Courbes à points : luminosité, rouge, vert, bleu | ✅ |
+| | Éditeur des courbes à points dans l'app (Lumière, Courbe des tonalités) : un clic ajoute un point, on le glisse, un double‑clic le retire ; la courbe paramétrique en pâle dessous ; annulable | ✅ |
 | Mélangeur de couleurs | Teinte, saturation, luminance de 8 couleurs | ✅ |
 | | Mélange noir et blanc (±3 IL, `crs:GrayMixer*`) | ✅ |
 | | Outil de ciblage direct (T) : glisser sur une couleur de la photo règle cette couleur en teinte, saturation ou luminance | ✅ |
