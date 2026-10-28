@@ -35,7 +35,11 @@ fn truncated_or_damaged_files_never_panic() {
             .enumerate()
             .map(|(i, b)| if i > 512 && i % 997 == 0 { b ^ 0x5A } else { *b })
             .collect();
-        let zeroed: Vec<u8> = bytes.iter().enumerate().map(|(i, b)| if i < 4096 { *b } else { 0 }).collect();
+        let zeroed: Vec<u8> = bytes
+            .iter()
+            .enumerate()
+            .map(|(i, b)| if i < 4096 { *b } else { 0 })
+            .collect();
         let variants: [(&str, &[u8]); 6] = [
             ("coupé à 10 %", &bytes[..n / 10]),
             ("coupé à 50 %", &bytes[..n / 2]),
