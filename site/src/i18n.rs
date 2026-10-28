@@ -181,7 +181,7 @@ mod catalog_tests {
         "RAW",
     ];
 
-    const STRIPE_ERRORS: [&str; 8] = [
+    const STRIPE_ERRORS: [&str; 12] = [
         "le paiement en ligne n'est pas encore ouvert",
         "le portail client n'est pas encore ouvert",
         "lien de paiement invalide",
@@ -190,6 +190,10 @@ mod catalog_tests {
         "l'abonnement n'est plus actif",
         "abonnement sans période",
         "abonnement sans identifiant",
+        "indiquez votre courriel et votre code",
+        "ce courriel et ce code ne correspondent à aucun accès offert",
+        "cet accès offert a pris fin",
+        "le serveur de licences n'est pas encore configuré",
     ];
 
     /// Les textes des îlots (rendus aussi dans le navigateur).
@@ -290,11 +294,13 @@ mod catalog_tests {
             add(doc.title);
             add(doc.lede);
         }
-        // Les erreurs que la page de la clé affiche (`server/mod.rs`, `server/stripe.rs`).
+        // Les erreurs que la page de la clé affiche (`server/mod.rs`, `server/stripe.rs`,
+        // `server/offerts.rs`).
         for e in STRIPE_ERRORS {
             assert!(
                 include_str!("server/stripe.rs").contains(e)
-                    || include_str!("server/mod.rs").contains(e),
+                    || include_str!("server/mod.rs").contains(e)
+                    || include_str!("server/offerts.rs").contains(e),
                 "{e}"
             );
             add(e);

@@ -5,6 +5,7 @@
 
 pub mod docs;
 pub mod export;
+pub mod offerts;
 pub mod pages;
 pub mod photo;
 pub mod stripe;
@@ -327,6 +328,29 @@ fn sitemap(origin: &str) -> String {
     xml
 }
 
+/// La page de l'accès offert (`/licence/offert/`) : le formulaire, ou la clé quand le
+/// courriel et le code (`form`) sont dans la liste.
+fn offert_page(site: &Site, req: &Request, lang: Lang, form: Option<(String, String)>) -> Response {
+    let here = pages::Here::new(lang, "/licence/offert/");
+    let page = match form {
+        None => pages::offert(site, &site.origin(req), here, None),
+        Some((email, code)) => {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_secs());
+            let result = match stripe::signing_key() {
+                Some(seed) => offerts::key(&offerts::from_env(), &seed, &email, &code, now),
+                None => Err("le serveur de licences n'est pas encore configuré".into()),
+            };
+            match result {
+                Ok(key) => pages::licence(site, &site.origin(req), here, Ok(key), None),
+                Err(e) => pages::offert(site, &site.origin(req), here, Some((email, e))),
+            }
+        }
+    };
+    page.into_response().header("cache-control", "no-store")
+}
+
 /// La page de la clé de licence (`/licence/`, `/en/licence/`…), dans `lang`.
 fn licence_page(site: &Site, req: &Request, lang: Lang) -> Response {
     let session = req
@@ -425,6 +449,32 @@ pub fn app(site: Arc<Site>) -> App {
                 licence_page(&site, &req, lang)
             }
         });
+        // LÜMA Premium offert : le courriel et le code, puis la clé.
+        let offered = site.clone();
+        app.get(
+            &i18n::path(lang, "/licence/offert/"),
+            move |req: Request| {
+                let site = offered.clone();
+                async move { offert_page(&site, &req, lang, None) }
+            },
+        );
+        let offered = site.clone();
+        app.post(
+            &i18n::path(lang, "/licence/offert/"),
+            move |req: Request| {
+                let site = offered.clone();
+                async move {
+                    let body = req.text().await.unwrap_or_default();
+                    let field = |name: &str| {
+                        body.split('&')
+                            .find_map(|kv| kv.strip_prefix(name)?.strip_prefix('='))
+                            .map(|v| percent_decode(&v.replace('+', " ")))
+                            .unwrap_or_default()
+                    };
+                    offert_page(&site, &req, lang, Some((field("email"), field("code"))))
+                }
+            },
+        );
     }
     app.get("/photo.svg", |_req: Request| async {
         svg(photo::svg(false))
@@ -501,12 +551,16 @@ pub fn app(site: Arc<Site>) -> App {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
-        let (status, json) = match (stripe::Stripe::from_env(), stripe::signing_key()) {
-            (Some(api), Some(seed)) => match stripe::refresh(&api, &seed, &key, now) {
-                Ok(k) => (200, serde_json::json!({ "key": k }).to_string()),
-                Err(e) => (402, serde_json::json!({ "error": e }).to_string()),
-            },
-            _ => (
+        // Une clé offerte se renouvelle d'après la liste, une clé d'abonnement chez Stripe.
+        let result = stripe::signing_key().and_then(|seed| {
+            offerts::renew(&offerts::from_env(), &seed, &key, now).or_else(|| {
+                stripe::Stripe::from_env().map(|api| stripe::refresh(&api, &seed, &key, now))
+            })
+        });
+        let (status, json) = match result {
+            Some(Ok(k)) => (200, serde_json::json!({ "key": k }).to_string()),
+            Some(Err(e)) => (402, serde_json::json!({ "error": e }).to_string()),
+            None => (
                 503,
                 r#"{"error":"serveur de licences non configuré"}"#.to_owned(),
             ),
@@ -642,6 +696,31 @@ mod tests {
         let res = client.post("/api/licence").body("key=LUMA1.abc").await;
         assert_eq!(res.status().as_u16(), 503);
         assert!(res.text().contains("error"));
+    }
+
+    #[tokio::test]
+    async fn the_gifted_access_page_asks_for_the_email_and_the_code() {
+        let client = client().await;
+        for (path, title) in [
+            ("/licence/offert/", "Accès offert"),
+            ("/en/licence/offert/", "Gifted access"),
+            ("/es/licence/offert/", "Acceso regalado"),
+        ] {
+            let res = client.get(path).await;
+            assert_eq!(res.status().as_u16(), 200, "{path}");
+            let html = res.text();
+            assert!(html.contains(title), "{path}");
+            assert!(html.contains(&format!(r#"action="{path}""#)), "{path}");
+            assert!(html.contains(r#"name="email""#) && html.contains(r#"name="code""#));
+        }
+        // Sans clé de signature : le courriel tapé reste, l'erreur est dite.
+        let res = client
+            .post("/licence/offert/")
+            .body("email=alice%40exemple.fr&code=K7Q2-PX9M")
+            .await;
+        assert_eq!(res.status().as_u16(), 200);
+        let html = res.text();
+        assert!(html.contains("pas encore configuré") && html.contains("alice@exemple.fr"));
     }
 
     #[tokio::test]
