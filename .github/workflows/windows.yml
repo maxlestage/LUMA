@@ -1,0 +1,101 @@
+# LÜMA pour Windows, à chaque push sur master et à chaque pull request :
+#
+# - clippy sans avertissement et tests du moteur, sur Windows ;
+# - fabrication de l'app (x64) : archive .zip et installateur (Inno Setup), publiés en
+#   artefact ;
+# - essai : l'app lancée avec un vrai RAW (rendu par le GPU logiciel de Windows, WARP,
+#   à défaut de carte graphique sur la machine de GitHub), qui doit créer son interface
+#   et rester ouverte.
+
+name: Windows
+
+on:
+  push:
+    branches: [master]
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  pull_request:
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  app:
+    name: Vérifier, fabriquer et lancer LÜMA pour Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Corpus de RAW (cache)
+        uses: actions/cache@v4
+        with:
+          path: tests/raw-corpus
+          key: raw-corpus-${{ hashFiles('scripts/fetch-corpus.sh') }}
+      - name: Corpus de RAW (téléchargement)
+        shell: bash
+        run: scripts/fetch-corpus.sh
+
+      # L'interface (apps/studio) est essayée plus bas, lancée pour de vrai ; ses essais
+      # d'écran demandent un GPU complet (Linux, lavapipe).
+      - name: Tests du moteur et de l'app (sans écran)
+        run: |
+          cargo test --workspace --exclude luma-studio
+          cargo test -p luma-studio --lib
+
+      - name: Paquets
+        env:
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+          LUMA_LICENCE_PUBLIC: ${{ vars.LUMA_LICENCE_PUBLIC }}
+          LUMA_LICENCE_SERVER: ${{ vars.LUMA_LICENCE_SERVER }}
+          LUMA_BILLING_PORTAL: ${{ vars.LUMA_BILLING_PORTAL }}
+        shell: pwsh
+        run: scripts/bundle-windows.ps1
+
+      - name: Lancer l'app (GPU logiciel)
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path target\windows\LUMA-windows-x64\luma-studio.exe
+          $raw = Resolve-Path tests\raw-corpus\_DSC0009.ARW
+          $app = Start-Process -FilePath $exe -ArgumentList "`"$raw`"" -PassThru `
+            -RedirectStandardError app.log -RedirectStandardOutput app.out
+          $ok = $false
+          foreach ($i in 1..90) {
+            if ((Test-Path app.log) -and (Select-String -Path app.log -Pattern 'interface créée' -Quiet)) { $ok = $true; break }
+            if ($app.HasExited) { break }
+            Start-Sleep -Seconds 1
+          }
+          Start-Sleep -Seconds 15
+          Get-Content app.log
+          if (-not $ok) { throw "l'interface n'a pas été créée" }
+          if ($app.HasExited) { throw "l'app s'est arrêtée (code $($app.ExitCode))" }
+          Stop-Process -Id $app.Id
+          & target\windows\LUMA-windows-x64\luma.exe --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'luma --help' }
+
+      - name: Installer sans fenêtre, puis désinstaller
+        shell: pwsh
+        run: |
+          $setup = Resolve-Path target\windows\LUMA-windows-x64-setup.exe
+          Start-Process -Wait -FilePath $setup -ArgumentList '/VERYSILENT', '/CURRENTUSER', '/SUPPRESSMSGBOXES', '/NORESTART'
+          $dir = Join-Path $env:LOCALAPPDATA 'Programs\LÜMA'
+          if (-not (Test-Path (Join-Path $dir 'luma-studio.exe'))) { throw "pas installée dans $dir" }
+          Start-Process -Wait -FilePath (Join-Path $dir 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          Start-Sleep -Seconds 3
+          if (Test-Path (Join-Path $dir 'luma-studio.exe')) { throw 'pas désinstallée' }
+
+      - name: Publier les paquets
+        uses: actions/upload-artifact@v4
+        with:
+          name: LUMA-windows
+          path: |
+            target/windows/LUMA-windows-x64.zip
+            target/windows/LUMA-windows-x64-setup.exe

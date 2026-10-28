@@ -38,10 +38,10 @@ epaint_default_fonts = "0.37"
 # Lecture : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, Radiance HDR, PNM, ICO.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tiff", "webp", "gif", "bmp", "tga", "qoi", "exr", "hdr", "pnm", "ico", "dds", "ff"] }
 # Interface : egui dessine tout (sans contrôles natifs, même rendu partout), wgpu affiche
-# avec Metal sur Mac et iPhone, Vulkan ailleurs.
+# avec Metal sur Mac et iPhone, DirectX 12 (ou Vulkan) sous Windows, Vulkan ailleurs.
 eframe = { version = "0.37", default-features = false, features = ["wgpu_no_default_features", "default_fonts"] }
 egui = "0.37"
-wgpu = { version = "30", default-features = false, features = ["metal", "vulkan", "wgsl", "std", "parking_lot"] }
+wgpu = { version = "30", default-features = false, features = ["metal", "vulkan", "dx12", "wgsl", "std", "parking_lot"] }
 pollster = "0.4"
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal", "pollster"] }
 egui_kittest = { version = "0.37", features = ["wgpu"] }
