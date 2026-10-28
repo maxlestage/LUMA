@@ -166,13 +166,15 @@ USAGE
       --dry-run montre ce qui serait fait.
   luma import [carte|dossier] --to dossier [--folders \"{année}/{année}-{mois}-{jour}\"]
               [--name modèle] [--backup second-disque] [--dry-run] [--catalog f.lumacat]
+              [--days 2026-10-26,2026-10-27]
       Importe les photos d'une carte mémoire (sans carte donnée : la carte montée, celle
       qui a un dossier DCIM) ou d'un dossier : copiées dans --to, rangées par date de
       prise de vue (--folders, vide : tout au même endroit), renommées avec --name (les
       repères de l'export : {date}_{séquence}, {boîtier}-{nom}…), et copiées aussi sur
       --backup. Chaque copie est relue et comparée à l'original ; le RAW, son JPEG et
       son XMP gardent un même nom ; une photo déjà importée est sautée ; la carte n'est
-      jamais modifiée. Les photos importées entrent dans la photothèque.
+      jamais modifiée. Les photos importées entrent dans la photothèque. Les jours de
+      prise de vue de la carte s'affichent ; --days n'importe que ceux‑là.
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -2149,6 +2151,7 @@ fn import(args: Vec<String>) -> Result<(), String> {
         dest: PathBuf::new(),
         folders: "{année}/{année}-{mois}-{jour}".into(),
         backup: None,
+        days: Vec::new(),
     };
     let (mut source, mut dest, mut template, mut dry, mut file) = (None, None, None, false, None);
     let mut it = args.into_iter();
@@ -2159,6 +2162,21 @@ fn import(args: Vec<String>) -> Result<(), String> {
             "--name" => template = Some(it.next().ok_or("--name : modèle attendu")?),
             "--backup" => o.backup = Some(PathBuf::from(it.next().ok_or("--backup : dossier attendu")?)),
             "--dry-run" | "-n" => dry = true,
+            "--days" => {
+                let v = it.next().ok_or("--days : des jours attendus (2026-10-26,2026-10-27)")?;
+                o.days = v
+                    .split(',')
+                    .map(|d| d.trim().to_owned())
+                    .filter(|d| !d.is_empty())
+                    .collect();
+                if let Some(bad) = o
+                    .days
+                    .iter()
+                    .find(|d| luma_library::geotag::parse_time(&format!("{d}T00:00:00")).is_none())
+                {
+                    return Err(format!("--days : « {bad} » n'est pas un jour (2026-10-26)"));
+                }
+            }
             "--catalog" => file = Some(PathBuf::from(it.next().ok_or("--catalog : fichier attendu")?)),
             _ => source = Some(PathBuf::from(a)),
         }
@@ -2186,6 +2204,11 @@ fn import(args: Vec<String>) -> Result<(), String> {
         return Err(format!("aucune photo dans {}", source.display()));
     }
     let entries: Vec<luma_library::Entry> = found.iter().map(|p| luma_library::entry_of(p)).collect();
+    let days: Vec<String> = import::days(&entries)
+        .iter()
+        .map(|(d, n)| format!("{d} ({n})"))
+        .collect();
+    eprintln!("jours : {}", days.join(", "));
     let plan = import::plan(&entries, &o, |e, n| {
         let t = template.as_ref()?;
         let f = export::NameFields::of_details(&e.path, &e.date, &e.make, &e.model, &e.lens, e.iso, e.rating, &e.label);
