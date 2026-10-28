@@ -412,6 +412,10 @@ La fototeca profesional, paso a paso.
 - **Libro de fotos** («Libro, presentación, galería…», `luma book`): un PDF con su portada (la
   primera foto, el título y el subtítulo) y luego páginas de una, dos o cuatro fotos
   elegidas según su orientación; formatos 20 × 20, 30 × 30, A4, 21 × 28, A3.
+- **Páginas de texto en el libro** («Libro, presentación, galería…», `luma book
+  --opening --closing`): una página tras la portada (una dedicatoria, unas palabras de
+  introducción) y una última página (un lugar, una fecha, agradecimientos), con sus
+  líneas centradas en la página.
 - **Presentación**: a pantalla completa en la app (la foto sola, avanza por sí misma,
   Espacio para pausar, Esc para salir) y **exportada** (`luma slideshow`): una carpeta
   autónoma, index.html y las fotos, para abrir en cualquier navegador o publicar
