@@ -158,7 +158,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
 | IPTC information in the XMP: title, caption, creator, copyright, location (sublocation, city, state, country); hierarchical keywords (“Places > France > Paris”, each level also in `dc:subject`); metadata templates given to the selected photos; in exported JPEGs | ✅ |
-| Map of geotagged photos (GPS position from the EXIF): groups of nearby photos, drag, zoom, tap a group to see its photos; open tile base map kept on the device, usable offline | ✅ |
+| Map of geotagged photos (GPS position from the EXIF): groups of nearby photos, drag, zoom, tap a group to see its photos; open tile base map kept on the device, usable offline; a photo without a position is placed by hand (the crosshair in the centre, “Place here”, written to its XMP) | ✅ |
 | Photos placed from a GPX track (`luma geotag --gpx`): the track's position at the moment of each shot (between the two points around it), camera clock offset (`--offset +02:00`), gaps in the track not bridged, written to the XMP (`exif:GPSLatitude`); the library and the map read it, ahead of the file's own | ✅ |
 | EXIF of developed images (JPEG, HEIC, AVIF, PNG, WebP, TIFF): capture date, camera, lens, settings and GPS position read as for a RAW; a phone's photos are sorted by their date and appear on the map | ✅ |
 | Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates, ISO, focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
