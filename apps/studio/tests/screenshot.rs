@@ -2380,6 +2380,36 @@ fn map_of_geotagged_photos() {
             "placée : plus de bouton"
         );
     }
+    // Deux photos choisies, sans position : placées d'un coup.
+    let free: Vec<usize> = (3..photos.len())
+        .filter(|&i| {
+            s.studio()
+                .catalog()
+                .get(&photos[i])
+                .is_some_and(|e| e.gps.is_none())
+        })
+        .take(2)
+        .collect();
+    if free.len() == 2 {
+        s.studio().selected = free.iter().copied().collect();
+        s.harness.step();
+        s.harness.get_by_label("Placer les 2 photos ici").click();
+        s.harness.step();
+        s.harness.step();
+        for &i in &free {
+            assert!(
+                s.studio().catalog().get(&photos[i]).unwrap().gps.is_some(),
+                "{}",
+                photos[i].display()
+            );
+        }
+        assert!(
+            s.harness
+                .query_by_label("Placer les 2 photos ici")
+                .is_none()
+        );
+        s.studio().selected.clear();
+    }
 
     // Toucher le groupe de Paris : ses deux photos dans la grille.
     let paris = groups.iter().find(|g| g.1 == 2).unwrap().0;

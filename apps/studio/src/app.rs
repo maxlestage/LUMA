@@ -1659,40 +1659,46 @@ impl Studio {
             .collect()
     }
 
-    /// La photo affichée, si elle n'a pas encore de position : la carte propose de la
-    /// placer.
-    fn unplaced(&self) -> Option<PathBuf> {
-        let path = self.current_path()?;
-        self.catalog
-            .get(path)
-            .is_none_or(|e| e.gps.is_none())
-            .then(|| path.to_path_buf())
+    /// Les photos choisies (et celle affichée) qui n'ont pas encore de position : la
+    /// carte propose de les placer.
+    fn unplaced(&self) -> Vec<PathBuf> {
+        self.rename_targets()
+            .into_iter()
+            .filter(|p| self.catalog.get(p).is_none_or(|e| e.gps.is_none()))
+            .collect()
     }
 
-    /// Place la photo affichée à cette position (latitude, longitude) : écrite dans son
-    /// XMP, la photothèque et la carte la montrent aussitôt.
-    pub fn place_current_at(&mut self, at: [f64; 2]) -> bool {
-        let Some(path) = self.current_path().map(Path::to_path_buf) else {
-            return false;
-        };
+    /// Place à cette position (latitude, longitude) les photos choisies et celle
+    /// affichée qui n'en ont pas : écrite dans leur XMP, la photothèque et la carte la
+    /// montrent aussitôt. Rend le nombre de photos placées.
+    pub fn place_unplaced_at(&mut self, at: [f64; 2]) -> usize {
+        let paths = self.unplaced();
+        if paths.is_empty() {
+            return 0;
+        }
         let position = luma_project::xmp::Position {
             latitude: at[0],
             longitude: at[1],
         };
-        self.edit_meta(std::slice::from_ref(&path), |m| m.position = Some(position));
+        self.edit_meta(&paths, |m| m.position = Some(position));
         self.flush_xmp();
-        let mut e = self
-            .catalog
-            .get(&path)
-            .cloned()
-            .unwrap_or_else(|| luma_library::entry_of(&path));
-        e.gps = Some(at);
-        self.catalog.insert(e);
+        for path in &paths {
+            let mut e = self
+                .catalog
+                .get(path)
+                .cloned()
+                .unwrap_or_else(|| luma_library::entry_of(path));
+            e.gps = Some(at);
+            self.catalog.insert(e);
+        }
         if let Some(file) = &self.catalog_path {
             let _ = self.catalog.save(file);
         }
-        self.status = trf("{name} placée sur la carte", &[("name", &file_name(&path))]);
-        true
+        self.status = match paths.as_slice() {
+            [one] => trf("{name} placée sur la carte", &[("name", &file_name(one))]),
+            _ => trf("{n} photos placées sur la carte", &[("n", &paths.len())]),
+        };
+        paths.len()
     }
 
     /// Montre la carte (cadrée sur les photos) ou revient à la grille.
@@ -8310,7 +8316,7 @@ impl Studio {
         let unplaced = self.unplaced();
         let painter = ui.painter().clone();
         painter.rect_filled(rect, 0.0, Color32::from_gray(0x1a));
-        if placed.is_empty() && unplaced.is_none() {
+        if placed.is_empty() && unplaced.is_empty() {
             self.map_groups.clear();
             centered_text(
                 &painter,
@@ -8439,10 +8445,10 @@ impl Studio {
             .expand2(vec2(5.0, 2.0));
         painter.rect_filled(chip, 4.0, Color32::from_black_alpha(150));
         painter.galley(chip.min + vec2(5.0, 2.0), credit, Color32::from_gray(0xe0));
-        // La photo affichée n'a pas de position : un viseur au centre, la carte glisse
-        // dessous, un bouton la place là.
+        // Des photos sans position (celle affichée, ou les photos choisies) : un viseur au
+        // centre, la carte glisse dessous, un bouton les place là.
         let mut place_at = None;
-        if let Some(path) = &unplaced {
+        if let Some(path) = unplaced.first() {
             let c = rect.center();
             let stroke = egui::Stroke::new(2.0, theme::ACCENT);
             painter.circle_stroke(
@@ -8455,7 +8461,10 @@ impl Studio {
                 painter.line_segment([c - d * 24.0, c - d * 8.0], stroke);
                 painter.line_segment([c + d * 8.0, c + d * 24.0], stroke);
             }
-            let text = trf("Placer « {name} » ici", &[("name", &file_name(path))]);
+            let text = match unplaced.len() {
+                1 => trf("Placer « {name} » ici", &[("name", &file_name(path))]),
+                n => trf("Placer les {n} photos ici", &[("n", &n)]),
+            };
             let button = egui::Button::new(RichText::new(text).size(14.0).color(theme::BACKGROUND))
                 .fill(theme::ACCENT)
                 .corner_radius(18.0);
@@ -8473,7 +8482,7 @@ impl Studio {
         }
         self.map = Some(Some(view));
         if let Some(at) = place_at {
-            self.place_current_at(at);
+            self.place_unplaced_at(at);
         }
         if let Some(members) = chosen {
             let photos = members
