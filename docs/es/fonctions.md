@@ -70,6 +70,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Máscara «Cielo» («Seleccionar el cielo»): cielo y nubes encontrados en la foto, bordes seguidos, reflejos en el agua excluidos; sin IA | ✅ |
 | | Pincel que sigue los bordes: cada toque solo pinta los tonos cercanos a su centro, la zona se detiene en los contornos de la foto | ✅ |
 | | Combinaciones de máscaras: añadir, restar, intersecar otras formas (cada una invertible) | ✅ |
+| | Duplicar una máscara, o duplicarla invertida (ajustes a cero): el suelo después del cielo, sin volver a trazar la zona | ✅ |
 | | Zona de la máscara mostrada (O) en rojo, verde, azul, blanco o blanco sobre negro, opacidad del 10 al 100 % | ✅ |
 | | Lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Corrector y tampón (Q): un clic, la fuente encontrada sola, zona y fuente desplazables; tamaño, difuminado, opacidad | ✅ |
