@@ -413,6 +413,10 @@ La photothèque professionnelle, étape par étape.
 - **Livre photo** (« Livre, diaporama, galerie… », `luma book`) : un PDF avec sa couverture
   (la première photo, le titre et le sous‑titre), puis des pages d'une, deux ou quatre
   photos choisies d'après leur orientation ; formats 20 × 20, 30 × 30, A4, 21 × 28, A3.
+- **Des pages de texte dans le livre** (« Livre, diaporama, galerie… », `luma book
+  --opening --closing`) : une page après la couverture (une dédicace, un mot
+  d'introduction) et une dernière page (un lieu, une date, des remerciements), leurs
+  lignes centrées au milieu de la page.
 - **Diaporama** : en plein écran dans l'app (la photo seule, elle avance d'elle‑même,
   Espace pour la pause, Échap pour sortir), et **exporté** (`luma slideshow`) : un
   dossier qui se suffit à lui‑même, index.html et les photos, à ouvrir dans n'importe
