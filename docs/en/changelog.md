@@ -66,7 +66,8 @@ The professional photo library, step by step.
   lets the processor finish the preview. Two tests stand guard: damaged RAWs (a cut
   copy, scrambled bytes, an empty file) open as an image or an error, never a crash, and
   settings with absurd values (infinite, huge) render to sound pixels, in masks,
-  retouches and liquify too.
+  retouches and liquify too. A long, very wide traced removal no longer freezes the
+  export (24 MP: 2 minutes → 4 seconds), same pixels.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).
