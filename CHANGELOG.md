@@ -41,7 +41,9 @@ La photothèque professionnelle, étape par étape.
   moins pour 24 Mpx, mêmes fichiers octet pour octet. Puis Hautes lumières, Ombres,
   Clarté et Texture, appliquées en une seule passe : 15 à 20 % plus rapides en pleine
   définition (RAF 26 Mpx : 0,84–0,92 → 0,72 s), mêmes pixels. Puis la réduction du
-  bruit de luminance : 104 Mo de mémoire en moins pour 26 Mpx, mêmes pixels.
+  bruit de luminance : 104 Mo de mémoire en moins pour 26 Mpx, mêmes pixels. Puis le
+  vignetage : 37 % plus court (24 Mpx : 108 → 68 ms), presque deux fois plus rapide
+  avec une rondeur (400 → 210 ms), mêmes pixels.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
