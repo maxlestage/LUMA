@@ -32,7 +32,9 @@ The professional photo library, step by step.
   shorter (0.83 → 0.60 s), same pixels. Then the edge-following filter (Shadows,
   Highlights, Clarity, mask and sky edges), without intermediate planes: almost twice
   as fast (24 MP: 87 → 47 ms), same values. Then JPEG export, converted to 8 bits strip
-  by strip: 72 MB less memory for 24 MP, same files byte for byte.
+  by strip: 72 MB less memory for 24 MP, same files byte for byte. Then Highlights,
+  Shadows, Clarity and Texture, applied in a single pass: 15 to 20% faster at full
+  resolution (26 MP RAF: 0.84–0.92 → 0.72 s), same pixels.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
