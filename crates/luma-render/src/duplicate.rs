@@ -288,14 +288,26 @@ pub fn write(raw: &RawPhoto, source: &Path, path: &Path) -> Result<()> {
         std::fs::create_dir_all(dir).map_err(Error::Io)?;
     }
     let tmp = path.with_extension("tmp");
-    let mut f = std::io::BufWriter::new(File::create(&tmp).map_err(Error::Io)?);
+    // Une écriture ratée (disque plein) ne laisse pas son fichier à moitié écrit.
+    let written = write_file(&tmp, &header, &bodies).and_then(|()| std::fs::rename(&tmp, path).map_err(Error::Io));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    written
+}
+
+/// Un niveau encodé : sa taille et ses bandes compressées.
+type Encoded = (usize, usize, Vec<Vec<u8>>);
+
+fn write_file(tmp: &Path, header: &[u8], bodies: &[Encoded]) -> Result<()> {
+    let mut f = std::io::BufWriter::new(File::create(tmp).map_err(Error::Io)?);
     let mut put = |b: &[u8]| f.write_all(b).map_err(Error::Io);
     put(MAGIC)?;
     put(&(header.len() as u32).to_le_bytes())?;
-    put(&header)?;
+    put(header)?;
     put(&(bodies.len() as u32).to_le_bytes())?;
     // La table des niveaux : taille, puis la longueur de chaque bande.
-    for (w, h, bands) in &bodies {
+    for (w, h, bands) in bodies {
         put(&(*w as u32).to_le_bytes())?;
         put(&(*h as u32).to_le_bytes())?;
         put(&(bands.len() as u32).to_le_bytes())?;
@@ -303,14 +315,12 @@ pub fn write(raw: &RawPhoto, source: &Path, path: &Path) -> Result<()> {
             put(&(b.len() as u32).to_le_bytes())?;
         }
     }
-    for (_, _, bands) in &bodies {
+    for (_, _, bands) in bodies {
         for b in bands {
             put(b)?;
         }
     }
-    f.flush().map_err(Error::Io)?;
-    drop(f);
-    std::fs::rename(&tmp, path).map_err(Error::Io)
+    f.flush().map_err(Error::Io)
 }
 
 /// Un niveau de la pyramide, dans le fichier.
@@ -431,14 +441,30 @@ impl Duplicate {
     }
 }
 
+/// Un fichier à moitié écrit plus vieux que cela a été abandonné (app fermée en pleine
+/// écriture) : le ménage le retire.
+const ABANDONED: std::time::Duration = std::time::Duration::from_secs(600);
+
 /// Le ménage : au‑delà de `budget` octets, les doublons et les vignettes servis il y a
-/// le plus longtemps partent.
+/// le plus longtemps partent ; les fichiers à moitié écrits et abandonnés aussi.
 pub fn trim(dir: &Path, budget: u64) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
+    let now = std::time::SystemTime::now();
+    let entries: Vec<_> = entries.flatten().collect();
+    for e in &entries {
+        let path = e.path();
+        if path.extension().is_some_and(|x| x == "tmp")
+            && e.metadata()
+                .and_then(|m| m.modified())
+                .is_ok_and(|t| now.duration_since(t).is_ok_and(|age| age > ABANDONED))
+        {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
     let mut files: Vec<(std::time::SystemTime, u64, PathBuf)> = entries
-        .flatten()
+        .iter()
         .filter(|e| {
             e.path()
                 .extension()
