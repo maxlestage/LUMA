@@ -174,6 +174,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Peso máximo de un JPEG** (Exportar, «Peso máximo», o `--max-kb 500`): la mejor
+  calidad que cabe en el peso, metadatos incluidos, para un sitio o un formulario que
+  limita el tamaño de los archivos; se guarda en los ajustes preestablecidos.
 - **Corrector y tampón trazados** (Retoque): arrastrar a lo largo de una arruga o una
   raya la corrige de un solo gesto, con la fuente siguiendo el trazo.
 - **Tamaño de copia** (Exportar, Dimensiones, «Copia impresa (cm)», o

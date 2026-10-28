@@ -133,6 +133,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Resizing: long edge, short edge, width × height, megapixels, no enlarging by default (`--resize`) | ✅ |
 | Enlarging if needed (“Enlarge if needed”, `--enlarge`): halo-free Lanczos, up to four times each side and 200 MP, for large prints; no AI | ✅ |
 | Print size (“Print (cm)”, `--resize 30x40cm@300`): the frame in centimetres and the resolution in dots per inch, written into the JPEG, the PNG and the TIFF | ✅ |
+| Maximum JPEG size (“Maximum size”, `--max-kb 500`): the best quality that fits in the size, metadata included, for a website or a form that limits file sizes | ✅ |
 | Export dialog: format, quality, bit depth, colour space, size, folder; export every photo in the filter | ✅ |
 | Export to several presets at once (Export dialog: checkboxes, use, save; `luma export --preset A --preset B`) | ✅ |
 | Export presets (format, quality, bit depth, colour space, size, folder): web, full resolution, P3 display, print, and your own; `luma export-preset`, `luma develop --preset` | ✅ |

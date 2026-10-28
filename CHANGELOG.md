@@ -178,6 +178,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Poids maximal d'un JPEG** (Exporter, « Poids maximal », ou `--max-kb 500`) : la
+  meilleure qualité qui tient dans le poids, métadonnées comprises, pour un site ou un
+  formulaire qui limite la taille des fichiers ; gardé dans les préréglages.
 - **Correcteur et tampon tracés** (Retouche) : glisser le long d'une ride ou d'une
   rayure la reprend d'un seul geste, la source suivant le trait.
 - **Taille de tirage** (Exporter, Dimensions, « Tirage (cm) », ou
