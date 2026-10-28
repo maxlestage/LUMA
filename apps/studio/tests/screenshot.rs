@@ -750,6 +750,8 @@ fn library_catalog_views() {
         cat.set_collection(luma_library::Collection::smart("Bas ISO", "iso:..160").unwrap())
             .unwrap();
         cat.save(&dir.join("catalogue.lumacat")).unwrap();
+        // Une copie virtuelle : elle entre dans la photothèque comme dans le dossier.
+        std::fs::write(dir.join("_DSC0009.ARW.copie-2.xmp"), "").unwrap();
     };
     let Some(mut s) = Session::open_prepared("phototheque", [1440.0, 900.0], 1.0, prepare) else {
         return;
@@ -785,6 +787,10 @@ fn library_catalog_views() {
         .map(|e| file(&e.path))
         .collect();
     assert_eq!(names(&mut s), by_date);
+    assert!(
+        by_date.iter().any(|n| n == "_DSC0009.ARW.copie-2"),
+        "{by_date:?}"
+    );
     let mut by_name = by_date.clone();
     by_name.sort();
     assert_ne!(by_date, by_name, "le corpus n'est pas rangé par nom");

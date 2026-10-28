@@ -1426,8 +1426,12 @@ impl Studio {
         };
         match found {
             Ok(photos) => {
-                // Les photos d'un disque débranché ne s'affichent pas.
-                let photos = photos.into_iter().filter(|p| p.is_file()).collect();
+                // Les photos d'un disque débranché ne s'affichent pas ; les copies
+                // virtuelles, tant que leur original et leur XMP sont là.
+                let photos = photos
+                    .into_iter()
+                    .filter(|p| luma_library::exists(p))
+                    .collect();
                 self.view = view;
                 self.show_photos(
                     photos,

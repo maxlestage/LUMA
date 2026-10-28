@@ -379,7 +379,7 @@ fn copy_of_sidecar(path: &Path) -> Option<PathBuf> {
 }
 
 /// La photo est‑elle encore là ? Pour une copie virtuelle : son original et son XMP.
-pub(crate) fn exists(path: &Path) -> bool {
+pub fn exists(path: &Path) -> bool {
     if copies::number(path).is_some() {
         copies::source(path).is_file() && copies::sidecar(path).is_file()
     } else {
