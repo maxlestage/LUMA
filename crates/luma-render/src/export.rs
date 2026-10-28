@@ -93,9 +93,32 @@ pub fn write_file(
                 }
                 Ok(out)
             };
+            // L'échantillon du poids maximal : une bande de huit lignes sur soixante‑quatre
+            // (une ligne de blocs sur huit), sans métadonnées.
+            let (width, height) = (img.width, img.height);
+            let sample_height = height.div_ceil(64) * 8;
+            let source_row = |y: usize| ((y / 8) * 64 + y % 8).min(height - 1);
+            let sample = |quality: u8| -> Result<usize, String> {
+                let out = if web {
+                    let rows: Vec<u8> = (0..sample_height)
+                        .flat_map(|y| {
+                            let y = source_row(y);
+                            bytes[y * width * 3..(y + 1) * width * 3].iter().copied()
+                        })
+                        .collect();
+                    crate::jpeg::encode_web(&rows, width, sample_height, quality, &[], &[])?
+                } else {
+                    let lines = |y: usize, x0: usize, dst: &mut [u8]| {
+                        let start = source_row(y) * width + x0;
+                        enc.pixels(&img.data[start..start + dst.len() / 3], dst);
+                    };
+                    crate::jpeg::encode_with(&lines, width, sample_height, quality, &[], &[])?
+                };
+                Ok(out.len())
+            };
             let out = match meta.max_bytes {
-                Some(max) => under_weight(quality, max, encode)?.0,
-                None => encode(quality)?,
+                Some(max) if width > 0 && height > 0 => under_weight(quality, max, encode, sample)?.0,
+                _ => encode(quality)?,
             };
             std::fs::write(path, out).map_err(|e| format!("{} : {e}", path.display()))
         }
@@ -144,27 +167,69 @@ pub fn write_file(
 }
 
 /// Le JPEG de la plus haute qualité, `quality` au plus, qui tient en `max` octets, et
-/// cette qualité ; si même la qualité 1 est trop lourde, celui de qualité 1. Le poids
-/// croît avec la qualité : une dichotomie, sept codages au plus après le premier.
+/// cette qualité ; si même la qualité 1 est trop lourde, celui de qualité 1.
+///
+/// `sample(q)` : le poids d'un échantillon de l'image (une bande de blocs sur huit) à
+/// la qualité `q`, huit fois moins cher qu'un codage entier. Mis à l'échelle du dernier
+/// vrai codage, il dit quelle qualité essayer ensuite ; seuls les vrais codages
+/// décident : la qualité rendue tient, celle juste au‑dessus non — le choix d'une
+/// dichotomie sur les vrais poids, en trois codages le plus souvent au lieu de huit.
+/// Trois essais de suite du même côté : le milieu, pour qu'un échantillon trompeur ne
+/// coûte jamais beaucoup plus qu'une dichotomie.
 fn under_weight(
     quality: u8,
     max: usize,
     encode: impl Fn(u8) -> Result<Vec<u8>, String>,
+    sample: impl Fn(u8) -> Result<usize, String>,
 ) -> Result<(Vec<u8>, u8), String> {
     let quality = quality.clamp(1, 100);
     let first = encode(quality)?;
     if first.len() <= max || quality == 1 {
         return Ok((first, quality));
     }
-    // `hi` est trop lourde ; la meilleure qualité qui tient est sous `hi`.
+    let mut samples = [None; 101];
+    let mut sample_at = |q: u8| -> Result<usize, String> {
+        if let Some(n) = samples[usize::from(q)] {
+            return Ok(n);
+        }
+        let n = sample(q)?.max(1);
+        samples[usize::from(q)] = Some(n);
+        Ok(n)
+    };
+    // Entre une qualité qui tient (`lo`, ou 1 pas encore codée) et une trop lourde
+    // (`hi`) ; `scale` : le vrai poids rapporté à l'échantillon, au dernier codage.
     let (mut lo, mut hi, mut best) = (1u8, quality, None);
+    let mut scale = first.len() as f64 / sample_at(quality)? as f64;
+    let mut streak = (true, 0u8);
     while hi - lo > 1 {
-        let mid = lo + (hi - lo) / 2;
-        let out = encode(mid)?;
-        if out.len() <= max {
-            (lo, best) = (mid, Some(out));
+        let next = if streak.1 >= 3 {
+            lo + (hi - lo) / 2
         } else {
-            hi = mid;
+            // La plus haute qualité entre les bornes dont l'échantillon, à l'échelle,
+            // tient.
+            let (mut a, mut b) = (lo, hi);
+            while b - a > 1 {
+                let mid = a + (b - a) / 2;
+                if sample_at(mid)? as f64 * scale <= max as f64 {
+                    a = mid;
+                } else {
+                    b = mid;
+                }
+            }
+            a.max(lo + 1)
+        };
+        let out = encode(next)?;
+        let fits = out.len() <= max;
+        scale = out.len() as f64 / sample_at(next)? as f64;
+        streak = if streak.0 == fits {
+            (fits, streak.1 + 1)
+        } else {
+            (fits, 1)
+        };
+        if fits {
+            (lo, best) = (next, Some(out));
+        } else {
+            hi = next;
         }
     }
     match best {
@@ -1586,17 +1651,90 @@ mod tests {
         let img = busy(160, 120);
         let rgb = luma_image::encode8(&img, OutputSpace::Srgb);
         let encode = |q: u8| crate::jpeg::encode(&rgb, 160, 120, q, &[], &[]);
+        // Un échantillon : la moitié du haut de l'image.
+        let sample = |q: u8| crate::jpeg::encode(&rgb[..160 * 64 * 3], 160, 64, q, &[], &[]).map(|j| j.len());
         let full = encode(92).unwrap().len();
         let max = full / 2;
-        let (out, q) = under_weight(92, max, encode).unwrap();
+        let (out, q) = under_weight(92, max, encode, sample).unwrap();
         assert!(out.len() <= max, "{} octets pour {max}", out.len());
         // La qualité juste au‑dessus ne tient plus : c'est la meilleure possible.
         assert!(q < 92 && encode(q + 1).unwrap().len() > max, "qualité {q}");
         assert_eq!(out, encode(q).unwrap());
         // Assez léger d'emblée : la qualité demandée, un seul codage.
-        assert_eq!(under_weight(92, full, encode).unwrap(), (encode(92).unwrap(), 92));
+        assert_eq!(
+            under_weight(92, full, encode, sample).unwrap(),
+            (encode(92).unwrap(), 92)
+        );
         // Impossible à tenir : la qualité 1, le plus léger possible.
-        assert_eq!(under_weight(92, 100, encode).unwrap().1, 1);
+        assert_eq!(under_weight(92, 100, encode, sample).unwrap().1, 1);
+        // Un échantillon trompeur (tout petit) : le même choix, en plus de codages.
+        assert_eq!(under_weight(92, max, encode, |_| Ok(1)).unwrap().1, q);
+        assert_eq!(
+            under_weight(92, max, encode, |q| Ok(usize::from(100 - q))).unwrap().1,
+            q
+        );
+    }
+
+    /// La dichotomie d'avant, qualité par qualité : la référence du choix.
+    fn bisection(quality: u8, max: usize, size: &dyn Fn(u8) -> usize) -> u8 {
+        if size(quality) <= max {
+            return quality;
+        }
+        let (mut lo, mut hi) = (1u8, quality);
+        while hi - lo > 1 {
+            let mid = lo + (hi - lo) / 2;
+            if size(mid) <= max {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        lo
+    }
+
+    #[test]
+    fn the_quality_is_found_in_few_encodings_and_is_the_same_as_by_halves() {
+        let (w, h) = (128, 512);
+        let img = busy(w, h);
+        let rgb = luma_image::encode8(&img, OutputSpace::Srgb);
+        let sizes: Vec<usize> = (0..=100u8)
+            .map(|q| crate::jpeg::encode(&rgb, w, h, q.max(1), &[], &[]).unwrap().len())
+            .collect();
+        let size = |q: u8| sizes[usize::from(q)];
+        let (mut ours, mut halves) = (0, 0);
+        for quality in [60u8, 85, 92, 100] {
+            for part in [0.25, 0.4, 0.55, 0.7, 0.85, 0.97] {
+                let max = (size(quality) as f64 * part) as usize;
+                let count = std::cell::Cell::new(0);
+                let encode = |q: u8| {
+                    count.set(count.get() + 1);
+                    crate::jpeg::encode(&rgb, w, h, q, &[], &[])
+                };
+                let sample = |q: u8| {
+                    // Une ligne de blocs sur huit, comme à l'export.
+                    let rows: Vec<u8> = (0..h / 8)
+                        .flat_map(|y| {
+                            let y = (y / 8) * 64 + y % 8;
+                            rgb[y * w * 3..(y + 1) * w * 3].iter().copied()
+                        })
+                        .collect();
+                    crate::jpeg::encode(&rows, w, h / 8, q, &[], &[]).map(|j| j.len())
+                };
+                let (out, q) = under_weight(quality, max, encode, sample).unwrap();
+                assert_eq!(q, bisection(quality, max, &size), "qualité {quality}, {max} octets");
+                assert_eq!(out.len(), size(q));
+                eprintln!(
+                    "CAS {quality} {part} q={q} codages={} taille1={} max={max}",
+                    count.get(),
+                    size(1)
+                );
+                ours += count.get();
+                // La dichotomie : le premier codage, sept au plus ensuite.
+                halves += 1 + (quality - 1).ilog2() as usize + 1;
+            }
+        }
+        // Les vrais codages : la moitié de ceux d'une dichotomie, au plus.
+        assert!(ours * 2 <= halves, "{ours} codages contre {halves}");
     }
 
     #[test]
