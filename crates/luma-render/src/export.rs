@@ -57,10 +57,11 @@ pub fn write_file(
     let err = |e: image::ImageError| e.to_string();
     let sixteen = bits == 16 && ext != "jpg" && ext != "jpeg";
     let jpeg = matches!(ext.as_str(), "jpg" | "jpeg");
-    // L'image en octets, sauf pour le JPEG ordinaire, converti bande par bande.
+    // L'image en octets, sauf pour le JPEG ordinaire, converti bande par bande ; s'il a
+    // un poids maximal, converti une fois pour tous ses codages.
     let (bytes, kind) = if sixteen {
         (luma_image::encode16_bytes(img, space), ExtendedColorType::Rgb16)
-    } else if jpeg && !web {
+    } else if jpeg && !web && meta.max_bytes.is_none() {
         (Vec::new(), ExtendedColorType::Rgb8)
     } else {
         (luma_image::encode8(img, space), ExtendedColorType::Rgb8)
@@ -70,23 +71,32 @@ pub fn write_file(
         "jpg" | "jpeg" => {
             // Sur tous les cœurs, octet pour octet le JPEG d'avant ; en mémoire d'abord :
             // le paquet XMP s'insère après les premiers segments.
-            let mut out = if web {
-                crate::jpeg::encode_web(&bytes, img.width, img.height, quality, &meta.exif, &profile)?
-            } else {
-                let enc = luma_image::Encoder8::new(space);
-                let w = img.width;
-                let lines = |y: usize, x0: usize, dst: &mut [u8]| {
-                    let start = y * w + x0;
-                    enc.pixels(&img.data[start..start + dst.len() / 3], dst);
+            let enc = luma_image::Encoder8::new(space);
+            let encode = |quality: u8| -> Result<Vec<u8>, String> {
+                let mut out = if web {
+                    crate::jpeg::encode_web(&bytes, img.width, img.height, quality, &meta.exif, &profile)?
+                } else if !bytes.is_empty() {
+                    crate::jpeg::encode(&bytes, img.width, img.height, quality, &meta.exif, &profile)?
+                } else {
+                    let w = img.width;
+                    let lines = |y: usize, x0: usize, dst: &mut [u8]| {
+                        let start = y * w + x0;
+                        enc.pixels(&img.data[start..start + dst.len() / 3], dst);
+                    };
+                    crate::jpeg::encode_with(&lines, img.width, img.height, quality, &meta.exif, &profile)?
                 };
-                crate::jpeg::encode_with(&lines, img.width, img.height, quality, &meta.exif, &profile)?
+                if let Some(dpi) = meta.dpi {
+                    crate::jpeg::set_density(&mut out, dpi);
+                }
+                if let Some(x) = &meta.xmp {
+                    insert_jpeg_xmp(&mut out, x)?;
+                }
+                Ok(out)
             };
-            if let Some(dpi) = meta.dpi {
-                crate::jpeg::set_density(&mut out, dpi);
-            }
-            if let Some(x) = &meta.xmp {
-                insert_jpeg_xmp(&mut out, x)?;
-            }
+            let out = match meta.max_bytes {
+                Some(max) => under_weight(quality, max, encode)?.0,
+                None => encode(quality)?,
+            };
             std::fs::write(path, out).map_err(|e| format!("{} : {e}", path.display()))
         }
         "png" => {
@@ -130,6 +140,36 @@ pub fn write_file(
             std::io::Write::write_all(&mut f, &pixels).map_err(io)
         }
         other => Err(format!("format de sortie inconnu « {other} » (jpg, png, tif)")),
+    }
+}
+
+/// Le JPEG de la plus haute qualité, `quality` au plus, qui tient en `max` octets, et
+/// cette qualité ; si même la qualité 1 est trop lourde, celui de qualité 1. Le poids
+/// croît avec la qualité : une dichotomie, sept codages au plus après le premier.
+fn under_weight(
+    quality: u8,
+    max: usize,
+    encode: impl Fn(u8) -> Result<Vec<u8>, String>,
+) -> Result<(Vec<u8>, u8), String> {
+    let quality = quality.clamp(1, 100);
+    let first = encode(quality)?;
+    if first.len() <= max || quality == 1 {
+        return Ok((first, quality));
+    }
+    // `hi` est trop lourde ; la meilleure qualité qui tient est sous `hi`.
+    let (mut lo, mut hi, mut best) = (1u8, quality, None);
+    while hi - lo > 1 {
+        let mid = lo + (hi - lo) / 2;
+        let out = encode(mid)?;
+        if out.len() <= max {
+            (lo, best) = (mid, Some(out));
+        } else {
+            hi = mid;
+        }
+    }
+    match best {
+        Some(out) => Ok((out, lo)),
+        None => Ok((encode(1)?, 1)),
     }
 }
 
@@ -219,6 +259,9 @@ pub struct Options {
     /// Agrandir l'image quand la taille demandée dépasse la pleine définition (jusqu'à
     /// quatre fois chaque côté, 200 Mpx au plus), au lieu de s'arrêter à sa taille.
     pub enlarge: bool,
+    /// Le poids maximal d'un JPEG, en kilo‑octets (1 000 octets) : la qualité descend
+    /// jusqu'à ce qu'il tienne ; `None` : la qualité demandée.
+    pub max_kb: Option<u32>,
 }
 
 impl Default for Options {
@@ -237,6 +280,7 @@ impl Default for Options {
             metadata: MetadataOptions::default(),
             web: false,
             enlarge: false,
+            max_kb: None,
         }
     }
 }
@@ -891,6 +935,9 @@ pub fn develop(
         image.height,
     );
     embedded.dpi = options.resize.and_then(Resize::dpi);
+    if options.format == Format::Jpeg {
+        embedded.max_bytes = options.max_kb.map(|k| k as usize * 1000);
+    }
     let web = options.web && options.format == Format::Jpeg;
     write_file(out, &image, options.space, options.quality, bits, &embedded, web)
 }
@@ -986,6 +1033,8 @@ struct StoredPreset {
     web: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     enlarge: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    max_kb: Option<u32>,
 }
 
 /// Les métadonnées, seulement si elles diffèrent de celles d'un export ordinaire.
@@ -1067,6 +1116,7 @@ impl StoredPreset {
             }),
             web: o.web,
             enlarge: o.enlarge,
+            max_kb: o.max_kb,
         }
     }
 
@@ -1135,6 +1185,7 @@ impl StoredPreset {
                     }),
                 web: self.web,
                 enlarge: self.enlarge,
+                max_kb: self.max_kb.filter(|&k| k > 0),
             },
         })
     }
@@ -1237,7 +1288,10 @@ fn same_name(a: &str, b: &str) -> bool {
 /// s'il y en a un.
 pub fn describe(o: &Options) -> String {
     let format = match o.format {
-        Format::Jpeg => format!("JPEG {}", o.quality),
+        Format::Jpeg => match o.max_kb {
+            Some(k) => format!("JPEG {}, {k} Ko au plus", o.quality),
+            None => format!("JPEG {}", o.quality),
+        },
         Format::Png => format!("PNG {} bits", o.bits),
         Format::Tiff => format!("TIFF {} bits", o.bits),
     };
@@ -1508,6 +1562,92 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// Une image détaillée, lourde en JPEG : du bruit sur un dégradé.
+    fn busy(w: usize, h: usize) -> RgbImage {
+        let mut seed = 12345u32;
+        let mut noise = || {
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            (seed >> 8) as f32 / (1u32 << 24) as f32
+        };
+        RgbImage {
+            width: w,
+            height: h,
+            data: (0..w * h)
+                .map(|i| {
+                    let x = (i % w) as f32 / w as f32;
+                    [0.3 * x + 0.5 * noise(), 0.4 + 0.3 * noise(), 0.6 - 0.4 * x * noise()]
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn a_weight_limit_keeps_the_best_quality_that_fits() {
+        let img = busy(160, 120);
+        let rgb = luma_image::encode8(&img, OutputSpace::Srgb);
+        let encode = |q: u8| crate::jpeg::encode(&rgb, 160, 120, q, &[], &[]);
+        let full = encode(92).unwrap().len();
+        let max = full / 2;
+        let (out, q) = under_weight(92, max, encode).unwrap();
+        assert!(out.len() <= max, "{} octets pour {max}", out.len());
+        // La qualité juste au‑dessus ne tient plus : c'est la meilleure possible.
+        assert!(q < 92 && encode(q + 1).unwrap().len() > max, "qualité {q}");
+        assert_eq!(out, encode(q).unwrap());
+        // Assez léger d'emblée : la qualité demandée, un seul codage.
+        assert_eq!(under_weight(92, full, encode).unwrap(), (encode(92).unwrap(), 92));
+        // Impossible à tenir : la qualité 1, le plus léger possible.
+        assert_eq!(under_weight(92, 100, encode).unwrap().1, 1);
+    }
+
+    #[test]
+    fn the_weight_limit_counts_the_metadata_and_reaches_the_file() {
+        let dir = std::env::temp_dir().join(format!("luma-poids-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let img = busy(200, 150);
+        let xmp = format!("<x:xmpmeta>{}</x:xmpmeta>", "mot-clé ".repeat(400));
+        let free = dir.join("libre.jpg");
+        let heavy = Embedded {
+            xmp: Some(xmp),
+            ..Embedded::default()
+        };
+        write_file(&free, &img, OutputSpace::Srgb, 95, 8, &heavy, false).unwrap();
+        let size = std::fs::metadata(&free).unwrap().len() as usize;
+        let max = size * 2 / 3;
+        let limited = Embedded {
+            max_bytes: Some(max),
+            ..heavy.clone()
+        };
+        let path = dir.join("limite.jpg");
+        write_file(&path, &img, OutputSpace::Srgb, 95, 8, &limited, false).unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        assert!(bytes.len() <= max, "{} octets pour {max}", bytes.len());
+        // Le XMP est toujours là et l'image se relit, à la même taille.
+        let needle = "mot-clé ".as_bytes();
+        assert!(bytes.windows(needle.len()).any(|w| w == needle));
+        let back = image::load_from_memory(&bytes).unwrap();
+        assert_eq!((back.width(), back.height()), (200, 150));
+        // Une limite déjà tenue : octet pour octet le fichier sans limite.
+        let loose = dir.join("large.jpg");
+        let roomy = Embedded {
+            max_bytes: Some(size),
+            ..heavy.clone()
+        };
+        write_file(&loose, &img, OutputSpace::Srgb, 95, 8, &roomy, false).unwrap();
+        assert_eq!(std::fs::read(&loose).unwrap(), std::fs::read(&free).unwrap());
+        // Le PNG ne connaît pas de limite : le même fichier qu'avant.
+        let (a, b) = (dir.join("a.png"), dir.join("b.png"));
+        write_file(&a, &img, OutputSpace::Srgb, 95, 8, &limited, false).unwrap();
+        write_file(&b, &img, OutputSpace::Srgb, 95, 8, &heavy, false).unwrap();
+        assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
+        let _ = std::fs::remove_dir_all(&dir);
+        // Dans la description d'un préréglage.
+        let o = Options {
+            max_kb: Some(500),
+            ..Options::default()
+        };
+        assert_eq!(describe(&o), "JPEG 92, 500 Ko au plus, sRGB, pleine définition, LÜMA/");
+    }
+
     #[test]
     fn print_sizes_are_parsed_written_and_described() {
         let p = Resize::parse("30x40cm@240").unwrap();
@@ -1742,6 +1882,7 @@ mod tests {
                 },
                 web: true,
                 enlarge: true,
+                max_kb: Some(500),
                 ..Options::default()
             },
         };

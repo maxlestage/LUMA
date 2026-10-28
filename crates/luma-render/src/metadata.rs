@@ -79,6 +79,10 @@ pub struct Embedded {
     /// La résolution d'un tirage (points par pouce) ; `None` : celle de toujours (72 dans
     /// un TIFF, aucune dans un JPEG).
     pub dpi: Option<u32>,
+    /// Le poids maximal d'un JPEG, en octets, métadonnées comprises : la qualité
+    /// descend jusqu'à ce qu'il tienne ; `None` : la qualité demandée, quel que soit le
+    /// poids.
+    pub max_bytes: Option<usize>,
 }
 
 impl Embedded {
@@ -111,6 +115,7 @@ impl Embedded {
             xmp,
             tags,
             dpi: None,
+            max_bytes: None,
         }
     }
 }
