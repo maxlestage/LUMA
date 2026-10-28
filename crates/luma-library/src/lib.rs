@@ -154,24 +154,31 @@ pub fn default_path() -> Option<PathBuf> {
 
 impl Catalog {
     /// Lit un catalogue, binaire ou JSON (le format d'avant) ; vide s'il n'existe pas,
-    /// est illisible ou d'une autre version.
+    /// est illisible ou d'une autre version. Un catalogue illisible (abîmé, ou d'une
+    /// version plus récente de LÜMA) est d'abord mis dans les sauvegardes : le prochain
+    /// enregistrement ne le fait pas disparaître.
     pub fn load(path: &Path) -> Catalog {
+        let loaded = Self::decode_file(path);
+        if loaded.is_none() && path.is_file() {
+            let _ = backup::backup(path);
+        }
+        loaded.unwrap_or_default()
+    }
+
+    fn decode_file(path: &Path) -> Option<Catalog> {
         // Le catalogue d'avant le format binaire, en JSON, à côté.
         let old = path.with_extension("json");
         let Ok(bytes) = std::fs::read(path).or_else(|_| std::fs::read(&old)) else {
-            return Catalog::default();
+            return Some(Catalog::default());
         };
         if store::is_binary(&bytes) {
-            return store::decode(&bytes).unwrap_or_default();
+            return store::decode(&bytes);
         }
-        let stored: Option<Stored> = serde_json::from_slice(&bytes).ok();
-        let Some(stored) = stored.filter(|s| s.version == VERSION) else {
-            return Catalog::default();
-        };
-        Catalog {
+        let stored: Stored = serde_json::from_slice(&bytes).ok()?;
+        (stored.version == VERSION).then(|| Catalog {
             entries: stored.entries.into_iter().map(|e| (e.path.clone(), e)).collect(),
             collections: stored.collections,
-        }
+        })
     }
 
     /// Enregistre le catalogue. L'écriture passe par un fichier temporaire renommé : un
@@ -717,5 +724,24 @@ mod tests {
             [("Sony ILCE-1".to_owned(), 1), ("Sony ILCE-7M3".to_owned(), 2)]
         );
         assert!(cat.lenses().is_empty());
+    }
+
+    /// Un catalogue illisible repart de zéro, mais l'ancien fichier reste dans les
+    /// sauvegardes : l'enregistrement suivant ne le fait pas disparaître.
+    #[test]
+    fn an_unreadable_catalog_is_kept_in_the_backups() {
+        let dir = std::env::temp_dir().join(format!("luma-illisible-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("catalogue.lumacat");
+        std::fs::write(&file, b"pas un catalogue").unwrap();
+        assert!(Catalog::load(&file).is_empty());
+        let kept = backup::list(&file);
+        assert_eq!(kept.len(), 1);
+        assert_eq!(std::fs::read(&kept[0]).unwrap(), b"pas un catalogue");
+        // Absent : vide, sans sauvegarde de plus.
+        assert!(Catalog::load(&dir.join("aucun.lumacat")).is_empty());
+        assert_eq!(backup::list(&file).len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

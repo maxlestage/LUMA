@@ -50,10 +50,10 @@ fi
   "$target/wasm32-unknown-unknown/wasm-release/luma_site.wasm"
 echo "       îlots prêts dans site/pkg"
 
-# Les apps à télécharger (boutons « Télécharger pour Mac » et « pour Linux ») : le dépôt
-# est privé, donc ses Releases aussi ; les fichiers de la dernière Release sont récupérés
-# avec le même jeton (qui doit pouvoir lire le dépôt LUMA) et servis par le site sous
-# /download/.
+# Les apps à télécharger (boutons « Télécharger pour Mac », « pour Linux » et « pour
+# Windows ») : le dépôt est privé, donc ses Releases aussi ; les fichiers de la dernière
+# Release sont récupérés avec le même jeton (qui doit pouvoir lire le dépôt LUMA) et
+# servis par le site sous /download/.
 echo "-----> Les apps à télécharger (dernière Release)"
 repo="${LUMA_REPO:-maxlestage/LUMA}"
 mkdir -p public/download
@@ -62,7 +62,9 @@ auth=()
 [ -n "${REPOS_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $REPOS_TOKEN")
 api="https://api.github.com/repos/$repo/releases/latest"
 release=$(curl -sSf "${auth[@]}" -H "Accept: application/vnd.github+json" "$api") || release=""
-for name in LUMA-macos.zip LUMA-linux-x86_64.tar.gz LUMA-linux-amd64.deb; do
+# Windows : ses fichiers sont facultatifs ; sans eux, le site affiche « Bientôt ».
+for name in LUMA-macos.zip LUMA-linux-x86_64.tar.gz LUMA-linux-amd64.deb \
+            LUMA-windows-x86_64-setup.exe LUMA-windows-x86_64.zip; do
   # L'identifiant de l'asset : la ligne "url" de l'asset précède son nom.
   asset=$(printf '%s' "$release" | tr ',' '\n' | grep -E '"(url|name)"' \
     | awk -v n="$name" '
@@ -71,6 +73,8 @@ for name in LUMA-macos.zip LUMA-linux-x86_64.tar.gz LUMA-linux-amd64.deb; do
   if [ -n "$asset" ] && curl -sSfL "${auth[@]}" -H "Accept: application/octet-stream" \
       -o "public/download/$name" "$asset"; then
     echo "       public/download/$name ($(du -h "public/download/$name" | cut -f1))"
+  elif [[ "$name" == LUMA-windows-* ]]; then
+    echo "       $name absent de la dernière Release : Windows reste « Bientôt » sur le site"
   else
     echo "       $name absent de la dernière Release (ou dépôt privé sans REPOS_TOKEN) : son bouton mènera à une page introuvable"
   fi

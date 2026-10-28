@@ -1,0 +1,52 @@
+# LÜMA pour Windows, à chaque push sur master et à chaque pull request :
+#
+# - fabrication de l'app et de la ligne de commande (x86_64) sur Windows ;
+# - archive .zip (installation sans droits administrateur), publiée en artefact ;
+# - essai de fumée : la ligne de commande « luma --help », et l'exécutable de l'app
+#   bien présent dans l'archive.
+
+name: Windows
+
+on:
+  push:
+    branches: [master]
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  pull_request:
+    paths-ignore: ["site/**", "docs/**", "*.md"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  app:
+    name: Fabriquer et lancer LÜMA pour Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Paquet
+        shell: pwsh
+        env:
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+          LUMA_LICENCE_PUBLIC: ${{ vars.LUMA_LICENCE_PUBLIC }}
+          LUMA_LICENCE_SERVER: ${{ vars.LUMA_LICENCE_SERVER }}
+          LUMA_BILLING_PORTAL: ${{ vars.LUMA_BILLING_PORTAL }}
+        run: pwsh -ExecutionPolicy Bypass -File scripts/bundle-windows.ps1
+
+      - name: Essai de fumée (ligne de commande et exécutable de l'app)
+        shell: pwsh
+        run: |
+          $bin = 'target\windows\LUMA-windows-x86_64\bin'
+          & "$bin\luma.exe" --help | Out-Null
+          if (-not (Test-Path "$bin\luma-studio.exe")) { throw "luma-studio.exe absent de l'archive" }
+          Write-Host 'luma --help : d''accord ; luma-studio.exe présent.'
+
+      - name: Publier le paquet
+        uses: actions/upload-artifact@v4
+        with:
+          name: LUMA-windows
+          path: target/windows/LUMA-windows-x86_64.zip

@@ -1,11 +1,11 @@
 // Les trois scènes du site : l'objectif 3D du haut de page (three.js), le Mac et
-// l'iPhone de la section Apple (HTML et CSS), et l'écran et le portable de la section
+// l'iPhone de la section Apple (HTML et CSS), et l'écran qui tourne de la section
 // Linux et Windows (three.js). Tout le reste de la page (animations, labo, îlots) est
 // en Rust, compilé en WebAssembly ; ce module ne fait que démarrer les scènes.
 //
 // - l'objectif démarre tout de suite et s'entrouvre quand le préchargement se termine
 //   (`luma:intro`, envoyé par le bundle Rust) ;
-// - les appareils des sections Apple et Linux et Windows ne sont chargés qu'à
+// - les scènes des sections Apple et Linux et Windows ne sont chargées qu'à
 //   l'approche de leur section.
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -54,12 +54,13 @@ function start() {
       .catch((e) => console.warn('LÜMA : appareils indisponibles', e)));
   }
 
+  // L'écran 3D de la section Linux et Windows : un moniteur qui tourne lentement.
   const desk = document.getElementById('bureau');
-  const deskStage = document.getElementById('desktop-stage');
-  if (desk && deskStage) {
-    nearby(desk, () => import(`./desktop.js${V}`)
-      .then(({ initDesktop }) => initDesktop(deskStage, desk, opts))
-      .catch((e) => { console.warn('LÜMA : écran et portable 3D indisponibles', e); deskStage.classList.add('desktop-off'); }));
+  const deskCanvas = document.getElementById('systems-gl');
+  if (desk && deskCanvas) {
+    nearby(desk, () => import(`./systems.js${V}`)
+      .then(({ initSystems }) => initSystems(deskCanvas, opts))
+      .catch((e) => { console.warn('LÜMA : écran 3D indisponible', e); deskCanvas.parentElement.classList.add('desktop-off'); }));
   }
 }
 

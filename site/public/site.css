@@ -688,19 +688,13 @@ html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(11
 .doc-body th { color: var(--text); font-weight: 600; background: var(--panel); }
 .licence-key { width: 100%; font-family: var(--mono); font-size: .85rem; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; word-break: break-all; resize: none; margin: 8px 0 14px; }
 
-/* ── Linux et Windows : l'écran et le portable en 3D, une carte par système ── */
+/* ── Linux et Windows : un écran 3D qui tourne, une carte par système ── */
 .desktop { background: radial-gradient(ellipse at 50% 30%, #12121c, var(--bg) 70%); }
-.desktop-stage { position: relative; max-width: 1240px; height: clamp(320px, 56vw, 620px); margin: -24px auto 24px; }
+.desktop-stage { position: relative; max-width: 1240px; height: clamp(300px, 46vw, 540px); margin: -24px auto 24px; }
 html:not(.js) .desktop-stage, .desktop-stage.desktop-off { display: none; }
 .desktop-stage::before { content: ""; position: absolute; inset: 20% 10% 0; border-radius: 50%; background: radial-gradient(ellipse at 50% 70%, rgba(255,207,74,.12), rgba(255,107,61,.08) 30%, rgba(139,123,255,.06) 55%, transparent 72%); pointer-events: none; transition: opacity 1s; }
-.desktop-stage.desktop-ready::before { opacity: 0; }
-.desktop-gl { position: absolute; inset: 0; width: 100%; height: 100%; }
-/* Sans WebGL : les deux écrans à plat, l'un devant l'autre. */
-.desktop-2d { display: grid; place-items: center; }
-.desktop-flat { position: absolute; width: min(62%, 720px); padding: 1.2%; border-radius: 14px; background: #15151c; box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 1px var(--line); }
-.desktop-flat canvas { width: 100%; height: auto; border-radius: 6px; }
-.desktop-flat-windows { left: 6%; top: 6%; }
-.desktop-flat-linux { right: 6%; bottom: 4%; width: min(46%, 520px); }
+/* L'écran 3D (systems.js) : il apparaît en fondu quand la scène tourne. */
+.systems-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; opacity: 0; }
 .desktop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; max-width: 1100px; margin: 0 auto; }
 .desktop-card { position: relative; padding: 32px; border-radius: 26px; background: linear-gradient(160deg, rgba(139,123,255,.14), rgba(74,242,200,.05) 60%, var(--panel)); border: 1px solid rgba(139,123,255,.3); display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 90px; }
 .desktop-soon { background: var(--panel); border-color: var(--line); }
@@ -730,3 +724,9 @@ html:not(.js) .desktop-stage, .desktop-stage.desktop-off { display: none; }
   .desktop-card { padding: 26px 22px; }
 }
 @media (max-width: 560px) { .desktop-spec div { grid-template-columns: 1fr; gap: 2px; } }
+.offert-form { display: grid; gap: 14px; max-width: 420px; margin: 8px 0 26px; }
+.offert-field { display: grid; gap: 6px; color: var(--muted); font-size: .95rem; }
+.offert-field input { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.offert-field input:focus { outline: 2px solid var(--accent, #fff); outline-offset: 1px; }
+.offert-form .btn { justify-self: start; border: 0; cursor: pointer; }
+.offert-error { color: #ff8a80; margin: 0 0 18px; }
