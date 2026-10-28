@@ -246,9 +246,9 @@ fr = Pellicules couleur, noir et blanc, cinéma et instantanés, prêtes à pose
 en = Color, black‑and‑white, cinema and instant films, ready to apply.
 es = Películas en color, en blanco y negro, de cine e instantáneas, listas para aplicar.
 
-fr = jours
-en = days
-es = días
+fr = mois
+en = month
+es = mes
 
 fr = D'essai complet, sans carte bancaire.
 en = Of full free trial, no credit card.
@@ -542,9 +542,9 @@ fr = Linux est déjà là : une archive qui s'installe sans mot de passe, ou un 
 en = Linux is already here: an archive that installs without a password, or a .deb package for Debian and Ubuntu (x86_64, with a Vulkan driver). Windows is on its way: an installer and a .zip archive for Windows 10 and 11, with DirectX 12 or Vulkan. Both with the same subscription as on Mac. Android will come next, with the same engine: a photo will look the same everywhere.
 es = Linux ya está aquí: un archivo que se instala sin contraseña, o un paquete .deb para Debian y Ubuntu (x86_64, con un controlador Vulkan). Windows está en camino: un instalador y un archivo .zip para Windows 10 y 11, con DirectX 12 o Vulkan. Los dos con la misma suscripción que en Mac. Android llegará después, con el mismo motor: una foto se verá igual en todas partes.
 
-fr = Quatorze jours pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.
-en = Fourteen days to try everything, no credit card required. Your photos are waiting.
-es = Catorce días para probarlo todo, sin tarjeta bancaria. Tus fotos te esperan.
+fr = Un mois pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.
+en = A month to try everything, no credit card required. Your photos are waiting.
+es = Un mes para probarlo todo, sin tarjeta bancaria. Tus fotos te esperan.
 
 fr = Questions fréquentes
 en = Frequently asked questions
@@ -564,9 +564,9 @@ es = Probar
 
 # ----- Tarifs -------------------------------------------------------------------------
 
-fr = Quatorze jours pour *essayer*, puis à vous de choisir.
-en = Fourteen days to *try it*, then the choice is yours.
-es = Catorce días para *probarlo*, y luego tú eliges.
+fr = Un mois pour *essayer*, puis à vous de choisir.
+en = A month to *try it*, then the choice is yours.
+es = Un mes para *probarlo*, y luego tú eliges.
 
 fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, Linux et Windows, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.
 en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription. On Mac, Linux and Windows, it is sold only here, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad (iOS and iPadOS), LÜMA Premium is a one-time purchase, sold only on the App Store.
@@ -1023,9 +1023,9 @@ fr = Conditions d'abonnement
 en = Subscription terms
 es = Condiciones de suscripción
 
-fr = Quatorze jours pour essayer, puis au mois ou à l'an. Sans surprise.
-en = Fourteen days to try it, then monthly or yearly. No surprises.
-es = Catorce días para probarlo y, después, al mes o al año. Sin sorpresas.
+fr = Un mois pour essayer, puis au mois ou à l'an. Sans surprise.
+en = A month to try it, then monthly or yearly. No surprises.
+es = Un mes para probarlo y, después, al mes o al año. Sin sorpresas.
 
 fr = Essai gratuit
 en = Free trial

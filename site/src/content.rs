@@ -82,8 +82,8 @@ pub const STATS: [Stat; 4] = [
     },
     Stat {
         prefix: "",
-        value: 14,
-        unit: "jours",
+        value: 1,
+        unit: "mois",
         text: "D'essai complet, sans carte bancaire.",
     },
     Stat {
@@ -896,7 +896,7 @@ pub const LEGAL: [Legal; 3] = [
     Legal {
         path: "/conditions/",
         title: "Conditions d'abonnement",
-        lede: "Quatorze jours pour essayer, puis au mois ou à l'an. Sans surprise.",
+        lede: "Un mois pour essayer, puis au mois ou à l'an. Sans surprise.",
         sections: &[
             (
                 "essai",
