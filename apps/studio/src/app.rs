@@ -9752,7 +9752,7 @@ impl Studio {
                 }
                 sub_title(ui, tr("Réglages du masque"));
                 let l = &mut m.local;
-                let rows: [(SliderSpec, &mut f32); 15] = [
+                let rows: [(SliderSpec, &mut f32); 16] = [
                     (spec("Intensité", 0.0, 100.0, 0), &mut m.amount),
                     (spec("Température", -100.0, 100.0, 0), &mut l.temperature),
                     (spec("Teinte", -100.0, 100.0, 0), &mut l.tint),
@@ -9765,6 +9765,7 @@ impl Studio {
                     (spec("Saturation", -100.0, 100.0, 0), &mut l.saturation),
                     (spec("Clarté", -100.0, 100.0, 0), &mut l.clarity),
                     (spec("Texture", -100.0, 100.0, 0), &mut l.texture),
+                    (spec("Netteté", -100.0, 100.0, 0), &mut l.sharpness),
                     (spec("Correction du voile", -100.0, 100.0, 0), &mut l.dehaze),
                     // Au pinceau sur un tissu, une grille, un contour à liserés.
                     (spec("Moiré", 0.0, 100.0, 0), &mut l.moire),

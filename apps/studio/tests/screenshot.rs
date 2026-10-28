@@ -1637,7 +1637,7 @@ fn mask_texture_and_dehaze() {
     // Maj+M : un dégradé radial.
     s.keys(&[(Modifiers::SHIFT, Key::M)]);
     s.wait();
-    // Les deux curseurs du masque, à côté de la Clarté.
+    // Les curseurs du masque, à côté de la Clarté.
     assert!(s.harness.query_all_by_label("Texture").next().is_some());
     assert!(
         s.harness
@@ -1645,8 +1645,10 @@ fn mask_texture_and_dehaze() {
             .next()
             .is_some()
     );
+    assert!(s.harness.query_all_by_label("Netteté").next().is_some());
     let st = s.studio();
     assert_eq!(st.settings.masks.len(), 1);
+    st.settings.masks[0].local.sharpness = 40.0;
     st.settings.masks[0].local.texture = -60.0;
     st.settings.masks[0].local.dehaze = 50.0;
     s.wait();
