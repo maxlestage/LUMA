@@ -452,6 +452,9 @@ La photothèque professionnelle, étape par étape.
   prise de vue, renommées si on le veut, copiées aussi sur un second disque ; chaque
   copie est relue et comparée à l'original, le RAW, son JPEG et son XMP gardent un même
   nom, une photo déjà importée est sautée, la carte n'est jamais modifiée.
+- **N'importer que certains jours** : la fenêtre d'import liste les jours de prise de vue
+  de la carte, chacun avec son nombre de photos ; on décoche ceux qu'on ne veut pas
+  (`luma import --days 2026-10-26,2026-10-27`).
 - **Raccourcis clavier personnalisables** (menu de la langue, « Raccourcis
   clavier… ») : chaque commande et ses touches ; cliquer, puis appuyer sur les
   nouvelles touches ; une touche déjà prise passe à la nouvelle commande ; retour aux

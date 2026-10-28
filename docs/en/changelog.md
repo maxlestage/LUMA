@@ -417,6 +417,9 @@ The professional photo library, step by step.
   wish, also copied to a second disk; each copy is read back and compared with the
   original, the RAW, its JPEG and its XMP keep the same name, a photo already imported
   is skipped, the card is never modified.
+- **Import only some days**: the import window lists the card's capture days, each with
+  its number of photos; untick those you don't want (`luma import --days
+  2026-10-26,2026-10-27`).
 - **Customizable keyboard shortcuts** (language menu, “Keyboard shortcuts…”): every
   command and its keys; click, then press the new keys; a key already taken moves to
   the new command; back to the default keys, one by one or all. **Tab** hides the
