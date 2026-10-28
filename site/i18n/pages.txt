@@ -458,10 +458,6 @@ fr = ProRAW, Photos, Fichiers.
 en = ProRAW, Photos, Files.
 es = ProRAW, Fotos, Archivos.
 
-fr = Le même rendu que sur Mac.
-en = The same rendering as on Mac.
-es = El mismo resultado que en Mac.
-
 fr = Le même rendu que sur iPhone.
 en = The same rendering as on iPhone.
 es = El mismo resultado que en el iPhone.
@@ -1208,3 +1204,119 @@ es = Las fotos en vertical se abren más rápido
 fr = L'image est réduite avant d'être tournée : 5 fois moins de temps pour la tourner (91 → 18 ms pour un ProRAW de l'iPhone).
 en = The image is reduced before it is rotated: 5 times less time to rotate it (91 → 18 ms for an iPhone ProRAW).
 es = La imagen se reduce antes de girarla: 5 veces menos tiempo para girarla (91 → 18 ms en un ProRAW del iPhone).
+
+# ----- Accès offert -----------------------------------------------------------------
+
+fr = Votre accès LÜMA Premium offert est actif{email}.
+en = Your gifted LÜMA Premium access is active{email}.
+es = Tu acceso LÜMA Premium regalado está activo{email}.
+
+fr = Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils (Mac, Linux, Windows), et se renouvelle seule tant que votre accès offert court.
+en = Copy it, then paste it into LÜMA: the “Trial” chip at the top of the app, “License key” field, Activate. It works on all your devices (Mac, Linux, Windows) and renews itself as long as your gifted access lasts.
+es = Cópiala y pégala en LÜMA: la etiqueta «Prueba» arriba en la app, campo «Clave de licencia», Activar. Funciona en todos tus dispositivos (Mac, Linux, Windows) y se renueva sola mientras dure tu acceso regalado.
+
+fr = Votre courriel et votre code redonnent votre clé à tout moment, sur cette page.
+en = Your email and your code give you your key again at any time, on this page.
+es = Tu correo y tu código te devuelven la clave en cualquier momento, en esta página.
+
+fr = Accès offert
+en = Gifted access
+es = Acceso regalado
+
+fr = On vous a offert LÜMA Premium ? Tapez le courriel et le code reçus : votre clé de licence s'affiche, prête à coller dans l'app.
+en = Were you given LÜMA Premium? Enter the email and the code you received: your license key appears, ready to paste into the app.
+es = ¿Te han regalado LÜMA Premium? Escribe el correo y el código que recibiste: aparece tu clave de licencia, lista para pegar en la app.
+
+fr = Courriel
+en = Email
+es = Correo
+
+fr = Code
+en = Code
+es = Código
+
+fr = Obtenir ma clé
+en = Get my key
+es = Obtener mi clave
+
+fr = Le code vous est donné avec l'invitation. Pas de code ? LÜMA s'essaie gratuitement, puis s'achète sur ce site.
+en = The code comes with your invitation. No code? LÜMA can be tried for free, then bought on this site.
+es = El código viene con la invitación. ¿Sin código? Puedes probar LÜMA gratis y luego comprarlo en este sitio.
+
+fr = indiquez votre courriel et votre code
+en = enter your email and your code
+es = escribe tu correo y tu código
+
+fr = ce courriel et ce code ne correspondent à aucun accès offert
+en = this email and code don't match any gifted access
+es = este correo y este código no corresponden a ningún acceso regalado
+
+fr = cet accès offert a pris fin
+en = this gifted access has ended
+es = este acceso regalado ha terminado
+
+fr = le serveur de licences n'est pas encore configuré
+en = the license server isn't set up yet
+es = el servidor de licencias aún no está configurado
+
+# ----- Sur votre bureau (Linux & Windows) -------------------------------------------
+
+fr = En préparation
+en = In progress
+es = En preparación
+
+fr = Build x86_64 et paquet en chantier ; le même rendu que sur Mac.
+en = x86_64 build and package in the works; the same rendering as on Mac.
+es = Compilación x86_64 y paquete en marcha; el mismo revelado que en Mac.
+
+fr = Sur votre bureau
+en = On your desktop
+es = En tu escritorio
+
+fr = Pas seulement Apple. *Linux et Windows*, même moteur.
+en = Not just Apple. *Linux and Windows*, same engine.
+es = No solo Apple. *Linux y Windows*, el mismo motor.
+
+fr = Le même moteur partout, sans rien qui dépende du système : une photo développée sur Linux ou sur Windows a le même rendu que sur Mac, au pixel près.
+en = The same engine everywhere, with nothing that depends on the system: a photo developed on Linux or Windows renders exactly as it does on Mac, down to the pixel.
+es = El mismo motor en todas partes, sin nada que dependa del sistema: una foto revelada en Linux o en Windows se ve igual que en Mac, píxel a píxel.
+
+fr = L'archive s'installe sans mot de passe, le paquet .deb comme n'importe quel logiciel.
+en = The archive installs with no password; the .deb package like any other app.
+es = El archivo se instala sin contraseña; el paquete .deb como cualquier otro programa.
+
+fr = Archive .tar.gz posée dans votre dossier avec install.sh, ou paquet .deb pour Debian et Ubuntu.
+en = A .tar.gz archive dropped in your folder with install.sh, or a .deb package for Debian and Ubuntu.
+es = Un archivo .tar.gz en tu carpeta con install.sh, o un paquete .deb para Debian y Ubuntu.
+
+fr = Le rendu sur le processeur graphique en Vulkan, pixel pour pixel celui du Mac.
+en = GPU rendering with Vulkan, pixel for pixel the same as on Mac.
+es = Revelado en la tarjeta gráfica con Vulkan, píxel a píxel igual que en Mac.
+
+fr = La ligne de commande « luma » comprise : info, développement, export et XMP.
+en = The “luma” command line included: info, develop, export, and XMP.
+es = La línea de comandos «luma» incluida: info, revelado, exportación y XMP.
+
+fr = Le même abonnement que sur Mac : une seule clé pour les deux.
+en = The same subscription as on Mac: a single key for both.
+es = La misma suscripción que en Mac: una sola clave para ambos.
+
+fr = Le même moteur que sur Mac, en chantier pour Windows 10 et 11 (x86_64).
+en = The same engine as on Mac, in the works for Windows 10 and 11 (x86_64).
+es = El mismo motor que en Mac, en marcha para Windows 10 y 11 (x86_64).
+
+fr = Build x86_64 fabriqué à chaque version, avec le rendu sur le processeur graphique (Vulkan, puis Direct3D).
+en = An x86_64 build made for every release, with GPU rendering (Vulkan, then Direct3D).
+es = Compilación x86_64 en cada versión, con revelado en la tarjeta gráfica (Vulkan, luego Direct3D).
+
+fr = Installation sans droits administrateur et raccourci au menu Démarrer, ou l'archive .zip à décompresser.
+en = Installs with no administrator rights and a Start menu shortcut, or a .zip archive to unpack.
+es = Instalación sin permisos de administrador y acceso directo en el menú Inicio, o el archivo .zip para descomprimir.
+
+fr = La ligne de commande « luma.exe », comme sur Mac et Linux.
+en = The “luma.exe” command line, just like on Mac and Linux.
+es = La línea de comandos «luma.exe», como en Mac y Linux.
+
+fr = Une photo ouverte sur Windows aura le même rendu que sur Mac et Linux.
+en = A photo opened on Windows will render the same as on Mac and Linux.
+es = Una foto abierta en Windows se verá igual que en Mac y Linux.

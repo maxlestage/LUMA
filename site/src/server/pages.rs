@@ -83,6 +83,7 @@ const BRAND_SVG: &str = include_str!("../../public/assets/marque.svg");
 const IRIS_SVG: &str = r##"<svg class="loader-iris" viewBox="-50 -50 100 100"><defs><linearGradient id="spec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b3d"/><stop offset=".35" stop-color="#ffcf4a"/><stop offset=".65" stop-color="#4af2c8"/><stop offset="1" stop-color="#8b7bff"/></linearGradient></defs><circle r="46" fill="none" stroke="url(#spec)" stroke-width="1.2"/><g class="blades"><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/></g></svg>"##;
 
 const LINUX_SVG: &str = r#"<svg class="linux-logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>"#;
+const WINDOWS_SVG: &str = r#"<svg class="win-logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M11 9.5v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>"#;
 const APPLE_SVG: &str = r#"<svg class="apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM13.9 4.9c.7-.9 1.2-2 1-3.2-1 .1-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>"#;
 
 // ----- Cadre --------------------------------------------------------------------------
@@ -372,6 +373,58 @@ fn apple(lang: Lang) -> Element {
                     .child(div().class("apple-dots").children([i(), i(), i(), i()])),
             ),
     )
+}
+
+/// Sur votre bureau : Linux (disponible) et Windows (en préparation), le même moteur
+/// qu'Apple. Une scène 3D (un écran qui tourne lentement) occupe le fond de la section.
+fn systems(lang: Lang) -> Element {
+    let logo = |name: &str| if name == "Linux" { LINUX_SVG } else { WINDOWS_SVG };
+    section()
+        .class("systems")
+        .id("systemes")
+        .child(
+            canvas()
+                .id("systems-gl")
+                .class("systems-gl")
+                .attr("aria-hidden", "true"),
+        )
+        .child(section_head(
+            t(lang, "Sur votre bureau"),
+            heading(h2, t(lang, "Pas seulement Apple. *Linux et Windows*, même moteur.")),
+            Some(p().text(t(lang,
+                "Le même moteur partout, sans rien qui dépende du système : une photo développée sur Linux ou sur Windows a le même rendu que sur Mac, au pixel près.",
+            ))),
+        ))
+        .child(div().class("systems-grid").children(SYSTEMS.iter().map(|s| {
+            article()
+                .class("system reveal tilt")
+                .child(
+                    div()
+                        .class("system-head")
+                        .child(
+                            span()
+                                .class("system-logo")
+                                .attr("aria-hidden", "true")
+                                .html(logo(s.name)),
+                        )
+                        .child(h3().text(s.name))
+                        .child(
+                            span()
+                                .class(if s.phase == "Disponible" { "badge badge-on" } else { "badge" })
+                                .text(t(lang, s.phase)),
+                        ),
+                )
+                .child(p().class("system-lede").text(t(lang, s.lede)))
+                .child(ul().class("system-points").children(s.points.iter().map(|pt| {
+                    li().child(
+                        span()
+                            .class("cap-check")
+                            .attr("aria-hidden", "true")
+                            .text("✔"),
+                    )
+                    .child(span().text(t(lang, pt)))
+                })))
+        })))
 }
 
 fn platforms(lang: Lang) -> Element {
@@ -1043,26 +1096,40 @@ pub fn licence(
 ) -> Page {
     let lang = here.lang;
     let content = match result {
-        Ok((claims, key)) => div()
+        Ok((claims, key)) => {
+            let offered = claims.sub == super::offerts::SUB;
+            let email = if claims.email.is_empty() { String::new() } else { format!(" ({})", claims.email) };
+            let lede = if offered {
+                fill(t(lang, "Votre accès LÜMA Premium offert est actif{email}."), &[("email", email.as_str())])
+            } else {
+                fill(
+                    t(lang, "Votre abonnement LÜMA Premium {plan} est actif{email}."),
+                    &[("plan", t(lang, claims.plan.name()).to_lowercase().as_str()), ("email", email.as_str())],
+                )
+            };
+            div()
             .child(h1().text(t(lang, "Merci !")))
-            .child(p().class("lede").text(fill(
-                t(lang, "Votre abonnement LÜMA Premium {plan} est actif{email}."),
-                &[
-                    ("plan", t(lang, claims.plan.name()).to_lowercase().as_str()),
-                    ("email", if claims.email.is_empty() { String::new() } else { format!(" ({})", claims.email) }.as_str()),
-                ],
-            )))
+            .child(p().class("lede").text(lede))
             .child(section().id("cle")
                 .child(h2().text(t(lang, "Votre clé de licence")))
-                .child(p().text(t(lang, "Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils, et se renouvelle seule tant que l'abonnement court.")))
+                .child(p().text(if offered {
+                    t(lang, "Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils (Mac, Linux, Windows), et se renouvelle seule tant que votre accès offert court.")
+                } else {
+                    t(lang, "Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils, et se renouvelle seule tant que l'abonnement court.")
+                }))
                 .child(textarea().class("licence-key").attr("readonly", "").attr("rows", "4").attr("aria-label", t(lang, "Clé de licence")).text(key))
-                .child(p().class("todo").text(t(lang, "Gardez l'adresse de cette page (favori) : elle redonne votre clé à tout moment."))))
+                .child(p().class("todo").text(if offered {
+                    t(lang, "Votre courriel et votre code redonnent votre clé à tout moment, sur cette page.")
+                } else {
+                    t(lang, "Gardez l'adresse de cette page (favori) : elle redonne votre clé à tout moment.")
+                })))
             .child(section()
                 .child(h2().text(t(lang, "Pas encore l'app ?")))
                 .child(div().class("hero-cta")
                     .children(downloads_open().then(|| a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac")))))
                     .children(downloads_open().then(|| a().class("btn btn-ghost").href(link("/download/LUMA-linux-x86_64.tar.gz")).attr("download", "").child(span().text(t(lang, "Télécharger pour Linux")))))
-                    .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement"))))))),
+                    .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement")))))))
+        }
         Err(e) => div()
             .child(h1().text(t(lang, "Clé de licence")))
             .child(p().class("lede").text(fill(t(lang, "Impossible d'afficher la clé : {error}."), &[("error", t(lang, &e))])))
@@ -1085,6 +1152,70 @@ pub fn licence(
         origin,
         here,
         &format!("{} — LÜMA", t(lang, "Votre clé de licence")),
+        t(lang, DESCRIPTION),
+        body,
+    )
+    .seo(Seo::new().noindex(true))
+}
+
+/// La page de l'accès offert : le courriel et le code reçus, pour obtenir sa clé.
+/// `error` : le courriel tapé et ce qui n'a pas marché.
+pub fn offert(site: &Site, origin: &str, here: Here, error: Option<(String, String)>) -> Page {
+    let lang = here.lang;
+    let (email, problem) = error.map_or((String::new(), None), |(e, why)| (e, Some(why)));
+    let field = |name: &'static str,
+                 kind: &'static str,
+                 title: &'static str,
+                 value: String,
+                 auto: &'static str| {
+        label()
+            .class("offert-field")
+            .child(span().text(title))
+            .child(
+                input()
+                    .attr("type", kind)
+                    .attr("name", name)
+                    .attr("required", "")
+                    .attr("autocomplete", auto)
+                    .attr("value", value),
+            )
+    };
+    let content = div()
+        .child(h1().text(t(lang, "Accès offert")))
+        .child(p().class("lede").text(t(lang, "On vous a offert LÜMA Premium ? Tapez le courriel et le code reçus : votre clé de licence s'affiche, prête à coller dans l'app.")))
+        .children(problem.map(|why| {
+            p().class("offert-error").attr("role", "alert").text(fill(
+                t(lang, "Impossible d'afficher la clé : {error}."),
+                &[("error", t(lang, &why))],
+            ))
+        }))
+        .child(
+            form()
+                .class("offert-form")
+                .attr("method", "post")
+                .attr("action", page_link(lang, "/licence/offert/"))
+                .child(field("email", "email", t(lang, "Courriel"), email, "email"))
+                .child(field("code", "text", t(lang, "Code"), String::new(), "off"))
+                .child(button().class("btn").attr("type", "submit").child(span().text(t(lang, "Obtenir ma clé")))),
+        )
+        .child(p().text(t(lang, "Le code vous est donné avec l'invitation. Pas de code ? LÜMA s'essaie gratuitement, puis s'achète sur ce site.")));
+    let body = div()
+        .class("site site--plain")
+        .child(navbar(here))
+        .child(
+            html::main().child(
+                article()
+                    .class("legal")
+                    .child(kicker("LÜMA Premium"))
+                    .child(content),
+            ),
+        )
+        .child(site_footer(here));
+    layout(
+        site,
+        origin,
+        here,
+        &format!("{} — LÜMA", t(lang, "Accès offert")),
         t(lang, DESCRIPTION),
         body,
     )
@@ -1249,6 +1380,7 @@ pub fn home(site: &Site, origin: &str, lang: Lang) -> Page {
                 .child(lab(lang))
                 .child(films(lang))
                 .child(apple(lang))
+                .child(systems(lang))
                 .child(capabilities(lang))
                 .child(privacy(lang))
                 .child(performance(lang))

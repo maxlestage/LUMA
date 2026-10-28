@@ -470,3 +470,18 @@ fn colors_of_a_second_camera_are_matched_to_the_first() {
     let elsewhere = RgbImage::from_fn(w, h, |x, y| [((x * y) % 7) as f32 / 10.0; 3]);
     assert!(luma_merge::matching::match_colors(&reference, &elsewhere).is_err());
 }
+
+#[test]
+fn tripod_frames_of_different_sizes_are_refused() {
+    let landscape = Arc::new(RgbImage::from_fn(60, 40, |x, y| {
+        [x as f32 / 60.0, y as f32 / 40.0, 0.5]
+    }));
+    let portrait = Arc::new(RgbImage::from_fn(40, 60, |x, y| {
+        [x as f32 / 40.0, y as f32 / 60.0, 0.5]
+    }));
+    for mode in [StackMode::Mean, StackMode::Median, StackMode::Maximum] {
+        let frames = vec![landscape.clone(), portrait.clone(), landscape.clone()];
+        let err = stack_images(frames, mode, false).err().expect("refusé");
+        assert!(err.to_string().contains("taille"), "{err}");
+    }
+}

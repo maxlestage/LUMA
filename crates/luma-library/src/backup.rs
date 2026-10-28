@@ -87,11 +87,16 @@ pub fn due(catalog: &Path, days: u64) -> bool {
 /// sauvegardé lui aussi (rien n'est perdu). L'écriture passe par un fichier
 /// temporaire renommé.
 pub fn restore(backup: &Path, catalog: &Path) -> std::io::Result<()> {
-    if catalog.is_file() {
-        backup_at(catalog, now(), KEEP + 1)?;
-    }
+    // La sauvegarde est copiée d'abord : sauvegarder le catalogue fait le tri des plus
+    // anciennes, qui peut emporter celle qu'on restaure.
     let tmp = catalog.with_extension("tmp");
     std::fs::copy(backup, &tmp)?;
+    if catalog.is_file()
+        && let Err(e) = backup_at(catalog, now(), KEEP + 1)
+    {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(e);
+    }
     std::fs::rename(&tmp, catalog)
 }
 
@@ -288,6 +293,25 @@ mod tests {
         assert_eq!(std::fs::read(&file).unwrap(), b"v1");
         // Le catalogue remplacé est dans les sauvegardes (datée de maintenant).
         assert!(list(&file).iter().any(|p| std::fs::read(p).unwrap() == b"v2"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Restaurer la plus ancienne quand toutes les places sont prises : le tri qui suit
+    /// la sauvegarde du catalogue ne l'emporte pas avant qu'elle soit relue.
+    #[test]
+    fn the_oldest_backup_can_be_restored() {
+        let dir = temp("plus-ancienne");
+        let file = dir.join("catalogue.lumacat");
+        std::fs::write(&file, b"ancien").unwrap();
+        backup_at(&file, 1_000_000_000, KEEP + 1).unwrap();
+        std::fs::write(&file, b"courant").unwrap();
+        for day in 1..=KEEP as u64 {
+            backup_at(&file, 1_000_000_000 + day * 86_400, KEEP + 1).unwrap();
+        }
+        let oldest = list(&file).pop().unwrap();
+        assert_eq!(std::fs::read(&oldest).unwrap(), b"ancien");
+        restore(&oldest, &file).unwrap();
+        assert_eq!(std::fs::read(&file).unwrap(), b"ancien");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
