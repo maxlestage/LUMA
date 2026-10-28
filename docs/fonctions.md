@@ -152,6 +152,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Catalogue local (`luma catalog`) : dossiers et sous‑dossiers, date de prise de vue, boîtier, objectif, ISO lus dans l'en‑tête sans décoder l'image, mise à jour incrémentale, tri par date | ✅ |
 | Renommage par lot (« Renommer… », `luma rename`) : les repères de l'export (`{date}_{séquence}`…), le RAW et le JPEG d'une même prise ensemble, XMP et copies virtuelles qui suivent, `-2` quand un nom est pris, retour en arrière au moindre échec ; la photothèque et ses collections suivent | ✅ |
 | Sauvegardes du catalogue (une par semaine dans l'app, les dix dernières gardées ; `luma catalog --backup`, `--restore`), photos manquantes listées, dossier déplacé retrouvé avec ses collections (`--missing`, `--relocate`) | ✅ |
+| Doublons du catalogue (`luma catalog --duplicates`) : même boîtier, même instant, fichiers de même taille et de même type (une carte importée deux fois, une copie dans un autre dossier), listés avec la place qu'ils prennent ; le RAW et le JPEG d'une même prise ne sont pas des doublons ; rien n'est effacé | ✅ |
 | Vignettes instantanées (l'aperçu intégré au RAW, en 15 ms), puis rendues avec les réglages et enregistrées sans perte pour les visites suivantes | ✅ |
 | Doublon de travail en pleine définition : identique à l'original, ouverture plus rapide, mémoire divisée par deux et demi ; « Vider le cache » en un clic | ✅ |
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |

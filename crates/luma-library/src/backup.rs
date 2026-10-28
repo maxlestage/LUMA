@@ -102,6 +102,38 @@ impl Catalog {
         self.entries().filter(|e| !e.path.is_file()).collect()
     }
 
+    /// Les doublons : les photos du même boîtier, prises au même instant, dont les
+    /// fichiers ont la même taille et le même type (une copie dans un autre dossier,
+    /// une carte importée deux fois). Le RAW et le JPEG d'une même prise ne sont pas des
+    /// doublons. Chaque groupe est rangé par chemin ; les groupes, par date.
+    pub fn duplicates(&self) -> Vec<Vec<&Entry>> {
+        let mut groups: std::collections::BTreeMap<(&str, String, u64, String), Vec<&Entry>> =
+            std::collections::BTreeMap::new();
+        for e in self.entries() {
+            // Sans date ni taille, rien ne permet de dire que deux photos sont la même.
+            if e.date.is_empty() || e.size == 0 {
+                continue;
+            }
+            let kind = e
+                .path
+                .extension()
+                .map(|x| x.to_string_lossy().to_lowercase())
+                .unwrap_or_default();
+            groups
+                .entry((e.date.as_str(), e.camera(), e.size, kind))
+                .or_default()
+                .push(e);
+        }
+        groups
+            .into_values()
+            .filter(|g| g.len() > 1)
+            .map(|mut g| {
+                g.sort_by(|a, b| a.path.cmp(&b.path));
+                g
+            })
+            .collect()
+    }
+
     /// Un dossier déplacé : les photos manquantes rangées sous `from` sont cherchées au
     /// même endroit sous `to`, et celles qu'on y trouve y passent, avec leurs
     /// collections (voir [`Catalog::rename`]). Rend le nombre de photos retrouvées.
@@ -178,6 +210,53 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn duplicates_are_grouped() {
+        let photo = |path: &str, date: &str, model: &str, size: u64| Entry {
+            path: PathBuf::from(path),
+            date: date.into(),
+            make: "SONY".into(),
+            model: model.into(),
+            size,
+            ..Entry::default()
+        };
+        let mut cat = Catalog::default();
+        for e in [
+            // Une carte importée deux fois.
+            photo("/a/DSC0001.ARW", "2026-06-01T10:00:00", "ILCE-7M3", 24_000_000),
+            photo(
+                "/b/2026-06-01/DSC0001.ARW",
+                "2026-06-01T10:00:00",
+                "ILCE-7M3",
+                24_000_000,
+            ),
+            photo("/c/copie.ARW", "2026-06-01T10:00:00", "ILCE-7M3", 24_000_000),
+            // Le JPEG de la même prise : pas un doublon.
+            photo("/a/DSC0001.JPG", "2026-06-01T10:00:00", "ILCE-7M3", 24_000_000),
+            // Même instant, autre boîtier ; même boîtier, autre taille.
+            photo("/a/autre.ARW", "2026-06-01T10:00:00", "ILCE-7RM4", 24_000_000),
+            photo("/a/rafale.ARW", "2026-06-01T10:00:00", "ILCE-7M3", 23_900_000),
+            // Un autre jour, deux copies.
+            photo("/a/DSC0100.ARW", "2026-05-01T08:00:00", "ILCE-7M3", 25_000_000),
+            photo("/z/DSC0100.ARW", "2026-05-01T08:00:00", "ILCE-7M3", 25_000_000),
+        ] {
+            cat.insert(e);
+        }
+        let groups: Vec<Vec<&str>> = cat
+            .duplicates()
+            .iter()
+            .map(|g| g.iter().map(|e| e.path.to_str().unwrap()).collect())
+            .collect();
+        assert_eq!(
+            groups,
+            vec![
+                vec!["/a/DSC0100.ARW", "/z/DSC0100.ARW"],
+                vec!["/a/DSC0001.ARW", "/b/2026-06-01/DSC0001.ARW", "/c/copie.ARW"],
+            ]
+        );
+        assert!(Catalog::default().duplicates().is_empty());
     }
 
     /// Des sauvegardes datées, les dix dernières gardées ; une restauration remet
