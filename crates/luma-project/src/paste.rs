@@ -20,10 +20,14 @@ pub enum Group {
     Crop,
     Geometry,
     Masks,
+    /// Les retouches (poussières, correcteur, tampon, suppression, yeux rouges) : leurs
+    /// places sont des fractions de l'image, les poussières d'une série tombent juste.
+    Retouch,
+    Liquify,
 }
 
 /// Tous les groupes, dans l'ordre des panneaux, avec leur nom (clé de traduction).
-pub const GROUPS: [(Group, &str); 14] = [
+pub const GROUPS: [(Group, &str); 16] = [
     (Group::WhiteBalance, "Balance des blancs"),
     (Group::Exposure, "Exposition"),
     (Group::Tone, "Contraste, hautes lumières, ombres, blancs, noirs"),
@@ -38,15 +42,21 @@ pub const GROUPS: [(Group, &str); 14] = [
     (Group::Crop, "Recadrage"),
     (Group::Geometry, "Objectif et transformation"),
     (Group::Masks, "Masques"),
+    (
+        Group::Retouch,
+        "Retouches (poussières, correcteur, tampon, suppression)",
+    ),
+    (Group::Liquify, "Fluidité"),
 ];
 
 /// Les groupes cochés par défaut : tout sauf ce qui dépend du cadrage de chaque photo
-/// (recadrage, masques), qu'on ne veut presque jamais recopier.
+/// (recadrage, masques, retouches, fluidité), qu'on ne veut presque jamais recopier —
+/// sauf les poussières d'une série, qu'on coche alors.
 pub fn default_groups() -> Vec<Group> {
     GROUPS
         .iter()
         .map(|g| g.0)
-        .filter(|g| !matches!(g, Group::Crop | Group::Masks))
+        .filter(|g| !matches!(g, Group::Crop | Group::Masks | Group::Retouch | Group::Liquify))
         .collect()
 }
 
@@ -92,6 +102,8 @@ pub fn paste(target: &Settings, source: &Settings, groups: &[Group]) -> Settings
                 s.transform = source.transform.clone();
             }
             Group::Masks => s.masks = source.masks.clone(),
+            Group::Retouch => s.spots = source.spots.clone(),
+            Group::Liquify => s.liquify = source.liquify.clone(),
         }
     }
     s
@@ -123,7 +135,29 @@ mod tests {
         s.detail.sharpen_amount = 80.0;
         s.effects.grain_amount = 30.0;
         s.masks.push(crate::Mask::full());
+        s.spots
+            .push(crate::Spot::new(crate::SpotKind::Remove, (0.3, 0.4), 0.02));
+        s.liquify
+            .push(crate::Warp::new(crate::WarpKind::Bloat, (0.5, 0.5), 0.1, 40.0));
         s
+    }
+
+    #[test]
+    fn retouches_are_pasted_only_when_asked() {
+        // Les poussières d'une série : seulement si on coche les retouches.
+        let target = Settings {
+            exposure: 0.3,
+            ..Settings::default()
+        };
+        let by_default = paste(&target, &edited(), &default_groups());
+        assert!(by_default.spots.is_empty() && by_default.liquify.is_empty());
+        let spots = paste(&target, &edited(), &[Group::Retouch]);
+        assert_eq!(spots.spots, edited().spots);
+        assert!(spots.liquify.is_empty());
+        assert_eq!(spots.exposure, 0.3);
+        let warps = paste(&target, &edited(), &[Group::Liquify]);
+        assert_eq!(warps.liquify, edited().liquify);
+        assert!(warps.spots.is_empty());
     }
 
     #[test]

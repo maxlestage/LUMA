@@ -938,6 +938,11 @@ impl Studio {
         (self.scope, self.scope_texture.is_some())
     }
 
+    /// Le groupe `g` est‑il coché dans « Coller une partie des réglages » ?
+    pub fn paste_groups_contain(&self, g: luma_project::paste::Group) -> bool {
+        self.paste_groups.contains(&g)
+    }
+
     /// Une image de photo est affichée.
     pub fn has_image(&self) -> bool {
         self.texture.is_some()
