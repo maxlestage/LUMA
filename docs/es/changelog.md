@@ -41,7 +41,8 @@ La fototeca profesional, paso a paso.
   Claridad y Textura, aplicadas en una sola pasada: de un 15 a un 20 % más rápidas a
   resolución completa (RAF de 26 Mpx: 0,84–0,92 → 0,72 s), mismos píxeles. Después la
   reducción de ruido de luminancia: 104 MB menos de memoria para 26 Mpx, mismos
-  píxeles.
+  píxeles. Después la viñeta: un 37 % más corta (24 Mpx: 108 → 68 ms), casi el doble
+  de rápida con redondez (400 → 210 ms), mismos píxeles.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
