@@ -5325,6 +5325,30 @@ fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
 
+fr = Dupliquer|masque
+en = Duplicate
+es = Duplicar
+
+fr = Une copie du masque, ses réglages compris
+en = A copy of the mask, its settings included
+es = Una copia de la máscara, con sus ajustes
+
+fr = Dupliquer inversé
+en = Duplicate inverted
+es = Duplicar invertida
+
+fr = Une copie inversée, réglages à zéro : tout le reste de la photo (le sol après le ciel)
+en = An inverted copy, settings at zero: all the rest of the photo (the ground after the sky)
+es = Una copia invertida, ajustes a cero: todo el resto de la foto (el suelo después del cielo)
+
+fr = Masque dupliqué
+en = Mask duplicated
+es = Máscara duplicada
+
+fr = Masque dupliqué et inversé
+en = Mask duplicated and inverted
+es = Máscara duplicada e invertida
+
 fr = Tons auto
 en = Auto tone
 es = Tonos automáticos
