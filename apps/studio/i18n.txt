@@ -5325,6 +5325,26 @@ fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
 
+fr = Tirage (cm)
+en = Print (cm)
+es = Copia impresa (cm)
+
+fr = Largeur du tirage en centimètres
+en = Print width in centimetres
+es = Ancho de la copia en centímetros
+
+fr = Hauteur du tirage en centimètres
+en = Print height in centimetres
+es = Alto de la copia en centímetros
+
+fr = Points par pouce
+en = Dots per inch
+es = Puntos por pulgada
+
+fr = {w} × {h} cm à {dpi} ppp
+en = {w} × {h} cm at {dpi} dpi
+es = {w} × {h} cm a {dpi} ppp
+
 fr = Dupliquer|masque
 en = Duplicate
 es = Duplicar
