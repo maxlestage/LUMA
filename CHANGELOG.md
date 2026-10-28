@@ -379,8 +379,9 @@ La photothèque professionnelle, étape par étape.
   photothèque sont relues une fois.
 - **Une trace GPX pour placer les photos** (`luma geotag --gpx trace.gpx`) : chaque
   photo prend la position de la trace à l'instant de sa prise de vue, écrite dans son
-  XMP ; l'écart de l'horloge du boîtier se donne avec `--offset`. La photothèque et la
-  carte la montrent aussitôt.
+  XMP ; l'écart de l'horloge du boîtier se donne avec `--offset`, ou se devine
+  (`--offset auto`). La photothèque et la carte la montrent aussitôt. Dans l'app sur Mac :
+  « Suivre une trace GPX… » sur la carte, l'écart deviné.
 - **Placer une photo sur la carte à la main** : sur la carte, la photo affichée qui n'a
   pas de position montre un viseur au centre ; on fait glisser la carte dessous, puis
   « Placer ici » l'inscrit dans son XMP et dans la photothèque. Les photos choisies qui

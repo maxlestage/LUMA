@@ -139,6 +139,20 @@ pub fn pick_logo() -> Option<PathBuf> {
     None
 }
 
+/// Une trace GPX, pour placer les photos sur la carte.
+#[cfg(not(target_os = "ios"))]
+pub fn pick_gpx() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title(tr("Choisir une trace GPX"))
+        .add_filter(tr("Trace GPX"), &["gpx", "GPX"])
+        .pick_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_gpx() -> Option<PathBuf> {
+    None
+}
+
 /// Le scan d'une pellicule, pour la mesurer.
 #[cfg(not(target_os = "ios"))]
 pub fn pick_scan() -> Option<PathBuf> {

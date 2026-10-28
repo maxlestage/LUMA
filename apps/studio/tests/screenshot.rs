@@ -2410,7 +2410,6 @@ fn map_of_geotagged_photos() {
         );
         s.studio().selected.clear();
     }
-
     // Toucher le groupe de Paris : ses deux photos dans la grille.
     let paris = groups.iter().find(|g| g.1 == 2).unwrap().0;
     s.harness.event(egui::Event::PointerMoved(paris));
@@ -2443,6 +2442,54 @@ fn map_of_geotagged_photos() {
     }
     s.wait();
     assert_eq!(s.studio().visible().len(), photos.len());
+    // Une trace GPX : la photo de Rome, sa position retirée, prise à l'heure de Paris
+    // (+02:00), est placée sur la trace, l'écart de l'horloge deviné (la trace ne dure
+    // que deux minutes : un autre écart ne la placerait pas).
+    {
+        let i = 1;
+        let mut e = s.studio().catalog().get(&photos[i]).unwrap().clone();
+        e.gps = None;
+        s.studio().catalog_mut().insert(e);
+        let date = s.studio().catalog().get(&photos[i]).unwrap().date.clone();
+        let t = luma_library::geotag::parse_time(&date).unwrap() - 7200;
+        // Un instant en texte, heure universelle (les jours civils depuis 1970).
+        let iso = |t: i64| {
+            let (d, r) = (t.div_euclid(86_400), t.rem_euclid(86_400));
+            let z = d + 719_468;
+            let era = z.div_euclid(146_097);
+            let doe = z - era * 146_097;
+            let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+            let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+            let mp = (5 * doy + 2) / 153;
+            let day = doy - (153 * mp + 2) / 5 + 1;
+            let month = if mp < 10 { mp + 3 } else { mp - 9 };
+            let year = yoe + era * 400 + i64::from(month <= 2);
+            format!(
+                "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z",
+                r / 3600,
+                r % 3600 / 60,
+                r % 60
+            )
+        };
+        let gpx = s.dir.join("trace.gpx");
+        std::fs::write(
+            &gpx,
+            format!(
+                "<gpx><trk><trkseg><trkpt lat=\"45.76\" lon=\"4.83\"><time>{}</time></trkpt><trkpt lat=\"45.78\" lon=\"4.85\"><time>{}</time></trkpt></trkseg></trk></gpx>",
+                iso(t - 60),
+                iso(t + 60)
+            ),
+        )
+        .unwrap();
+        assert!(s.studio().follow_gpx(&gpx) >= 1);
+        let gps = s.studio().catalog().get(&photos[i]).unwrap().gps.unwrap();
+        assert!(
+            (gps[0] - 45.77).abs() < 1e-3 && (gps[1] - 4.84).abs() < 1e-3,
+            "au milieu de la trace : {gps:?}"
+        );
+        let side = std::fs::read_to_string(luma_project::xmp::sidecar_path(&photos[i])).unwrap();
+        assert!(luma_project::xmp::read_meta(&side).position.is_some());
+    }
 }
 
 #[test]
