@@ -13,6 +13,7 @@
 pub mod backup;
 pub mod collections;
 pub mod fingerprint;
+pub mod geotag;
 pub mod import;
 pub mod map;
 pub mod query;
@@ -24,6 +25,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
+use luma_project::copies;
 use luma_project::xmp::{self, Flag, Meta};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -93,6 +95,10 @@ impl Entry {
         };
         self.label = meta.label;
         self.keywords = meta.keywords;
+        // Une position placée après coup (trace GPX, carte) passe devant celle du fichier.
+        if let Some(p) = meta.position {
+            self.gps = Some([p.latitude, p.longitude]);
+        }
     }
 }
 
@@ -266,7 +272,7 @@ impl Catalog {
                 p.parent()
                     .is_some_and(|d| d == dir || (recursive && d.starts_with(dir)))
             })
-            .filter(|p| !p.is_file())
+            .filter(|p| !exists(p))
             .cloned()
             .collect();
         for p in gone {
@@ -277,7 +283,8 @@ impl Catalog {
         let stamps: Vec<(PathBuf, u64, u64, u64)> = files
             .into_iter()
             .map(|p| {
-                let (size, modified) = stamp(&p);
+                // Une copie virtuelle : la taille et la date de son original.
+                let (size, modified) = stamp(&copies::source(&p));
                 let sidecar = stamp(&xmp::sidecar_path(&p)).1;
                 (p, size, modified, sidecar)
             })
@@ -367,7 +374,28 @@ fn list(dir: &Path, recursive: bool, out: &mut Vec<PathBuf>) {
             }
         } else if luma_raw::is_photo(&path) {
             out.push(path);
+        } else if let Some(copy) = copy_of_sidecar(&path) {
+            out.push(copy);
         }
+    }
+}
+
+/// La copie virtuelle dont ce fichier est le XMP (`IMG_0001.ARW.copie-2.xmp` →
+/// `IMG_0001.ARW.copie-2`), si son original est là.
+fn copy_of_sidecar(path: &Path) -> Option<PathBuf> {
+    let name = path.file_name()?.to_str()?;
+    let copy = path.with_file_name(name.strip_suffix(".xmp")?);
+    copies::number(&copy)?;
+    let source = copies::source(&copy);
+    (luma_raw::is_photo(&source) && source.is_file()).then_some(copy)
+}
+
+/// La photo est‑elle encore là ? Pour une copie virtuelle : son original et son XMP.
+pub fn exists(path: &Path) -> bool {
+    if copies::number(path).is_some() {
+        copies::source(path).is_file() && copies::sidecar(path).is_file()
+    } else {
+        path.is_file()
     }
 }
 
@@ -392,13 +420,14 @@ fn read_meta(sidecar: &Path) -> Meta {
 /// Ce que le catalogue retient d'une photo, lu tout de suite (sans passer par le
 /// catalogue).
 pub fn entry_of(path: &Path) -> Entry {
-    let (size, modified) = stamp(path);
+    let (size, modified) = stamp(&copies::source(path));
     let sidecar = stamp(&xmp::sidecar_path(path)).1;
     read_entry(path.to_path_buf(), size, modified, sidecar)
 }
 
 fn read_entry(path: PathBuf, size: u64, modified: u64, sidecar: u64) -> Entry {
-    let info = luma_raw::info(&path).unwrap_or_default();
+    // Les pixels et l'EXIF d'une copie virtuelle sont ceux de son original.
+    let info = luma_raw::info(copies::source(&path)).unwrap_or_default();
     let exif = info.exif;
     let mut e = Entry {
         size,
@@ -485,6 +514,42 @@ mod tests {
         // La plus petite image PNG valide n'est pas nécessaire : seul le nom compte ici,
         // l'en‑tête d'une image développée n'étant pas lu.
         std::fs::write(path, b"\x89PNG\r\n\x1a\n").unwrap();
+    }
+
+    /// Une copie virtuelle entre au catalogue avec la date et la taille de son original,
+    /// sa note à elle ; elle en sort quand son XMP disparaît.
+    #[test]
+    fn virtual_copies_are_in_the_catalog() {
+        let dir = temp("copies");
+        png(&dir.join("a.png"));
+        let copy = luma_project::copies::path(&dir.join("a.png"), 2);
+        let meta = Meta {
+            rating: 4,
+            ..Meta::default()
+        };
+        std::fs::write(
+            luma_project::copies::sidecar(&copy),
+            xmp::write_with_meta(&luma_project::Settings::default(), &meta),
+        )
+        .unwrap();
+        // Le XMP d'une copie dont l'original n'est pas là : rien.
+        std::fs::write(dir.join("absent.png.copie-3.xmp"), "").unwrap();
+        let mut cat = Catalog::default();
+        let u = cat.add_folder(&dir, false);
+        assert_eq!((u.added, cat.len()), (2, 2));
+        let (orig, c) = (cat.get(&dir.join("a.png")).unwrap(), cat.get(&copy).unwrap());
+        assert_eq!((&c.date, c.size), (&orig.date, orig.size));
+        assert_eq!((orig.rating, c.rating), (0, 4));
+        assert!(cat.missing().is_empty() && cat.duplicates().is_empty());
+        assert_eq!(entry_of(&copy).rating, 4);
+        // Rien à relire ensuite.
+        let u = cat.add_folder(&dir, false);
+        assert_eq!((u.added, u.updated, u.unchanged, u.removed), (0, 0, 2, 0));
+        // Le XMP de la copie supprimé : la copie sort du catalogue, l'original reste.
+        std::fs::remove_file(luma_project::copies::sidecar(&copy)).unwrap();
+        let u = cat.add_folder(&dir, false);
+        assert_eq!((u.removed, cat.len()), (1, 1));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// Une photo renommée garde son entrée (note, date) et sa place dans une collection

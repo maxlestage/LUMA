@@ -54,6 +54,10 @@ pub struct Spot {
     /// 0 à 100.
     #[serde(default = "full")]
     pub opacity: f32,
+    /// Suppression tracée : les points suivants du tracé (après `center`), reliés ; vide
+    /// pour un cercle. Un fil ou une rayure s'efface d'un seul geste.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub path: Vec<(f32, f32)>,
 }
 
 fn half() -> f32 {
@@ -84,7 +88,13 @@ impl Spot {
             radius,
             feather: half(),
             opacity: full(),
+            path: Vec::new(),
         }
+    }
+
+    /// Le tracé entier : le centre puis les points suivants.
+    pub fn points(&self) -> impl Iterator<Item = (f32, f32)> + '_ {
+        std::iter::once(self.center).chain(self.path.iter().copied())
     }
 
     /// Ramène les valeurs dans leurs plages.
@@ -101,5 +111,36 @@ impl Spot {
         fix(&mut self.radius, 0.001, 0.5, 0.02);
         fix(&mut self.feather, 0.0, 100.0, half());
         fix(&mut self.opacity, 0.0, 100.0, full());
+        self.path.retain(|p| p.0.is_finite() && p.1.is_finite());
+        for p in &mut self.path {
+            *p = (p.0.clamp(-0.5, 1.5), p.1.clamp(-0.5, 1.5));
+        }
+        // Un tracé n'a de sens que pour la suppression.
+        if self.kind != SpotKind::Remove {
+            self.path.clear();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_traced_removal_is_saved_and_only_for_removal() {
+        let mut s = Spot::new(SpotKind::Remove, (0.2, 0.3), 0.01);
+        s.path = vec![(0.4, 0.35), (f32::NAN, 0.1), (0.6, 2.0)];
+        s.clamp();
+        assert_eq!(s.path, vec![(0.4, 0.35), (0.6, 1.5)]);
+        assert_eq!(s.points().count(), 3);
+        let json = serde_json::to_string(&s).unwrap();
+        assert_eq!(serde_json::from_str::<Spot>(&json).unwrap(), s);
+        // Un cercle n'écrit pas de tracé ; un correcteur n'en garde pas.
+        let circle = Spot::new(SpotKind::Remove, (0.5, 0.5), 0.02);
+        assert!(!serde_json::to_string(&circle).unwrap().contains("path"));
+        let mut heal = Spot::new(SpotKind::Heal, (0.5, 0.5), 0.02);
+        heal.path = vec![(0.6, 0.6)];
+        heal.clamp();
+        assert!(heal.path.is_empty());
     }
 }

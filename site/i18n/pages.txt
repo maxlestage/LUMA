@@ -178,13 +178,13 @@ fr = LÜMA — L'éditeur photo qui développe la lumière
 en = LÜMA — The photo editor that develops light
 es = LÜMA — El editor de fotos que revela la luz
 
-fr = LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone et iPad. 14 jours d'essai.
-en = LÜMA, the professional photo editor: your RAW files developed with precision, 100 film looks, your own film stocks, masks, a fast photo library. On Mac, iPhone and iPad. 14‑day free trial.
-es = LÜMA, el editor de fotos profesional: tus RAW revelados con precisión, 275 películas, tus propios carretes, máscaras y una fototeca rápida. En Mac, iPhone y iPad. 14 días de prueba.
+fr = LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad et Linux. 14 jours d'essai.
+en = LÜMA, the professional photo editor: your RAW files developed with precision, 275 film looks, your own film stocks, masks, a fast photo library. On Mac, iPhone, iPad and Linux. 14‑day free trial.
+es = LÜMA, el editor de fotos profesional: tus RAW revelados con precisión, 275 películas, tus propios carretes, máscaras y una fototeca rápida. En Mac, iPhone, iPad y Linux. 14 días de prueba.
 
-fr = Éditeur photo · Mac, iPhone et iPad
-en = Photo editor · Mac, iPhone and iPad
-es = Editor de fotos · Mac, iPhone y iPad
+fr = Éditeur photo · Mac, iPhone, iPad et Linux
+en = Photo editor · Mac, iPhone, iPad and Linux
+es = Editor de fotos · Mac, iPhone, iPad y Linux
 
 fr = La lumière, *développée*.
 en = Light, *developed*.
@@ -434,9 +434,9 @@ fr = Mesurés à chaque version sur un Mac à puce Apple, avec cinq vrais RAW : 
 en = Measured with every release on an Apple silicon Mac, with five real RAW files: Sony, Canon, Nikon, Fujifilm and iPhone ProRAW. On iPhone, these are still targets.
 es = Medidos en cada versión en un Mac con chip de Apple, con cinco RAW reales: Sony, Canon, Nikon, Fujifilm y iPhone ProRAW. En el iPhone, todavía son objetivos.
 
-fr = Windows, Linux et Android suivront, avec le même moteur : une photo aura le même rendu partout.
-en = Windows, Linux and Android will follow, with the same engine: a photo will look the same everywhere.
-es = Windows, Linux y Android vendrán después, con el mismo motor: una foto se verá igual en todas partes.
+fr = Linux est déjà là ; Windows et Android suivront, avec le même moteur : une photo aura le même rendu partout.
+en = Linux is already here; Windows and Android will follow, with the same engine: a photo will look the same everywhere.
+es = Linux ya está aquí; Windows y Android vendrán después, con el mismo motor: una foto se verá igual en todas partes.
 
 fr = D'abord
 en = First
@@ -502,25 +502,25 @@ fr = Faut‑il un compte ou une connexion ?
 en = Do I need an account or an internet connection?
 es = ¿Hace falta una cuenta o una conexión?
 
-fr = Non. LÜMA fonctionne sans compte. Sur Mac, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.
-en = No. LÜMA works without an account. On Mac, once a day when there's a connection, the app simply checks that your subscription is active; with no connection, it keeps going.
-es = No. LÜMA funciona sin cuenta. En Mac, una vez al día si hay conexión, la app simplemente comprueba que la suscripción sigue activa; sin conexión, sigue funcionando.
+fr = Non. LÜMA fonctionne sans compte. Sur Mac et Linux, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.
+en = No. LÜMA works without an account. On Mac and Linux, once a day when there's a connection, the app simply checks that your subscription is active; with no connection, it keeps going.
+es = No. LÜMA funciona sin cuenta. En Mac y Linux, una vez al día si hay conexión, la app simplemente comprueba que la suscripción sigue activa; sin conexión, sigue funcionando.
 
 fr = Que se passe‑t‑il après l'essai ?
 en = What happens after the trial?
 es = ¿Qué pasa después de la prueba?
 
-fr = Tout est ouvert pendant l'essai : 14 jours sur Mac, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.
-en = Everything is unlocked during the trial: 14 days on Mac, one month on iPhone and iPad. After that, LÜMA Premium lets you keep developing (a subscription on Mac, a one-time purchase on iPhone and iPad); your files and your adjustments remain yours either way.
-es = Todo está disponible durante la prueba: 14 días en Mac, un mes en iPhone y iPad. Después, LÜMA Premium te permite seguir revelando (una suscripción en Mac, una compra única en iPhone y iPad); tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
+fr = Tout est ouvert pendant l'essai : 14 jours sur Mac et Linux, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.
+en = Everything is unlocked during the trial: 14 days on Mac and Linux, one month on iPhone and iPad. After that, LÜMA Premium lets you keep developing (a subscription on Mac and Linux, a one-time purchase on iPhone and iPad); your files and your adjustments remain yours either way.
+es = Todo está disponible durante la prueba: 14 días en Mac y Linux, un mes en iPhone y iPad. Después, LÜMA Premium te permite seguir revelando (una suscripción en Mac y Linux, una compra única en iPhone y iPad); tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
 
 fr = Où acheter LÜMA ?
 en = Where can I buy LÜMA?
 es = ¿Dónde se compra LÜMA?
 
-fr = Sur Mac, uniquement sur ce site, par abonnement. Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.
-en = On Mac, only on this site, by subscription. On iPhone and iPad, only in the App Store: €89.99 once and for all, after a one-month trial.
-es = En Mac, solo en este sitio, por suscripción. En iPhone y iPad, solo en la App Store: 89,99 € de una vez por todas, tras un mes de prueba.
+fr = Sur Mac et Linux, uniquement sur ce site, par abonnement (le même vaut pour les deux). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.
+en = On Mac and Linux, only on this site, by subscription (one subscription covers both). On iPhone and iPad, only in the App Store: €89.99 once and for all, after a one-month trial.
+es = En Mac y Linux, solo en este sitio, por suscripción (la misma sirve para los dos). En iPhone y iPad, solo en la App Store: 89,99 € de una vez por todas, tras un mes de prueba.
 
 fr = Où vont mes photos exportées sur iPhone ?
 en = Where do my photos go when I export on iPhone?
@@ -530,13 +530,13 @@ fr = Dans la Pellicule de l'app Photos, telles quelles, avec leurs informations 
 en = Into your library in the Photos app, as is, with their shooting information and colour profile; a copy also stays in the Files app.
 es = A la fototeca de la app Fotos, tal cual, con su información de toma y su perfil de color; una copia queda también en la app Archivos.
 
-fr = Et Windows, Linux ou Android ?
-en = What about Windows, Linux or Android?
-es = ¿Y Windows, Linux o Android?
+fr = Et Linux, Windows ou Android ?
+en = What about Linux, Windows or Android?
+es = ¿Y Linux, Windows o Android?
 
-fr = Ils viendront après les appareils Apple, avec le même moteur : une photo aura le même rendu partout.
-en = They'll come after Apple devices, with the same engine: a photo will look the same everywhere.
-es = Llegarán después de los dispositivos de Apple, con el mismo motor: una foto se verá igual en todas partes.
+fr = Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu, avec le même abonnement que sur Mac. Windows et Android viendront ensuite, avec le même moteur : une photo aura le même rendu partout.
+en = Linux is already here: an archive that installs without a password, or a .deb package for Debian and Ubuntu, with the same subscription as on Mac. Windows and Android will come next, with the same engine: a photo will look the same everywhere.
+es = Linux ya está aquí: un archivo que se instala sin contraseña, o un paquete .deb para Debian y Ubuntu, con la misma suscripción que en Mac. Windows y Android llegarán después, con el mismo motor: una foto se verá igual en todas partes.
 
 fr = Quatorze jours pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.
 en = Fourteen days to try everything, no credit card required. Your photos are waiting.
@@ -564,13 +564,33 @@ fr = Quatorze jours pour *essayer*, puis à vous de choisir.
 en = Fourteen days to *try it*, then the choice is yours.
 es = Catorce días para *probarlo*, y luego tú eliges.
 
-fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store.
-en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription. On Mac, it is sold only here, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad (iOS and iPadOS), it is sold only on the App Store.
-es = Descarga LÜMA: todo está disponible durante la prueba. Después, una suscripción mensual o anual. En Mac, se compra únicamente aquí, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app. En iPhone y iPad (iOS y iPadOS), se compra únicamente en el App Store.
+fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac et Linux, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.
+en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription. On Mac and Linux, it is sold only here, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad (iOS and iPadOS), LÜMA Premium is a one-time purchase, sold only on the App Store.
+es = Descarga LÜMA: todo está disponible durante la prueba. Después, una suscripción mensual o anual. En Mac y Linux, se compra únicamente aquí, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app. En iPhone y iPad (iOS y iPadOS), LÜMA Premium se compra una sola vez, únicamente en el App Store.
 
 fr = Télécharger pour Mac
 en = Download for Mac
 es = Descargar para Mac
+
+fr = Télécharger pour Linux
+en = Download for Linux
+es = Descargar para Linux
+
+fr = Paquet .deb (Debian, Ubuntu)
+en = .deb package (Debian, Ubuntu)
+es = Paquete .deb (Debian, Ubuntu)
+
+fr = Linux x86_64 (Ubuntu 22.04, Debian 12, Fedora 36 ou plus récent) : l'archive s'installe sans mot de passe avec install.sh ; il faut un pilote graphique Vulkan.
+en = Linux x86_64 (Ubuntu 22.04, Debian 12, Fedora 36 or later): the archive installs without a password using install.sh; a Vulkan graphics driver is required.
+es = Linux x86_64 (Ubuntu 22.04, Debian 12, Fedora 36 o posterior): el archivo se instala sin contraseña con install.sh; se necesita un controlador gráfico Vulkan.
+
+fr = Disponible
+en = Available
+es = Disponible
+
+fr = Archive ou paquet .deb, le même rendu que sur Mac.
+en = Archive or .deb package, the same rendering as on Mac.
+es = Archivo o paquete .deb, el mismo resultado que en Mac.
 
 fr = Apple Silicon et Intel, macOS 11 ou plus récent.
 en = Apple Silicon and Intel, macOS 11 or later.
@@ -644,15 +664,15 @@ fr = Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto
 en = JPEG, PNG and 16‑bit TIFF export, in P3 and ProPhoto
 es = Exportación JPEG, PNG y TIFF de 16 bits, en P3 y ProPhoto
 
-fr = Sur Mac, avec toutes les mises à jour
-en = On Mac, with every update
-es = En Mac, con todas las actualizaciones
+fr = Sur Mac et Linux, avec toutes les mises à jour
+en = On Mac and Linux, with every update
+es = En Mac y Linux, con todas las actualizaciones
 
 # ----- Pied de page -------------------------------------------------------------------
 
-fr = L'éditeur photo qui développe la lumière. Pour Mac, iPhone et iPad.
-en = The photo editor that develops light. For Mac, iPhone and iPad.
-es = El editor de fotos que revela la luz. Para Mac, iPhone y iPad.
+fr = L'éditeur photo qui développe la lumière. Pour Mac, iPhone, iPad et Linux.
+en = The photo editor that develops light. For Mac, iPhone, iPad and Linux.
+es = El editor de fotos que revela la luz. Para Mac, iPhone, iPad y Linux.
 
 fr = Télécharger pour
 en = Download for
@@ -1027,9 +1047,9 @@ fr = La clé est valable jusqu'à la fin de la période payée, plus 14 jours. E
 en = The key is valid until the end of the paid period, plus 14 days. When online, the app renews it by itself every day as long as the subscription runs.
 es = La clave es válida hasta el final del período pagado, más 14 días. Con conexión, la app la renueva por sí sola cada día mientras la suscripción siga activa.
 
-fr = Sur Mac, LÜMA Premium s'achète uniquement sur ce site, payé par Stripe ; il n'est pas vendu sur le Mac App Store. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store, par un abonnement intégré distinct de l'abonnement Mac : il est facturé par Apple, aux prix affichés dans l'App Store, et se gère ou se résilie dans les réglages de votre compte Apple. Les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac.
-en = On Mac, LÜMA Premium is sold only on this site, paid through Stripe; it is not sold on the Mac App Store. On iPhone and iPad (iOS and iPadOS), it is sold only on the App Store, as an in‑app subscription separate from the Mac subscription: it is billed by Apple, at the prices shown on the App Store, and is managed or cancelled in your Apple account settings. The Payment and Cancellation sections below apply to the Mac subscription.
-es = En Mac, LÜMA Premium se compra únicamente en este sitio, pagado a través de Stripe; no se vende en el Mac App Store. En iPhone y iPad (iOS y iPadOS), se compra únicamente en el App Store, como una suscripción integrada distinta de la de Mac: la factura Apple, a los precios indicados en el App Store, y se gestiona o se cancela en los ajustes de tu cuenta de Apple. Los apartados Pago y Cancelación siguientes se refieren a la suscripción de Mac.
+fr = Sur Mac et Linux, LÜMA Premium s'achète uniquement sur ce site, par un abonnement payé par Stripe ; il n'est pas vendu sur le Mac App Store. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store, en un achat unique distinct de l'abonnement Mac et Linux : il est facturé par Apple, au prix affiché dans l'App Store, et se restaure sur vos autres iPhone et iPad avec le même compte Apple. Les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac et Linux.
+en = On Mac and Linux, LÜMA Premium is sold only on this site, as a subscription paid through Stripe; it is not sold on the Mac App Store. On iPhone and iPad (iOS and iPadOS), it is sold only on the App Store, as a one-time purchase separate from the Mac and Linux subscription: it is billed by Apple, at the price shown on the App Store, and can be restored on your other iPhone and iPad devices with the same Apple account. The Payment and Cancellation sections below apply to the Mac and Linux subscription.
+es = En Mac y Linux, LÜMA Premium se compra únicamente en este sitio, con una suscripción pagada a través de Stripe; no se vende en el Mac App Store. En iPhone y iPad (iOS y iPadOS), se compra únicamente en el App Store, en una compra única distinta de la suscripción de Mac y Linux: la factura Apple, al precio indicado en el App Store, y se restaura en tus otros iPhone y iPad con la misma cuenta de Apple. Los apartados Pago y Cancelación siguientes se refieren a la suscripción de Mac y Linux.
 
 fr = Paiement
 en = Payment
@@ -1055,9 +1075,9 @@ fr = Mises à jour
 en = Updates
 es = Actualizaciones
 
-fr = Toutes les mises à jour de LÜMA sont comprises dans l'abonnement, sur Mac, iPhone et iPad. Une modification des prix est annoncée au moins 30 jours à l'avance et ne s'applique qu'au renouvellement suivant.
-en = Every LÜMA update is included in the subscription, on Mac, iPhone and iPad. Any price change is announced at least 30 days in advance and only applies from the next renewal.
-es = Todas las actualizaciones de LÜMA están incluidas en la suscripción, en Mac, iPhone y iPad. Cualquier cambio de precio se anuncia con al menos 30 días de antelación y solo se aplica a partir de la siguiente renovación.
+fr = Toutes les mises à jour de LÜMA sont comprises dans LÜMA Premium, sur Mac, Linux, iPhone et iPad. Une modification des prix de l'abonnement est annoncée au moins 30 jours à l'avance et ne s'applique qu'au renouvellement suivant.
+en = Every LÜMA update is included in LÜMA Premium, on Mac, Linux, iPhone and iPad. Any change to the subscription prices is announced at least 30 days in advance and only applies from the next renewal.
+es = Todas las actualizaciones de LÜMA están incluidas en LÜMA Premium, en Mac, Linux, iPhone y iPad. Cualquier cambio en los precios de la suscripción se anuncia con al menos 30 días de antelación y solo se aplica a partir de la siguiente renovación.
 
 fr = Droit applicable
 en = Governing law

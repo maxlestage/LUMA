@@ -88,32 +88,42 @@ pub fn apply(img: &mut RgbImage, e: &Effects, scale: f32) {
     }
     let (w, h) = (img.width as f32, img.height as f32);
     let width = img.width;
+    // La distance au centre se sépare : un terme par colonne, un par ligne, calculés une
+    // fois (les mêmes valeurs qu'à chaque pixel).
+    // Rondeur 0 : ellipse du cadre ; +100 : cercle ; −100 : presque rectangle.
+    let term = |v: f32| if power == 2.0 { v * v } else { v.abs().powf(power) };
+    let columns: Vec<f32> = (0..width)
+        .map(|x| {
+            let nx = (x as f32 + 0.5) / w * 2.0 - 1.0;
+            term(if w < h {
+                nx * (1.0 - circle + circle * w / h)
+            } else {
+                nx
+            })
+        })
+        .collect();
     img.data.par_chunks_mut(width).enumerate().for_each(|(y, row)| {
         let ny = (y as f32 + 0.5) / h * 2.0 - 1.0;
+        let ty = term(if w >= h {
+            ny * (1.0 - circle + circle * h / w)
+        } else {
+            ny
+        });
         for (x, p) in row.iter_mut().enumerate() {
             if vignette != 0.0 {
-                let nx = (x as f32 + 0.5) / w * 2.0 - 1.0;
-                // Rondeur 0 : ellipse du cadre ; +100 : cercle ; −100 : presque rectangle.
-                let ny2 = if w >= h {
-                    ny * (1.0 - circle + circle * h / w)
-                } else {
-                    ny
-                };
-                let nx2 = if w < h {
-                    nx * (1.0 - circle + circle * w / h)
-                } else {
-                    nx
-                };
                 let d = if power == 2.0 {
-                    (nx2 * nx2 + ny2 * ny2).sqrt() * std::f32::consts::FRAC_1_SQRT_2
+                    (columns[x] + ty).sqrt() * std::f32::consts::FRAC_1_SQRT_2
                 } else {
-                    (nx2.abs().powf(power) + ny2.abs().powf(power)).powf(1.0 / power) / 2f32.sqrt().powf(2.0 / power)
+                    (columns[x] + ty).powf(1.0 / power) / 2f32.sqrt().powf(2.0 / power)
                 };
                 let k = smoothstep(inner, outer, d);
                 if vignette < 0.0 {
-                    let bright = smoothstep(0.4, 1.0, luminance(*p));
-                    let g = 1.0 + vignette * k * (1.0 - protect * bright);
-                    p.iter_mut().for_each(|c| *c *= g);
+                    // Dans l'ovale intérieur, le gain vaut exactement 1 : rien à faire.
+                    if k != 0.0 {
+                        let bright = smoothstep(0.4, 1.0, luminance(*p));
+                        let g = 1.0 + vignette * k * (1.0 - protect * bright);
+                        p.iter_mut().for_each(|c| *c *= g);
+                    }
                 } else {
                     p.iter_mut().for_each(|c| *c += (1.0 - *c).max(0.0) * vignette * k);
                 }
@@ -135,6 +145,105 @@ pub fn apply(img: &mut RgbImage, e: &Effects, scale: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // L'ancien calcul (la distance refaite à chaque pixel), pour vérifier que la
+    // version par lignes et colonnes donne exactement les mêmes pixels.
+    fn apply_reference(img: &mut RgbImage, e: &Effects, scale: f32) {
+        let Params {
+            vignette,
+            circle,
+            power,
+            inner,
+            outer,
+            protect,
+            grain,
+            cell,
+            rough,
+        } = params(e, scale);
+        if vignette == 0.0 && grain == 0.0 {
+            return;
+        }
+        let (w, h) = (img.width as f32, img.height as f32);
+        let width = img.width;
+        img.data.par_chunks_mut(width).enumerate().for_each(|(y, row)| {
+            let ny = (y as f32 + 0.5) / h * 2.0 - 1.0;
+            for (x, p) in row.iter_mut().enumerate() {
+                if vignette != 0.0 {
+                    let nx = (x as f32 + 0.5) / w * 2.0 - 1.0;
+                    // Rondeur 0 : ellipse du cadre ; +100 : cercle ; −100 : presque rectangle.
+                    let ny2 = if w >= h {
+                        ny * (1.0 - circle + circle * h / w)
+                    } else {
+                        ny
+                    };
+                    let nx2 = if w < h {
+                        nx * (1.0 - circle + circle * w / h)
+                    } else {
+                        nx
+                    };
+                    let d = if power == 2.0 {
+                        (nx2 * nx2 + ny2 * ny2).sqrt() * std::f32::consts::FRAC_1_SQRT_2
+                    } else {
+                        (nx2.abs().powf(power) + ny2.abs().powf(power)).powf(1.0 / power)
+                            / 2f32.sqrt().powf(2.0 / power)
+                    };
+                    let k = smoothstep(inner, outer, d);
+                    if vignette < 0.0 {
+                        let bright = smoothstep(0.4, 1.0, luminance(*p));
+                        let g = 1.0 + vignette * k * (1.0 - protect * bright);
+                        p.iter_mut().for_each(|c| *c *= g);
+                    } else {
+                        p.iter_mut().for_each(|c| *c += (1.0 - *c).max(0.0) * vignette * k);
+                    }
+                }
+                if grain != 0.0 {
+                    let (fx, fy) = (x as f32 / scale, y as f32 / scale);
+                    let coarse = value_noise(fx / cell, fy / cell);
+                    let fine = value_noise(fx / (cell * 0.45) + 17.3, fy / (cell * 0.45) - 9.1);
+                    let n = coarse * (1.0 - 0.5 * rough) + fine * 0.5 * rough;
+                    let y = luminance(*p).clamp(0.0, 1.0).sqrt();
+                    let strength = grain * 0.12 * (4.0 * y * (1.0 - y)).max(0.15);
+                    let g = 1.0 + n * strength;
+                    p.iter_mut().for_each(|c| *c = (*c * g).max(0.0));
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn separable_vignette_gives_the_same_pixels() {
+        for (w, h) in [(121, 80), (64, 97)] {
+            let img = RgbImage::from_fn(w, h, |x, y| {
+                let v = 0.05 + 0.9 * (((x * 7 + y * 13) % 31) as f32 / 31.0);
+                [v, v * 0.7, 1.0 - v]
+            });
+            for (amount, roundness, feather, grain) in [
+                (-40.0, 0.0, 50.0, 0.0),
+                (-70.0, -100.0, 10.0, 0.0),
+                (-25.0, 60.0, 90.0, 30.0),
+                (35.0, -40.0, 50.0, 0.0),
+                (0.0, 0.0, 50.0, 40.0),
+            ] {
+                let e = Effects {
+                    vignette_amount: amount,
+                    vignette_roundness: roundness,
+                    vignette_feather: feather,
+                    vignette_highlights: 30.0,
+                    grain_amount: grain,
+                    ..Effects::default()
+                };
+                let (mut a, mut b) = (img.clone(), img.clone());
+                apply(&mut a, &e, 0.5);
+                apply_reference(&mut b, &e, 0.5);
+                let same = a
+                    .data
+                    .iter()
+                    .zip(&b.data)
+                    .all(|(p, q)| (0..3).all(|c| p[c].to_bits() == q[c].to_bits()));
+                assert!(same, "{w}×{h} {amount} {roundness} {feather} {grain}");
+            }
+        }
+    }
 
     #[test]
     fn vignette_darkens_corners_not_the_center() {

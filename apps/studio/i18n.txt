@@ -875,6 +875,10 @@ fr = Sur Mac, avec toutes les mises à jour
 en = On Mac, with every update
 es = En Mac, con todas las actualizaciones
 
+fr = Sur Linux, avec toutes les mises à jour
+en = On Linux, with every update
+es = En Linux, con todas las actualizaciones
+
 fr = Mensuel
 en = Monthly
 es = Mensual
@@ -4599,9 +4603,9 @@ fr = Supprimer|retouche
 en = Remove
 es = Eliminar
 
-fr = Un cercle sur ce qui gêne (fil, passant, déchet) : la photo autour le remplace, texture comprise
-en = A circle over what is in the way (wire, passer-by, litter): the surrounding photo replaces it, texture included
-es = Un círculo sobre lo que molesta (cable, transeúnte, basura): la foto de alrededor lo sustituye, textura incluida
+fr = Un clic sur ce qui gêne (passant, déchet), ou un trait le long d'un fil : la photo autour le remplace, texture comprise
+en = A click on what is in the way (passer-by, litter), or a stroke along a wire: the surrounding photo replaces it, texture included
+es = Un clic sobre lo que molesta (transeúnte, basura), o un trazo a lo largo de un cable: la foto de alrededor lo sustituye, textura incluida
 
 # ----- Les 125 films de la troisième série -----
 
@@ -5321,6 +5325,46 @@ fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
 
+fr = Dupliquer|masque
+en = Duplicate
+es = Duplicar
+
+fr = Une copie du masque, ses réglages compris
+en = A copy of the mask, its settings included
+es = Una copia de la máscara, con sus ajustes
+
+fr = Dupliquer inversé
+en = Duplicate inverted
+es = Duplicar invertida
+
+fr = Une copie inversée, réglages à zéro : tout le reste de la photo (le sol après le ciel)
+en = An inverted copy, settings at zero: all the rest of the photo (the ground after the sky)
+es = Una copia invertida, ajustes a cero: todo el resto de la foto (el suelo después del cielo)
+
+fr = Masque dupliqué
+en = Mask duplicated
+es = Máscara duplicada
+
+fr = Masque dupliqué et inversé
+en = Mask duplicated and inverted
+es = Máscara duplicada e invertida
+
+fr = Tons auto
+en = Auto tone
+es = Tonos automáticos
+
+fr = Exposition, contraste, hautes lumières et ombres lus sur l'histogramme de la photo
+en = Exposure, contrast, highlights and shadows read from the photo's histogram
+es = Exposición, contraste, altas luces y sombras leídos en el histograma de la foto
+
+fr = Tons automatiques
+en = Auto tone
+es = Tonos automáticos
+
+fr = Netteté
+en = Sharpness
+es = Nitidez
+
 fr = Agrandir au besoin
 en = Enlarge if needed
 es = Ampliar si es necesario
@@ -5418,3 +5462,15 @@ es = LÜMA Premium es tuyo, para siempre: en tus otros iPhone y iPad, «Restaura
 fr = Déjà acheté avec ce compte Apple ?
 en = Already bought with this Apple Account?
 es = ¿Ya lo compraste con esta cuenta de Apple?
+
+fr = Placer « {name} » ici
+en = Place “{name}” here
+es = Situar «{name}» aquí
+
+fr = {name} placée sur la carte
+en = {name} placed on the map
+es = {name} situada en el mapa
+
+fr = Glisser la carte pour mettre le viseur à l'endroit de la prise de vue
+en = Drag the map to put the crosshair where the photo was taken
+es = Arrastra el mapa para poner la mira donde se tomó la foto

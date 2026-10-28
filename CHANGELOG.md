@@ -4,6 +4,12 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **LÜMA pour Linux** : le même moteur et le même rendu que sur Mac, avec le même
+  abonnement. Une archive qui s'installe sans mot de passe (`./install.sh`, avec son
+  lanceur dans le menu des applications et l'ouverture des RAW par « Ouvrir avec »), ou
+  un paquet `.deb` pour Debian et Ubuntu ; x86_64, Ubuntu 22.04, Debian 12, Fedora 36
+  ou plus récent, avec un pilote graphique Vulkan. La ligne de commande `luma` est
+  comprise.
 - **Plus rapide** : la réduction du bruit de couleur (active par défaut) trois fois
   plus rapide, sans changer un seul pixel ; export en pleine définition 25 à 30 %
   plus court, aperçu avec réglages lourds environ 25 % plus vif. Puis les flous :
@@ -21,10 +27,24 @@ La photothèque professionnelle, étape par étape.
   plus rapide quand elle est réglée (NEF 372 → 136 ms), mêmes octets.
   Puis les exports TIFF et PNG en 16 bits : l'image
   écrite directement en octets, sur tous les cœurs, sans seconde copie : 20 à 28 % plus
-  courts (24 Mpx : 372 → 299 ms) et 144 Mo de mémoire en moins, mêmes octets.
+  courts (24 Mpx : 372 → 299 ms) et 144 Mo de mémoire en moins, mêmes octets. Puis
+  l'export par lot avec un logo : le logo lu une seule fois pour tout le lot (40 ms de
+  moins par photo pour un logo de 1200 × 600). Puis la conversion vers l'espace de
+  sortie (JPEG), huit pixels à la fois : 24 Mpx en sRGB 230 → 150 ms,
+  mêmes octets ; et pour les TIFF et PNG en 16 bits : sRGB environ 35 % plus court
+  (24 Mpx : 295–366 → 190–204 ms), mêmes octets.
   Puis la réduction du bruit par ondelettes, sans image neuve à chaque échelle : 1,8 fois
   plus rapide (24 Mpx : 1,17 → 0,65 s), et l'accentuation par déconvolution, huit pixels
-  à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels.
+  à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels. Puis le filtre qui suit
+  les contours (Ombres, Hautes lumières, Clarté, bords des masques et du ciel), sans
+  plans intermédiaires : presque deux fois plus rapide (24 Mpx : 87 → 47 ms), mêmes
+  valeurs. Puis l'export JPEG, converti en 8 bits bande par bande : 72 Mo de mémoire en
+  moins pour 24 Mpx, mêmes fichiers octet pour octet. Puis Hautes lumières, Ombres,
+  Clarté et Texture, appliquées en une seule passe : 15 à 20 % plus rapides en pleine
+  définition (RAF 26 Mpx : 0,84–0,92 → 0,72 s), mêmes pixels. Puis la réduction du
+  bruit de luminance : 104 Mo de mémoire en moins pour 26 Mpx, mêmes pixels. Puis le
+  vignetage : 37 % plus court (24 Mpx : 108 → 68 ms), presque deux fois plus rapide
+  avec une rondeur (400 → 210 ms), mêmes pixels.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
@@ -38,6 +58,9 @@ La photothèque professionnelle, étape par étape.
   dans les sauvegardes. Dans l'app, l'aperçu de la photo d'avant ne recouvre plus celle
   qu'on ouvre, les masques à bord adouci s'affichent comme ils s'exportent, et un GPU qui
   ne répond plus laisse le processeur finir l'aperçu.
+- **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
+  échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
+  écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
@@ -144,6 +167,22 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Dupliquer un masque** (Masques) : une copie, ou une copie inversée aux réglages à
+  zéro, pour régler le sol après le ciel sans retracer la zone.
+- **Suppression tracée** (Retouche, Supprimer) : glisser le long d'un fil, d'une rayure
+  ou d'un câble l'efface d'un seul geste, remplacé par la photo qui l'entoure. Sans IA.
+- **Tons auto** (Lumière, Tonalité, ou `--auto-tone`) : un clic règle l'exposition, le
+  contraste, les hautes lumières et les ombres d'après l'histogramme de la photo, un
+  point de départ à affiner. Sans IA.
+- **Réduction du bruit dans les masques** : lisser des ombres débouchées ou un ciel
+  bruité au pinceau, en gardant les contours nets, sans adoucir le reste de la photo.
+- **Netteté dans les masques** : relever le détail d'un regard ou d'une matière au
+  pinceau, ou adoucir un fond, sans toucher au reste de la photo.
+- **Dématriçage X‑Trans directionnel** (Fujifilm) : le vert suit les contours au lieu de
+  les moyenner en travers, jusque dans les ombres bruitées (3 dB de mieux sur nos
+  essais). Les doublons de travail sont refaits une fois.
+- **Texture et Correction du voile dans les masques** : adoucir une peau ou un fond au
+  pinceau, déboucher un ciel voilé dans un dégradé, sans toucher au reste de la photo.
 - **Agrandir au besoin** (Exporter, Dimensions, ou `--enlarge`) : une taille plus grande
   que la photo l'agrandit, jusqu'à quatre fois chaque côté, nette et sans halo autour
   des contours ; pour les grands tirages. Sans IA.
@@ -281,6 +320,9 @@ La photothèque professionnelle, étape par étape.
   copiée, exportée à une autre taille ou recompressée, retrouvée par son empreinte et
   montrée groupe par groupe. **En lot** : avec plusieurs photos choisies, la note, le
   drapeau et le libellé vont à toutes.
+- **Les copies virtuelles dans la photothèque** : elles apparaissent aussi dans « toutes
+  les photos », les recherches et les collections, avec la date et le boîtier de leur
+  original et leur note à elles ; une copie supprimée en sort.
 - **Ouverture deux fois plus rapide** : les niveaux du capteur (noir, blanc) ramenés
   directement depuis ses entiers, sur tous les cœurs, sans copie préalable en
   flottants ; NEF 145 → 67 ms, ARW 143 → 65, RW2 131 → 65, RAF 169 → 73, DNG
@@ -322,6 +364,9 @@ La photothèque professionnelle, étape par étape.
   `--restore` (le catalogue remplacé est sauvegardé d'abord). **Photos manquantes** :
   `--missing` les liste, `--relocate ancien nouveau` retrouve un dossier déplacé hors de
   LÜMA, collections comprises.
+- **Doublons** (`luma catalog --duplicates`) : les photos en double du catalogue — même
+  boîtier, même instant, fichiers de même taille et de même type, comme une carte
+  importée deux fois — listées avec la place qu'elles prennent, sans rien effacer.
 - **Carte** (Bibliothèque, « Carte ») : les photos du film à l'endroit de leur prise
   de vue (position GPS de l'EXIF, gardée dans la photothèque), regroupées quand elles
   sont proches ; glisser, zoomer à la molette ou à deux doigts, toucher un groupe pour
@@ -331,6 +376,13 @@ La photothèque professionnelle, étape par étape.
   développées (JPEG, HEIC, AVIF, PNG, WebP, TIFF) est lu comme celui d'un RAW — date de
   prise de vue, boîtier, objectif, réglages, position GPS. Les photos déjà dans la
   photothèque sont relues une fois.
+- **Une trace GPX pour placer les photos** (`luma geotag --gpx trace.gpx`) : chaque
+  photo prend la position de la trace à l'instant de sa prise de vue, écrite dans son
+  XMP ; l'écart de l'horloge du boîtier se donne avec `--offset`. La photothèque et la
+  carte la montrent aussitôt.
+- **Placer une photo sur la carte à la main** : sur la carte, la photo affichée qui n'a
+  pas de position montre un viseur au centre ; on fait glisser la carte dessous, puis
+  « Placer ici » l'inscrit dans son XMP et dans la photothèque.
 - **Impression** (« Imprimer… » sur les photos choisies, `luma print`) : un PDF à la
   taille exacte du papier (A4, A3, A3+, 10 × 15 cm…), portrait ou paysage, marges, une
   photo par page ou une **planche contact** (grille, nom sous chaque photo), photos

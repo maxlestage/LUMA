@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{Catalog, Entry, unix_date};
+use crate::{Catalog, Entry, exists, unix_date};
 
 /// Le nombre de sauvegardes gardées.
 pub const KEEP: usize = 10;
@@ -104,7 +104,40 @@ impl Catalog {
     /// Les photos du catalogue dont le fichier n'est plus là (disque débranché,
     /// dossier déplacé ou renommé hors de LÜMA).
     pub fn missing(&self) -> Vec<&Entry> {
-        self.entries().filter(|e| !e.path.is_file()).collect()
+        self.entries().filter(|e| !exists(&e.path)).collect()
+    }
+
+    /// Les doublons : les photos du même boîtier, prises au même instant, dont les
+    /// fichiers ont la même taille et le même type (une copie dans un autre dossier,
+    /// une carte importée deux fois). Le RAW et le JPEG d'une même prise ne sont pas des
+    /// doublons. Chaque groupe est rangé par chemin ; les groupes, par date.
+    pub fn duplicates(&self) -> Vec<Vec<&Entry>> {
+        let mut groups: std::collections::BTreeMap<(&str, String, u64, String), Vec<&Entry>> =
+            std::collections::BTreeMap::new();
+        for e in self.entries() {
+            // Sans date ni taille, rien ne permet de dire que deux photos sont la même ;
+            // une copie virtuelle partage, par nature, le fichier de son original.
+            if e.date.is_empty() || e.size == 0 || luma_project::copies::number(&e.path).is_some() {
+                continue;
+            }
+            let kind = e
+                .path
+                .extension()
+                .map(|x| x.to_string_lossy().to_lowercase())
+                .unwrap_or_default();
+            groups
+                .entry((e.date.as_str(), e.camera(), e.size, kind))
+                .or_default()
+                .push(e);
+        }
+        groups
+            .into_values()
+            .filter(|g| g.len() > 1)
+            .map(|mut g| {
+                g.sort_by(|a, b| a.path.cmp(&b.path));
+                g
+            })
+            .collect()
     }
 
     /// Un dossier déplacé : les photos manquantes rangées sous `from` sont cherchées au
@@ -117,7 +150,7 @@ impl Catalog {
             .filter_map(|e| {
                 let rest = e.path.strip_prefix(from).ok()?;
                 let new = to.join(rest);
-                new.is_file().then(|| (e.path.clone(), new))
+                exists(&new).then(|| (e.path.clone(), new))
             })
             .collect();
         for (a, b) in &moves {
@@ -146,7 +179,7 @@ impl Catalog {
                 continue;
             }
             let new = home.join(e.path.strip_prefix(&old).unwrap_or(&e.path));
-            if new.is_file() {
+            if exists(&new) {
                 moves.push((e.path.clone(), new));
             } else {
                 gone.push(e.path.clone());
@@ -183,6 +216,53 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn duplicates_are_grouped() {
+        let photo = |path: &str, date: &str, model: &str, size: u64| Entry {
+            path: PathBuf::from(path),
+            date: date.into(),
+            make: "SONY".into(),
+            model: model.into(),
+            size,
+            ..Entry::default()
+        };
+        let mut cat = Catalog::default();
+        for e in [
+            // Une carte importée deux fois.
+            photo("/a/DSC0001.ARW", "2026-06-01T10:00:00", "ILCE-7M3", 24_000_000),
+            photo(
+                "/b/2026-06-01/DSC0001.ARW",
+                "2026-06-01T10:00:00",
+                "ILCE-7M3",
+                24_000_000,
+            ),
+            photo("/c/copie.ARW", "2026-06-01T10:00:00", "ILCE-7M3", 24_000_000),
+            // Le JPEG de la même prise : pas un doublon.
+            photo("/a/DSC0001.JPG", "2026-06-01T10:00:00", "ILCE-7M3", 24_000_000),
+            // Même instant, autre boîtier ; même boîtier, autre taille.
+            photo("/a/autre.ARW", "2026-06-01T10:00:00", "ILCE-7RM4", 24_000_000),
+            photo("/a/rafale.ARW", "2026-06-01T10:00:00", "ILCE-7M3", 23_900_000),
+            // Un autre jour, deux copies.
+            photo("/a/DSC0100.ARW", "2026-05-01T08:00:00", "ILCE-7M3", 25_000_000),
+            photo("/z/DSC0100.ARW", "2026-05-01T08:00:00", "ILCE-7M3", 25_000_000),
+        ] {
+            cat.insert(e);
+        }
+        let groups: Vec<Vec<&str>> = cat
+            .duplicates()
+            .iter()
+            .map(|g| g.iter().map(|e| e.path.to_str().unwrap()).collect())
+            .collect();
+        assert_eq!(
+            groups,
+            vec![
+                vec!["/a/DSC0100.ARW", "/z/DSC0100.ARW"],
+                vec!["/a/DSC0001.ARW", "/b/2026-06-01/DSC0001.ARW", "/c/copie.ARW"],
+            ]
+        );
+        assert!(Catalog::default().duplicates().is_empty());
     }
 
     /// Des sauvegardes datées, les dix dernières gardées ; une restauration remet

@@ -4,6 +4,11 @@
 
 La fototeca profesional, paso a paso.
 
+- **LÜMA para Linux**: el mismo motor y el mismo resultado que en Mac, con la misma
+  suscripción. Un archivo que se instala sin contraseña (`./install.sh`, con su
+  lanzador en el menú de aplicaciones y los RAW que se abren con «Abrir con»), o un
+  paquete `.deb` para Debian y Ubuntu; x86_64, Ubuntu 22.04, Debian 12, Fedora 36 o
+  posterior, con un controlador gráfico Vulkan. Incluye la línea de comandos `luma`.
 - **Más rápido**: la reducción de ruido de color (activa por defecto) es tres veces
   más rápida sin cambiar un solo píxel; la exportación a resolución completa tarda
   entre un 25 y un 30 % menos, y la vista previa con ajustes intensos responde un 25 %
@@ -22,10 +27,24 @@ La fototeca profesional, paso a paso.
   (NEF 372 → 136 ms), mismos bytes.
   Después las exportaciones TIFF y PNG de 16 bits: la imagen escrita directamente en
   bytes, en todos los núcleos, sin segunda copia: de un 20 a un 28 % más cortas (24 Mpx:
-  372 → 299 ms) y 144 MB menos de memoria, mismos bytes.
+  372 → 299 ms) y 144 MB menos de memoria, mismos bytes. Después la exportación por
+  lotes con un logotipo: el logotipo se lee una sola vez para todo el lote (40 ms menos
+  por foto con un logotipo de 1200 × 600). Después la conversión al espacio de salida
+  (JPEG), ocho píxeles a la vez: 24 Mpx en sRGB 230 → 150 ms, mismos bytes; y para
+  TIFF y PNG de 16 bits: sRGB alrededor de un 35 % más corto (24 Mpx: 295–366 →
+  190–204 ms), mismos bytes.
   Después la reducción de ruido por ondículas, sin imagen nueva en cada escala: 1,8
   veces más rápida (24 Mpx: 1,17 → 0,65 s), y el enfoque por deconvolución, ocho píxeles
-  a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles.
+  a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles. Después el filtro que
+  sigue los contornos (Sombras, Altas luces, Claridad, bordes de máscaras y del
+  cielo), sin planos intermedios: casi el doble de rápido (24 Mpx: 87 → 47 ms), mismos
+  valores. Después la exportación JPEG, convertida a 8 bits por franjas: 72 MB menos de
+  memoria para 24 Mpx, mismos archivos byte a byte. Después Altas luces, Sombras,
+  Claridad y Textura, aplicadas en una sola pasada: de un 15 a un 20 % más rápidas a
+  resolución completa (RAF de 26 Mpx: 0,84–0,92 → 0,72 s), mismos píxeles. Después la
+  reducción de ruido de luminancia: 104 MB menos de memoria para 26 Mpx, mismos
+  píxeles. Después la viñeta: un 37 % más corta (24 Mpx: 108 → 68 ms), casi el doble
+  de rápida con redondez (400 → 210 ms), mismos píxeles.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
@@ -39,6 +58,9 @@ La fototeca profesional, paso a paso.
   ilegible se guarda en las copias. En la app, la vista previa de la foto anterior ya no
   tapa la que se abre, las máscaras de borde suavizado se ven como se exportan, y una GPU
   que deja de responder deja al procesador terminar la vista previa.
+- **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
+  (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
+  limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
   focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en
@@ -142,6 +164,24 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Duplicar una máscara** (Máscaras): una copia, o una copia invertida con los
+  ajustes a cero, para ajustar el suelo después del cielo sin volver a trazar la zona.
+- **Eliminación trazada** (Retoque, Eliminar): arrastrar a lo largo de un cable, una
+  raya o un alambre lo borra de un solo gesto, sustituido por la foto de alrededor.
+  Sin IA.
+- **Tonos automáticos** (Luz, Tono, o `--auto-tone`): un clic ajusta la
+  exposición, el contraste, las altas luces y las sombras según el histograma de la
+  foto, un punto de partida para afinar. Sin IA.
+- **Reducción de ruido en las máscaras**: suavizar sombras levantadas o un cielo con
+  ruido con el pincel, manteniendo los contornos nítidos, sin suavizar el resto de la
+  foto.
+- **Nitidez en las máscaras**: realzar el detalle de una mirada o de una materia con
+  el pincel, o suavizar un fondo, sin tocar el resto de la foto.
+- **Interpolación cromática X‑Trans direccional** (Fujifilm): el verde sigue los
+  contornos en lugar de promediarlos de través, incluso en las sombras con ruido (3 dB
+  mejor en nuestras pruebas). Las copias de trabajo se rehacen una vez.
+- **Textura y Neblina en las máscaras**: suavizar una piel o un fondo con el pincel,
+  despejar un cielo brumoso en un degradado, sin tocar el resto de la foto.
 - **Ampliar si es necesario** (Exportar, Dimensiones, o `--enlarge`): un tamaño mayor
   que la foto la amplía, hasta cuatro veces cada lado, nítida y sin halos alrededor de
   los contornos; para copias grandes. Sin IA.
@@ -276,6 +316,9 @@ La fototeca profesional, paso a paso.
   exportada a otro tamaño o recomprimida, encontrada por su huella y mostrada grupo
   por grupo. **En lote**: con varias fotos elegidas, la valoración, la bandera y la
   etiqueta van a todas.
+- **Las copias virtuales en la fototeca**: aparecen también en «todas las fotos», las
+  búsquedas y las colecciones, con la fecha y la cámara de su original y su propia
+  valoración; una copia eliminada sale de ella.
 - **Apertura dos veces más rápida**: los niveles del sensor (negro, blanco) se
   normalizan directamente desde sus enteros, en todos los núcleos, sin copia previa
   a flotantes; NEF 145 → 67 ms, ARW 143 → 65, RW2 131 → 65, RAF 169 → 73, DNG
@@ -304,6 +347,13 @@ La fototeca profesional, paso a paso.
   reveladas (JPEG, HEIC, AVIF, PNG, WebP, TIFF) se lee como el de un RAW: fecha de la
   toma, cámara, objetivo, ajustes, posición GPS. Las fotos que ya están en la fototeca
   se vuelven a leer una vez.
+- **Un track GPX para situar las fotos** (`luma geotag --gpx track.gpx`): cada foto
+  toma la posición del track en el instante de la toma, escrita en su XMP; el desfase
+  del reloj de la cámara se indica con `--offset`. La fototeca y el mapa la muestran
+  enseguida.
+- **Situar una foto en el mapa a mano**: en el mapa, la foto mostrada que no tiene
+  posición enseña una mira en el centro; se arrastra el mapa debajo y «Situar aquí» la
+  escribe en su XMP y en la fototeca.
 - **Instrumentos de medida** (encima del histograma, o Mayús+J): **forma de onda**
   (la luminancia, columna por columna), **desfile RGB** (cada canal por separado) y
   **vectorscopio** (tono y saturación, con los objetivos de los primarios al 75 % y la
@@ -328,6 +378,9 @@ La fototeca profesional, paso a paso.
   `--restore` (el catálogo reemplazado se guarda antes). **Fotos que faltan**:
   `--missing` las lista, `--relocate antigua nueva` recupera una carpeta movida fuera de
   LÜMA, colecciones incluidas.
+- **Duplicados** (`luma catalog --duplicates`): las fotos repetidas del catálogo
+  (misma cámara, mismo instante, archivos del mismo tamaño y tipo, como una tarjeta
+  importada dos veces), listadas con el espacio que ocupan, sin borrar nada.
 - **Impresión** («Imprimir…» en las fotos seleccionadas, `luma print`): un PDF al
   tamaño exacto del papel (A4, A3, A3+, 10 × 15 cm…), vertical u horizontal, márgenes,
   una foto por página o una **hoja de contactos** (cuadrícula, nombre bajo cada foto),

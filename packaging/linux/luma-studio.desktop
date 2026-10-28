@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=LÜMA
+GenericName=Photo Editor
+GenericName[fr]=Développement photo
+GenericName[es]=Revelado fotográfico
+Comment=Develop your RAW photos
+Comment[fr]=Développez vos photos RAW
+Comment[es]=Revela tus fotos RAW
+Exec=luma-studio %f
+Icon=luma-studio
+Terminal=false
+StartupWMClass=luma-studio
+Categories=Graphics;Photography;RasterGraphics;
+Keywords=RAW;photo;film;develop;darkroom;
+Keywords[fr]=RAW;photo;pellicule;développer;chambre noire;
+Keywords[es]=RAW;foto;película;revelar;cuarto oscuro;
+MimeType=image/x-sony-arw;image/x-canon-cr2;image/x-canon-cr3;image/x-nikon-nef;image/x-fuji-raf;image/x-adobe-dng;image/x-olympus-orf;image/x-panasonic-rw2;image/x-pentax-pef;image/jpeg;image/png;image/tiff;

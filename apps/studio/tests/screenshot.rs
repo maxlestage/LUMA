@@ -750,6 +750,8 @@ fn library_catalog_views() {
         cat.set_collection(luma_library::Collection::smart("Bas ISO", "iso:..160").unwrap())
             .unwrap();
         cat.save(&dir.join("catalogue.lumacat")).unwrap();
+        // Une copie virtuelle : elle entre dans la photothèque comme dans le dossier.
+        std::fs::write(dir.join("_DSC0009.ARW.copie-2.xmp"), "").unwrap();
     };
     let Some(mut s) = Session::open_prepared("phototheque", [1440.0, 900.0], 1.0, prepare) else {
         return;
@@ -785,6 +787,10 @@ fn library_catalog_views() {
         .map(|e| file(&e.path))
         .collect();
     assert_eq!(names(&mut s), by_date);
+    assert!(
+        by_date.iter().any(|n| n == "_DSC0009.ARW.copie-2"),
+        "{by_date:?}"
+    );
     let mut by_name = by_date.clone();
     by_name.sort();
     assert_ne!(by_date, by_name, "le corpus n'est pas rangé par nom");
@@ -1276,6 +1282,60 @@ fn liquify() {
 }
 
 #[test]
+fn traced_removal() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("supprimer-trace") else {
+        return;
+    };
+    // Q ouvre la Retouche ; le premier « Supprimer » est l'outil.
+    s.keys(&[(NONE, Key::Q)]);
+    s.wait();
+    s.harness
+        .get_all_by_label("Supprimer")
+        .next()
+        .unwrap()
+        .click();
+    s.wait();
+    assert_eq!(s.studio().retouch, Some(luma_project::SpotKind::Remove));
+    // Un trait sur la photo, d'un geste.
+    let path: Vec<egui::Pos2> = (0..=12)
+        .map(|i| egui::pos2(380.0 + 30.0 * i as f32, 250.0 + 12.0 * i as f32))
+        .collect();
+    let (a, b) = (path[0], path[path.len() - 1]);
+    let mut events = vec![
+        egui::Event::PointerMoved(a),
+        egui::Event::PointerButton {
+            pos: a,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: NONE,
+        },
+    ];
+    events.extend(path[1..].iter().map(|p| egui::Event::PointerMoved(*p)));
+    events.push(egui::Event::PointerButton {
+        pos: b,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: NONE,
+    });
+    for e in events {
+        s.harness.input_mut().events.push(e);
+        s.harness.step();
+    }
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.spots.len(), 1);
+    let spot = &st.settings.spots[0];
+    assert_eq!(spot.kind, luma_project::SpotKind::Remove);
+    assert!(spot.path.len() >= 3, "{:?}", spot.path);
+    assert!(st.has_image());
+    s.capture("supprimer-trace");
+    // Annulable d'un coup.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert!(s.studio().settings.spots.is_empty());
+}
+
+#[test]
 fn sensor_dust() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("poussieres") else {
@@ -1620,6 +1680,99 @@ fn sky_mask() {
     s.wait();
     s.keys(&[(NONE, Key::O)]);
     s.capture("masque-ciel");
+}
+
+#[test]
+fn mask_texture_and_dehaze() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("masque-texture-voile") else {
+        return;
+    };
+    // Maj+M : un dégradé radial.
+    s.keys(&[(Modifiers::SHIFT, Key::M)]);
+    s.wait();
+    // Les curseurs du masque, à côté de la Clarté.
+    assert!(s.harness.query_all_by_label("Texture").next().is_some());
+    assert!(
+        s.harness
+            .query_all_by_label("Correction du voile")
+            .next()
+            .is_some()
+    );
+    assert!(s.harness.query_all_by_label("Netteté").next().is_some());
+    assert!(
+        s.harness
+            .query_all_by_label("Réduction du bruit")
+            .next()
+            .is_some()
+    );
+    let st = s.studio();
+    assert_eq!(st.settings.masks.len(), 1);
+    st.settings.masks[0].local.sharpness = 40.0;
+    st.settings.masks[0].local.noise = 50.0;
+    st.settings.masks[0].local.texture = -60.0;
+    st.settings.masks[0].local.dehaze = 50.0;
+    s.wait();
+    assert!(s.studio().has_image());
+    s.capture("masque-texture-voile");
+}
+
+#[test]
+fn auto_tone() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("tons-auto") else {
+        return;
+    };
+    // La veste du RW2, nettement sous‑exposée.
+    let rw2 = s.dir.join("P1000951.RW2");
+    s.studio().open_path(&rw2);
+    s.wait();
+    s.studio().tool = luma_studio::app::Tool::Light;
+    s.wait();
+    s.harness.get_by_label("Tons auto").click();
+    s.wait();
+    let st = s.studio();
+    assert!(
+        st.settings.exposure > 0.3,
+        "exposition {}",
+        st.settings.exposure
+    );
+    assert!(st.has_image());
+    s.capture("tons-auto");
+    // Annulable d'un coup.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.exposure, 0.0);
+}
+
+#[test]
+fn mask_duplicate() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("masque-duplique") else {
+        return;
+    };
+    // Maj+M : un dégradé radial, assombri.
+    s.keys(&[(Modifiers::SHIFT, Key::M)]);
+    s.wait();
+    s.studio().settings.masks[0].local.exposure = -1.0;
+    s.wait();
+    s.harness.get_by_label("Dupliquer").click();
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.masks.len(), 2);
+    assert_eq!(st.settings.masks[1], st.settings.masks[0]);
+    assert_eq!(st.selected_mask, Some(1));
+    // La copie inversée : tout le reste, réglages à zéro.
+    s.harness.get_by_label("Dupliquer inversé").click();
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.masks.len(), 3);
+    let (a, b) = (&st.settings.masks[1], &st.settings.masks[2]);
+    assert_eq!(a.shape, b.shape);
+    assert!(b.invert != a.invert && b.local.is_neutral());
+    s.capture("masque-duplique");
+    // Annulable.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.masks.len(), 2);
 }
 
 #[test]
@@ -2197,6 +2350,36 @@ fn map_of_geotagged_photos() {
     s.wait();
     assert!(s.studio().map_tiles() >= 4, "{}", s.studio().map_tiles());
     s.capture("carte");
+
+    // La photo affichée n'a pas de position : le viseur et le bouton la placent au
+    // centre de la carte, dans son XMP et dans la photothèque.
+    let current = s.studio().current_path().unwrap().to_path_buf();
+    if s.studio()
+        .catalog()
+        .get(&current)
+        .is_some_and(|e| e.gps.is_none())
+    {
+        let name = current.file_name().unwrap().to_string_lossy().into_owned();
+        s.harness
+            .get_by_label(&format!("Placer « {name} » ici"))
+            .click();
+        s.harness.step();
+        s.harness.step();
+        let gps = s.studio().catalog().get(&current).unwrap().gps.unwrap();
+        let expected = luma_library::map::unproject(view.center);
+        assert!((gps[0] - expected[0]).abs() < 1e-6 && (gps[1] - expected[1]).abs() < 1e-6);
+        let side = std::fs::read_to_string(luma_project::xmp::sidecar_path(&current)).unwrap();
+        assert!(
+            luma_project::xmp::read_meta(&side).position.is_some(),
+            "{side}"
+        );
+        assert!(
+            s.harness
+                .query_by_label(&format!("Placer « {name} » ici"))
+                .is_none(),
+            "placée : plus de bouton"
+        );
+    }
 
     // Toucher le groupe de Paris : ses deux photos dans la grille.
     let paris = groups.iter().find(|g| g.1 == 2).unwrap().0;

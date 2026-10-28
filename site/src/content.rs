@@ -4,7 +4,7 @@
 use crate::i18n::{Lang, t};
 
 pub const TITLE: &str = "LÜMA — L'éditeur photo qui développe la lumière";
-pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone et iPad. 14 jours d'essai.";
+pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad et Linux. 14 jours d'essai.";
 
 pub const NAV: [(&str, &str); 6] = [
     ("#etapes", "Fonctions"),
@@ -41,7 +41,7 @@ pub const PREMIUM: [&str; 6] = [
     "Masques, films empilés, recadrage et géométrie",
     "Empilements, HDR, mise au point, ciel étoilé, panoramas en DNG",
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
-    "Sur Mac, avec toutes les mises à jour",
+    "Sur Mac et Linux, avec toutes les mises à jour",
 ];
 
 pub const MARQUEE: [&str; 9] = [
@@ -234,23 +234,23 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Faut‑il un compte ou une connexion ?",
-        "Non. LÜMA fonctionne sans compte. Sur Mac, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.",
+        "Non. LÜMA fonctionne sans compte. Sur Mac et Linux, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.",
     ),
     (
         "Que se passe‑t‑il après l'essai ?",
-        "Tout est ouvert pendant l'essai : 14 jours sur Mac, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.",
+        "Tout est ouvert pendant l'essai : 14 jours sur Mac et Linux, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.",
     ),
     (
         "Où acheter LÜMA ?",
-        "Sur Mac, uniquement sur ce site, par abonnement. Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.",
+        "Sur Mac et Linux, uniquement sur ce site, par abonnement (le même vaut pour les deux). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.",
     ),
     (
         "Où vont mes photos exportées sur iPhone ?",
         "Dans la Pellicule de l'app Photos, telles quelles, avec leurs informations de prise de vue et leur profil de couleur ; une copie reste aussi dans l'app Fichiers.",
     ),
     (
-        "Et Windows, Linux ou Android ?",
-        "Ils viendront après les appareils Apple, avec le même moteur : une photo aura le même rendu partout.",
+        "Et Linux, Windows ou Android ?",
+        "Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu, avec le même abonnement que sur Mac. Windows et Android viendront ensuite, avec le même moteur : une photo aura le même rendu partout.",
     ),
 ];
 
@@ -290,8 +290,13 @@ pub const PLATFORMS: [(&str, &str, &str, bool); 6] = [
         "Apple Pencil, gestes, Stage Manager.",
         true,
     ),
+    (
+        "Linux",
+        "Disponible",
+        "Archive ou paquet .deb, le même rendu que sur Mac.",
+        true,
+    ),
     ("Windows", "Plus tard", "Le même rendu que sur Mac.", false),
-    ("Linux", "Plus tard", "Le même rendu que sur Mac.", false),
     (
         "Android",
         "Plus tard",
@@ -722,7 +727,7 @@ pub const LEGAL: [Legal; 3] = [
                     "Deux formules : Mensuel, 19,99 € par mois, et Annuel, 239,88 € par an (TVA comprise). L'abonnement se renouvelle automatiquement à la fin de chaque période.",
                     "Après le paiement, votre clé de licence s'affiche sur le site (gardez l'adresse de la page : elle redonne la clé à tout moment). Saisissez‑la dans LÜMA (puce « Essai » en haut de l'app) ; elle vaut pour vos propres appareils, pour votre usage personnel ou professionnel.",
                     "La clé est valable jusqu'à la fin de la période payée, plus 14 jours. En ligne, l'app la renouvelle d'elle‑même chaque jour tant que l'abonnement court.",
-                    "Sur Mac, LÜMA Premium s'achète uniquement sur ce site, payé par Stripe ; il n'est pas vendu sur le Mac App Store. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store, par un abonnement intégré distinct de l'abonnement Mac : il est facturé par Apple, aux prix affichés dans l'App Store, et se gère ou se résilie dans les réglages de votre compte Apple. Les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac.",
+                    "Sur Mac et Linux, LÜMA Premium s'achète uniquement sur ce site, par un abonnement payé par Stripe ; il n'est pas vendu sur le Mac App Store. Sur iPhone et iPad (iOS et iPadOS), il s'achète uniquement dans l'App Store, en un achat unique distinct de l'abonnement Mac et Linux : il est facturé par Apple, au prix affiché dans l'App Store, et se restaure sur vos autres iPhone et iPad avec le même compte Apple. Les articles Paiement et Résiliation ci‑dessous concernent l'abonnement Mac et Linux.",
                 ],
             ),
             (
@@ -744,7 +749,7 @@ pub const LEGAL: [Legal; 3] = [
                 "evolutions",
                 "Mises à jour",
                 &[
-                    "Toutes les mises à jour de LÜMA sont comprises dans l'abonnement, sur Mac, iPhone et iPad. Une modification des prix est annoncée au moins 30 jours à l'avance et ne s'applique qu'au renouvellement suivant.",
+                    "Toutes les mises à jour de LÜMA sont comprises dans LÜMA Premium, sur Mac, Linux, iPhone et iPad. Une modification des prix de l'abonnement est annoncée au moins 30 jours à l'avance et ne s'applique qu'au renouvellement suivant.",
                 ],
             ),
             (

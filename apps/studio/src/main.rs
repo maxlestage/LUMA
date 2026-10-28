@@ -119,7 +119,10 @@ fn main() -> eframe::Result {
         }));
         viewport = viewport
             .with_inner_size([1440.0, 900.0])
-            .with_min_inner_size([1024.0, 640.0]);
+            .with_min_inner_size([1024.0, 640.0])
+            // Sous Linux, le nom qui relie la fenêtre à son lanceur (luma-studio.desktop) :
+            // l'icône et le nom de LÜMA dans le dock et le sélecteur de fenêtres.
+            .with_app_id("luma-studio");
     }
     // Le GPU : on demande ce que l'adaptateur offre vraiment, pas les limites par
     // défaut de wgpu (que le Metal du simulateur iOS, par exemple, n'atteint pas).

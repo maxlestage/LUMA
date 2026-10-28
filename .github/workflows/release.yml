@@ -1,7 +1,7 @@
 # Une version de LÜMA à télécharger : à chaque étiquette v… (ex. v0.1.0), l'app Mac
 # universelle, l'app iPhone et iPad (non signée, à signer avec un compte Apple
-# Developer) et la ligne de commande `luma` (Mac et Linux) sont construites et
-# publiées dans une Release GitHub.
+# Developer), l'app Linux (archive et paquet .deb) et la ligne de commande `luma`
+# sont construites et publiées dans une Release GitHub.
 
 name: Release
 
@@ -64,21 +64,20 @@ jobs:
 
   linux:
     name: Linux
-    runs-on: ubuntu-latest
+    # Le plus ancien Ubuntu de GitHub : l'app tourne sur glibc 2.35 et plus.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: luma et LÜMA Studio (x86_64)
-        run: |
-          cargo build --release -p luma-cli -p luma-studio
-          mkdir -p out/luma-linux
-          cp target/release/luma target/release/luma-studio out/luma-linux/
-          tar -C out -czf out/luma-linux-x86_64.tar.gz luma-linux
+      - name: "LÜMA pour Linux (x86_64), archive et paquet .deb"
+        run: scripts/bundle-linux.sh
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: out/luma-linux-x86_64.tar.gz
+          path: |
+            target/linux/LUMA-linux-x86_64.tar.gz
+            target/linux/LUMA-linux-amd64.deb
 
   publish:
     name: Publier la Release
@@ -96,11 +95,13 @@ jobs:
         run: |
           case "$TAG" in v[0-9]*) ;; *) echo "version invalide : $TAG"; exit 1 ;; esac
           find dist -type f
-          notes="LÜMA ${TAG#v} — 14 jours d'essai, puis LÜMA Premium (9,99 € par mois ou 79,99 € par an).
+          notes="LÜMA ${TAG#v} — sur Mac et Linux, 14 jours d'essai puis LÜMA Premium (19,99 € par mois ou 239,88 € par an) ; sur iPhone et iPad, un mois d'essai puis 89,99 € une fois pour toutes.
 
-          - **LUMA-macos.zip** : l'app pour Mac (Apple Silicon et Intel, macOS 11+). Premier lancement : clic droit sur LÜMA, puis Ouvrir.
+          - **LUMA-macos.zip** : l'app pour Mac (Apple Silicon et Intel, macOS 11+).
+          - **LUMA-linux-x86_64.tar.gz** : l'app pour Linux, avec la ligne de commande \`luma\` ; \`./install.sh\` l'installe sans mot de passe.
+          - **LUMA-linux-amd64.deb** : la même, pour Debian et Ubuntu (\`sudo apt install ./LUMA-linux-amd64.deb\`).
           - **LUMA-ios-device.zip** : l'app pour iPhone et iPad, non signée (à signer pour l'installer).
-          - **luma-cli-macos.zip**, **luma-linux-x86_64.tar.gz** : la ligne de commande \`luma\` (et LÜMA Studio pour Linux)."
+          - **luma-cli-macos.zip** : la ligne de commande \`luma\` pour Mac."
           files=$(find dist -type f)
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" $files --clobber --repo "$GITHUB_REPOSITORY"

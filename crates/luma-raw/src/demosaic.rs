@@ -6,8 +6,9 @@
 //!   contours au lieu de les croiser, sans « fermeture éclair ». Puis rouge et bleu par
 //!   les différences de couleur au vert, qui varient lentement. Malvar‑He‑Cutler (2004,
 //!   filtres linéaires 5×5, une seule passe) reste disponible ([`bayer_mhc`]).
-//! - X‑Trans : le vert d'abord (moyenne des verts voisins), puis rouge et bleu par
-//!   interpolation des différences de couleur, pondérée par la distance.
+//! - X‑Trans : le vert d'abord (moyenne des verts voisins), repris dans le sens des
+//!   contours (chaque voisin pondéré par la régularité de sa direction), puis rouge et
+//!   bleu par interpolation des différences de couleur, pondérée par la distance.
 //! - Réduction : chaque bloc du motif devient un pixel, sans interpolation.
 //!
 //! Les bords sont prolongés par réflexion d'ordre 2, ce qui garde la parité du motif.
@@ -202,6 +203,12 @@ fn xtrans_tables(cfa: &Cfa) -> Vec<[Neighbors; 3]> {
 }
 
 pub fn xtrans(raw: &[f32], w: usize, h: usize, cfa: &Cfa) -> RgbImage {
+    xtrans_with(raw, w, h, cfa, true)
+}
+
+/// Le dématriçage X‑Trans, le vert repris dans le sens des contours ou non (le calcul
+/// d'avant, gardé pour les essais).
+fn xtrans_with(raw: &[f32], w: usize, h: usize, cfa: &Cfa, directional: bool) -> RgbImage {
     let tables = xtrans_tables(cfa);
     let phase = |x: usize, y: usize| (y % cfa.height) * cfa.width + (x % cfa.width);
     // 1. Le vert partout.
@@ -236,6 +243,12 @@ pub fn xtrans(raw: &[f32], w: usize, h: usize, cfa: &Cfa) -> RgbImage {
             *g = if n > 0.0 { sum / n } else { own };
         }
     });
+    // 1 bis. Le vert repris dans le sens des contours.
+    let green = if directional {
+        directional_green(raw, &green, w, h, cfa, &tables)
+    } else {
+        green
+    };
     // 2. Rouge et bleu : différences de couleur au vert, voisinage 5×5.
     let mut out = RgbImage::new(w, h);
     out.data.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
@@ -271,6 +284,39 @@ pub fn xtrans(raw: &[f32], w: usize, h: usize, cfa: &Cfa) -> RgbImage {
                 rgb[c] = g + if n > 0.0 { sum / n } else { 0.0 };
             }
             *px = [rgb[0].max(0.0), rgb[1].max(0.0), rgb[2].max(0.0)];
+        }
+    });
+    out
+}
+
+/// Le vert X‑Trans repris dans le sens des contours : chaque vert voisin compte
+/// d'autant moins que le premier vert (`g0`, la moyenne des voisins) varie dans sa
+/// direction, de part et d'autre du pixel et un pas plus loin. Un contour n'est plus
+/// moyenné en travers ; dans un aplat, les poids s'égalisent et le bruit reste moyenné.
+/// Le seuil suit le niveau local, pour les ombres comme pour les hautes lumières.
+fn directional_green(raw: &[f32], g0: &[f32], w: usize, h: usize, cfa: &Cfa, tables: &[[Neighbors; 3]]) -> Vec<f32> {
+    let phase = |x: usize, y: usize| (y % cfa.height) * cfa.width + (x % cfa.width);
+    let mut out = g0.to_vec();
+    out.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+        if y < 2 || y + 2 >= h {
+            return;
+        }
+        for (x, g) in row.iter_mut().enumerate() {
+            if x < 2 || x + 2 >= w || cfa.color(x, y) == 1 {
+                continue;
+            }
+            let at = |dx: isize, dy: isize| g0[(y as isize + dy) as usize * w + (x as isize + dx) as usize];
+            let eps = 0.1 * (at(0, 0).max(0.0) + 0.002);
+            let (mut sum, mut n) = (0.0f32, 0.0f32);
+            for &(dx, dy, base) in &tables[phase(x, y)][0] {
+                let grad = (at(dx, dy) - at(-dx, -dy)).abs() + (at(2 * dx, 2 * dy) - at(0, 0)).abs();
+                let wgt = base / ((grad + eps) * (grad + eps));
+                sum += raw[(y as isize + dy) as usize * w + (x as isize + dx) as usize] * wgt;
+                n += wgt;
+            }
+            if n > 0.0 {
+                *g = sum / n;
+            }
         }
     });
     out
@@ -420,6 +466,47 @@ mod tests {
             psnr(e_fine),
             psnr(e_linear)
         );
+    }
+
+    #[test]
+    fn xtrans_follows_edges_without_hurting_flat_or_noisy_areas() {
+        let cfa = Cfa::parse("GGRGGBGGBGGRBRGRBGGGBGGRGGRGGBRBGBRG", 6, 6).unwrap();
+        let (w, h) = (240, 180);
+        let psnr = |e: f64, peak: f64| 10.0 * (peak * peak / e).log10();
+        let noise = |raw: &mut [f32], k: usize, amount: f32| {
+            for (i, v) in raw.iter_mut().enumerate() {
+                let n = ((i.wrapping_mul(k) as u32) >> 8) as f32 / 16_777_216.0 - 0.5;
+                *v += amount * n;
+            }
+        };
+        let both = |raw: &[f32], truth: &RgbImage, peak: f64| {
+            (
+                psnr(error(&xtrans(raw, w, h, &cfa), truth), peak),
+                psnr(error(&xtrans_with(raw, w, h, &cfa, false), truth), peak),
+            )
+        };
+        // Des contours nets : bien mieux.
+        let edges = edges(w, h);
+        let (new, old) = both(&mosaic(&edges, &cfa), &edges, 1.0);
+        assert!(new > old + 2.5, "contours {new:.2} / {old:.2} dB");
+        // Les mêmes, dix fois plus sombres et bruités : mieux aussi.
+        let dark = RgbImage::from_fn(w, h, |x, y| edges.pixel(x, y).map(|v| v * 0.1));
+        let mut raw = mosaic(&dark, &cfa);
+        noise(&mut raw, 2_246_822_519, 0.004);
+        let (new, old) = both(&raw, &dark, 0.1);
+        assert!(new > old + 2.0, "sombre {new:.2} / {old:.2} dB");
+        // Une image douce, propre puis bruitée : presque rien de perdu.
+        let smooth = RgbImage::from_fn(w, h, |x, y| {
+            let (fx, fy) = (x as f32 / w as f32, y as f32 / h as f32);
+            let t = 0.4 + 0.3 * (fx * 9.0).sin() * (fy * 7.0).cos();
+            [t, 0.5 * t + 0.2 * fx, 0.3 + 0.2 * fy]
+        });
+        let mut raw = mosaic(&smooth, &cfa);
+        let (new, old) = both(&raw, &smooth, 1.0);
+        assert!(new > 60.0 && new > old - 1.0, "douce {new:.2} / {old:.2} dB");
+        noise(&mut raw, 2_654_435_761, 0.03);
+        let (new, old) = both(&raw, &smooth, 1.0);
+        assert!(new > old - 0.3, "bruitée {new:.2} / {old:.2} dB");
     }
 
     #[test]
