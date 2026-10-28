@@ -28,7 +28,8 @@ The professional photo library, step by step.
   and 144 MB less memory, same bytes. Then batch export with a logo: the logo is read
   once for the whole batch (40 ms less per photo for a 1200 × 600 logo). Then the
   conversion to the output space (JPEG), eight pixels at a time: 24 MP in sRGB 230 →
-  150 ms, same bytes.
+  150 ms, same bytes; and for 16-bit TIFF and PNG: sRGB about 35% shorter (24 MP:
+  295–366 → 190–204 ms), same bytes.
   Then wavelet noise reduction, without a new image at each scale: 1.8 times faster
   (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
   shorter (0.83 → 0.60 s), same pixels. Then the edge-following filter (Shadows,

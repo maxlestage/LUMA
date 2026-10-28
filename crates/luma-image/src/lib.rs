@@ -641,12 +641,23 @@ pub fn encode16_bytes(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
     out.par_chunks_mut(6 * img.width.max(1))
         .zip(img.data.par_chunks(img.width.max(1)))
         .for_each(|(dst, src)| {
-            for (d, &p) in dst.as_chunks_mut::<6>().0.iter_mut().zip(src) {
-                let c = to_output(&m, p);
+            let write = |d: &mut [u8; 6], c: [f32; 3]| {
                 for i in 0..3 {
                     let v = (space.encode(c[i]) * 65535.0 + 0.5) as u16;
                     d[2 * i..2 * i + 2].copy_from_slice(&v.to_ne_bytes());
                 }
+            };
+            // Huit pixels à la fois, puis le reste de la ligne un par un.
+            let dst = dst.as_chunks_mut::<6>().0;
+            let (blocks, rest) = src.as_chunks::<LANES>();
+            let (head, tail) = dst.split_at_mut(blocks.len() * LANES);
+            for (d, p) in head.as_chunks_mut::<LANES>().0.iter_mut().zip(blocks) {
+                for (d, c) in d.iter_mut().zip(to_output_lanes(&m, p)) {
+                    write(d, c);
+                }
+            }
+            for (d, &p) in tail.iter_mut().zip(rest) {
+                write(d, to_output(&m, p));
             }
         });
     out
