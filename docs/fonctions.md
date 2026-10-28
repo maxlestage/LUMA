@@ -28,6 +28,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Profils fabricant | ⏳ |
 | Base | Balance des blancs telle quelle, température et teinte (échelle DNG) | ✅ |
 | | Balance automatique, préréglages (lumière du jour, nuageux, ombre, tungstène, fluorescent, flash), pipette (W) | ✅ |
+| | Tons automatiques (« Tons auto », `--auto-tone`) : exposition, contraste, hautes lumières et ombres lus sur l'histogramme de la photo, sans IA | ✅ |
 | | Exposition, Contraste | ✅ |
 | | Hautes lumières, Ombres (adaptatifs à l'image) | ✅ |
 | | Blancs, Noirs (adaptatifs : amènent les vrais extrêmes de la photo au blanc et au noir) | ✅ |
