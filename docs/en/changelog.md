@@ -330,7 +330,8 @@ The professional photo library, step by step.
   offset is given with `--offset`. The library and the map show it at once.
 - **Place a photo on the map by hand**: on the map, the displayed photo that has no
   position shows a crosshair in the centre; drag the map under it, then “Place here”
-  writes it to its XMP and to the library.
+  writes it to its XMP and to the library. The chosen photos that have no position are
+  placed at once (“Place the 12 photos here”).
 - **Scopes** (above the histogram, or Shift+J): **waveform** (luminance, column by
   column), **RGB parade** (each channel on its own) and **vectorscope** (hue and
   saturation, with the 75% primary targets and the skin‑tone line), computed on the
