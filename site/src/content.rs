@@ -6,11 +6,12 @@ use crate::i18n::{Lang, t};
 pub const TITLE: &str = "LÜMA — L'éditeur photo qui développe la lumière";
 pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad et Linux. 14 jours d'essai.";
 
-pub const NAV: [(&str, &str); 6] = [
+pub const NAV: [(&str, &str); 7] = [
     ("#etapes", "Fonctions"),
     ("#films", "Films"),
     ("#labo", "Essayer"),
     ("#apple", "Apple"),
+    ("#bureau", "Linux · Windows"),
     ("#questions", "Questions"),
     ("#tarifs", "Tarifs"),
 ];
@@ -242,7 +243,7 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Où acheter LÜMA ?",
-        "Sur Mac et Linux, uniquement sur ce site, par abonnement (le même vaut pour les deux). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.",
+        "Sur Mac, Linux et Windows, uniquement sur ce site, par abonnement (le même vaut pour les trois). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.",
     ),
     (
         "Où vont mes photos exportées sur iPhone ?",
@@ -250,7 +251,7 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Et Linux, Windows ou Android ?",
-        "Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu, avec le même abonnement que sur Mac. Windows et Android viendront ensuite, avec le même moteur : une photo aura le même rendu partout.",
+        "Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu (x86_64, avec un pilote Vulkan). Windows arrive : un installateur et une archive .zip pour Windows 10 et 11, avec DirectX 12 ou Vulkan. Les deux avec le même abonnement que sur Mac. Android viendra ensuite, avec le même moteur : une photo aura le même rendu partout.",
     ),
 ];
 
@@ -298,9 +299,9 @@ pub const PLATFORMS: [(&str, &str, &str, bool); 6] = [
     ),
     (
         "Windows",
-        "En préparation",
-        "Build x86_64 et paquet en chantier ; le même rendu que sur Mac.",
-        true,
+        "Bientôt",
+        "Windows 10 et 11 : installateur ou archive .zip, le même rendu que sur Mac.",
+        false,
     ),
     (
         "Android",
@@ -308,40 +309,6 @@ pub const PLATFORMS: [(&str, &str, &str, bool); 6] = [
         "Le même rendu que sur iPhone.",
         false,
     ),
-];
-
-/// Un système de bureau hors Apple, pour la section « Sur votre bureau » :
-/// (nom, phase, chapeau, points clés). Le même moteur et le même rendu que sur Mac.
-pub struct System {
-    pub name: &'static str,
-    pub phase: &'static str,
-    pub lede: &'static str,
-    pub points: &'static [&'static str],
-}
-
-pub const SYSTEMS: [System; 2] = [
-    System {
-        name: "Linux",
-        phase: "Disponible",
-        lede: "L'archive s'installe sans mot de passe, le paquet .deb comme n'importe quel logiciel.",
-        points: &[
-            "Archive .tar.gz posée dans votre dossier avec install.sh, ou paquet .deb pour Debian et Ubuntu.",
-            "Le rendu sur le processeur graphique en Vulkan, pixel pour pixel celui du Mac.",
-            "La ligne de commande « luma » comprise : info, développement, export et XMP.",
-            "Le même abonnement que sur Mac : une seule clé pour les deux.",
-        ],
-    },
-    System {
-        name: "Windows",
-        phase: "En préparation",
-        lede: "Le même moteur que sur Mac, en chantier pour Windows 10 et 11 (x86_64).",
-        points: &[
-            "Build x86_64 fabriqué à chaque version, avec le rendu sur le processeur graphique (Vulkan, puis Direct3D).",
-            "Installation sans droits administrateur et raccourci au menu Démarrer, ou l'archive .zip à décompresser.",
-            "La ligne de commande « luma.exe », comme sur Mac et Linux.",
-            "Une photo ouverte sur Windows aura le même rendu que sur Mac et Linux.",
-        ],
-    },
 ];
 
 pub struct Crate {

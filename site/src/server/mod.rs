@@ -634,6 +634,24 @@ mod tests {
         // Le téléchargement est fermé tant que LUMA_DOWNLOADS ne vaut pas 1.
         assert!(!html.contains("/download/LUMA-macos.zip") && !html.contains("Télécharger"));
         assert!(!html.contains("/download/LUMA-linux"));
+        // Linux et Windows : la scène 3D, puis une carte par système, avec ce qu'il faut.
+        for id in ["bureau", "desktop-stage", "systems-gl", "linux", "windows"] {
+            assert!(html.contains(&format!(r#"id="{id}""#)), "section {id}");
+        }
+        for need in [
+            "glibc 2.35",
+            "Un pilote Vulkan",
+            "Windows 10 ou Windows 11",
+            "DirectX 12 ou Vulkan",
+        ] {
+            assert!(html.contains(need), "configuration : {need}");
+        }
+        assert!(html.contains(r##"href="/#bureau""##), "le lien de la barre");
+        assert!(html.contains("Mac, iPhone, iPad, Linux et Windows"));
+        // Windows sans fichiers (et téléchargement fermé) : « Bientôt », sans lien.
+        assert!(html.contains("Bientôt sur Windows") && html.contains("Windows, <em>bientôt</em>"));
+        assert!(!html.contains("/download/LUMA-windows"));
+        assert!(!pages::windows_open());
         assert!(
             html.contains(r#"<span class="brand-mark"><svg"#),
             "le logo de la barre"
@@ -656,6 +674,13 @@ mod tests {
         assert_eq!(m.matches(r#""form_factor""#).count(), 2, "deux captures");
         let sw = client.get("/sw.js").await.text();
         assert!(sw.contains("const PRECACHE = [\"/\"") && sw.contains("/site.css?v="));
+        // Chaque module des scènes, à la version de scenes.js.
+        for module in ["scenes", "hero", "devices", "screen", "systems"] {
+            assert!(
+                sw.contains(&format!("/js/{module}.js?v=")),
+                "{module}.js hors du cache"
+            );
+        }
         assert!(!sw.contains("__"), "gabarit rempli");
         let home = client.get("/").await.text();
         assert!(home.contains(r#"rel="manifest""#) && home.contains("serviceWorker"));
@@ -813,6 +838,11 @@ mod tests {
             en.contains(r#"href="/en/#tarifs""#) && en.contains(r#"href="/en/docs/fonctions/""#)
         );
         assert!(en.contains(r#"href="/en/mentions-legales/""#));
+        assert!(
+            en.contains("The same LÜMA, <em>on your PC</em>.")
+                && en.contains("Coming soon to Windows")
+                && en.contains("A Vulkan driver")
+        );
         // Des textes français qui ne doivent pas rester sur la page anglaise.
         for french in [
             "Télécharger",
@@ -839,6 +869,11 @@ mod tests {
         assert!(es.contains("<title>LÜMA — El editor de fotos que revela la luz</title>"));
         assert!(es.contains(">19,99</i> €") && es.contains("al mes"));
         assert!(es.contains(r#"data-props="es""#));
+        assert!(
+            es.contains("El mismo LÜMA, <em>en tu PC</em>.")
+                && es.contains("Muy pronto en Windows")
+                && es.contains("DirectX 12 o Vulkan")
+        );
         for french in [
             "Télécharger",
             "Feuille de route",
