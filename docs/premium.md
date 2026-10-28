@@ -45,7 +45,17 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
   Store (dans la devise de l'acheteur), « Acheter » et « Restaurer les achats ». L'achat
   (ou sa restauration) est enregistré dans `licence.json` et n'expire jamais
   (`Plan::Lifetime`). Le partage familial est activé. Les clés de licence n'y comptent
-  pas (et l'app Mac ignore l'App Store).
+  pas (et l'app Mac ignore l'App Store), sauf les clés offertes.
+- **Accès offert** (`LUMA_OFFERTS`, sur Heroku : `courriel:code`, séparés par des
+  virgules) : sur ordinateur, la personne tape son courriel et son code sur
+  `/licence/offert/` et reçoit sa clé. Sur iPhone et iPad, elle touche **« Se connecter
+  avec Apple »** dans l'écran Premium (`luma_apple::signin`) : l'app envoie le jeton
+  d'identité d'Apple à `POST /api/licence/apple`, le serveur vérifie sa signature
+  (clés publiques d'Apple), son destinataire (`app.luma.studio`) et le courriel
+  vérifié, puis rend une clé offerte si ce courriel est dans la liste (le code n'est
+  pas demandé : Apple a prouvé le courriel). Une adresse masquée (relais d'Apple) n'est
+  pas acceptée. La clé se renouvelle chaque jour comme les autres ; retiré de la liste,
+  l'accès s'arrête au plus tard 44 jours après.
 - La ligne de commande `luma` reste libre.
 
 ## Ouvrir l'App Store (iPhone et iPad, une fois)
@@ -54,12 +64,15 @@ Les prix affichés sont dans `crates/luma-licence/src/lib.rs` (l'app) et
    intégrés** : « LÜMA Premium à vie », non consommable, identifiant
    `app.luma.studio.premium.lifetime`, 89,99 € (territoire de référence : France), en
    vente dans tous les pays, nom et description en français, anglais et espagnol. Créé
-   par l'API App Store Connect le 27 octobre 2026 ; pour le soumettre, Apple demande
-   encore une capture de l'écran d'achat (pour la vérification).
+   par l'API App Store Connect le 27 octobre 2026, avec sa capture pour la
+   vérification le 28 octobre : « Prêt à soumettre », à envoyer avec la version 1.0.
 
    Un autre identifiant ? Le donner à la compilation : variable `LUMA_APPSTORE_LIFETIME`.
 2. Accords, taxes et coordonnées bancaires : l'accord « Applications payantes » signé.
-3. Pour essayer sans payer : un compte **Sandbox** (Utilisateurs et accès → Sandbox),
+3. « Se connecter avec Apple » : la capacité est activée sur l'identifiant
+   `app.luma.studio` (`scripts/asc.py bundle-id` s'en assure à chaque envoi), et le
+   profil en porte le droit `com.apple.developer.applesignin`.
+4. Pour essayer sans payer : un compte **Sandbox** (Utilisateurs et accès → Sandbox),
    puis l'app installée par TestFlight sur un iPhone ou un iPad.
 
 ## Ouvrir la boutique (une fois)

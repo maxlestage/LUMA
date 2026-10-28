@@ -7,13 +7,15 @@
 //! devine.
 //!
 //! - `/licence/offert/` : la personne tape son courriel et son code, et reçoit sa clé ;
+//! - `POST /api/licence/apple` : sur iPhone et iPad, « Se connecter avec Apple » ; le
+//!   courriel prouvé par Apple remplace le code (voir `apple`) ;
 //! - `POST /api/licence` : la clé se renouvelle (30 jours de plus) tant que le courriel
 //!   est dans la liste ; retiré, l'accès s'arrête à la fin de la clé en cours.
 
 use luma_licence::{Claims, DAY, GRACE_DAYS, Plan};
 
 /// L'« abonnement » d'une clé offerte.
-pub const SUB: &str = "offert";
+pub const SUB: &str = luma_licence::OFFERED;
 
 /// La durée d'une clé offerte, renouvelée chaque jour par l'app.
 const PERIOD_DAYS: u64 = 30;
@@ -77,6 +79,19 @@ pub fn key(
     Ok(sign(&email, seed, now))
 }
 
+/// La clé du courriel `email`, déjà prouvé (par Apple), s'il est dans la liste.
+pub fn key_for_verified(
+    list: &str,
+    seed: &[u8; 32],
+    email: &str,
+    now: u64,
+) -> Result<(Claims, String), String> {
+    if !listed(list, email) {
+        return Err(format!("aucun accès offert pour {}", normalize(email)));
+    }
+    Ok(sign(email, seed, now))
+}
+
 /// Une clé fraîche pour la clé offerte `key` ; `None` si ce n'est pas une clé offerte
 /// (une clé d'abonnement, que Stripe renouvelle).
 pub fn renew(list: &str, seed: &[u8; 32], key: &str, now: u64) -> Option<Result<String, String>> {
@@ -128,6 +143,18 @@ mod tests {
             );
         }
         assert!(key("", &SEED, "alice@exemple.fr", "K7Q2-PX9M", 1000).is_err());
+    }
+
+    #[test]
+    fn an_email_proven_by_apple_needs_no_code() {
+        let (claims, _) = key_for_verified(LIST, &SEED, "Bob@Exemple.fr", 1000).unwrap();
+        assert_eq!(
+            (claims.sub.as_str(), claims.email.as_str()),
+            (SUB, "bob@exemple.fr")
+        );
+        // Une entrée sans code n'est pas un accès ; un inconnu non plus.
+        assert!(key_for_verified(LIST, &SEED, "sans-code@exemple.fr", 1000).is_err());
+        assert!(key_for_verified(LIST, &SEED, "eve@exemple.fr", 1000).is_err());
     }
 
     #[test]

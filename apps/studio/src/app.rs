@@ -6054,7 +6054,19 @@ impl Studio {
         ui.add_space(16.0);
         if app_store {
             // L'App Store : restaurer un abonnement, le gérer dans les Réglages.
-            if matches!(access, Access::Premium { .. }) {
+            if let Access::Premium {
+                email: Some(email), ..
+            } = &access
+            {
+                ui.label(
+                    RichText::new(trf(
+                        "LÜMA Premium vous est offert ({email}) : sur vos autres iPhone et iPad, « Se connecter avec Apple » avec le même compte.",
+                        &[("email", email)],
+                    ))
+                    .size(12.5)
+                    .color(theme::DIM),
+                );
+            } else if matches!(access, Access::Premium { .. }) {
                 ui.label(
                     RichText::new(tr(
                         "LÜMA Premium est à vous, pour toujours : sur vos autres iPhone et iPad, « Restaurer les achats » avec le même compte Apple.",
@@ -6081,6 +6093,27 @@ impl Studio {
                         .clicked()
                     {
                         self.licence.restore();
+                    }
+                    // L'accès offert : le compte Apple prouve le courriel, le serveur
+                    // donne la clé s'il est dans la liste.
+                    ui.add_space(12.0);
+                    ui.label(
+                        RichText::new(tr("LÜMA vous est offert ?"))
+                            .size(12.5)
+                            .color(theme::DIM),
+                    );
+                    ui.add_space(4.0);
+                    let apple = egui::Button::new(
+                        RichText::new(tr("Se connecter avec Apple"))
+                            .size(15.0)
+                            .strong()
+                            .color(egui::Color32::BLACK),
+                    )
+                    .fill(egui::Color32::WHITE)
+                    .corner_radius(8.0)
+                    .min_size(egui::vec2(240.0, 44.0));
+                    if ui.add_enabled(!self.licence.busy(), apple).clicked() {
+                        self.licence.sign_in_with_apple();
                     }
                 });
             }
