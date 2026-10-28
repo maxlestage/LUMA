@@ -402,6 +402,10 @@ La fototeca profesional, paso a paso.
   de la página; páginas convertidas al **perfil de la impresora** (el de la prueba en
   pantalla, con compensación del punto negro), para imprimir sin la gestión de color
   del controlador.
+- **Marcas de corte y texto al pie de la página** («Imprimir…», `luma print
+  --crop-marks --text`): trazos finos en las esquinas de cada foto, para cortar con
+  guillotina, y una línea de texto (un título, un nombre, unos derechos) en el margen
+  inferior.
 - **Libro de fotos** («Libro, presentación, galería…», `luma book`): un PDF con su portada (la
   primera foto, el título y el subtítulo) y luego páginas de una, dos o cuatro fotos
   elegidas según su orientación; formatos 20 × 20, 30 × 30, A4, 21 × 28, A3.

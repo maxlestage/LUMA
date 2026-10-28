@@ -107,6 +107,11 @@ pub struct Layout {
     pub fill: bool,
     /// L'accentuation pour le papier.
     pub sharpen: Option<OutputSharpen>,
+    /// Des repères de coupe aux coins de chaque photo, dans les marges et les espaces.
+    pub crop_marks: bool,
+    /// Une ligne de texte au bas de chaque page (un titre, un nom, des droits), dans la
+    /// marge du bas ; vide : rien.
+    pub text: String,
 }
 
 impl Default for Layout {
@@ -122,6 +127,8 @@ impl Default for Layout {
             captions: false,
             fill: false,
             sharpen: None,
+            crop_marks: false,
+            text: String::new(),
         }
     }
 }
@@ -292,8 +299,93 @@ pub fn compose(layout: &Layout, pictures: &[Picture], printer: Option<&Conversio
     let (pw, ph) = layout.page_px();
     pictures
         .chunks(cells.len())
-        .map(|chunk| page(pw, ph, &cells, chunk, printer))
+        .map(|chunk| {
+            let mut p = page(pw, ph, &cells, chunk, printer);
+            if layout.crop_marks {
+                for (pic, cell) in chunk.iter().zip(&cells) {
+                    crop_marks(&mut p, placed(pic, cell), layout.px(1.0), layout.px(4.0));
+                }
+            }
+            if !layout.text.trim().is_empty() {
+                footer(&mut p, layout);
+            }
+            p
+        })
         .collect()
+}
+
+/// La place d'une photo dans sa case, en pixels : (x, y, largeur, hauteur).
+fn placed(pic: &Picture, cell: &Cell) -> (usize, usize, usize, usize) {
+    let (w, h) = (pic.width.min(cell.width), pic.height.min(cell.height));
+    let x = cell.x + (cell.width - w) / 2;
+    let y = if cell.caption > 0 {
+        cell.y + cell.height - h
+    } else {
+        cell.y + (cell.height - h) / 2
+    };
+    (x, y, w, h)
+}
+
+/// Les repères de coupe d'une photo : à chaque coin, un trait horizontal et un trait
+/// vertical, noirs, dans le prolongement de ses bords, à `gap` pixels d'elle et longs de
+/// `len` (assez fins pour un massicot : un tiers de millimètre).
+fn crop_marks(page: &mut Page, (x, y, w, h): (usize, usize, usize, usize), gap: usize, len: usize) {
+    let thick = (gap / 3).max(1);
+    let mut fill = |x0: isize, y0: isize, x1: isize, y1: isize| {
+        for py in y0.max(0)..y1.min(page.height as isize) {
+            for px in x0.max(0)..x1.min(page.width as isize) {
+                let i = (py as usize * page.width + px as usize) * 3;
+                page.rgb[i..i + 3].copy_from_slice(&[0, 0, 0]);
+            }
+        }
+    };
+    let (x, y, w, h, g, l, t) = (
+        x as isize,
+        y as isize,
+        w as isize,
+        h as isize,
+        gap as isize,
+        len as isize,
+        thick as isize,
+    );
+    for (cx, sx) in [(x, -1), (x + w, 1)] {
+        for (cy, sy) in [(y, -1), (y + h, 1)] {
+            // Le trait horizontal, dans le prolongement du bord du haut ou du bas.
+            let (hx0, hx1) = if sx < 0 {
+                (cx - g - l, cx - g)
+            } else {
+                (cx + g, cx + g + l)
+            };
+            let hy = if sy < 0 { cy } else { cy - t };
+            fill(hx0, hy, hx1, hy + t);
+            // Le trait vertical, dans le prolongement du bord de gauche ou de droite.
+            let (vy0, vy1) = if sy < 0 {
+                (cy - g - l, cy - g)
+            } else {
+                (cy + g, cy + g + l)
+            };
+            let vx = if sx < 0 { cx } else { cx - t };
+            fill(vx, vy0, vx + t, vy1);
+        }
+    }
+}
+
+/// La ligne de texte du bas de la page, centrée dans la marge du bas, en gris foncé.
+fn footer(page: &mut Page, layout: &Layout) {
+    let band = layout.px(layout.margin);
+    if band < 4 {
+        return;
+    }
+    let cell = Cell {
+        x: 0,
+        y: page.height - band,
+        width: page.width,
+        height: band,
+        caption: 0,
+    };
+    // Environ 9 points, moins dans une marge étroite.
+    let size = (layout.dpi as f32 * 9.0 / 72.0).min(band as f32 * 0.5);
+    write(page, layout.text.trim(), &cell, size, 60);
 }
 
 /// Une page de `width × height` pixels : chaque photo dans sa case, son nom dessous,
@@ -319,14 +411,8 @@ pub fn page(width: usize, height: usize, cells: &[Cell], pictures: &[Picture], p
 /// Pose une photo au centre de sa case (au bas de sa case quand son nom est dessous,
 /// qui la suit alors de près) ; ce qui dépasse (case remplie) est coupé.
 fn place(page: &mut Page, pic: &Picture, cell: &Cell) {
-    let (w, h) = (pic.width.min(cell.width), pic.height.min(cell.height));
+    let (dx, dy, w, h) = placed(pic, cell);
     let (sx, sy) = ((pic.width - w) / 2, (pic.height - h) / 2);
-    let dx = cell.x + (cell.width - w) / 2;
-    let dy = if cell.caption > 0 {
-        cell.y + cell.height - h
-    } else {
-        cell.y + (cell.height - h) / 2
-    };
     for y in 0..h {
         let (py, row) = (dy + y, sy + y);
         if py >= page.height {
@@ -412,6 +498,51 @@ mod tests {
             rgb: vec![v; w * h * 3],
             caption: caption.into(),
         }
+    }
+
+    #[test]
+    fn crop_marks_and_a_line_of_text() {
+        let l = Layout {
+            paper: paper("100x100").unwrap(),
+            dpi: 254,
+            margin: 10.0,
+            crop_marks: true,
+            text: "© Maxime Lestage".into(),
+            ..Layout::default()
+        };
+        // 100 mm à 254 points par pouce : 1000 pixels, 10 par millimètre.
+        assert_eq!(l.page_px(), (1000, 1000));
+        let cell = l.cells()[0];
+        let (w, h) = l.target(&cell, 3000, 2000);
+        let pages = compose(&l, &[solid(w, h, 200, "")], None);
+        let p = &pages[0];
+        let at = |x: usize, y: usize| &p.rgb[(y * p.width + x) * 3..(y * p.width + x) * 3 + 3];
+        let (x, y, _, ph) = placed(&solid(w, h, 200, ""), &cell);
+        // Au coin haut gauche : un trait horizontal à gauche de la photo, sur son bord du
+        // haut, à 1 mm d'elle et long de 4 mm ; et un trait vertical au‑dessus.
+        assert_eq!(at(x - 20, y), [0, 0, 0]);
+        assert_eq!(at(x, y - 20), [0, 0, 0]);
+        assert_eq!(at(x - 5, y), [255, 255, 255], "l'espace d'1 mm reste blanc");
+        assert_eq!(at(x - 60, y), [255, 255, 255], "le trait ne fait que 4 mm");
+        assert_eq!(at(x, y), [200, 200, 200], "la photo n'est pas touchée");
+        assert_eq!(at(x - 20, y + ph - 1), [0, 0, 0], "le coin bas gauche aussi");
+        // Le texte, dans la marge du bas.
+        let dark = (900..1000)
+            .flat_map(|y| (0..1000).map(move |x| (x, y)))
+            .filter(|&(x, y)| at(x, y)[0] < 128)
+            .count();
+        assert!(dark > 50, "{dark}");
+        // Sans rien : la page n'a que du blanc et la photo.
+        let plain = compose(
+            &Layout {
+                crop_marks: false,
+                text: String::new(),
+                ..l.clone()
+            },
+            &[solid(w, h, 200, "")],
+            None,
+        );
+        assert!(plain[0].rgb.iter().all(|&v| v == 255 || v == 200));
     }
 
     #[test]

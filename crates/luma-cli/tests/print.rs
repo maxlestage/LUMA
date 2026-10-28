@@ -36,6 +36,7 @@ fn wrong_options_are_explained() {
         (vec!["print", "a.ARW", "-o", &pdf, "--paper", "géant"], "format inconnu"),
         (vec!["print", "a.ARW", "-o", &pdf, "--margin", "120"], "plus de place"),
         (vec!["print", "a.ARW", "-o", &pdf, "--intent", "vive"], "--intent"),
+        (vec!["print", "a.ARW", "-o", &pdf, "--text"], "--text attend un texte"),
     ] {
         let (ok, out) = luma(&args);
         assert!(!ok && out.contains(says), "{args:?} : {out}");
@@ -72,6 +73,9 @@ fn contact_sheet_and_print_with_a_profile() {
         "13x18",
         "--dpi",
         "150",
+        "--crop-marks",
+        "--text",
+        "© Maxime Lestage 2026",
     ]);
     assert!(ok, "{out}");
     assert!(out.contains("2 page(s) de 127 × 178 mm, 3 photo(s)"), "{out}");

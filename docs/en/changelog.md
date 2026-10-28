@@ -374,6 +374,9 @@ The professional photo library, step by step.
   their cell, output sharpening for matte or glossy paper, page preview; pages
   converted to the **printer profile** (the soft-proofing one, black point
   compensated), to print without the driver's color management.
+- **Crop marks and text at the bottom of the page** (“Print…”, `luma print --crop-marks
+  --text`): thin lines at the corners of each photo, to cut with a guillotine, and a line
+  of text (a title, a name, a copyright) in the bottom margin.
 - **Photo book** (“Book, slideshow, gallery…”, `luma book`): a PDF with its cover (the first
   photo, the title and subtitle), then pages of one, two or four photos chosen from
   their orientation; 20 × 20, 30 × 30, A4, 21 × 28, A3 formats.
