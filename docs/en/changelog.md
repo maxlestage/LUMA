@@ -43,7 +43,8 @@ The professional photo library, step by step.
   reduction: 104 MB less memory for 26 MP, same pixels. Then the vignette: 37% shorter
   (24 MP: 108 → 68 ms), almost twice as fast with a roundness (400 → 210 ms), same
   pixels. Then Remove (circle or stroke): 28% shorter, then another 22% (almost twice
-  as fast overall), same pixels.
+  as fast overall), same pixels. Then enlarging on export: 18% shorter (6 → 24 MP:
+  440 → 360 ms), same pixels.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.

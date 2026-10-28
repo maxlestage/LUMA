@@ -48,7 +48,8 @@ La fototeca profesional, paso a paso.
   píxeles. Después la viñeta: un 37 % más corta (24 Mpx: 108 → 68 ms), casi el doble
   de rápida con redondez (400 → 210 ms), mismos píxeles. Después Eliminar (en círculo
   o en trazo): un 28 % más corto, y otro 22 % después (casi el doble de rápido en
-  total), mismos píxeles.
+  total), mismos píxeles. Después la ampliación al exportar: un 18 % más corta
+  (6 → 24 Mpx: 440 → 360 ms), mismos píxeles.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
