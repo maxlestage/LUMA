@@ -5325,6 +5325,18 @@ fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
 
+fr = Tons auto
+en = Auto tone
+es = Tonos automáticos
+
+fr = Exposition, contraste, hautes lumières et ombres lus sur l'histogramme de la photo
+en = Exposure, contrast, highlights and shadows read from the photo's histogram
+es = Exposición, contraste, altas luces y sombras leídos en el histograma de la foto
+
+fr = Tons automatiques
+en = Auto tone
+es = Tonos automáticos
+
 fr = Netteté
 en = Sharpness
 es = Nitidez

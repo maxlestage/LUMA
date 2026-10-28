@@ -10237,6 +10237,25 @@ impl Studio {
                         ));
                     }
                     sub_title(ui, tr("Tonalité"));
+                    // Les tons lus sur la photo : un point de départ, réglable ensuite.
+                    if ui
+                        .button(tr("Tons auto"))
+                        .on_hover_text(tr(
+                            "Exposition, contraste, hautes lumières et ombres lus sur l'histogramme de la photo",
+                        ))
+                        .clicked()
+                        && let Some(photo) = &self.photo
+                    {
+                        let t = photo.auto_tones(&self.settings);
+                        let s = &mut self.settings;
+                        s.exposure = t.exposure;
+                        s.contrast = t.contrast;
+                        s.highlights = t.highlights;
+                        s.shadows = t.shadows;
+                        s.whites = 0.0;
+                        s.blacks = 0.0;
+                        commits.push(tr("Tons automatiques").into());
+                    }
                     let l = self.fields(ui, &TONE);
                     keep(l, &mut commits);
                     if ui
