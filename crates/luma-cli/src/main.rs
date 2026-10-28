@@ -156,7 +156,7 @@ USAGE
   luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords]
                [--smart nom \"règle\"] [--add nom photo]… [--remove-collection nom]
                [--collections] [--collection nom] [--backup] [--backups] [--restore f]
-               [--missing] [--relocate ancien nouveau]
+               [--missing] [--relocate ancien nouveau] [--duplicates]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
       au catalogue de LÜMA, ou le remet à jour ; seuls les fichiers modifiés sont relus.
       --list affiche les photos par date de prise de vue ; --search ne garde que celles
@@ -174,6 +174,9 @@ USAGE
       --restore remet l'une d'elles (le catalogue remplacé est sauvegardé d'abord).
       --missing liste les photos dont le fichier n'est plus là ; --relocate retrouve
       celles d'un dossier déplacé à sa nouvelle place, collections comprises.
+      --duplicates liste les photos en double : même boîtier, même instant, fichiers de
+      même taille et de même type (une carte importée deux fois, une copie ailleurs) ;
+      rien n'est effacé.
   luma cameras [--markdown] [--corpus dossier]
       Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
       --corpus marque ceux dont un vrai RAW est dans le dossier.
@@ -368,7 +371,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     let mut edits: Vec<(String, String, String)> = Vec::new();
     let (mut list_collections, mut shown) = (false, None);
     // Sauvegardes et photos manquantes.
-    let (mut save_copy, mut list_backups, mut missing) = (false, false, false);
+    let (mut save_copy, mut list_backups, mut missing, mut duplicates) = (false, false, false, false);
     let mut restore = None;
     let mut relocate = None;
     let mut it = args.into_iter();
@@ -402,6 +405,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             "--backups" => list_backups = true,
             "--restore" => restore = Some(PathBuf::from(it.next().ok_or("--restore attend une sauvegarde")?)),
             "--missing" => missing = true,
+            "--duplicates" => duplicates = true,
             "--relocate" => {
                 let from = it.next().ok_or("--relocate attend l'ancien dossier")?;
                 let to = it.next().ok_or("--relocate attend le nouveau dossier")?;
@@ -465,6 +469,21 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
         println!("{} photos manquantes", gone.len());
         for e in gone {
             println!("  {}", e.path.display());
+        }
+    }
+    if duplicates {
+        let groups = cat.duplicates();
+        let extra: u64 = groups.iter().map(|g| g[0].size * (g.len() as u64 - 1)).sum();
+        println!(
+            "{} photos en double ({:.1} Mo de copies en trop)",
+            groups.len(),
+            extra as f64 / 1e6
+        );
+        for g in &groups {
+            println!("  {} · {}", g[0].date.replace('T', " "), g[0].camera());
+            for e in g {
+                println!("    {}", e.path.display());
+            }
         }
     }
     if !folders.is_empty() || !edits.is_empty() || moved {

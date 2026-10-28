@@ -151,6 +151,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
 | Batch rename (“Rename…”, `luma rename`): the export tokens (`{date}_{séquence}`…), the RAW and JPEG of a shot together, XMP and virtual copies follow, `-2` when a name is taken, rolled back on any failure; the library and its collections follow | ✅ |
 | Catalogue backups (one a week in the app, the last ten kept; `luma catalog --backup`, `--restore`), missing photos listed, a moved folder found again with its collections (`--missing`, `--relocate`) | ✅ |
+| Duplicates in the catalogue (`luma catalog --duplicates`): same camera, same moment, files of the same size and type (a card imported twice, a copy in another folder), listed with the space they take; the RAW and JPEG of one shot are not duplicates; nothing is deleted | ✅ |
 | Instant thumbnails (the preview embedded in the raw file, in 15 ms), then rendered with the adjustments and saved losslessly for later visits | ✅ |
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
