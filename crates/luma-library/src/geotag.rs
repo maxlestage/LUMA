@@ -50,7 +50,12 @@ pub fn parse_time(text: &str) -> Option<i64> {
         num(14..16)?,
         num(17..19)?,
     );
-    if !(1..=12).contains(&mo) || !(1..=31).contains(&d) || h > 23 || mi > 59 || s > 60 {
+    if !(1..=12).contains(&mo)
+        || !(1..=31).contains(&d)
+        || !(0..=23).contains(&h)
+        || !(0..=59).contains(&mi)
+        || !(0..=60).contains(&s)
+    {
         return None;
     }
     let mut rest = &t[19..];
@@ -74,10 +79,11 @@ pub fn offset(text: &str) -> Option<i64> {
     };
     let (h, m) = match body.split_once(':') {
         Some((h, m)) => (h.parse::<i64>().ok()?, m.parse::<i64>().ok()?),
-        None if body.len() == 4 => (body[..2].parse().ok()?, body[2..].parse().ok()?),
+        None if body.len() == 4 => (body.get(..2)?.parse().ok()?, body.get(2..)?.parse().ok()?),
         None => (body.parse().ok()?, 0),
     };
-    (h <= 14 && m < 60).then_some(sign * (h * 3600 + m * 60))
+    // Le signe est devant : les heures et les minutes sont positives.
+    ((0..=14).contains(&h) && (0..60).contains(&m)).then_some(sign * (h * 3600 + m * 60))
 }
 
 /// Les points d'une trace GPX (`trkpt`, et `rtept` ou `wpt` datés), dans l'ordre du
@@ -151,9 +157,23 @@ pub fn position_at(track: &[Point], time: i64, max_gap: i64) -> Option<Position>
                 return ((near.time - time).abs() <= max_gap).then(|| at(near));
             }
             let t = (time - a.time) as f64 / (b.time - a.time) as f64;
+            // Par le plus court : une trace qui passe le 180ᵉ méridien ne fait pas le
+            // tour du monde.
+            let mut dlon = b.longitude - a.longitude;
+            if dlon > 180.0 {
+                dlon -= 360.0;
+            } else if dlon < -180.0 {
+                dlon += 360.0;
+            }
+            let mut longitude = a.longitude + dlon * t;
+            if longitude > 180.0 {
+                longitude -= 360.0;
+            } else if longitude < -180.0 {
+                longitude += 360.0;
+            }
             Some(Position {
                 latitude: a.latitude + (b.latitude - a.latitude) * t,
-                longitude: a.longitude + (b.longitude - a.longitude) * t,
+                longitude,
             })
         }
         (Some(a), None) => (time - a.time <= max_gap).then(|| at(a)),
@@ -239,7 +259,12 @@ pub fn place(
 /// informations ; sans XMP, un XMP de métadonnées seules est créé.
 pub fn write_position(photo: &Path, position: Position) -> Result<PathBuf, String> {
     let target = xmp::sidecar_path(photo);
-    let text = std::fs::read_to_string(&target).unwrap_or_default();
+    // Un XMP illisible (pas en UTF‑8, droits) n'est pas remplacé par un XMP neuf.
+    let text = match std::fs::read_to_string(&target) {
+        Ok(text) => text,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(format!("{} : {e}", target.display())),
+    };
     let mut meta = xmp::read_meta(&text);
     meta.position = Some(position);
     let out = if text.contains("crs:") {
@@ -248,7 +273,13 @@ pub fn write_position(photo: &Path, position: Position) -> Result<PathBuf, Strin
     } else {
         xmp::write_meta(&meta)
     };
-    std::fs::write(&target, out).map_err(|e| format!("{} : {e}", target.display()))?;
+    // Par un fichier temporaire renommé : une écriture ratée ne laisse pas le XMP à moitié.
+    let err = |e: std::io::Error| format!("{} : {e}", target.display());
+    let tmp = target.with_extension("xmp.tmp");
+    if let Err(e) = std::fs::write(&tmp, out).and_then(|()| std::fs::rename(&tmp, &target)) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(err(e));
+    }
     Ok(target)
 }
 
@@ -289,6 +320,58 @@ mod tests {
             (Some(7200), Some(-19_800), Some(3600), Some(10_800))
         );
         assert_eq!(offset("+25:00"), None);
+    }
+
+    #[test]
+    fn garbled_times_and_offsets_are_refused() {
+        // Un caractère accentué au milieu du fuseau : refusé, sans paniquer.
+        assert_eq!(offset("+0é0"), None);
+        assert_eq!(parse_time("2026-06-01T08:00:00+0é0"), None);
+        // Des nombres négatifs là où le signe est déjà donné.
+        assert_eq!(offset("+-5"), None);
+        assert_eq!(offset("-05:-30"), None);
+        assert_eq!(parse_time("2026-06-01T-1:00:00Z"), None);
+        assert_eq!(parse_time("2026-06-01T08:-1:00Z"), None);
+    }
+
+    #[test]
+    fn a_track_across_the_date_line() {
+        // Fidji → Samoa : la trace passe le 180ᵉ méridien, pas par l'Afrique.
+        let t = [
+            Point {
+                time: 0,
+                latitude: -17.0,
+                longitude: 179.0,
+            },
+            Point {
+                time: 600,
+                latitude: -17.0,
+                longitude: -179.0,
+            },
+        ];
+        let p = position_at(&t, 150, 3600).unwrap();
+        assert!((p.longitude - 179.5).abs() < 1e-9, "{p:?}");
+        let p = position_at(&t, 450, 3600).unwrap();
+        assert!((p.longitude + 179.5).abs() < 1e-9, "{p:?}");
+    }
+
+    #[test]
+    fn an_unreadable_sidecar_is_not_overwritten() {
+        let dir = std::env::temp_dir().join(format!("luma-geotag-latin1-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let photo = dir.join("IMG_0001.CR3");
+        // Un XMP écrit par un autre logiciel, en Latin‑1 : pas de l'UTF‑8.
+        let latin1 = b"<x:xmpmeta><rdf:Description dc:title=\"\xe9t\xe9\" crs:Exposure2012=\"+1.00\"/></x:xmpmeta>";
+        let side = xmp::sidecar_path(&photo);
+        std::fs::write(&side, latin1).unwrap();
+        let p = Position {
+            latitude: 1.0,
+            longitude: 2.0,
+        };
+        assert!(write_position(&photo, p).is_err());
+        assert_eq!(std::fs::read(&side).unwrap(), latin1);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
