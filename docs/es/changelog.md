@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **«Iniciar sesión con Apple» en iPhone y iPad**: quienes han recibido LÜMA Premium
+  como regalo lo desbloquean iniciando sesión con su cuenta de Apple desde la pantalla
+  Premium; el servidor comprueba el token de Apple y el correo en la lista de accesos
+  regalados.
 - **LÜMA para Linux**: el mismo motor y el mismo resultado que en Mac, con la misma
   suscripción. Un archivo que se instala sin contraseña (`./install.sh`, con su
   lanzador en el menú de aplicaciones y los RAW que se abren con «Abrir con»), o un

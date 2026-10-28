@@ -4,6 +4,10 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **« Se connecter avec Apple » sur iPhone et iPad** : LÜMA Premium s'ouvre pour les
+  personnes à qui il est offert, en se connectant avec leur compte Apple depuis l'écran
+  Premium ; le serveur vérifie le jeton d'Apple et le courriel dans la liste des accès
+  offerts.
 - **LÜMA pour Linux** : le même moteur et le même rendu que sur Mac, avec le même
   abonnement. Une archive qui s'installe sans mot de passe (`./install.sh`, avec son
   lanceur dans le menu des applications et l'ouverture des RAW par « Ouvrir avec »), ou

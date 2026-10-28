@@ -2,15 +2,17 @@
 //! préréglages), la clé signée vérifiée hors ligne, la clé fraîche demandée chaque jour
 //! en arrière‑plan, et l'écran Premium (les formules, la clé).
 //!
-//! Le réseau passe par `curl` (présent sur macOS et Linux) : pas de bibliothèque TLS
-//! compilée dans LÜMA. Sur iPhone et iPad, l'abonnement s'achète uniquement dans l'App
-//! Store (`luma_apple::store`) : chaque achat, renouvellement ou restauration est
-//! enregistré dans `licence.json`, et les clés n'y comptent pas.
+//! Le réseau passe par `curl` (présent sur macOS et Linux), et par Foundation sur iPhone
+//! et iPad : pas de bibliothèque TLS compilée dans LÜMA. Sur iPhone et iPad,
+//! l'abonnement s'achète uniquement dans l'App Store (`luma_apple::store`) : chaque
+//! achat, renouvellement ou restauration est enregistré dans `licence.json`, et seules
+//! les clés offertes y comptent, reçues en se connectant avec Apple
+//! (`luma_apple::signin`).
 
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
 
-use luma_apple::store;
+use luma_apple::{signin, store};
 use luma_licence::{Access, Plan, Refused, State, Transport};
 
 use crate::i18n::{tr, trf};
@@ -36,17 +38,19 @@ pub struct Curl;
 
 impl Transport for Curl {
     fn post(&self, url: &str, form: &[(&str, &str)]) -> Result<String, String> {
+        let agent = concat!("LUMA/", env!("CARGO_PKG_VERSION"));
         if cfg!(target_os = "ios") {
-            return Err(tr("pas de vérification en ligne sur iPhone et iPad").into());
+            let body = luma_apple::net::post(url, &luma_licence::form_encode(form), agent)?;
+            let body = String::from_utf8_lossy(&body).into_owned();
+            return if body.trim_start().starts_with('{') {
+                Ok(body)
+            } else {
+                Err(tr("réponse illisible").into())
+            };
         }
         let out = std::process::Command::new("curl")
             .args(["-sS", "--fail-with-body", "--max-time", "20", "-X", "POST"])
-            .args([
-                "-H",
-                "Accept: application/json",
-                "-A",
-                concat!("LUMA/", env!("CARGO_PKG_VERSION")),
-            ])
+            .args(["-H", "Accept: application/json", "-A", agent])
             .args(["--data", &luma_licence::form_encode(form), url])
             .output()
             .map_err(|e| format!("curl : {e}"))?;
@@ -107,6 +111,8 @@ pub struct Licence {
     pub store_busy: bool,
     /// Pendant une restauration : un achat est‑il revenu ?
     restored_any: bool,
+    /// La feuille « Se connecter avec Apple » est ouverte (iPhone et iPad).
+    signin: Option<Receiver<signin::Event>>,
 }
 
 impl Licence {
@@ -137,6 +143,7 @@ impl Licence {
             products: Vec::new(),
             store_busy: false,
             restored_any: false,
+            signin: None,
         };
         if fresh {
             l.save();
@@ -149,7 +156,6 @@ impl Licence {
     fn refresh_if_due(&mut self) {
         if let Some(server) = luma_licence::licence_server()
             && self.state.needs_check(now())
-            && !cfg!(target_os = "ios")
         {
             self.run(move |s| {
                 luma_licence::refresh(s, server, luma_licence::public_key().as_ref(), &Curl, now())
@@ -164,7 +170,7 @@ impl Licence {
     }
 
     pub fn busy(&self) -> bool {
-        self.pending.is_some() || self.store_busy
+        self.pending.is_some() || self.store_busy || self.signin.is_some()
     }
 
     fn save(&self) {
@@ -251,6 +257,57 @@ impl Licence {
         store::buy(plan.app_store_id());
     }
 
+    /// « Se connecter avec Apple » : la feuille du système, puis la clé offerte si le
+    /// courriel du compte est dans la liste des accès offerts.
+    pub fn sign_in_with_apple(&mut self) {
+        self.message.clear();
+        self.signin = signin::start();
+        if self.signin.is_none() {
+            self.message = tr("« Se connecter avec Apple » n'est pas disponible ici.").into();
+        }
+    }
+
+    /// La réponse de la feuille « Se connecter avec Apple ».
+    fn poll_signin(&mut self) {
+        let Some(rx) = &self.signin else {
+            return;
+        };
+        let Ok(event) = rx.try_recv() else {
+            return;
+        };
+        self.signin = None;
+        match event {
+            signin::Event::Token(token) => {
+                let Some(server) = luma_licence::licence_server() else {
+                    self.message =
+                        tr("cette version de LÜMA ne vérifie pas encore les clés").into();
+                    return;
+                };
+                self.run(move |s| {
+                    let c = luma_licence::apple_sign_in(
+                        s,
+                        server,
+                        luma_licence::public_key().as_ref(),
+                        &Curl,
+                        &token,
+                        now(),
+                    )?;
+                    Ok(trf(
+                        "Bienvenue dans LÜMA Premium, {email}.",
+                        &[("email", &c.email)],
+                    ))
+                });
+            }
+            signin::Event::Cancelled => {}
+            signin::Event::Failed(detail) => {
+                self.message = trf(
+                    "Apple a refusé la connexion : {detail}",
+                    &[("detail", &detail)],
+                );
+            }
+        }
+    }
+
     /// Retrouve les abonnements de ce compte Apple.
     pub fn restore(&mut self) {
         self.store_busy = true;
@@ -262,6 +319,7 @@ impl Licence {
     /// À chaque image : récupère le résultat d'une opération finie. `true` si l'état a
     /// changé.
     pub fn poll(&mut self) -> bool {
+        self.poll_signin();
         if self.poll_store() {
             return true;
         }

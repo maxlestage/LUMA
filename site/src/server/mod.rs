@@ -3,6 +3,7 @@
 //! `public/` et le bundle du navigateur de `pkg/` (trouvés par Paquets dans le dossier
 //! courant).
 
+pub mod apple;
 pub mod docs;
 pub mod export;
 pub mod offerts;
@@ -571,6 +572,36 @@ pub fn app(site: Arc<Site>) -> App {
             .header("cache-control", "no-store")
             .send(json)
     });
+    // « Se connecter avec Apple » (iPhone et iPad) : le jeton d'identité, vérifié, et la
+    // clé offerte si le courriel est dans la liste.
+    app.post("/api/licence/apple", |req: Request| async move {
+        let body = req.text().await.unwrap_or_default();
+        let token = body
+            .split('&')
+            .find_map(|kv| kv.strip_prefix("token="))
+            .map(percent_decode)
+            .unwrap_or_default();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        let (status, json) = match stripe::signing_key() {
+            None => (
+                503,
+                r#"{"error":"serveur de licences non configuré"}"#.to_owned(),
+            ),
+            Some(seed) => match apple::verified_email(&token, now).and_then(|email| {
+                offerts::key_for_verified(&offerts::from_env(), &seed, &email, now)
+            }) {
+                Ok((_, key)) => (200, serde_json::json!({ "key": key }).to_string()),
+                Err(e) => (403, serde_json::json!({ "error": e }).to_string()),
+            },
+        };
+        Response::new()
+            .status(status)
+            .header("content-type", "application/json; charset=utf-8")
+            .header("cache-control", "no-store")
+            .send(json)
+    });
     // Introuvable : dans la langue de l'adresse demandée.
     let missing = site.clone();
     app.fallback(move |req: Request| {
@@ -719,6 +750,9 @@ mod tests {
         assert_eq!(res.status().as_u16(), 200);
         assert!(res.text().contains("pas encore ouvert"));
         let res = client.post("/api/licence").body("key=LUMA1.abc").await;
+        assert_eq!(res.status().as_u16(), 503);
+        assert!(res.text().contains("error"));
+        let res = client.post("/api/licence/apple").body("token=abc").await;
         assert_eq!(res.status().as_u16(), 503);
         assert!(res.text().contains("error"));
     }
