@@ -5542,3 +5542,19 @@ es = Texto al pie de la página
 fr = un titre, un nom, des droits
 en = a title, a name, a copyright
 es = un título, un nombre, unos derechos
+
+fr = Page de texte après la couverture
+en = Text page after the cover
+es = Página de texto tras la portada
+
+fr = une dédicace, un mot d'introduction
+en = a dedication, a few words of introduction
+es = una dedicatoria, unas palabras de introducción
+
+fr = Dernière page
+en = Last page
+es = Última página
+
+fr = un lieu, une date, des remerciements
+en = a place, a date, acknowledgements
+es = un lugar, una fecha, agradecimientos
