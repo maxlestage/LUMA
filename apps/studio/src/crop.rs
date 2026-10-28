@@ -242,17 +242,19 @@ fn drag(c: &mut Crop, h: Handle, d: egui::Vec2, aspect: Option<f32>, image: f32)
         c.bottom = t + ht;
         return;
     }
+    // `min` puis `max` plutôt que `clamp`, qui panique si un cadre déjà plus étroit que
+    // `MIN` inverse les bornes.
     if h.moves_left() {
-        c.left = (c.left + d.x).clamp(0.0, c.right - MIN);
+        c.left = (c.left + d.x).min(c.right - MIN).max(0.0);
     }
     if h.moves_right() {
-        c.right = (c.right + d.x).clamp(c.left + MIN, 1.0);
+        c.right = (c.right + d.x).max(c.left + MIN).min(1.0);
     }
     if h.moves_top() {
-        c.top = (c.top + d.y).clamp(0.0, c.bottom - MIN);
+        c.top = (c.top + d.y).min(c.bottom - MIN).max(0.0);
     }
     if h.moves_bottom() {
-        c.bottom = (c.bottom + d.y).clamp(c.top + MIN, 1.0);
+        c.bottom = (c.bottom + d.y).max(c.top + MIN).min(1.0);
     }
     let Some(a) = aspect else { return };
     let r = norm_ratio(if a == 0.0 { image } else { a }, image);
@@ -265,6 +267,10 @@ fn drag(c: &mut Crop, h: Handle, d: egui::Vec2, aspect: Option<f32>, image: f32)
     } else {
         w = ht * r;
     }
+    // Le côté qui suit ne descend pas non plus sous `MIN`.
+    let grow = (MIN / w).max(MIN / ht).max(1.0);
+    w *= grow;
+    ht *= grow;
     // Rester dans la photo.
     let max_w = if h.moves_left() {
         c.right
@@ -522,6 +528,25 @@ mod tests {
             1.5,
         );
         assert!(close((c.right - c.left) * 1.5, c.bottom - c.top), "{c:?}");
+        // Tiré au plus petit, puis par le coin opposé : le cadre garde `MIN` des deux côtés.
+        for aspect in [0.8, 1.0, 16.0 / 9.0, 0.5] {
+            let mut c = Crop::default();
+            constrain(&mut c, Some(aspect), 1.5);
+            drag(
+                &mut c,
+                Handle::BottomRight,
+                vec2(-2.0, -2.0),
+                Some(aspect),
+                1.5,
+            );
+            assert!(
+                c.right - c.left >= MIN - 1e-6 && c.bottom - c.top >= MIN - 1e-6,
+                "{c:?}"
+            );
+            drag(&mut c, Handle::TopLeft, vec2(0.01, 0.01), Some(aspect), 1.5);
+            drag(&mut c, Handle::Left, vec2(2.0, 0.0), Some(aspect), 1.5);
+            assert!(c.left >= 0.0 && c.right <= 1.0 && c.top >= 0.0 && c.bottom <= 1.0);
+        }
         // « Original » : les proportions de la photo, donc toute la photo possible.
         let mut c = Crop::default();
         constrain(&mut c, Some(0.0), 1.5);

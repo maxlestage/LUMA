@@ -4,8 +4,8 @@
 #   /download/LUMA-macos.zip (14 jours d'essai, puis LÜMA Premium) ;
 # - linux-app : LÜMA pour Linux, sous /download/LUMA-linux-x86_64.tar.gz et
 #   /download/LUMA-linux-amd64.deb ;
-# - windows-app : LÜMA pour Windows, sous /download/LUMA-windows-x64-setup.exe et
-#   /download/LUMA-windows-x64.zip ;
+# - windows-app : LÜMA pour Windows, sous /download/LUMA-windows-x86_64-setup.exe et
+#   /download/LUMA-windows-x86_64.zip ;
 # - build : vérifications (fmt, clippy serveur et WebAssembly, tests), bundle du
 #   navigateur, puis export statique du site par le serveur Paquets lui-même, liens
 #   sous /<dépôt> ;
@@ -119,8 +119,8 @@ jobs:
         with:
           name: telechargement-windows
           path: |
-            target/windows/LUMA-windows-x64-setup.exe
-            target/windows/LUMA-windows-x64.zip
+            target/windows/LUMA-windows-x86_64-setup.exe
+            target/windows/LUMA-windows-x86_64.zip
 
   build:
     name: Vérifier et construire le site
@@ -198,8 +198,8 @@ jobs:
           test -s dist/download/LUMA-macos.zip
           test -s dist/download/LUMA-linux-x86_64.tar.gz
           test -s dist/download/LUMA-linux-amd64.deb
-          test -s dist/download/LUMA-windows-x64-setup.exe
-          test -s dist/download/LUMA-windows-x64.zip
+          test -s dist/download/LUMA-windows-x86_64-setup.exe
+          test -s dist/download/LUMA-windows-x86_64.zip
 
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'

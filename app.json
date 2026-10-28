@@ -17,6 +17,10 @@
       "description": "La clé secrète Stripe (sk_live_… ; une clé restreinte en lecture des sessions et abonnements suffit), pour délivrer les clés de licence.",
       "required": false
     },
+    "LUMA_OFFERTS": {
+      "description": "Les accès offerts à LÜMA Premium : courriel:code, séparés par des virgules (alice@exemple.fr:K7Q2-PX9M, bob@exemple.fr:R4TW-8ZDN). Chaque personne obtient sa clé sur /licence/offert/ ; retirée de la liste, son accès s'arrête au renouvellement suivant (30 jours au plus).",
+      "required": false
+    },
     "LUMA_LICENCE_SECRET": {
       "description": "La clé privée qui signe les licences (luma licence-keys). À garder secrète.",
       "required": false

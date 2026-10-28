@@ -93,7 +93,8 @@ pub fn refusal(e: &Refused) -> String {
 pub struct Licence {
     pub state: State,
     path: Option<PathBuf>,
-    pending: Option<Receiver<Done>>,
+    /// L'opération en cours, et l'état sur lequel elle travaille.
+    pending: Option<(State, Receiver<Done>)>,
     /// Le champ de la clé.
     pub key_input: String,
     /// Le dernier message (clé activée, refusée…).
@@ -181,7 +182,7 @@ impl Licence {
             let _ = tx.send((state, r));
             crate::wake();
         });
-        self.pending = Some(rx);
+        self.pending = Some((self.state.clone(), rx));
     }
 
     /// L'App Store : produits, achats, renouvellements, restaurations. `true` si
@@ -264,12 +265,18 @@ impl Licence {
         if self.poll_store() {
             return true;
         }
-        let Some(rx) = &self.pending else {
+        let Some((base, rx)) = &self.pending else {
             return false;
         };
         let Ok((state, result)) = rx.try_recv() else {
             return false;
         };
+        // L'état a changé pendant l'opération (une clé activée, un achat) : son résultat,
+        // calculé sur l'ancien, ne l'écrase pas.
+        if *base != self.state {
+            self.pending = None;
+            return true;
+        }
         self.pending = None;
         // Sans réseau, la vérification du jour ne change rien et ne dit rien.
         let offline = matches!(&result, Err((true, _)));
