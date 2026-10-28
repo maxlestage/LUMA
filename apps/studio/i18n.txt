@@ -5634,3 +5634,15 @@ es = Un clic en la curva añade un punto, arrástrelo para ajustarlo; un doble c
 fr = Jours
 en = Days
 es = Días
+
+fr = Photos par page
+en = Photos per page
+es = Fotos por página
+
+fr = auto, ou 1,2,4 (répété)
+en = auto, or 1,2,4 (repeated)
+es = auto, o 1,2,4 (repetido)
+
+fr = 1, 2 ou 4 photos par page
+en = 1, 2 or 4 photos per page
+es = 1, 2 o 4 fotos por página

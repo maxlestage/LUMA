@@ -77,10 +77,15 @@ La photothèque professionnelle, étape par étape.
   ne répond plus laisse le processeur finir l'aperçu. Deux essais montent la garde :
   des RAW abîmés (copie coupée, octets brouillés, fichier vide) s'ouvrent en image ou en
   erreur, jamais en plantage, et des réglages aux valeurs aberrantes (infinies, énormes)
-  se rendent en pixels sains, dans les masques, les retouches et la fluidité aussi.
+  se rendent en pixels sains, dans les masques, les retouches et la fluidité aussi. Une
+  suppression tracée longue et très large ne fige plus l'export (24 Mpx : 2 minutes →
+  4 secondes), mêmes pixels.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
+- **Corrections d'objectif toujours appliquées** : un doublon de travail écrit par une
+  version d'avant la lecture des corrections d'objectif du fichier (Sony, Fujifilm,
+  Olympus, Panasonic, DNG) est refait une fois, au lieu de montrer la photo sans elles.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
@@ -439,7 +444,8 @@ La photothèque professionnelle, étape par étape.
 - **Des pages de texte dans le livre** (« Livre, diaporama, galerie… », `luma book
   --opening --closing`) : une page après la couverture (une dédicace, un mot
   d'introduction) et une dernière page (un lieu, une date, des remerciements), leurs
-  lignes centrées au milieu de la page.
+  lignes centrées au milieu de la page. Et la disposition au choix : le nombre de photos
+  de chaque page (« 1,2,4 », répété ; `--pages`).
 - **Diaporama** : en plein écran dans l'app (la photo seule, elle avance d'elle‑même,
   Espace pour la pause, Échap pour sortir), et **exporté** (`luma slideshow`) : un
   dossier qui se suffit à lui‑même, index.html et les photos, à ouvrir dans n'importe

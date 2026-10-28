@@ -9,6 +9,7 @@
 //! proche, et le coût ne dépend que de la taille de la zone.
 
 use luma_core::RgbImage;
+use rayon::prelude::*;
 
 /// Le demi‑côté des patchs.
 const HALF: isize = 3;
@@ -278,23 +279,88 @@ pub fn fill(img: &mut RgbImage, cx: f32, cy: f32, r: f32, feather: f32, opacity:
 }
 
 /// La distance du point (`x`, `y`) au tracé `path` (un point : sa distance au point).
+#[cfg(test)]
 fn distance_to(path: &[(f32, f32)], x: f32, y: f32) -> f32 {
     if path.len() == 1 {
         return ((x - path[0].0).powi(2) + (y - path[0].1).powi(2)).sqrt();
     }
     path.windows(2)
-        .map(|s| {
-            let ((ax, ay), (bx, by)) = (s[0], s[1]);
-            let (dx, dy) = (bx - ax, by - ay);
-            let len2 = dx * dx + dy * dy;
-            let t = if len2 > 0.0 {
-                (((x - ax) * dx + (y - ay) * dy) / len2).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            ((x - ax - t * dx).powi(2) + (y - ay - t * dy).powi(2)).sqrt()
-        })
+        .map(|s| segment_distance(s[0], s[1], x, y))
         .fold(f32::INFINITY, f32::min)
+}
+
+/// La distance du point (`x`, `y`) au segment de `a` à `b`.
+#[inline]
+fn segment_distance((ax, ay): (f32, f32), (bx, by): (f32, f32), x: f32, y: f32) -> f32 {
+    let (dx, dy) = (bx - ax, by - ay);
+    let len2 = dx * dx + dy * dy;
+    let t = if len2 > 0.0 {
+        (((x - ax) * dx + (y - ay) * dy) / len2).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    ((x - ax - t * dx).powi(2) + (y - ay - t * dy).powi(2)).sqrt()
+}
+
+/// Les segments consécutifs d'un tracé, rangés par paquets dans leur boîte : un paquet
+/// dont la boîte est plus loin que la meilleure distance trouvée n'est pas parcouru. Un
+/// long trait (des centaines de points) au grand rayon ne coûte plus la distance à
+/// chaque segment pour chaque pixel.
+struct Stroke {
+    points: Vec<(f32, f32)>,
+    /// Le premier segment de chaque paquet et la boîte de ses points.
+    chunks: Vec<(usize, [f32; 4])>,
+}
+
+/// Les segments d'un paquet.
+const CHUNK: usize = 32;
+
+impl Stroke {
+    fn new(path: &[(f32, f32)]) -> Stroke {
+        let segments = path.len().saturating_sub(1).max(1);
+        let chunks = (0..segments)
+            .step_by(CHUNK)
+            .map(|start| {
+                let end = (start + CHUNK + 1).min(path.len());
+                let b = path[start..end].iter().fold(
+                    [f32::INFINITY, f32::INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY],
+                    |b, p| [b[0].min(p.0), b[1].min(p.1), b[2].max(p.0), b[3].max(p.1)],
+                );
+                (start, b)
+            })
+            .collect();
+        Stroke {
+            points: path.to_vec(),
+            chunks,
+        }
+    }
+
+    /// La distance du point au tracé, exactement celle de [`distance_to`] ; sauf qu'au
+    /// premier segment à moins de `enough`, elle rend celle‑là (assez pour décider).
+    fn distance(&self, x: f32, y: f32, enough: f32) -> f32 {
+        let p = &self.points;
+        if p.len() == 1 {
+            return ((x - p[0].0).powi(2) + (y - p[0].1).powi(2)).sqrt();
+        }
+        let mut best = f32::INFINITY;
+        for &(start, b) in &self.chunks {
+            // La distance à la boîte minore celle de ses segments ; la marge couvre les
+            // arrondis des deux calculs, pour ne jamais sauter le segment le plus proche.
+            let (dx, dy) = ((b[0] - x).max(x - b[2]).max(0.0), (b[1] - y).max(y - b[3]).max(0.0));
+            let bound = (dx * dx + dy * dy).sqrt();
+            if bound > best * (1.0 + 1e-4) + 1e-2 {
+                continue;
+            }
+            let end = (start + CHUNK).min(p.len() - 1);
+            for i in start..end {
+                best = best.min(segment_distance(p[i], p[i + 1], x, y));
+                if best < enough {
+                    return best;
+                }
+            }
+        }
+        best
+    }
 }
 
 /// Remplit le tracé `path` (des points en pixels de `img`, reliés), épais de `r` de
@@ -330,13 +396,18 @@ pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, 
         px: Vec::with_capacity(ww * wh),
         hole: Vec::with_capacity(ww * wh),
     };
+    let stroke = Stroke::new(path);
     for y in y0..y1 {
-        for x in x0..x1 {
-            base.px.push(img.data[y * w + x]);
-            let d = distance_to(path, x as f32 + 0.5, y as f32 + 0.5);
-            base.hole.push(d < r + 1.0);
-        }
+        base.px.extend_from_slice(&img.data[y * w + x0..y * w + x1]);
     }
+    // Le trou, ligne par ligne sur tous les cœurs : un segment à moins de `r + 1` suffit.
+    base.hole = (y0..y1)
+        .into_par_iter()
+        .flat_map_iter(|y| {
+            let stroke = &stroke;
+            (x0..x1).map(move |x| stroke.distance(x as f32 + 0.5, y as f32 + 0.5, r + 1.0) < r + 1.0)
+        })
+        .collect();
     // La pyramide, jusqu'à un trou d'une dizaine de pixels de rayon.
     let mut levels = vec![base];
     let mut radius = r;
@@ -424,10 +495,19 @@ pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, 
     // Le résultat, fondu sur le bord de la zone.
     let filled = &levels[0];
     let inner = r * (1.0 - feather.clamp(0.0, 1.0));
+    // Les distances d'abord, sur tous les cœurs ; en deçà de `inner`, le plein effet : la
+    // première distance qui y tombe suffit.
+    let distances: Vec<f32> = (y0..y1)
+        .into_par_iter()
+        .flat_map_iter(|y| {
+            let stroke = &stroke;
+            (x0..x1).map(move |x| stroke.distance(x as f32 + 0.5, y as f32 + 0.5, inner))
+        })
+        .collect();
     for y in y0..y1 {
         for x in x0..x1 {
             let k = (y - y0) * ww + (x - x0);
-            let d = distance_to(path, x as f32 + 0.5, y as f32 + 0.5);
+            let d = distances[k];
             if d >= r {
                 continue;
             }
@@ -450,6 +530,48 @@ pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_stroke_distance_is_exactly_the_distance_to_every_segment() {
+        // Un long trait en zigzag : la distance par paquets est celle de tous les
+        // segments, au bit près ; avec un seuil, elle s'arrête sous lui.
+        let path: Vec<(f32, f32)> = (0..300)
+            .map(|i| (i as f32 * 3.1, 200.0 + 80.0 * ((i as f32) * 0.37).sin()))
+            .collect();
+        let stroke = Stroke::new(&path);
+        let mut seed = 7u32;
+        for _ in 0..20_000 {
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            let x = (seed >> 8) as f32 / (1u32 << 24) as f32 * 1200.0 - 100.0;
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            let y = (seed >> 8) as f32 / (1u32 << 24) as f32 * 600.0 - 100.0;
+            let exact = distance_to(&path, x, y);
+            assert_eq!(stroke.distance(x, y, 0.0).to_bits(), exact.to_bits(), "({x}, {y})");
+            let quick = stroke.distance(x, y, 40.0);
+            assert_eq!(quick < 40.0, exact < 40.0);
+        }
+        // Un seul point : un disque.
+        let dot = Stroke::new(&[(10.0, 10.0)]);
+        assert_eq!(dot.distance(13.0, 14.0, 0.0), 5.0);
+    }
+
+    #[test]
+    fn a_long_stroke_with_a_huge_radius_takes_a_moment_not_minutes() {
+        // Un trait de 800 points, de rayon 300 pixels, sur 1600 × 1200 : avant, la
+        // distance à chaque segment pour chaque pixel (plus d'une minute) ; maintenant,
+        // quelques secondes au plus.
+        let mut img = RgbImage::from_fn(1600, 1200, |x, y| {
+            let v = (((x * 7 + y * 13) % 255) as f32) / 255.0;
+            [v, 0.5 * v, 0.3]
+        });
+        let path: Vec<(f32, f32)> = (0..800)
+            .map(|i| ((i % 40) as f32 * 40.0, (i / 40) as f32 * 60.0))
+            .collect();
+        let start = std::time::Instant::now();
+        fill_path(&mut img, &path, 300.0, 0.5, 1.0);
+        assert!(start.elapsed().as_secs() < 20, "{:?}", start.elapsed());
+        assert!(img.data.iter().all(|p| p.iter().all(|c| c.is_finite())));
+    }
 
     #[test]
     fn a_disc_outside_the_photo_changes_nothing() {

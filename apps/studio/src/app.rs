@@ -2622,6 +2622,27 @@ impl Studio {
                         .desired_rows(2)
                         .desired_width(f32::INFINITY),
                 );
+                // La disposition : le nombre de photos de chaque page, au choix ; le texte
+                // tapé est gardé tant qu'il n'est pas valable.
+                let id = ui.scope_id().with("disposition-livre");
+                let mut text: String = ui.data_mut(|d| d.get_temp(id)).unwrap_or_else(|| {
+                    b.rhythm.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")
+                });
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(tr("Photos par page")).color(theme::DIM));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut text)
+                            .hint_text(tr("auto, ou 1,2,4 (répété)"))
+                            .desired_width(140.0),
+                    );
+                    match luma_render::book::parse_rhythm(&text) {
+                        Ok(r) => b.rhythm = r,
+                        Err(_) => {
+                            ui.label(RichText::new(tr("1, 2 ou 4 photos par page")).color(theme::ACCENT));
+                        }
+                    }
+                });
+                ui.data_mut(|d| d.insert_temp(id, text));
                 // Les pages d'après l'orientation des vignettes.
                 let landscape: Vec<bool> = photos
                     .iter()
