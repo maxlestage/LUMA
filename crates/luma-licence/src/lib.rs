@@ -143,16 +143,32 @@ pub fn billing_portal() -> Option<&'static str> {
     option_env!("LUMA_BILLING_PORTAL").filter(|u| u.starts_with("https://"))
 }
 
-/// Le serveur des clés (le site), s'il est configuré.
+/// Le site de LÜMA, qui délivre les clés, quand `LUMA_LICENCE_SERVER` n'est pas donnée
+/// à la construction.
+const DEFAULT_SERVER: &str = "https://luma-app-3b60d70f73ef.herokuapp.com";
+
+/// La clé publique des licences délivrées par le site (sa clé privée est
+/// `LUMA_LICENCE_SECRET`, sur le serveur seulement), quand `LUMA_LICENCE_PUBLIC` n'est
+/// pas donnée à la construction. Publique : elle ne fait que vérifier.
+const DEFAULT_PUBLIC: &str = "ad91e4122b2bde1d8968f0f3516c274e72af483c65373990a956167b32026952";
+
+/// Le serveur des clés (le site) : `LUMA_LICENCE_SERVER`, sinon le site de LÜMA.
 pub fn licence_server() -> Option<&'static str> {
-    option_env!("LUMA_LICENCE_SERVER")
+    let url = option_env!("LUMA_LICENCE_SERVER")
+        .filter(|u| !u.is_empty())
+        .unwrap_or(DEFAULT_SERVER);
+    Some(url)
         .filter(|u| u.starts_with("https://") || u.starts_with("http://"))
         .map(|u| u.trim_end_matches('/'))
 }
 
-/// La clé publique qui vérifie les licences, si elle est configurée.
+/// La clé publique qui vérifie les licences : `LUMA_LICENCE_PUBLIC`, sinon celle du site.
 pub fn public_key() -> Option<[u8; 32]> {
-    option_env!("LUMA_LICENCE_PUBLIC").and_then(from_hex)
+    from_hex(
+        option_env!("LUMA_LICENCE_PUBLIC")
+            .filter(|k| !k.is_empty())
+            .unwrap_or(DEFAULT_PUBLIC),
+    )
 }
 
 // ----- Clés de licence ------------------------------------------------------------------
@@ -504,6 +520,28 @@ mod tests {
 
     use super::*;
     use std::cell::RefCell;
+
+    #[test]
+    fn the_app_knows_the_site_and_its_public_key() {
+        assert!(public_key().is_some());
+        assert!(licence_server().is_some_and(|u| u.starts_with("https://") && !u.ends_with('/')));
+        // Une clé offerte (délivrée par le site sans abonnement) ouvre LÜMA comme une autre.
+        let seed = [3; 32];
+        let public = from_hex(&public_of(&seed)).unwrap();
+        let claims = Claims {
+            sub: "offert".into(),
+            email: "alice@exemple.fr".into(),
+            plan: Plan::Lifetime,
+            iat: 1_000_000,
+            exp: 1_000_000 + 30 * DAY,
+        };
+        let mut state = State::new(1_000_000);
+        activate(&mut state, &sign(&claims, &seed), Some(&public), 1_000_000).unwrap();
+        assert!(matches!(
+            state.access_with(1_000_000 + DAY, Some(&public), true),
+            Access::Premium { .. }
+        ));
+    }
 
     const SEED: [u8; 32] = [7; 32];
 
