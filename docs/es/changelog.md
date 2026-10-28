@@ -30,7 +30,9 @@ La fototeca profesional, paso a paso.
   372 → 299 ms) y 144 MB menos de memoria, mismos bytes. Después la exportación por
   lotes con un logotipo: el logotipo se lee una sola vez para todo el lote (40 ms menos
   por foto con un logotipo de 1200 × 600). Después la conversión al espacio de salida
-  (JPEG), ocho píxeles a la vez: 24 Mpx en sRGB 230 → 150 ms, mismos bytes.
+  (JPEG), ocho píxeles a la vez: 24 Mpx en sRGB 230 → 150 ms, mismos bytes; y para
+  TIFF y PNG de 16 bits: sRGB alrededor de un 35 % más corto (24 Mpx: 295–366 →
+  190–204 ms), mismos bytes.
   Después la reducción de ruido por ondículas, sin imagen nueva en cada escala: 1,8
   veces más rápida (24 Mpx: 1,17 → 0,65 s), y el enfoque por deconvolución, ocho píxeles
   a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles. Después el filtro que
