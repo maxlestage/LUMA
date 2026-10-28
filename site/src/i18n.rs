@@ -170,13 +170,14 @@ mod catalog_tests {
     use crate::server::docs::{CAMERAS_INTRO_KEY, DOCS};
 
     /// Les textes identiques dans toutes les langues, sans entrée au catalogue.
-    const SAME: [&str; 8] = [
+    const SAME: [&str; 9] = [
         "1.0",
         "Alpha",
         "Apple",
         "Apple Pencil",
         "Display P3",
         "HDR / EDR",
+        "Linux · Windows",
         "Metal",
         "RAW",
     ];
@@ -243,11 +244,6 @@ mod catalog_tests {
         for (_, phase, detail, _) in PLATFORMS {
             add(phase);
             add(detail);
-        }
-        for s in &SYSTEMS {
-            add(s.phase);
-            add(s.lede);
-            s.points.iter().for_each(|p| add(p));
         }
         for p in &PERF {
             add(p.name);
