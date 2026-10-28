@@ -1,4 +1,4 @@
-//! LÜMA Premium : sur Mac, 14 jours d'essai, puis un abonnement, au mois ou à l'an ;
+//! LÜMA Premium : sur Mac, un mois d'essai, puis un abonnement, au mois ou à l'an ;
 //! sur iPhone et iPad, un mois d'essai, puis un achat unique, à vie ([`Plan::Lifetime`]).
 //!
 //! Le paiement passe par Stripe (liens de paiement). Après le paiement, Stripe renvoie
@@ -31,8 +31,8 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
-/// Durée de l'essai gratuit : un mois sur iPhone et iPad, 14 jours sur Mac.
-pub const TRIAL_DAYS: u64 = if cfg!(target_os = "ios") { 30 } else { 14 };
+/// Durée de l'essai gratuit : un mois, partout.
+pub const TRIAL_DAYS: u64 = 30;
 /// Les jours ajoutés après la fin de la période payée : le temps d'un renouvellement,
 /// ou d'un voyage sans réseau.
 pub const GRACE_DAYS: u64 = 14;
@@ -587,16 +587,16 @@ mod tests {
     }
 
     #[test]
-    fn a_fresh_install_gets_a_fourteen_day_trial_then_expires() {
+    fn a_fresh_install_gets_a_one_month_trial_then_expires() {
         let s = State::new(1_000_000);
         let p = public();
-        assert_eq!(s.access(1_000_000, Some(&p)), Access::Trial { days_left: 14 });
+        assert_eq!(s.access(1_000_000, Some(&p)), Access::Trial { days_left: 30 });
         assert_eq!(
-            s.access(1_000_000 + 13 * DAY + 5, Some(&p)),
+            s.access(1_000_000 + 29 * DAY + 5, Some(&p)),
             Access::Trial { days_left: 1 }
         );
         assert_eq!(
-            s.access(1_000_000 + 14 * DAY, Some(&p)),
+            s.access(1_000_000 + 30 * DAY, Some(&p)),
             Access::Expired { had_key: false }
         );
         // Une horloge reculée ne prolonge rien.
