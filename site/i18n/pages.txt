@@ -182,9 +182,9 @@ fr = LÜMA, l'éditeur photo professionnel : vos RAW développés avec précisio
 en = LÜMA, the professional photo editor: your RAW files developed with precision, 275 film looks, your own film stocks, masks, a fast photo library. On Mac, iPhone, iPad and Linux. 14‑day free trial.
 es = LÜMA, el editor de fotos profesional: tus RAW revelados con precisión, 275 películas, tus propios carretes, máscaras y una fototeca rápida. En Mac, iPhone, iPad y Linux. 14 días de prueba.
 
-fr = Éditeur photo · Mac, iPhone, iPad et Linux
-en = Photo editor · Mac, iPhone, iPad and Linux
-es = Editor de fotos · Mac, iPhone, iPad y Linux
+fr = Éditeur photo · Mac, iPhone, iPad, Linux et Windows
+en = Photo editor · Mac, iPhone, iPad, Linux and Windows
+es = Editor de fotos · Mac, iPhone, iPad, Linux y Windows
 
 fr = La lumière, *développée*.
 en = Light, *developed*.
@@ -434,9 +434,9 @@ fr = Mesurés à chaque version sur un Mac à puce Apple, avec cinq vrais RAW : 
 en = Measured with every release on an Apple silicon Mac, with five real RAW files: Sony, Canon, Nikon, Fujifilm and iPhone ProRAW. On iPhone, these are still targets.
 es = Medidos en cada versión en un Mac con chip de Apple, con cinco RAW reales: Sony, Canon, Nikon, Fujifilm y iPhone ProRAW. En el iPhone, todavía son objetivos.
 
-fr = Linux est déjà là ; Windows et Android suivront, avec le même moteur : une photo aura le même rendu partout.
-en = Linux is already here; Windows and Android will follow, with the same engine: a photo will look the same everywhere.
-es = Linux ya está aquí; Windows y Android vendrán después, con el mismo motor: una foto se verá igual en todas partes.
+fr = Linux est déjà là, Windows arrive ; Android suivra, avec le même moteur : une photo aura le même rendu partout.
+en = Linux is already here and Windows is on its way; Android will follow, with the same engine: a photo will look the same everywhere.
+es = Linux ya está aquí y Windows está en camino; Android vendrá después, con el mismo motor: una foto se verá igual en todas partes.
 
 fr = D'abord
 en = First
@@ -458,9 +458,13 @@ fr = ProRAW, Photos, Fichiers.
 en = ProRAW, Photos, Files.
 es = ProRAW, Fotos, Archivos.
 
-fr = Le même rendu que sur Mac.
-en = The same rendering as on Mac.
-es = El mismo resultado que en Mac.
+fr = Windows 10 et 11 : installateur ou archive .zip, le même rendu que sur Mac.
+en = Windows 10 and 11: installer or .zip archive, the same rendering as on Mac.
+es = Windows 10 y 11: instalador o archivo .zip, el mismo resultado que en Mac.
+
+fr = Bientôt
+en = Coming soon
+es = Muy pronto
 
 fr = Le même rendu que sur iPhone.
 en = The same rendering as on iPhone.
@@ -518,9 +522,9 @@ fr = Où acheter LÜMA ?
 en = Where can I buy LÜMA?
 es = ¿Dónde se compra LÜMA?
 
-fr = Sur Mac et Linux, uniquement sur ce site, par abonnement (le même vaut pour les deux). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.
-en = On Mac and Linux, only on this site, by subscription (one subscription covers both). On iPhone and iPad, only in the App Store: €89.99 once and for all, after a one-month trial.
-es = En Mac y Linux, solo en este sitio, por suscripción (la misma sirve para los dos). En iPhone y iPad, solo en la App Store: 89,99 € de una vez por todas, tras un mes de prueba.
+fr = Sur Mac, Linux et Windows, uniquement sur ce site, par abonnement (le même vaut pour les trois). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.
+en = On Mac, Linux and Windows, only on this site, by subscription (one subscription covers all three). On iPhone and iPad, only in the App Store: €89.99 once and for all, after a one-month trial.
+es = En Mac, Linux y Windows, solo en este sitio, por suscripción (la misma sirve para los tres). En iPhone y iPad, solo en la App Store: 89,99 € de una vez por todas, tras un mes de prueba.
 
 fr = Où vont mes photos exportées sur iPhone ?
 en = Where do my photos go when I export on iPhone?
@@ -534,9 +538,9 @@ fr = Et Linux, Windows ou Android ?
 en = What about Linux, Windows or Android?
 es = ¿Y Linux, Windows o Android?
 
-fr = Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu, avec le même abonnement que sur Mac. Windows et Android viendront ensuite, avec le même moteur : une photo aura le même rendu partout.
-en = Linux is already here: an archive that installs without a password, or a .deb package for Debian and Ubuntu, with the same subscription as on Mac. Windows and Android will come next, with the same engine: a photo will look the same everywhere.
-es = Linux ya está aquí: un archivo que se instala sin contraseña, o un paquete .deb para Debian y Ubuntu, con la misma suscripción que en Mac. Windows y Android llegarán después, con el mismo motor: una foto se verá igual en todas partes.
+fr = Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu (x86_64, avec un pilote Vulkan). Windows arrive : un installateur et une archive .zip pour Windows 10 et 11, avec DirectX 12 ou Vulkan. Les deux avec le même abonnement que sur Mac. Android viendra ensuite, avec le même moteur : une photo aura le même rendu partout.
+en = Linux is already here: an archive that installs without a password, or a .deb package for Debian and Ubuntu (x86_64, with a Vulkan driver). Windows is on its way: an installer and a .zip archive for Windows 10 and 11, with DirectX 12 or Vulkan. Both with the same subscription as on Mac. Android will come next, with the same engine: a photo will look the same everywhere.
+es = Linux ya está aquí: un archivo que se instala sin contraseña, o un paquete .deb para Debian y Ubuntu (x86_64, con un controlador Vulkan). Windows está en camino: un instalador y un archivo .zip para Windows 10 y 11, con DirectX 12 o Vulkan. Los dos con la misma suscripción que en Mac. Android llegará después, con el mismo motor: una foto se verá igual en todas partes.
 
 fr = Quatorze jours pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.
 en = Fourteen days to try everything, no credit card required. Your photos are waiting.
@@ -564,9 +568,9 @@ fr = Quatorze jours pour *essayer*, puis à vous de choisir.
 en = Fourteen days to *try it*, then the choice is yours.
 es = Catorce días para *probarlo*, y luego tú eliges.
 
-fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac et Linux, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.
-en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription. On Mac and Linux, it is sold only here, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad (iOS and iPadOS), LÜMA Premium is a one-time purchase, sold only on the App Store.
-es = Descarga LÜMA: todo está disponible durante la prueba. Después, una suscripción mensual o anual. En Mac y Linux, se compra únicamente aquí, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app. En iPhone y iPad (iOS y iPadOS), LÜMA Premium se compra una sola vez, únicamente en el App Store.
+fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, Linux et Windows, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.
+en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription. On Mac, Linux and Windows, it is sold only here, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad (iOS and iPadOS), LÜMA Premium is a one-time purchase, sold only on the App Store.
+es = Descarga LÜMA: todo está disponible durante la prueba. Después, una suscripción mensual o anual. En Mac, Linux y Windows, se compra únicamente aquí, pagada a través de Stripe; tu clave de licencia aparece al instante y se introduce en la app. En iPhone y iPad (iOS y iPadOS), LÜMA Premium se compra una sola vez, únicamente en el App Store.
 
 fr = Télécharger pour Mac
 en = Download for Mac
@@ -670,9 +674,9 @@ es = En Mac y Linux, con todas las actualizaciones
 
 # ----- Pied de page -------------------------------------------------------------------
 
-fr = L'éditeur photo qui développe la lumière. Pour Mac, iPhone, iPad et Linux.
-en = The photo editor that develops light. For Mac, iPhone, iPad and Linux.
-es = El editor de fotos que revela la luz. Para Mac, iPhone, iPad y Linux.
+fr = L'éditeur photo qui développe la lumière. Pour Mac, iPhone, iPad, Linux et Windows.
+en = The photo editor that develops light. For Mac, iPhone, iPad, Linux and Windows.
+es = El editor de fotos que revela la luz. Para Mac, iPhone, iPad, Linux y Windows.
 
 fr = Télécharger pour
 en = Download for
@@ -1208,3 +1212,97 @@ es = Las fotos en vertical se abren más rápido
 fr = L'image est réduite avant d'être tournée : 5 fois moins de temps pour la tourner (91 → 18 ms pour un ProRAW de l'iPhone).
 en = The image is reduced before it is rotated: 5 times less time to rotate it (91 → 18 ms for an iPhone ProRAW).
 es = La imagen se reduce antes de girarla: 5 veces menos tiempo para girarla (91 → 18 ms en un ProRAW del iPhone).
+
+# ----- Linux et Windows (section « bureau », téléchargements Windows) ------------------
+
+fr = Linux et Windows
+en = Linux and Windows
+es = Linux y Windows
+
+fr = Le même LÜMA, *sur votre PC*.
+en = The same LÜMA, *on your PC*.
+es = El mismo LÜMA, *en tu PC*.
+
+fr = Le moteur du Mac, tel quel : les mêmes réglages, les mêmes films, le même rendu au pixel près. Linux est déjà là, Windows arrive, avec le même abonnement.
+en = The Mac engine, as is: the same adjustments, the same film looks, the same rendering down to the pixel. Linux is already here and Windows is on its way, with the same subscription.
+es = El motor del Mac, tal cual: los mismos ajustes, las mismas películas, el mismo resultado al píxel. Linux ya está aquí y Windows está en camino, con la misma suscripción.
+
+fr = Linux, *déjà là*.
+en = Linux, *already here*.
+es = Linux, *ya disponible*.
+
+fr = Une archive .tar.gz qui s'installe sans mot de passe dans votre dossier personnel, avec son lanceur et ses icônes, ou un paquet .deb pour Debian et Ubuntu. Le même moteur que sur Mac, sur votre carte graphique.
+en = A .tar.gz archive that installs into your home folder without a password, with its launcher and icons, or a .deb package for Debian and Ubuntu. The same engine as on Mac, running on your graphics card.
+es = Un archivo .tar.gz que se instala sin contraseña en tu carpeta personal, con su lanzador y sus iconos, o un paquete .deb para Debian y Ubuntu. El mismo motor que en Mac, en tu tarjeta gráfica.
+
+fr = Processeur
+en = Processor
+es = Procesador
+
+fr = Système
+en = System
+es = Sistema
+
+fr = Graphisme
+en = Graphics
+es = Gráficos
+
+fr = x86_64 (64 bits)
+en = x86_64 (64-bit)
+es = x86_64 (64 bits)
+
+fr = glibc 2.35 ou plus récente : Ubuntu 22.04, Debian 12, Fedora 36…
+en = glibc 2.35 or later: Ubuntu 22.04, Debian 12, Fedora 36…
+es = glibc 2.35 o posterior: Ubuntu 22.04, Debian 12, Fedora 36…
+
+fr = Un pilote Vulkan
+en = A Vulkan driver
+es = Un controlador Vulkan
+
+fr = Windows, *c'est parti*.
+en = Windows, *here we go*.
+es = Windows, *ya está aquí*.
+
+fr = Windows, *bientôt*.
+en = Windows, *coming soon*.
+es = Windows, *muy pronto*.
+
+fr = Un installateur, ou une archive .zip à décompresser où vous voulez. Le même moteur que sur Mac et Linux, et le même abonnement.
+en = An installer, or a .zip archive to unzip wherever you like. The same engine as on Mac and Linux, and the same subscription.
+es = Un instalador, o un archivo .zip para descomprimir donde quieras. El mismo motor que en Mac y Linux, y la misma suscripción.
+
+fr = Le portage est en cours : un installateur et une archive .zip à décompresser, le même moteur que sur Mac et Linux, et le même abonnement. Le bouton apparaîtra ici dès la sortie.
+en = The port is under way: an installer and a .zip archive to unzip, the same engine as on Mac and Linux, and the same subscription. The button will show up here as soon as it's released.
+es = La adaptación está en marcha: un instalador y un archivo .zip para descomprimir, el mismo motor que en Mac y Linux, y la misma suscripción. El botón aparecerá aquí en cuanto salga.
+
+fr = x64 (64 bits)
+en = x64 (64-bit)
+es = x64 (64 bits)
+
+fr = Windows 10 ou Windows 11
+en = Windows 10 or Windows 11
+es = Windows 10 o Windows 11
+
+fr = DirectX 12 ou Vulkan
+en = DirectX 12 or Vulkan
+es = DirectX 12 o Vulkan
+
+fr = Un seul abonnement LÜMA Premium vaut pour Mac, Linux et Windows : la clé achetée sur ce site se saisit dans l'app, sur chacun de vos ordinateurs.
+en = A single LÜMA Premium subscription covers Mac, Linux and Windows: the key you buy on this site is entered in the app, on each of your computers.
+es = Una sola suscripción LÜMA Premium sirve para Mac, Linux y Windows: la clave comprada en este sitio se introduce en la app, en cada uno de tus ordenadores.
+
+fr = Télécharger pour Windows
+en = Download for Windows
+es = Descargar para Windows
+
+fr = Bientôt sur Windows
+en = Coming soon to Windows
+es = Muy pronto en Windows
+
+fr = Archive .zip, sans installation
+en = .zip archive, no installation
+es = Archivo .zip, sin instalación
+
+fr = Windows 10 ou 11, 64 bits (x64), avec DirectX 12 ou Vulkan.
+en = Windows 10 or 11, 64-bit (x64), with DirectX 12 or Vulkan.
+es = Windows 10 u 11, 64 bits (x64), con DirectX 12 o Vulkan.
