@@ -74,6 +74,31 @@ impl Level {
     /// L'écart (somme des carrés) entre le patch autour de `t` et celui autour de `s`,
     /// arrêté dès qu'il dépasse `best`.
     fn distance(&self, t: (isize, isize), s: (isize, isize), best: f32) -> f32 {
+        let (w, h) = (self.w as isize, self.h as isize);
+        // Le patch cible tout entier dans la fenêtre (presque toujours) : ses lignes se
+        // lisent d'un bloc, sans vérifier les bords à chaque pixel ; mêmes additions dans
+        // le même ordre.
+        if t.0 >= HALF && t.1 >= HALF && t.0 < w - HALF && t.1 < h - HALF {
+            const SIDE: usize = 2 * HALF as usize + 1;
+            let mut d = 0.0;
+            for j in -HALF..=HALF {
+                let at = ((t.1 + j) * w + t.0 - HALF) as usize;
+                let from = ((s.1 + j) * w + s.0 - HALF) as usize;
+                let (tr, sr, hr) = (
+                    &self.px[at..at + SIDE],
+                    &self.px[from..from + SIDE],
+                    &self.hole[at..at + SIDE],
+                );
+                for ((a, b), &hole) in tr.iter().zip(sr).zip(hr) {
+                    let k = if hole { HOLE_WEIGHT } else { 1.0 };
+                    d += k * ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2));
+                }
+                if d >= best {
+                    return d;
+                }
+            }
+            return d;
+        }
         let mut d = 0.0;
         for j in -HALF..=HALF {
             let ty = t.1 + j;
@@ -100,15 +125,27 @@ impl Level {
     }
 }
 
-/// Les centres de patch utilisables comme source (aucun pixel du trou dans le patch).
+/// Les centres de patch utilisables comme source (aucun pixel du trou dans le patch) :
+/// d'abord, ligne par ligne, les pixels dont les sept voisins horizontaux sont hors du
+/// trou, puis ceux dont les sept voisins verticaux le sont ainsi (les mêmes réponses que
+/// les 49 pixels un à un).
 fn sources(level: &Level) -> Vec<bool> {
     let (w, h) = (level.w, level.h);
+    let r = HALF as usize;
     let mut ok = vec![false; w * h];
-    for y in HALF as usize..h.saturating_sub(HALF as usize) {
-        for x in HALF as usize..w.saturating_sub(HALF as usize) {
-            ok[y * w + x] = (-HALF..=HALF).all(|j| {
-                (-HALF..=HALF).all(|i| !level.hole[(y as isize + j) as usize * w + (x as isize + i) as usize])
-            });
+    if w <= 2 * r || h <= 2 * r {
+        return ok;
+    }
+    let mut rows = vec![false; w * h];
+    for y in 0..h {
+        let line = &level.hole[y * w..(y + 1) * w];
+        for x in r..w - r {
+            rows[y * w + x] = !line[x - r..=x + r].iter().any(|&v| v);
+        }
+    }
+    for y in r..h - r {
+        for x in r..w - r {
+            ok[y * w + x] = (y - r..=y + r).all(|yy| rows[yy * w + x]);
         }
     }
     ok
