@@ -5325,6 +5325,10 @@ fr = Sélectionner le ciel
 en = Select sky
 es = Seleccionar el cielo
 
+fr = Netteté
+en = Sharpness
+es = Nitidez
+
 fr = Agrandir au besoin
 en = Enlarge if needed
 es = Ampliar si es necesario
