@@ -301,7 +301,7 @@ fn the_interface_draws_in_every_language() {
     std::fs::create_dir_all(&expired).unwrap();
     std::fs::write(
         expired.join("licence.json"),
-        luma_licence::State::new(luma_studio::licence::now() - 20 * 86_400).to_json(),
+        luma_licence::State::new(luma_studio::licence::now() - 40 * 86_400).to_json(),
     )
     .unwrap();
     // Une photo du corpus, si elle est là.
