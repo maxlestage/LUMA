@@ -11696,6 +11696,7 @@ fn resize_editor(ui: &mut Ui, resize: &mut Option<luma_render::export::Resize>) 
         tr("Petit côté"),
         tr("Largeur × hauteur"),
         tr("Mégapixels"),
+        tr("Tirage (cm)"),
     ];
     let mode = match resize {
         None => 0,
@@ -11703,6 +11704,7 @@ fn resize_editor(ui: &mut Ui, resize: &mut Option<luma_render::export::Resize>) 
         Some(Resize::ShortEdge(_)) => 2,
         Some(Resize::Fit { .. }) => 3,
         Some(Resize::Megapixels(_)) => 4,
+        Some(Resize::Print { .. }) => 5,
     };
     let mut chosen = mode;
     egui::ComboBox::from_id_salt("dimensions")
@@ -11729,7 +11731,12 @@ fn resize_editor(ui: &mut Ui, resize: &mut Option<luma_render::export::Resize>) 
                 width: edge,
                 height: edge,
             }),
-            _ => Some(Resize::Megapixels(12.0)),
+            4 => Some(Resize::Megapixels(12.0)),
+            _ => Some(Resize::Print {
+                width_cm: 30.0,
+                height_cm: 40.0,
+                dpi: 300,
+            }),
         };
     }
     match resize {
@@ -11758,6 +11765,39 @@ fn resize_editor(ui: &mut Ui, resize: &mut Option<luma_render::export::Resize>) 
             )
             .accessible_name(tr("Mégapixels"));
         }
+        Some(Resize::Print {
+            width_cm,
+            height_cm,
+            dpi,
+        }) => {
+            fn cm(v: &mut f32) -> egui::DragValue<'_> {
+                // Les décimales comme ailleurs dans l'app (virgule en français).
+                egui::DragValue::new(v)
+                    .range(1.0..=500.0)
+                    .speed(0.5)
+                    .custom_formatter(|v, _| format!("{} cm", format_value(v as f32, 1, false)))
+                    .custom_parser(|t| {
+                        t.trim()
+                            .trim_end_matches("cm")
+                            .trim()
+                            .replace(',', ".")
+                            .parse()
+                            .ok()
+                    })
+            }
+            ui.add(cm(width_cm))
+                .accessible_name(tr("Largeur du tirage en centimètres"));
+            ui.label("×");
+            ui.add(cm(height_cm))
+                .accessible_name(tr("Hauteur du tirage en centimètres"));
+            ui.add(
+                egui::DragValue::new(dpi)
+                    .range(72..=1200)
+                    .speed(1.0)
+                    .suffix(" ppp"),
+            )
+            .accessible_name(tr("Points par pouce"));
+        }
     }
 }
 
@@ -11782,6 +11822,18 @@ fn export_summary(o: &ExportOptions) -> String {
         Some(Resize::ShortEdge(n)) => trf("petit côté {n} px", &[("n", &n)]),
         Some(Resize::Fit { width, height }) => format!("{width} × {height} px"),
         Some(Resize::Megapixels(m)) => format!("{m} Mpx"),
+        Some(Resize::Print {
+            width_cm,
+            height_cm,
+            dpi,
+        }) => trf(
+            "{w} × {h} cm à {dpi} ppp",
+            &[
+                ("w", &format_value(width_cm, 1, false)),
+                ("h", &format_value(height_cm, 1, false)),
+                ("dpi", &dpi),
+            ],
+        ),
     };
     if o.enlarge && o.resize.is_some() {
         return format!("{format}, {space}, {size}, {}", tr("agrandie au besoin"));

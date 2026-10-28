@@ -1123,6 +1123,30 @@ fn export_enlarge() {
 }
 
 #[test]
+fn export_print_size() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("export-tirage") else {
+        return;
+    };
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::E)]);
+    // Un tirage de 30 × 40 cm à 300 ppp : ses trois champs.
+    s.studio().export_options.resize = Some(luma_render::export::Resize::Print {
+        width_cm: 30.0,
+        height_cm: 40.0,
+        dpi: 300,
+    });
+    s.wait();
+    for label in [
+        "Largeur du tirage en centimètres",
+        "Hauteur du tirage en centimètres",
+        "Points par pouce",
+    ] {
+        assert!(s.harness.query_by_label(label).is_some(), "{label}");
+    }
+    s.capture("export-tirage");
+}
+
+#[test]
 fn masks_linear_and_radial() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("masques") else {
