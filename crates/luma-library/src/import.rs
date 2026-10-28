@@ -68,6 +68,8 @@ pub struct Options {
     pub folders: String,
     /// Le second disque, où chaque photo est copiée aussi (même rangement).
     pub backup: Option<PathBuf>,
+    /// Seulement les photos de ces jours de prise de vue (`AAAA-MM-JJ`) ; vide : toutes.
+    pub days: Vec<String>,
 }
 
 /// Une photo à copier.
@@ -111,8 +113,26 @@ pub fn folder(template: &str, date: &str) -> PathBuf {
 /// Le plan : les photos (lues dans leurs en‑têtes, `entries`) dans l'ordre de prise de
 /// vue, leur place, et leur nom donné par `name` (le nouveau nom sans extension, pour la
 /// photo et le rang de sa prise ; `None` : son nom d'origine).
+/// Le jour de prise de vue d'une photo (`AAAA-MM-JJ`).
+fn day(e: &Entry) -> &str {
+    e.date.get(..10).unwrap_or(&e.date)
+}
+
+/// Les jours de prise de vue des photos, dans l'ordre, et le nombre de photos de chacun :
+/// de quoi n'en importer que certains.
+pub fn days(entries: &[Entry]) -> Vec<(String, usize)> {
+    let mut count: BTreeMap<String, usize> = BTreeMap::new();
+    for e in entries {
+        *count.entry(day(e).to_owned()).or_default() += 1;
+    }
+    count.into_iter().collect()
+}
+
 pub fn plan(entries: &[Entry], o: &Options, name: impl Fn(&Entry, usize) -> Option<String>) -> Plan {
-    let mut sorted: Vec<&Entry> = entries.iter().collect();
+    let mut sorted: Vec<&Entry> = entries
+        .iter()
+        .filter(|e| o.days.is_empty() || o.days.iter().any(|d| d == day(e)))
+        .collect();
     sorted.sort_by(|a, b| (&a.date, &a.path).cmp(&(&b.date, &b.path)));
     // Les prises : même dossier, même nom sans extension (le RAW et son JPEG).
     let shot = |e: &Entry| {
@@ -290,6 +310,39 @@ mod tests {
     }
 
     #[test]
+    fn only_the_chosen_days() {
+        let root = std::env::temp_dir().join(format!("luma-import-jours-{}", std::process::id()));
+        let entries = vec![
+            entry(&root.join("IMG_0001.CR3"), "2026-10-26T09:00:00"),
+            entry(&root.join("IMG_0001.JPG"), "2026-10-26T09:00:00"),
+            entry(&root.join("IMG_0002.CR3"), "2026-10-27T12:00:00"),
+            entry(&root.join("IMG_0003.CR3"), "2026-10-28T08:30:00"),
+        ];
+        assert_eq!(
+            days(&entries),
+            [
+                ("2026-10-26".to_owned(), 2),
+                ("2026-10-27".to_owned(), 1),
+                ("2026-10-28".to_owned(), 1)
+            ]
+        );
+        let mut o = Options {
+            dest: root.join("Photos"),
+            folders: String::new(),
+            backup: None,
+            days: Vec::new(),
+        };
+        assert_eq!(plan(&entries, &o, |_, _| None).items.len(), 4, "tous les jours");
+        o.days = vec!["2026-10-26".into(), "2026-10-28".into()];
+        let names: Vec<String> = plan(&entries, &o, |_, _| None)
+            .items
+            .iter()
+            .map(|i| i.source.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["IMG_0001.CR3", "IMG_0001.JPG", "IMG_0003.CR3"]);
+    }
+
+    #[test]
     fn folders_from_the_date() {
         assert_eq!(
             folder("{année}/{année}-{mois}-{jour}", "2026-10-27T10:00:00"),
@@ -325,6 +378,7 @@ mod tests {
             dest: root.join("Photos"),
             folders: "{année}/{année}-{mois}-{jour}".into(),
             backup: Some(root.join("Second")),
+            days: Vec::new(),
         };
         // Renommées dans l'ordre de prise de vue ; le RAW et son JPEG ensemble.
         let name = |e: &Entry, n: usize| Some(format!("{}_{n:03}", &e.date[..10]));
@@ -382,6 +436,7 @@ mod tests {
             dest: root.join("Photos"),
             folders: String::new(),
             backup: Some(root.join("Second")),
+            days: Vec::new(),
         };
         std::fs::create_dir_all(&o.dest).unwrap();
         std::fs::write(o.dest.join("IMG_1.xmp"), b"reglages de la phototheque").unwrap();
@@ -415,6 +470,7 @@ mod tests {
             dest: root.join("Photos"),
             folders: String::new(),
             backup: None,
+            days: Vec::new(),
         };
         let p = plan(&[entry(&root.join("A.NEF"), "2026-01-01T00:00:00")], &o, |_, _| None);
         assert_eq!(p.items[0].target, root.join("Photos/A-2.NEF"));
