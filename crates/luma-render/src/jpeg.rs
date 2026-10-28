@@ -393,6 +393,7 @@ fn blocks(rgb: &[u8], w: usize, h: usize, bx: usize, by: usize, q: &[[u8; 64]; 2
 }
 
 fn segment(out: &mut Vec<u8>, marker: u8, data: &[u8]) {
+    debug_assert!(data.len() + 2 <= usize::from(u16::MAX), "segment JPEG trop long");
     out.extend_from_slice(&[0xFF, marker]);
     out.extend_from_slice(&(data.len() as u16 + 2).to_be_bytes());
     out.extend_from_slice(data);
@@ -438,6 +439,10 @@ pub fn with_standard_tables(jpeg: &[u8]) -> std::borrow::Cow<'_, [u8]> {
 fn applications(out: &mut Vec<u8>, exif: &[u8], icc: &[u8]) -> Result<(), String> {
     segment(out, APP0, &[b'J', b'F', b'I', b'F', 0, 1, 2, 0, 0, 1, 0, 1, 0, 0]);
     if !exif.is_empty() {
+        // Un segment JPEG tient en 64 Ko, sa longueur comprise.
+        if 6 + exif.len() + 2 > usize::from(u16::MAX) {
+            return Err("JPEG : métadonnées EXIF trop grandes (64 Ko au plus)".into());
+        }
         let mut e = b"Exif\0\0".to_vec();
         e.extend_from_slice(exif);
         segment(out, APP1, &e);

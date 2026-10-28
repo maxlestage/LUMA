@@ -60,7 +60,9 @@ pub fn reconstruct(cam: &RgbImage) -> Option<RgbImage> {
             for c in 0..3 {
                 let t = smoothstep(FROM, TO, p[c]) * sure;
                 if t > 0.0 {
-                    let rebuilt = (scale * k[c]).clamp(p[c], CEILING);
+                    // `min` puis `max` : un canal déjà au-dessus du plafond (RAW flottant,
+                    // HDR) reste tel quel, là où `clamp` paniquerait.
+                    let rebuilt = (scale * k[c]).min(CEILING).max(p[c]);
                     p[c] += (rebuilt - p[c]) * t;
                 }
             }
@@ -119,6 +121,15 @@ fn neighbour_chroma(cam: &RgbImage) -> [Plane; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn channels_above_the_ceiling_do_not_panic() {
+        // Un RAW flottant ou HDR : un canal déjà au-dessus du plafond.
+        let cam = RgbImage::from_fn(16, 16, |x, _| if x < 8 { [5.0, 0.3, 0.2] } else { [0.5, 0.4, 0.3] });
+        if let Some(out) = reconstruct(&cam) {
+            assert!(out.data.iter().flatten().all(|v| v.is_finite()));
+        }
+    }
 
     /// Un ciel orangé, de teinte changeante, dont le rouge dépasse la saturation au centre : la vérité, et ce
     /// que le capteur en garde (canaux bornés à 1).

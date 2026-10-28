@@ -44,6 +44,15 @@ The professional photo library, step by step.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
+- **Reliability**: a full code review. Highlights no longer turn black when Whites
+  is pushed hard; no more crashes on a malformed HEIC, ICC or DNG file, a one-pixel-wide
+  image, a retouch outside the photo, a locked-ratio crop dragged to its smallest, or an
+  oversized panorama. An export never overwrites an original photo; import no longer
+  replaces a library XMP or a file on the second disk, and keeps each photo's XMP within
+  a shot; restoring the oldest catalogue backup works, and an unreadable catalogue is
+  kept in the backups. In the app, the previous photo's preview no longer covers the one
+  being opened, feathered masks look as they export, and a GPU that stops responding
+  lets the processor finish the preview.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).
