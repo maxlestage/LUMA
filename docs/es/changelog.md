@@ -77,10 +77,16 @@ La fototeca profesional, paso a paso.
   que deja de responder deja al procesador terminar la vista previa. Dos pruebas hacen
   guardia: los RAW dañados (copia cortada, bytes revueltos, archivo vacío) se abren como
   imagen o como error, nunca como cierre, y los ajustes con valores absurdos (infinitos,
-  enormes) dan píxeles sanos, también en máscaras, retoques y licuado.
+  enormes) dan píxeles sanos, también en máscaras, retoques y licuado. Una eliminación
+  trazada larga y muy ancha ya no congela la exportación (24 Mpx: 2 minutos → 4
+  segundos), mismos píxeles.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
+- **Correcciones de objetivo siempre aplicadas**: un duplicado de trabajo escrito por
+  una versión anterior a la lectura de las correcciones de objetivo del archivo (Sony,
+  Fujifilm, Olympus, Panasonic, DNG) se rehace una vez, en lugar de mostrar la foto sin
+  ellas.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
@@ -437,7 +443,8 @@ La fototeca profesional, paso a paso.
 - **Páginas de texto en el libro** («Libro, presentación, galería…», `luma book
   --opening --closing`): una página tras la portada (una dedicatoria, unas palabras de
   introducción) y una última página (un lugar, una fecha, agradecimientos), con sus
-  líneas centradas en la página.
+  líneas centradas en la página. Y la disposición a elegir: el número de fotos de cada
+  página («1,2,4», repetido; `--pages`).
 - **Presentación**: a pantalla completa en la app (la foto sola, avanza por sí misma,
   Espacio para pausar, Esc para salir) y **exportada** (`luma slideshow`): una carpeta
   autónoma, index.html y las fotos, para abrir en cualquier navegador o publicar

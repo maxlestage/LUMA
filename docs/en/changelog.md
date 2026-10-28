@@ -69,10 +69,14 @@ The professional photo library, step by step.
   lets the processor finish the preview. Two tests stand guard: damaged RAWs (a cut
   copy, scrambled bytes, an empty file) open as an image or an error, never a crash, and
   settings with absurd values (infinite, huge) render to sound pixels, in masks,
-  retouches and liquify too.
+  retouches and liquify too. A long, very wide traced removal no longer freezes the
+  export (24 MP: 2 minutes → 4 seconds), same pixels.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).
+- **Lens corrections always applied**: a working duplicate written by a version from
+  before the file's lens corrections were read (Sony, Fujifilm, Olympus, Panasonic, DNG)
+  is made again once, instead of showing the photo without them.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
@@ -405,7 +409,9 @@ The professional photo library, step by step.
   their orientation; 20 × 20, 30 × 30, A4, 21 × 28, A3 formats.
 - **Text pages in the book** (“Book, slideshow, gallery…”, `luma book --opening
   --closing`): a page after the cover (a dedication, a few words of introduction) and a
-  last page (a place, a date, acknowledgements), their lines centred on the page.
+  last page (a place, a date, acknowledgements), their lines centred on the page. And
+  the layout of your choice: the number of photos on each page (“1,2,4”, repeated;
+  `--pages`).
 - **Slideshow**: full screen in the app (the photo alone, advancing by itself, Space to
   pause, Esc to leave), and **exported** (`luma slideshow`): a self-contained folder,
   index.html and the photos, to open in any browser or put online (crossfade, arrows,

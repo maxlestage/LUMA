@@ -485,3 +485,33 @@ fn tripod_frames_of_different_sizes_are_refused() {
         assert!(err.to_string().contains("taille"), "{err}");
     }
 }
+
+/// Les corrections d'objectif du fichier (ici celles qu'inscrit le boîtier Sony) sont
+/// dans les poses fusionnées, donc dans le résultat : l'empilement de deux poses
+/// identiques est l'image corrigée, pas l'image brute.
+#[test]
+fn a_merge_keeps_the_lens_corrections_of_the_files() {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus/_DSC0009.ARW");
+    let Ok(photo) = Photo::open(&src) else {
+        return;
+    };
+    assert!(photo.has_camera_corrections());
+    let frames = luma_merge::RawFiles {
+        paths: vec![src.clone(), src.clone()],
+        size: Size::Fit(800),
+    };
+    let merged = luma_merge::stack(&frames, StackMode::Mean, false, &|_, _| {}, &luma_core::Cancel::new()).unwrap();
+    let mut t = Default::default();
+    let gap = |a: &RgbImage| {
+        a.data
+            .iter()
+            .zip(&merged.image.data)
+            .map(|(x, y)| (0..3).map(|c| (x[c] - y[c]).abs()).sum::<f32>())
+            .sum::<f32>()
+            / a.data.len() as f32
+    };
+    let corrected = photo.source_with(Size::Fit(800), true, &mut t);
+    let raw = photo.source_with(Size::Fit(800), false, &mut t);
+    assert!(gap(&corrected) < 1e-6, "{}", gap(&corrected));
+    assert!(gap(&raw) > 0.01, "{}", gap(&raw));
+}

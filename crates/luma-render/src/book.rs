@@ -57,6 +57,9 @@ pub struct Book {
     /// une à la fin ; vides : pas de page. Une ligne par ligne du texte.
     pub opening: String,
     pub closing: String,
+    /// La disposition choisie : le nombre de photos de chaque page après la couverture
+    /// (1, 2 ou 4), répété jusqu'à la fin ; vide : choisie d'après les photos ([`plan`]).
+    pub rhythm: Vec<usize>,
 }
 
 impl Default for Book {
@@ -72,6 +75,7 @@ impl Default for Book {
             captions: false,
             opening: String::new(),
             closing: String::new(),
+            rhythm: Vec::new(),
         }
     }
 }
@@ -133,6 +137,54 @@ pub fn plan(landscape: &[bool]) -> Vec<Sheet> {
     sheets
 }
 
+/// Les pages du livre selon une disposition choisie : la couverture, puis `rhythm`
+/// photos par page (1, 2 ou 4), répété ; une page de 4 ou 2 photos qui n'en a plus assez
+/// en prend moins. Sans disposition, celle de [`plan`].
+pub fn plan_with(landscape: &[bool], rhythm: &[usize]) -> Vec<Sheet> {
+    let rhythm: Vec<usize> = rhythm.iter().copied().filter(|n| matches!(n, 1 | 2 | 4)).collect();
+    if rhythm.is_empty() || landscape.is_empty() {
+        return plan(landscape);
+    }
+    let mut sheets = vec![Sheet {
+        kind: Kind::Cover,
+        photos: vec![0],
+    }];
+    let mut i = 1;
+    for &want in rhythm.iter().cycle() {
+        if i >= landscape.len() {
+            break;
+        }
+        let left = landscape.len() - i;
+        let n = [4, 2, 1].into_iter().find(|&n| n <= want && n <= left).unwrap_or(1);
+        let kind = match n {
+            4 => Kind::Four,
+            2 => Kind::Pair,
+            _ => Kind::Single,
+        };
+        sheets.push(Sheet {
+            kind,
+            photos: (i..i + n).collect(),
+        });
+        i += n;
+    }
+    sheets
+}
+
+/// Une disposition écrite « 1,2,4 » (ou « 1 2 4 ») ; vide ou « auto » : aucune.
+pub fn parse_rhythm(text: &str) -> Result<Vec<usize>, String> {
+    let t = text.trim();
+    if t.is_empty() || t.eq_ignore_ascii_case("auto") {
+        return Ok(Vec::new());
+    }
+    t.split([',', ' ', ';'])
+        .filter(|p| !p.is_empty())
+        .map(|p| match p.trim().parse::<usize>() {
+            Ok(n @ (1 | 2 | 4)) => Ok(n),
+            _ => Err(format!("« {p} » : 1, 2 ou 4 photos par page")),
+        })
+        .collect()
+}
+
 impl Book {
     /// La mise en page d'impression de ce livre (papier, marges, résolution).
     pub fn layout(&self) -> Layout {
@@ -149,7 +201,7 @@ impl Book {
 
     /// Les pages du livre : celles des photos ([`plan`]), avec ses pages de texte.
     pub fn sheets(&self, landscape: &[bool]) -> Vec<Sheet> {
-        let mut sheets = plan(landscape);
+        let mut sheets = plan_with(landscape, &self.rhythm);
         if sheets.is_empty() {
             return sheets;
         }
@@ -271,6 +323,39 @@ mod tests {
 
     fn kinds(sheets: &[Sheet]) -> Vec<(Kind, usize)> {
         sheets.iter().map(|s| (s.kind, s.photos.len())).collect()
+    }
+
+    #[test]
+    fn a_chosen_layout() {
+        // Couverture, puis 1, 4, 1, 4… ; la dernière page de 4 n'en a que 2.
+        let sheets = plan_with(&[true; 9], &[1, 4]);
+        assert_eq!(
+            kinds(&sheets),
+            [
+                (Kind::Cover, 1),
+                (Kind::Single, 1),
+                (Kind::Four, 4),
+                (Kind::Single, 1),
+                (Kind::Pair, 2)
+            ]
+        );
+        // Chaque photo une fois, dans l'ordre.
+        let all: Vec<usize> = sheets.iter().flat_map(|s| s.photos.clone()).collect();
+        assert_eq!(all, (0..9).collect::<Vec<_>>());
+        // Sans disposition (ou rien de valable), celle d'après les photos.
+        assert_eq!(plan_with(&[true; 9], &[]), plan(&[true; 9]));
+        assert_eq!(plan_with(&[true; 9], &[3]), plan(&[true; 9]));
+        assert_eq!(parse_rhythm("1, 2 4").unwrap(), [1, 2, 4]);
+        assert!(parse_rhythm("auto").unwrap().is_empty() && parse_rhythm("").unwrap().is_empty());
+        assert!(parse_rhythm("1,3").unwrap_err().contains("« 3 »"));
+        let b = Book {
+            rhythm: vec![2],
+            ..Book::default()
+        };
+        assert_eq!(
+            kinds(&b.sheets(&[false; 5])),
+            [(Kind::Cover, 1), (Kind::Pair, 2), (Kind::Pair, 2)]
+        );
     }
 
     #[test]
