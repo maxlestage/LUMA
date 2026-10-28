@@ -76,6 +76,23 @@ fn photos_follow_the_track() {
     ]);
     assert!(text.contains("hors de la trace"), "{text}");
 
+    // L'écart deviné : la photo de 08:20, lue comme l'heure de Paris, n'est pas dans la
+    // trace ; à l'heure universelle, si.
+    let (ok, text) = luma(&[
+        "geotag",
+        inside.to_str().unwrap(),
+        "--gpx",
+        &gpx_s,
+        "--offset",
+        "auto",
+        "--replace",
+    ]);
+    assert!(
+        ok && text.contains("horloge du boîtier : UTC+00:00 (devinée)"),
+        "{text}"
+    );
+    assert!(text.contains("1 photos placées"), "{text}");
+
     for (args, says) in [
         (vec!["geotag", &dir_s], "--gpx"),
         (vec!["geotag", "--gpx", &gpx_s], "aucune photo"),

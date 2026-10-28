@@ -327,7 +327,9 @@ The professional photo library, step by step.
   settings, GPS position. Photos already in the library are read again once.
 - **A GPX track to place photos** (`luma geotag --gpx track.gpx`): each photo takes the
   track's position at the moment it was taken, written to its XMP; the camera clock's
-  offset is given with `--offset`. The library and the map show it at once.
+  offset is given with `--offset`, or guessed (`--offset auto`). The library and the
+  map show it at once. In the app on Mac: “Follow a GPX track…” on the map, the offset
+  guessed.
 - **Place a photo on the map by hand**: on the map, the displayed photo that has no
   position shows a crosshair in the centre; drag the map under it, then “Place here”
   writes it to its XMP and to the library. The chosen photos that have no position are
