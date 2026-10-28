@@ -107,7 +107,8 @@ fn boxes(b: &[u8]) -> impl Iterator<Item = ([u8; 4], &[u8])> {
             s => (i + 8, s),
         };
         let end = i.saturating_add(usize::try_from(size).ok()?);
-        if size < 8 || start > b.len() {
+        // La taille compte l'en-tête (8 octets, 16 avec la grande taille).
+        if size < (start - i) as u64 || start > b.len() {
             return None;
         }
         let body = &b[start..end.min(b.len())];
@@ -134,9 +135,9 @@ fn heif_exif(b: &[u8]) -> Option<(u64, usize)> {
     // L'élément de type « Exif ».
     let (_, iinf) = boxes(children).find(|(k, _)| k == b"iinf")?;
     let mut i = 4;
-    be(iinf, &mut i, if iinf[0] == 0 { 2 } else { 4 })?;
+    be(iinf, &mut i, if *iinf.first()? == 0 { 2 } else { 4 })?;
     let id = boxes(iinf.get(i..)?).find_map(|(k, infe)| {
-        if &k != b"infe" || infe[0] < 2 {
+        if &k != b"infe" || infe.first().is_none_or(|&v| v < 2) {
             return None;
         }
         let mut j = 4;
@@ -164,7 +165,7 @@ fn heif_exif(b: &[u8]) -> Option<(u64, usize)> {
             be(iloc, &mut i, index_size)?;
             let off = be(iloc, &mut i, offset_size)?;
             let len = be(iloc, &mut i, length_size)?;
-            first.get_or_insert((base + off, len as usize));
+            first.get_or_insert((base.checked_add(off)?, len as usize));
         }
         if item == id {
             // Seule la place dans le fichier est lue (pas les données dans `idat`).

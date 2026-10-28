@@ -414,6 +414,16 @@ pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, 
 mod tests {
     use super::*;
 
+    #[test]
+    fn a_disc_outside_the_photo_changes_nothing() {
+        let (clean, _) = scene();
+        for (cx, cy) in [(300.0, 80.0), (100.0, 240.0), (-100.0, -100.0)] {
+            let mut img = clean.clone();
+            fill(&mut img, cx, cy, 2.0, 0.5, 1.0);
+            assert_eq!(img.data, clean.data);
+        }
+    }
+
     /// L'empreinte des pixels de trois suppressions (un grand disque, un petit, un
     /// tracé) : celle d'avant l'index plein ; une modification qui change le résultat la
     /// change, une accélération non.
