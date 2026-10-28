@@ -87,6 +87,9 @@ La fototeca profesional, paso a paso.
   una versión anterior a la lectura de las correcciones de objetivo del archivo (Sony,
   Fujifilm, Olympus, Panasonic, DNG) se rehace una vez, en lugar de mostrar la foto sin
   ellas.
+- **Distorsión de los DNG más rápida**: la corrección de la distorsión escrita en un
+  DNG (teléfonos, cámaras que graban en DNG) es un 35 % más rápida (6 Mpx: 230 → 150
+  ms), sin cambiar un píxel.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

@@ -84,6 +84,9 @@ La photothèque professionnelle, étape par étape.
 - **Corrections d'objectif toujours appliquées** : un doublon de travail écrit par une
   version d'avant la lecture des corrections d'objectif du fichier (Sony, Fujifilm,
   Olympus, Panasonic, DNG) est refait une fois, au lieu de montrer la photo sans elles.
+- **Distorsion des DNG plus rapide** : la correction de la distorsion écrite dans un
+  DNG (téléphones, boîtiers qui enregistrent en DNG) environ 35 % plus rapide (6 Mpx :
+  230 → 150 ms), sans changer un pixel.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
