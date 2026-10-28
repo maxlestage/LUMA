@@ -103,8 +103,10 @@ fn meta(raw: &RawPhoto, source: (u64, u128)) -> Value {
         "orientation": orientation_code(raw.orientation),
         "baseline_exposure": raw.baseline_exposure,
         "rendered": raw.rendered,
-        // Les corrections d'objectif du fichier sont déjà dans les pixels du doublon.
+        // Les corrections d'objectif du fichier sont déjà dans les pixels du doublon ;
+        // `corrections_read` : le doublon a été écrit après leur lecture.
         "lens_corrected": raw.opcodes.is_some(),
+        "corrections_read": true,
         "exif": {
             "iso": raw.exif.iso,
             "exposure_time": raw.exif.exposure_time,
@@ -364,6 +366,11 @@ impl Duplicate {
         f.read_exact(&mut header).ok()?;
         let m: Value = serde_json::from_slice(&header).ok()?;
         if m["source_len"].as_u64() != Some(sig.0) || m["source_time"].as_str() != Some(&sig.1.to_string()) {
+            return None;
+        }
+        // Un doublon d'avant la lecture des corrections d'objectif du fichier n'en porte
+        // aucune, même quand le fichier en a : il est refait.
+        if m["corrections_read"].as_bool() != Some(true) {
             return None;
         }
         let count = read_u32(&mut f).ok()? as usize;
