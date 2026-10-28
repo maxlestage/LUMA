@@ -13,6 +13,7 @@
 pub mod backup;
 pub mod collections;
 pub mod fingerprint;
+pub mod geotag;
 pub mod import;
 pub mod map;
 pub mod query;
@@ -94,6 +95,10 @@ impl Entry {
         };
         self.label = meta.label;
         self.keywords = meta.keywords;
+        // Une position placée après coup (trace GPX, carte) passe devant celle du fichier.
+        if let Some(p) = meta.position {
+            self.gps = Some([p.latitude, p.longitude]);
+        }
     }
 }
 
