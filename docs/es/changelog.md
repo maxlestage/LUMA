@@ -151,6 +151,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Eliminación trazada** (Retoque, Eliminar): arrastrar a lo largo de un cable, una
+  raya o un alambre lo borra de un solo gesto, sustituido por la foto de alrededor.
+  Sin IA.
 - **Tonos automáticos** (Luz, Tono, o `--auto-tone`): un clic ajusta la
   exposición, el contraste, las altas luces y las sombras según el histograma de la
   foto, un punto de partida para afinar. Sin IA.

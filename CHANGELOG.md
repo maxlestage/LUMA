@@ -154,6 +154,8 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Suppression tracée** (Retouche, Supprimer) : glisser le long d'un fil, d'une rayure
+  ou d'un câble l'efface d'un seul geste, remplacé par la photo qui l'entoure. Sans IA.
 - **Tons auto** (Lumière, Tonalité, ou `--auto-tone`) : un clic règle l'exposition, le
   contraste, les hautes lumières et les ombres d'après l'histogramme de la photo, un
   point de départ à affiner. Sans IA.
