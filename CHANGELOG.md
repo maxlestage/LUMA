@@ -70,7 +70,10 @@ La photothèque professionnelle, étape par étape.
   plus ancienne sauvegarde du catalogue fonctionne, et un catalogue illisible est gardé
   dans les sauvegardes. Dans l'app, l'aperçu de la photo d'avant ne recouvre plus celle
   qu'on ouvre, les masques à bord adouci s'affichent comme ils s'exportent, et un GPU qui
-  ne répond plus laisse le processeur finir l'aperçu.
+  ne répond plus laisse le processeur finir l'aperçu. Deux essais montent la garde :
+  des RAW abîmés (copie coupée, octets brouillés, fichier vide) s'ouvrent en image ou en
+  erreur, jamais en plantage, et des réglages aux valeurs aberrantes (infinies, énormes)
+  se rendent en pixels sains, dans les masques, les retouches et la fluidité aussi.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).

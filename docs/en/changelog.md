@@ -63,7 +63,10 @@ The professional photo library, step by step.
   a shot; restoring the oldest catalogue backup works, and an unreadable catalogue is
   kept in the backups. In the app, the previous photo's preview no longer covers the one
   being opened, feathered masks look as they export, and a GPU that stops responding
-  lets the processor finish the preview.
+  lets the processor finish the preview. Two tests stand guard: damaged RAWs (a cut
+  copy, scrambled bytes, an empty file) open as an image or an error, never a crash, and
+  settings with absurd values (infinite, huge) render to sound pixels, in masks,
+  retouches and liquify too.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).
