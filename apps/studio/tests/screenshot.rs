@@ -2855,19 +2855,44 @@ fn import_from_a_memory_card() {
             "tous : rien à filtrer"
         );
     }
-    s.harness.get_by_label("Importer 2 photos").click();
+    // Photo par photo : les aperçus de la carte, et une photo laissée dessus.
+    s.harness.get_by_label("Choisir photo par photo").click();
+    s.harness.step();
+    let ctx = s.harness.ctx.clone();
+    s.studio().wait_import_previews(&ctx);
+    assert_eq!(
+        s.studio().import_previews(),
+        2,
+        "les aperçus intégrés aux RAW"
+    );
+    let left = s
+        .studio()
+        .import
+        .shots
+        .iter()
+        .position(|p| p.main().ends_with("DSC_0750.NEF"))
+        .unwrap();
+    s.studio().import.shots[left].on = false;
+    s.harness.step();
+    s.harness.step();
+    s.capture("importer-photo-par-photo");
+    s.harness.get_by_label("Importer 1 photos").click();
     s.harness.step();
     s.wait();
     // Rangées par date, renommées, sur les deux disques ; puis ouvertes.
     let imported = luma_library::import::photos(&lib);
-    assert_eq!(imported.len(), 2, "{imported:?}");
+    assert_eq!(imported.len(), 1, "{imported:?}");
+    assert!(
+        imported[0].extension().is_some_and(|x| x == "ARW"),
+        "le NEF reste sur la carte"
+    );
     assert!(imported.iter().all(|p| {
         p.file_name()
             .unwrap()
             .to_string_lossy()
             .starts_with("essai_")
     }));
-    assert_eq!(luma_library::import::photos(&second).len(), 2);
+    assert_eq!(luma_library::import::photos(&second).len(), 1);
     assert!(
         card.join("_DSC0009.ARW").is_file(),
         "la carte reste intacte"

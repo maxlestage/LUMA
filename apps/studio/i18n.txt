@@ -5671,6 +5671,14 @@ fr = Jours
 en = Days
 es = Días
 
+fr = Choisir photo par photo
+en = Choose photo by photo
+es = Elegir foto a foto
+
+fr = Aucune|photo
+en = None
+es = Ninguna
+
 fr = Photos par page
 en = Photos per page
 es = Fotos por página
