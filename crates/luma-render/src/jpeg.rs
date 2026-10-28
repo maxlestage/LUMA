@@ -435,6 +435,17 @@ pub fn with_standard_tables(jpeg: &[u8]) -> std::borrow::Cow<'_, [u8]> {
     jpeg.into()
 }
 
+/// Inscrit la résolution d'un tirage (points par pouce) dans le segment JFIF d'un JPEG
+/// écrit par LÜMA ; un autre fichier ne bouge pas.
+pub fn set_density(jpeg: &mut [u8], dpi: u32) {
+    if jpeg.len() >= 18 && jpeg[..4] == [0xFF, 0xD8, 0xFF, APP0] && &jpeg[6..11] == b"JFIF\0" {
+        let d = (dpi.clamp(1, u32::from(u16::MAX)) as u16).to_be_bytes();
+        jpeg[13] = 1;
+        jpeg[14..16].copy_from_slice(&d);
+        jpeg[16..18].copy_from_slice(&d);
+    }
+}
+
 /// Le début du fichier : JFIF, puis l'EXIF et le profil ICC s'ils ne sont pas vides.
 fn applications(out: &mut Vec<u8>, exif: &[u8], icc: &[u8]) -> Result<(), String> {
     segment(out, APP0, &[b'J', b'F', b'I', b'F', 0, 1, 2, 0, 0, 1, 0, 1, 0, 0]);
