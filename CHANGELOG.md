@@ -102,6 +102,10 @@ La photothèque professionnelle, étape par étape.
   photo de la carte (celui intégré au RAW, lu en arrière‑plan) ; un clic en laisse une
   sur la carte, avec son JPEG ; « Toutes », « Aucune » ; avec les jours choisis
   (`luma import --skip photo`).
+- **Curseurs plus vifs** : chaque rendu de l'aperçu copiait sa base à part, sur un
+  seul cœur ; la copie se fait maintenant dans la première passe, sur tous les cœurs.
+  Un rendu aux réglages de base 4 à 23 % plus court selon le boîtier (DNG d'iPhone
+  120 → 97 ms, ORF 86 → 67 ms), sans changer un pixel.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

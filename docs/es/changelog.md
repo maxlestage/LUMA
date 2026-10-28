@@ -105,6 +105,10 @@ La fototeca profesional, paso a paso.
   foto de la tarjeta (la integrada en el RAW, leída en segundo plano); un clic deja una
   en la tarjeta, con su JPEG; «Todas», «Ninguna»; junto con los días elegidos (`luma
   import --skip photo`).
+- **Controles deslizantes más ágiles**: cada render de la vista previa copiaba su base
+  aparte, en un solo núcleo; la copia se hace ahora en la primera pasada, en todos los
+  núcleos. Un render con los ajustes básicos es de un 4 a un 23 % más corto según la
+  cámara (DNG de iPhone 120 → 97 ms, ORF 86 → 67 ms), sin cambiar un píxel.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
