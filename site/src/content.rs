@@ -296,13 +296,52 @@ pub const PLATFORMS: [(&str, &str, &str, bool); 6] = [
         "Archive ou paquet .deb, le même rendu que sur Mac.",
         true,
     ),
-    ("Windows", "Plus tard", "Le même rendu que sur Mac.", false),
+    (
+        "Windows",
+        "En préparation",
+        "Build x86_64 et paquet en chantier ; le même rendu que sur Mac.",
+        true,
+    ),
     (
         "Android",
         "Plus tard",
         "Le même rendu que sur iPhone.",
         false,
     ),
+];
+
+/// Un système de bureau hors Apple, pour la section « Sur votre bureau » :
+/// (nom, phase, chapeau, points clés). Le même moteur et le même rendu que sur Mac.
+pub struct System {
+    pub name: &'static str,
+    pub phase: &'static str,
+    pub lede: &'static str,
+    pub points: &'static [&'static str],
+}
+
+pub const SYSTEMS: [System; 2] = [
+    System {
+        name: "Linux",
+        phase: "Disponible",
+        lede: "L'archive s'installe sans mot de passe, le paquet .deb comme n'importe quel logiciel.",
+        points: &[
+            "Archive .tar.gz posée dans votre dossier avec install.sh, ou paquet .deb pour Debian et Ubuntu.",
+            "Le rendu sur le processeur graphique en Vulkan, pixel pour pixel celui du Mac.",
+            "La ligne de commande « luma » comprise : info, développement, export et XMP.",
+            "Le même abonnement que sur Mac : une seule clé pour les deux.",
+        ],
+    },
+    System {
+        name: "Windows",
+        phase: "En préparation",
+        lede: "Le même moteur que sur Mac, en chantier pour Windows 10 et 11 (x86_64).",
+        points: &[
+            "Build x86_64 fabriqué à chaque version, avec le rendu sur le processeur graphique (Vulkan, puis Direct3D).",
+            "Installation sans droits administrateur et raccourci au menu Démarrer, ou l'archive .zip à décompresser.",
+            "La ligne de commande « luma.exe », comme sur Mac et Linux.",
+            "Une photo ouverte sur Windows aura le même rendu que sur Mac et Linux.",
+        ],
+    },
 ];
 
 pub struct Crate {

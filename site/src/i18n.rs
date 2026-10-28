@@ -244,6 +244,11 @@ mod catalog_tests {
             add(phase);
             add(detail);
         }
+        for s in &SYSTEMS {
+            add(s.phase);
+            add(s.lede);
+            s.points.iter().for_each(|p| add(p));
+        }
         for p in &PERF {
             add(p.name);
             add(p.unit);
