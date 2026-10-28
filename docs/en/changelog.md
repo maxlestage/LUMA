@@ -40,7 +40,7 @@ The professional photo library, step by step.
   resolution (26 MP RAF: 0.84–0.92 → 0.72 s), same pixels. Then luminance noise
   reduction: 104 MB less memory for 26 MP, same pixels. Then the vignette: 37% shorter
   (24 MP: 108 → 68 ms), almost twice as fast with a roundness (400 → 210 ms), same
-  pixels.
+  pixels. Then Remove (circle or stroke): 28% shorter, same pixels.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
