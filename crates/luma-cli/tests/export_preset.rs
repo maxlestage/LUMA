@@ -83,6 +83,28 @@ fn presets_listed_created_and_deleted() {
     assert!(ok && out.contains("12000 px, LÜMA/, agrandie au besoin"), "{out}");
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--no-enlarge"]);
     assert!(ok && !out.contains("agrandie"), "{out}");
+    // Le poids maximal d'un JPEG : dit dans la liste, retiré par 0, refusé s'il est
+    // illisible ; puis la galerie redevient un PNG.
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export-preset",
+            "Galerie",
+            "--format",
+            "jpg",
+            "--quality",
+            "90",
+            "--max-kb",
+            "500",
+        ],
+    );
+    assert!(ok && out.contains("JPEG 90, 500 Ko au plus"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--max-kb", "0"]);
+    assert!(ok && !out.contains("Ko au plus"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--max-kb", "beaucoup"]);
+    assert!(!ok && out.contains("--max-kb"), "{out}");
+    let (ok, out) = luma(&file, &["export-preset", "Galerie", "--format", "png"]);
+    assert!(ok && out.contains("PNG 16 bits"), "{out}");
     let (ok, out) = luma(&file, &["export-preset", "Galerie", "--size", "0"]);
     assert!(ok && out.contains("pleine définition"), "{out}");
 

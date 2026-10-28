@@ -44,7 +44,7 @@ USAGE
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille] [--enlarge] [--web]
-                     [--auto-tone]
+                     [--max-kb N] [--auto-tone]
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
@@ -60,6 +60,8 @@ USAGE
       l'histogramme de la photo (blancs et noirs remis à zéro), sans IA.
       --web : un JPEG allégé pour le web (chrominance 4:2:0 et tables de Huffman
       calculées pour l'image : de 9 à 29 % plus léger ; le préréglage Web le fait).
+      --max-kb : le poids maximal d'un JPEG, en kilo‑octets (1 000 octets),
+      métadonnées comprises : la meilleure qualité qui tient, --quality au plus.
       --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
       (l'image tient dans le cadre), 12mp (mégapixels), 30x40cm@300 (tirage : le cadre
       en centimètres à 300 ppp, inscrits dans le JPEG et le TIFF) ; jamais d'agrandissement, sauf
@@ -87,7 +89,7 @@ USAGE
                      [--watermark texte …|--no-watermark] [--logo f.png …|--no-logo]
                      [--author nom] [--copyright texte] [--keep-gps|--remove-gps]
                      [--exif|--no-exif] [--keywords|--no-keywords] [--web|--no-web]
-                     [--enlarge|--no-enlarge] [--delete]
+                     [--enlarge|--no-enlarge] [--max-kb N|0] [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
       Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
       (partagé avec l'app) ; --delete le retire.
@@ -262,9 +264,14 @@ struct Args {
     web: Option<bool>,
     /// `--enlarge` / `--no-enlarge` : agrandir au‑delà de la pleine définition.
     enlarge: Option<bool>,
+    /// `--max-kb N` : le poids maximal d'un JPEG, en kilo‑octets (0 : aucun).
+    max_kb: Option<u32>,
     /// `--auto-tone` : exposition, contraste, hautes lumières et ombres lus sur la photo.
     auto_tone: bool,
 }
+
+/// L'erreur d'un `--max-kb` illisible.
+const MAX_KB: &str = "--max-kb : un poids en kilo-octets (0 : aucun)";
 
 fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
     let mut a = Args {
@@ -289,6 +296,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         lut: None,
         web: None,
         enlarge: None,
+        max_kb: None,
         auto_tone: false,
     };
     while let Some(arg) = it.next() {
@@ -307,6 +315,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--no-web" => a.web = Some(false),
             "--enlarge" => a.enlarge = Some(true),
             "--no-enlarge" => a.enlarge = Some(false),
+            "--max-kb" => a.max_kb = Some(value(&arg)?.parse().map_err(|_| MAX_KB)?),
             "--auto-tone" => a.auto_tone = true,
             "--name" => a.name = Some(value(&arg)?),
             s if s.starts_with("--watermark") => {
@@ -655,6 +664,7 @@ fn develop(a: &Args) -> Result<(), String> {
         || a.name.is_some()
         || a.resize.is_some()
         || a.enlarge.is_some()
+        || a.max_kb.is_some()
         || a.output_sharpen.is_some()
         || !a.watermark.is_empty()
         || !a.logo.is_empty()
@@ -945,6 +955,9 @@ fn export_options(a: &Args, preset: Option<&str>, presets: &export::Presets) -> 
     o.bits = a.bits.unwrap_or(o.bits);
     o.web = a.web.unwrap_or(o.web);
     o.enlarge = a.enlarge.unwrap_or(o.enlarge);
+    if let Some(k) = a.max_kb {
+        o.max_kb = (k > 0).then_some(k);
+    }
     o.resize = a
         .resize
         .or(a.size.filter(|&n| n > 0).map(export::Resize::LongEdge))
@@ -1051,6 +1064,10 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
             "--no-web" => o.web = false,
             "--enlarge" => o.enlarge = true,
             "--no-enlarge" => o.enlarge = false,
+            "--max-kb" => {
+                let k: u32 = value()?.parse().map_err(|_| MAX_KB)?;
+                o.max_kb = (k > 0).then_some(k);
+            }
             "--bits" => {
                 o.bits = match value()?.as_str() {
                     "8" => 8,
