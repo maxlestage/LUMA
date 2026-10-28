@@ -97,8 +97,10 @@ La fototeca profesional, paso a paso.
   deslizamiento (la foto siguiente empuja a la anterior) o un fundido con un zoom lento
   en cada foto; una música (MP3, AAC, Ogg, WAV, FLAC) copiada en la carpeta y
   reproducida en bucle, en pausa con la presentación, silenciada con M («Libro,
-  presentación y galería», `luma slideshow --transition --music`). La etiqueta
-  «Fundido» de la presentación está ahora bien traducida en inglés y en español.
+  presentación y galería», `luma slideshow --transition --music`). La presentación a
+  pantalla completa de la app pasa de una foto a otra con la misma transición (antes:
+  de golpe). La etiqueta «Fundido» de la presentación está ahora bien traducida en
+  inglés y en español.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

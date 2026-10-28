@@ -546,6 +546,21 @@ impl Default for Import {
 struct Playing {
     since: std::time::Instant,
     paused: bool,
+    /// Quand l'image de la photo affichée est arrivée (le début de sa transition).
+    arrived: Option<std::time::Instant>,
+    /// Le rang de la photo dans le diaporama (le zoom lent change de côté une fois sur
+    /// deux).
+    count: usize,
+    /// La photo qui part, le temps de la transition.
+    leaving: Option<Leaving>,
+}
+
+/// L'image de la photo qui part, gardée le temps de la transition.
+struct Leaving {
+    texture: TextureHandle,
+    size: [usize; 2],
+    arrived: std::time::Instant,
+    count: usize,
 }
 
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
@@ -2092,7 +2107,15 @@ impl Studio {
         self.playing = Some(Playing {
             since: std::time::Instant::now(),
             paused: false,
+            arrived: None,
+            count: 0,
+            leaving: None,
         });
+    }
+
+    /// Une photo du diaporama est‑elle en train de partir (une transition en cours) ?
+    pub fn in_transition(&self) -> bool {
+        self.playing.as_ref().is_some_and(|p| p.leaving.is_some())
     }
 
     /// Le diaporama est‑il en cours (et pas en pause) ?
@@ -2130,9 +2153,24 @@ impl Studio {
             Some(k) if k + 1 < visible.len() => visible[k + 1],
             _ => visible.first().copied().unwrap_or(0),
         };
+        // L'image de la photo qui part est gardée pour la transition ; la suivante
+        // arrive dans une image neuve.
+        let leaving = self
+            .texture
+            .take()
+            .map(|texture| (texture, self.image_size));
         self.select(next);
         if let Some(p) = &mut self.playing {
-            p.since = std::time::Instant::now();
+            let now = std::time::Instant::now();
+            p.since = now;
+            p.leaving = leaving.map(|(texture, size)| Leaving {
+                texture,
+                size,
+                arrived: p.arrived.unwrap_or(now),
+                count: p.count,
+            });
+            p.arrived = None;
+            p.count += 1;
         }
         ctx.request_repaint();
     }
@@ -2573,9 +2611,7 @@ impl Studio {
                             for t in Transition::ALL {
                                 ui.selectable_value(&mut self.show.transition, t, label(t));
                             }
-                        })
-                        .response
-                        .on_hover_text(tr("Dans le diaporama exporté"));
+                        });
                     ui.end_row();
                     if crate::dialogs::FOLDER_PICKER {
                         ui.label(RichText::new(tr("Musique")).color(theme::DIM));
@@ -5861,10 +5897,7 @@ impl Studio {
         if let Some(p) = &self.playing {
             let paused = p.paused;
             ui.painter().rect_filled(full, 0.0, Color32::BLACK);
-            ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
-                ui.set_clip_rect(full);
-                self.viewer(ui);
-            });
+            self.slideshow_frame(ui, full);
             if paused {
                 ui.painter().text(
                     pos2(full.center().x, full.max.y - 24.0),
@@ -5886,6 +5919,58 @@ impl Studio {
             self.viewer(ui);
         });
         self.island(ui, bar, |s, ui| s.culling_bar(ui));
+    }
+
+    /// Une image du diaporama : la photo affichée et, pendant la transition, celle qui
+    /// part (les mêmes transitions que le diaporama exporté).
+    fn slideshow_frame(&mut self, ui: &mut Ui, full: Rect) {
+        use luma_render::slideshow::Transition;
+        let ppp = ui.ctx().pixels_per_point();
+        self.request_render(full.width().max(full.height()) * ppp, false);
+        let now = std::time::Instant::now();
+        let (transition, fade) = (self.show.transition, self.show.fade.max(0.0));
+        let photo_time = self.show.seconds.max(0.5) + 2.0 * fade;
+        let has_texture = self.texture.is_some();
+        let Some(p) = &mut self.playing else {
+            return;
+        };
+        if has_texture && p.arrived.is_none() {
+            p.arrived = Some(now);
+        }
+        let progress = p.arrived.map_or(0.0, |a| {
+            if fade > 0.0 {
+                (now - a).as_secs_f32() / fade
+            } else {
+                1.0
+            }
+        });
+        if progress >= 1.0 {
+            p.leaving = None;
+        }
+        let t = progress.clamp(0.0, 1.0);
+        let painter = ui.painter_at(full);
+        let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+        let frame = SlideFrame {
+            transition,
+            t,
+            photo_time,
+            now,
+            area: full,
+        };
+        if let Some(l) = &p.leaving {
+            let (rect, alpha) = frame.place(l.size, l.arrived, l.count, true);
+            painter.image(l.texture.id(), rect, uv, Color32::from_white_alpha(alpha));
+        }
+        if let (Some(texture), Some(arrived)) = (&self.texture, p.arrived) {
+            let (rect, alpha) = frame.place(self.image_size, arrived, p.count, false);
+            painter.image(texture.id(), rect, uv, Color32::from_white_alpha(alpha));
+        }
+        // Une transition en cours, ou le zoom lent : l'image suivante, à 30 images par
+        // seconde au plus.
+        if p.leaving.is_some() || (transition == Transition::Drift && !p.paused) {
+            ui.ctx()
+                .request_repaint_after(std::time::Duration::from_millis(33));
+        }
     }
 
     fn culling_bar(&mut self, ui: &mut Ui) {
@@ -11705,6 +11790,65 @@ fn file_name(p: &Path) -> String {
 }
 
 /// Le rectangle de taille `w × h` qui tient dans `area`, centré.
+/// Le moment d'une transition du diaporama : `t` va de 0 (la photo arrive) à 1 (elle
+/// est en place).
+struct SlideFrame {
+    transition: luma_render::slideshow::Transition,
+    t: f32,
+    /// Le temps d'une photo, fondus compris (la durée du zoom lent).
+    photo_time: f32,
+    now: std::time::Instant,
+    area: Rect,
+}
+
+impl SlideFrame {
+    /// La place et l'opacité d'une photo : celle qui part (`leaving`) ou celle qui
+    /// arrive.
+    fn place(
+        &self,
+        size: [usize; 2],
+        arrived: std::time::Instant,
+        count: usize,
+        leaving: bool,
+    ) -> (Rect, u8) {
+        use luma_render::slideshow::Transition;
+        let rect = fit(self.area, size[0], size[1]);
+        let t = self.t;
+        match self.transition {
+            Transition::Fade => (rect, alpha(if leaving { 1.0 } else { t })),
+            Transition::Slide => {
+                // Lent au départ et à l'arrivée, comme dans le navigateur.
+                let e = t * t * (3.0 - 2.0 * t);
+                let shift = self.area.width() * if leaving { -e } else { 1.0 - e };
+                (rect.translate(vec2(shift, 0.0)), 255)
+            }
+            Transition::Drift => {
+                let u = ((self.now - arrived).as_secs_f32() / self.photo_time).min(1.0);
+                let scale = 1.0 + 0.08 * u;
+                // Vers le haut à gauche, puis vers le bas à droite, une photo sur deux.
+                let (ox, oy) = if count % 2 == 1 {
+                    (0.7, 0.6)
+                } else {
+                    (0.3, 0.4)
+                };
+                let origin = pos2(
+                    rect.min.x + rect.width() * ox,
+                    rect.min.y + rect.height() * oy,
+                );
+                let zoomed = Rect::from_min_max(
+                    origin + (rect.min - origin) * scale,
+                    origin + (rect.max - origin) * scale,
+                );
+                (zoomed, alpha(if leaving { 1.0 } else { t }))
+            }
+        }
+    }
+}
+
+fn alpha(v: f32) -> u8 {
+    (v.clamp(0.0, 1.0) * 255.0).round() as u8
+}
+
 fn fit(area: egui::Rect, w: usize, h: usize) -> egui::Rect {
     if w == 0 || h == 0 {
         return area;
@@ -12119,6 +12263,43 @@ fn centered_text(painter: &egui::Painter, top: egui::Pos2, width: f32, text: Str
 
 #[cfg(test)]
 mod tests {
+    use luma_render::slideshow::Transition;
+
+    #[test]
+    fn slideshow_transitions_move_the_photos() {
+        let area = egui::Rect::from_min_size(pos2(0.0, 0.0), vec2(1000.0, 500.0));
+        let start = std::time::Instant::now();
+        let frame = |transition, t, now| SlideFrame {
+            transition,
+            t,
+            photo_time: 6.0,
+            now,
+            area,
+        };
+        // Glissement : la photo qui arrive vient de la droite, celle qui part sort à gauche.
+        let f = frame(Transition::Slide, 0.0, start);
+        assert_eq!(f.place([200, 100], start, 0, false).0.min.x, 1000.0);
+        assert_eq!(f.place([200, 100], start, 0, true).0.min.x, 0.0);
+        let f = frame(Transition::Slide, 0.5, start);
+        assert_eq!(f.place([200, 100], start, 0, false).0.min.x, 500.0);
+        assert_eq!(f.place([200, 100], start, 0, true).0.min.x, -500.0);
+        let f = frame(Transition::Slide, 1.0, start);
+        assert_eq!(f.place([200, 100], start, 0, false), (area, 255));
+        // Fondu : la photo qui arrive apparaît sur celle qui part, sans bouger.
+        let f = frame(Transition::Fade, 0.5, start);
+        assert_eq!(f.place([200, 100], start, 0, false), (area, 128));
+        assert_eq!(f.place([200, 100], start, 0, true), (area, 255));
+        // Zoom lent : 8 % sur tout le temps de la photo, vers un côté puis l'autre.
+        let later = start + std::time::Duration::from_secs(6);
+        let f = frame(Transition::Drift, 1.0, later);
+        let (even, _) = f.place([200, 100], start, 0, false);
+        let (odd, _) = f.place([200, 100], start, 1, false);
+        assert!((even.width() - 1080.0).abs() < 0.01 && (odd.width() - 1080.0).abs() < 0.01);
+        assert!((even.min.x - -24.0).abs() < 0.01 && (odd.min.x - -56.0).abs() < 0.01);
+        let f = frame(Transition::Drift, 1.0, start);
+        assert_eq!(f.place([200, 100], start, 0, false).0, area);
+    }
+
     use super::*;
 
     #[test]
