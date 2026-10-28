@@ -1105,4 +1105,23 @@ mod tests {
             assert_eq!(bad, 0, "{v} : {bad} pixels non finis");
         }
     }
+
+    #[test]
+    fn tiny_images_render_with_every_setting() {
+        // Une image d'un pixel, d'une ligne, d'une colonne, de quelques pixels : chaque
+        // étape (flous, ciel, retouches, fluidité, masques) tient, en pixels finis.
+        let s = everything();
+        for (w, h) in [(1, 1), (1, 7), (7, 1), (2, 2), (3, 2), (5, 9), (16, 1), (1, 16)] {
+            let cam = RgbImage::from_fn(w, h, |x, y| {
+                let v = 0.05 + 0.1 * (x + 2 * y) as f32;
+                [v, v * 0.8, v * 0.6]
+            });
+            let out = std::panic::catch_unwind(|| {
+                develop(&cam, &gray_input(), &s, &Cancel::new(), &mut Timings::default()).unwrap()
+            })
+            .unwrap_or_else(|_| panic!("{w} × {h} : panique"));
+            assert_eq!((out.width, out.height), (w, h));
+            assert!(out.data.iter().all(|p| p.iter().all(|c| c.is_finite())), "{w} × {h}");
+        }
+    }
 }
