@@ -179,7 +179,7 @@ La photothèque professionnelle, étape par étape.
   sont refaits une fois.
 - **Taille de tirage** (Exporter, Dimensions, « Tirage (cm) », ou
   `--resize 30x40cm@300`) : le cadre en centimètres et la résolution en points par
-  pouce, inscrite dans le JPEG et le TIFF pour l'imprimeur.
+  pouce, inscrite dans le JPEG, le PNG et le TIFF pour l'imprimeur.
 - **Dupliquer un masque** (Masques) : une copie, ou une copie inversée aux réglages à
   zéro, pour régler le sol après le ciel sans retracer la zone.
 - **Suppression tracée** (Retouche, Supprimer) : glisser le long d'un fil, d'une rayure
