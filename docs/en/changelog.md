@@ -306,6 +306,9 @@ The professional photo library, step by step.
 - **A GPX track to place photos** (`luma geotag --gpx track.gpx`): each photo takes the
   track's position at the moment it was taken, written to its XMP; the camera clock's
   offset is given with `--offset`. The library and the map show it at once.
+- **Place a photo on the map by hand**: on the map, the displayed photo that has no
+  position shows a crosshair in the centre; drag the map under it, then “Place here”
+  writes it to its XMP and to the library.
 - **Scopes** (above the histogram, or Shift+J): **waveform** (luminance, column by
   column), **RGB parade** (each channel on its own) and **vectorscope** (hue and
   saturation, with the 75% primary targets and the skin‑tone line), computed on the

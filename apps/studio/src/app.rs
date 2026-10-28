@@ -1655,6 +1655,42 @@ impl Studio {
             .collect()
     }
 
+    /// La photo affichée, si elle n'a pas encore de position : la carte propose de la
+    /// placer.
+    fn unplaced(&self) -> Option<PathBuf> {
+        let path = self.current_path()?;
+        self.catalog
+            .get(path)
+            .is_none_or(|e| e.gps.is_none())
+            .then(|| path.to_path_buf())
+    }
+
+    /// Place la photo affichée à cette position (latitude, longitude) : écrite dans son
+    /// XMP, la photothèque et la carte la montrent aussitôt.
+    pub fn place_current_at(&mut self, at: [f64; 2]) -> bool {
+        let Some(path) = self.current_path().map(Path::to_path_buf) else {
+            return false;
+        };
+        let position = luma_project::xmp::Position {
+            latitude: at[0],
+            longitude: at[1],
+        };
+        self.edit_meta(std::slice::from_ref(&path), |m| m.position = Some(position));
+        self.flush_xmp();
+        let mut e = self
+            .catalog
+            .get(&path)
+            .cloned()
+            .unwrap_or_else(|| luma_library::entry_of(&path));
+        e.gps = Some(at);
+        self.catalog.insert(e);
+        if let Some(file) = &self.catalog_path {
+            let _ = self.catalog.save(file);
+        }
+        self.status = trf("{name} placée sur la carte", &[("name", &file_name(&path))]);
+        true
+    }
+
     /// Montre la carte (cadrée sur les photos) ou revient à la grille.
     pub fn toggle_map(&mut self) {
         self.map = match self.map {
@@ -8226,9 +8262,10 @@ impl Studio {
         let rect = ui.max_rect();
         let size = [f64::from(rect.width()), f64::from(rect.height())];
         let placed = self.placed();
+        let unplaced = self.unplaced();
         let painter = ui.painter().clone();
         painter.rect_filled(rect, 0.0, Color32::from_gray(0x1a));
-        if placed.is_empty() {
+        if placed.is_empty() && unplaced.is_none() {
             self.map_groups.clear();
             centered_text(
                 &painter,
@@ -8357,7 +8394,42 @@ impl Studio {
             .expand2(vec2(5.0, 2.0));
         painter.rect_filled(chip, 4.0, Color32::from_black_alpha(150));
         painter.galley(chip.min + vec2(5.0, 2.0), credit, Color32::from_gray(0xe0));
+        // La photo affichée n'a pas de position : un viseur au centre, la carte glisse
+        // dessous, un bouton la place là.
+        let mut place_at = None;
+        if let Some(path) = &unplaced {
+            let c = rect.center();
+            let stroke = egui::Stroke::new(2.0, theme::ACCENT);
+            painter.circle_stroke(
+                c,
+                14.0,
+                egui::Stroke::new(4.0, Color32::from_black_alpha(120)),
+            );
+            painter.circle_stroke(c, 14.0, stroke);
+            for d in [vec2(1.0, 0.0), vec2(0.0, 1.0)] {
+                painter.line_segment([c - d * 24.0, c - d * 8.0], stroke);
+                painter.line_segment([c + d * 8.0, c + d * 24.0], stroke);
+            }
+            let text = trf("Placer « {name} » ici", &[("name", &file_name(path))]);
+            let button = egui::Button::new(RichText::new(text).size(14.0).color(theme::BACKGROUND))
+                .fill(theme::ACCENT)
+                .corner_radius(18.0);
+            let w = (rect.width() - 40.0).min(420.0);
+            let place = Rect::from_center_size(pos2(c.x, rect.max.y - 56.0), vec2(w, 36.0));
+            if ui
+                .put(place, button)
+                .on_hover_text(tr(
+                    "Glisser la carte pour mettre le viseur à l'endroit de la prise de vue",
+                ))
+                .clicked()
+            {
+                place_at = Some(map::unproject(view.center));
+            }
+        }
         self.map = Some(Some(view));
+        if let Some(at) = place_at {
+            self.place_current_at(at);
+        }
         if let Some(members) = chosen {
             let photos = members
                 .into_iter()
