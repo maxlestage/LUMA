@@ -88,9 +88,11 @@ pub fn local_tone(img: &mut RgbImage, s: &Settings) {
     let diag = ((img.width * img.width + img.height * img.height) as f32).sqrt();
     // Luminance en IL autour du gris moyen.
     let stops = Plane::from_rgb(img, |p| (luminance(p).max(1e-6) / 0.18).log2());
-    let mut out = stops.clone();
 
-    if hl != 0.0 || sh != 0.0 {
+    // Les bases d'abord, puis une seule passe qui ajoute chaque terme dans l'ordre
+    // (hautes lumières et ombres, clarté, texture) et applique le gain : ni copie de la
+    // luminance, ni une passe par curseur.
+    let tones = (hl != 0.0 || sh != 0.0).then(|| {
         // Base : lisse à l'intérieur des zones, nette sur les contours (écarts > ½ IL).
         let base = stops.guided(0.02 * diag, 0.25);
         // Ces curseurs s'adaptent à l'image : ils visent ses
@@ -102,44 +104,38 @@ pub fn local_tone(img: &mut RgbImage, s: &Settings) {
         let (span_hi, span_lo) = ((hi - mid).max(0.5), (mid - lo).max(0.5));
         // Transitions sur 1,5 fois l'écart ; l'amplitude est plafonnée pour que la
         // courbe reste croissante (un ton ne passe jamais devant un autre).
-        // Les hautes lumières démarrent à la médiane (les tons moyens restent en place),
-        // les ombres un peu avant (elles remontent aussi les tons sombres moyens).
-        let (ramp_hi, ramp_sh) = (|u: f32| smoothstep(0.0, 1.2, u), |u: f32| smoothstep(-0.3, 1.2, u));
         let k_hi = (hl * 1.3).max(-0.85 * span_hi * 1.2 / 1.5);
         let k_sh = (sh * 2.2).min(0.85 * span_lo);
-        out.data.par_iter_mut().zip(&base.data).for_each(|(v, &b)| {
-            let w_hi = ramp_hi((b - mid) / span_hi);
-            let w_sh = ramp_sh((mid - b) / span_lo);
-            *v += k_hi * w_hi + k_sh * w_sh;
-        });
-    }
-    if clarity != 0.0 {
-        let base = stops.guided(0.008 * diag, 0.5);
-        out.data
-            .par_iter_mut()
-            .zip(stops.data.par_iter().zip(&base.data))
-            .for_each(|(v, (&l, &b))| {
-                // Les tons moyens surtout : ni les noirs ni les blancs ne s'emballent.
-                let mid = (-(l / 2.5).powi(2)).exp();
-                *v += clarity * 0.7 * (l - b) * mid;
-            });
-    }
-    if texture != 0.0 {
-        let base = stops.blur(texture_sigma(diag));
-        out.data
-            .par_iter_mut()
-            .zip(stops.data.par_iter().zip(&base.data))
-            .for_each(|(v, (&l, &b))| {
-                // Les ombres profondes, où vit le bruit, sont épargnées.
-                let w = smoothstep(-6.0, -3.0, l);
-                *v += texture * 0.9 * (l - b) * w;
-            });
-    }
+        (base, mid, span_hi, span_lo, k_hi, k_sh)
+    });
+    let clarity_base = (clarity != 0.0).then(|| stops.guided(0.008 * diag, 0.5));
+    let texture_base = (texture != 0.0).then(|| stops.blur(texture_sigma(diag)));
+    // Les hautes lumières démarrent à la médiane (les tons moyens restent en place),
+    // les ombres un peu avant (elles remontent aussi les tons sombres moyens).
+    let (ramp_hi, ramp_sh) = (|u: f32| smoothstep(0.0, 1.2, u), |u: f32| smoothstep(-0.3, 1.2, u));
     img.data
         .par_iter_mut()
-        .zip(out.data.par_iter().zip(&stops.data))
-        .for_each(|(p, (&new, &old))| {
-            let g = (new - old).clamp(-6.0, 6.0).exp2();
+        .zip(&stops.data)
+        .enumerate()
+        .for_each(|(i, (p, &l))| {
+            let mut v = l;
+            if let Some((base, mid, span_hi, span_lo, k_hi, k_sh)) = &tones {
+                let b = base.data[i];
+                let w_hi = ramp_hi((b - mid) / span_hi);
+                let w_sh = ramp_sh((mid - b) / span_lo);
+                v += k_hi * w_hi + k_sh * w_sh;
+            }
+            if let Some(base) = &clarity_base {
+                // Les tons moyens surtout : ni les noirs ni les blancs ne s'emballent.
+                let mid = (-(l / 2.5).powi(2)).exp();
+                v += clarity * 0.7 * (l - base.data[i]) * mid;
+            }
+            if let Some(base) = &texture_base {
+                // Les ombres profondes, où vit le bruit, sont épargnées.
+                let w = smoothstep(-6.0, -3.0, l);
+                v += texture * 0.9 * (l - base.data[i]) * w;
+            }
+            let g = (v - l).clamp(-6.0, 6.0).exp2();
             p[0] *= g;
             p[1] *= g;
             p[2] *= g;
@@ -166,6 +162,110 @@ mod tests {
             }
         }
         s / ((x1 - x0) * img.height) as f32
+    }
+
+    // L'ancienne Tonalité locale (une copie de la luminance, une passe par curseur),
+    // pour vérifier que la passe unique donne exactement les mêmes pixels.
+    fn local_tone_reference(img: &mut RgbImage, s: &Settings) {
+        let (hl, sh, clarity, texture) = (
+            s.highlights / 100.0,
+            s.shadows / 100.0,
+            s.clarity / 100.0,
+            s.texture / 100.0,
+        );
+        if hl == 0.0 && sh == 0.0 && clarity == 0.0 && texture == 0.0 {
+            return;
+        }
+        let diag = ((img.width * img.width + img.height * img.height) as f32).sqrt();
+        // Luminance en IL autour du gris moyen.
+        let stops = Plane::from_rgb(img, |p| (luminance(p).max(1e-6) / 0.18).log2());
+        let mut out = stops.clone();
+
+        if hl != 0.0 || sh != 0.0 {
+            // Base : lisse à l'intérieur des zones, nette sur les contours (écarts > ½ IL).
+            let base = stops.guided(0.02 * diag, 0.25);
+            // Ces curseurs s'adaptent à l'image : ils visent ses
+            // parties claires et sombres à elle (centiles 1, 50 et 99 de la base).
+            let mut sample: Vec<f32> = base.data.iter().step_by(5).copied().collect();
+            let n = sample.len() - 1;
+            let mut q = |p: f32| *sample.select_nth_unstable_by((n as f32 * p) as usize, f32::total_cmp).1;
+            let (lo, mid, hi) = (q(0.01), q(0.5), q(0.99));
+            let (span_hi, span_lo) = ((hi - mid).max(0.5), (mid - lo).max(0.5));
+            // Transitions sur 1,5 fois l'écart ; l'amplitude est plafonnée pour que la
+            // courbe reste croissante (un ton ne passe jamais devant un autre).
+            // Les hautes lumières démarrent à la médiane (les tons moyens restent en place),
+            // les ombres un peu avant (elles remontent aussi les tons sombres moyens).
+            let (ramp_hi, ramp_sh) = (|u: f32| smoothstep(0.0, 1.2, u), |u: f32| smoothstep(-0.3, 1.2, u));
+            let k_hi = (hl * 1.3).max(-0.85 * span_hi * 1.2 / 1.5);
+            let k_sh = (sh * 2.2).min(0.85 * span_lo);
+            out.data.par_iter_mut().zip(&base.data).for_each(|(v, &b)| {
+                let w_hi = ramp_hi((b - mid) / span_hi);
+                let w_sh = ramp_sh((mid - b) / span_lo);
+                *v += k_hi * w_hi + k_sh * w_sh;
+            });
+        }
+        if clarity != 0.0 {
+            let base = stops.guided(0.008 * diag, 0.5);
+            out.data
+                .par_iter_mut()
+                .zip(stops.data.par_iter().zip(&base.data))
+                .for_each(|(v, (&l, &b))| {
+                    // Les tons moyens surtout : ni les noirs ni les blancs ne s'emballent.
+                    let mid = (-(l / 2.5).powi(2)).exp();
+                    *v += clarity * 0.7 * (l - b) * mid;
+                });
+        }
+        if texture != 0.0 {
+            let base = stops.blur(texture_sigma(diag));
+            out.data
+                .par_iter_mut()
+                .zip(stops.data.par_iter().zip(&base.data))
+                .for_each(|(v, (&l, &b))| {
+                    // Les ombres profondes, où vit le bruit, sont épargnées.
+                    let w = smoothstep(-6.0, -3.0, l);
+                    *v += texture * 0.9 * (l - b) * w;
+                });
+        }
+        img.data
+            .par_iter_mut()
+            .zip(out.data.par_iter().zip(&stops.data))
+            .for_each(|(p, (&new, &old))| {
+                let g = (new - old).clamp(-6.0, 6.0).exp2();
+                p[0] *= g;
+                p[1] *= g;
+                p[2] *= g;
+            });
+    }
+
+    #[test]
+    fn one_pass_local_tone_gives_the_same_pixels() {
+        let img = RgbImage::from_fn(181, 127, |x, y| {
+            let v = 0.02 + 0.9 * (((x * 13 + y * 7) % 97) as f32 / 97.0).powi(2);
+            [v, v * 0.8 + 0.05 * (y % 5) as f32, v * 0.6]
+        });
+        for (hl, sh, cl, tx) in [
+            (-60.0, 40.0, 25.0, 15.0),
+            (30.0, 0.0, 0.0, 0.0),
+            (0.0, 0.0, -50.0, 0.0),
+            (0.0, 0.0, 0.0, 80.0),
+        ] {
+            let s = Settings {
+                highlights: hl,
+                shadows: sh,
+                clarity: cl,
+                texture: tx,
+                ..Settings::default()
+            };
+            let (mut a, mut b) = (img.clone(), img.clone());
+            local_tone(&mut a, &s);
+            local_tone_reference(&mut b, &s);
+            let same = a
+                .data
+                .iter()
+                .zip(&b.data)
+                .all(|(p, q)| (0..3).all(|c| p[c].to_bits() == q[c].to_bits()));
+            assert!(same, "{hl} {sh} {cl} {tx}");
+        }
     }
 
     #[test]
