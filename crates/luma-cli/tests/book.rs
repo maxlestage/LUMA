@@ -40,6 +40,10 @@ fn wrong_options_are_explained() {
             "format inconnu",
         ),
         (vec!["book", "a.ARW", "-o", "l.pdf", "--margin", "99"], "plus de place"),
+        (
+            vec!["book", "a.ARW", "-o", "l.pdf", "--pages", "1,3"],
+            "--pages : « 3 »",
+        ),
         (vec!["slideshow", "a.ARW"], "-o diaporama"),
         (vec!["slideshow", "-o", "d"], "aucune photo"),
         (vec!["slideshow", "a.ARW", "-o", "d", "--seconds", "0"], "--seconds"),
@@ -74,6 +78,8 @@ fn a_book_and_a_slideshow() {
         "Pour Lou,\\nqui était là.",
         "--closing",
         "Islande, été 2026",
+        "--pages",
+        "1",
     ];
     args.extend(photos.iter().map(String::as_str));
     let (ok, out) = luma(&args);
@@ -91,8 +97,8 @@ fn a_book_and_a_slideshow() {
         .unwrap()
         .parse()
         .unwrap();
-    // Avec la page d'ouverture et la dernière page de texte.
-    assert!((4..=6).contains(&pages), "{pages}");
+    // Une photo par page : la couverture, trois pages, l'ouverture et la dernière page.
+    assert_eq!(pages, 6, "{pages}");
 
     let show = dir.join("diaporama");
     let mut args = vec![
