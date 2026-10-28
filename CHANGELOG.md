@@ -180,6 +180,9 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Courbes à points dans l'app** (Lumière, Courbe des tonalités) : luminosité,
+  rouge, vert et bleu ; un clic ajoute un point, on le glisse, un double‑clic le
+  retire.
 - **Poids maximal d'un JPEG** (Exporter, « Poids maximal », ou `--max-kb 500`) : la
   meilleure qualité qui tient dans le poids, métadonnées comprises, pour un site ou un
   formulaire qui limite la taille des fichiers ; gardé dans les préréglages.

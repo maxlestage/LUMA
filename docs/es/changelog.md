@@ -176,6 +176,8 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Curvas de puntos en la app** (Luz, Curva de tonos): luminosidad, rojo, verde y
+  azul; un clic añade un punto, se arrastra, un doble clic lo quita.
 - **Peso máximo de un JPEG** (Exportar, «Peso máximo», o `--max-kb 500`): la mejor
   calidad que cabe en el peso, metadatos incluidos, para un sitio o un formulario que
   limita el tamaño de los archivos; se guarda en los ajustes preestablecidos.
