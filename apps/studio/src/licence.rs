@@ -345,6 +345,8 @@ pub const FEATURES: [&str; 6] = [
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
     if cfg!(target_os = "ios") {
         "Sur iPhone et iPad, avec toutes les mises à jour"
+    } else if cfg!(target_os = "linux") {
+        "Sur Linux, avec toutes les mises à jour"
     } else {
         "Sur Mac, avec toutes les mises à jour"
     },

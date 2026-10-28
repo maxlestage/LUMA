@@ -50,23 +50,28 @@ fi
   "$target/wasm32-unknown-unknown/wasm-release/luma_site.wasm"
 echo "       îlots prêts dans site/pkg"
 
-# L'app à télécharger (bouton « Télécharger pour Mac ») : le dépôt est privé, donc ses
-# Releases aussi ; LUMA-macos.zip de la dernière Release est récupéré avec le même jeton
-# (qui doit pouvoir lire le dépôt LUMA) et servi par le site sous /download/.
-echo "-----> L'app à télécharger (dernière Release)"
+# Les apps à télécharger (boutons « Télécharger pour Mac » et « pour Linux ») : le dépôt
+# est privé, donc ses Releases aussi ; les fichiers de la dernière Release sont récupérés
+# avec le même jeton (qui doit pouvoir lire le dépôt LUMA) et servis par le site sous
+# /download/.
+echo "-----> Les apps à télécharger (dernière Release)"
 repo="${LUMA_REPO:-maxlestage/LUMA}"
 mkdir -p public/download
 # Avec un jeton si le dépôt est privé ; sans, si les Releases sont publiques.
 auth=()
 [ -n "${REPOS_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $REPOS_TOKEN")
 api="https://api.github.com/repos/$repo/releases/latest"
-# L'identifiant de l'asset LUMA-macos.zip : la ligne "url" de l'asset précède son nom.
-asset=$(curl -sSf "${auth[@]}" -H "Accept: application/vnd.github+json" "$api" \
-  | tr ',' '\n' | grep -E '"(url|name)"' \
-  | awk -F'"' '/"url"/ { url = $4 } /"name": *"LUMA-macos.zip"|"name":"LUMA-macos.zip"/ { print url; exit }') || asset=""
-if [ -n "$asset" ] && curl -sSfL "${auth[@]}" -H "Accept: application/octet-stream" \
-    -o public/download/LUMA-macos.zip "$asset"; then
-  echo "       public/download/LUMA-macos.zip ($(du -h public/download/LUMA-macos.zip | cut -f1))"
-else
-  echo "       pas de Release lisible (dépôt privé sans REPOS_TOKEN ?) : le bouton de téléchargement mènera à une page introuvable"
-fi
+release=$(curl -sSf "${auth[@]}" -H "Accept: application/vnd.github+json" "$api") || release=""
+for name in LUMA-macos.zip LUMA-linux-x86_64.tar.gz LUMA-linux-amd64.deb; do
+  # L'identifiant de l'asset : la ligne "url" de l'asset précède son nom.
+  asset=$(printf '%s' "$release" | tr ',' '\n' | grep -E '"(url|name)"' \
+    | awk -v n="$name" '
+        match($0, /"url": *"[^"]*"/) { url = substr($0, RSTART, RLENGTH); sub(/^"url": *"/, "", url); sub(/"$/, "", url) }
+        $0 ~ "\"name\": *\"" n "\"" { print url; exit }') || asset=""
+  if [ -n "$asset" ] && curl -sSfL "${auth[@]}" -H "Accept: application/octet-stream" \
+      -o "public/download/$name" "$asset"; then
+    echo "       public/download/$name ($(du -h "public/download/$name" | cut -f1))"
+  else
+    echo "       $name absent de la dernière Release (ou dépôt privé sans REPOS_TOKEN) : son bouton mènera à une page introuvable"
+  fi
+done

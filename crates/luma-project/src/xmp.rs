@@ -29,8 +29,10 @@ struct Values {
     meta: HashMap<String, String>,
 }
 
-const META_KEYS: [&str; 15] = [
+const META_KEYS: [&str; 17] = [
     "luma:Snapshots",
+    "exif:GPSLatitude",
+    "exif:GPSLongitude",
     "xmp:Rating",
     "xmp:Label",
     "luma:Pick",
@@ -79,8 +81,58 @@ pub struct Meta {
     pub creator: String,
     pub rights: String,
     pub location: Location,
+    /// La position de la prise de vue, si elle a été placée après coup (une trace
+    /// GPX, la carte) : `exif:GPSLatitude` et `exif:GPSLongitude`, comme l'écrit tout
+    /// logiciel. Elle passe devant celle de l'EXIF du fichier.
+    pub position: Option<Position>,
     /// Les instantanés : des états des réglages, nommés, qu'on retrouve d'un clic.
     pub snapshots: Vec<Snapshot>,
+}
+
+/// Une position, en degrés (nord et est positifs).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Position {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+// Jamais de NaN : une position vient d'une coordonnée lue ou calculée.
+impl Eq for Position {}
+
+impl Position {
+    /// Une coordonnée XMP : degrés, minutes décimales et hémisphère (`48,51.504N`).
+    fn write(v: f64, positive: char, negative: char) -> String {
+        let a = v.abs();
+        let deg = a.floor();
+        format!(
+            "{},{:.6}{}",
+            deg as u32,
+            (a - deg) * 60.0,
+            if v < 0.0 { negative } else { positive }
+        )
+    }
+
+    /// Lit une coordonnée XMP : `48,51.504N`, `48,51,30.2N` ou des degrés décimaux.
+    fn read(text: &str) -> Option<f64> {
+        let t = text.trim();
+        let (body, sign) = match t.chars().last()? {
+            'N' | 'E' | 'n' | 'e' => (&t[..t.len() - 1], 1.0),
+            'S' | 'W' | 's' | 'w' => (&t[..t.len() - 1], -1.0),
+            _ => (t, 1.0),
+        };
+        let parts: Vec<f64> = body
+            .split(',')
+            .map(|p| p.trim().parse::<f64>())
+            .collect::<std::result::Result<_, _>>()
+            .ok()?;
+        let v = match parts.as_slice() {
+            [d] => *d,
+            [d, m] => d + m / 60.0,
+            [d, m, s] => d + m / 60.0 + s / 3600.0,
+            _ => return None,
+        };
+        v.is_finite().then_some(v * sign)
+    }
 }
 
 /// Un instantané : un nom et les réglages d'un moment (en JSON, le format des
@@ -299,6 +351,15 @@ pub fn read_meta(text: &str) -> Meta {
             city: place(&values, 1),
             state: place(&values, 2),
             country: place(&values, 3),
+        },
+        position: match (
+            values.meta.get("exif:GPSLatitude").and_then(|v| Position::read(v)),
+            values.meta.get("exif:GPSLongitude").and_then(|v| Position::read(v)),
+        ) {
+            (Some(latitude), Some(longitude)) if latitude.abs() <= 90.0 && longitude.abs() <= 180.0 => {
+                Some(Position { latitude, longitude })
+            }
+            _ => None,
         },
         snapshots: values
             .meta
@@ -959,6 +1020,14 @@ fn open_document(meta: &Meta, settings: bool) -> String {
     if !meta.location.is_empty() {
         out.push_str(&format!("    xmlns:Iptc4xmpExt=\"{IPTC_EXT}\"\n"));
     }
+    if let Some(p) = meta.position {
+        out.push_str("    xmlns:exif=\"http://ns.adobe.com/exif/1.0/\"\n");
+        out.push_str(&format!(
+            "    exif:GPSLatitude=\"{}\"\n    exif:GPSLongitude=\"{}\"\n",
+            Position::write(p.latitude, 'N', 'S'),
+            Position::write(p.longitude, 'E', 'W')
+        ));
+    }
     out.push_str(&format!("    xmlns:luma=\"{LUMA_NS}\"\n"));
     let rating = if meta.flag == Flag::Reject {
         -1
@@ -1043,6 +1112,34 @@ pub fn color_index(name: &str) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn a_position_is_written_and_read_back() {
+        let meta = Meta {
+            rating: 3,
+            position: Some(Position {
+                latitude: 48.858_37,
+                longitude: -2.294_48,
+            }),
+            ..Meta::default()
+        };
+        for text in [write_meta(&meta), write_with_meta(&Settings::default(), &meta)] {
+            assert!(text.contains("exif:GPSLatitude=\"48,51.502200N\""), "{text}");
+            assert!(text.contains("exif:GPSLongitude=\"2,17.668800W\""), "{text}");
+            let back = read_meta(&text);
+            let p = back.position.unwrap();
+            assert!((p.latitude - 48.858_37).abs() < 1e-8 && (p.longitude + 2.294_48).abs() < 1e-8);
+            assert_eq!(back.rating, 3);
+        }
+        assert!(!write_meta(&Meta::default()).contains("exif:"));
+        // Les autres écritures : secondes, degrés décimaux ; une coordonnée fausse est ignorée.
+        assert_eq!(Position::read("48,51,30.6N"), Some(48.0 + 51.0 / 60.0 + 30.6 / 3600.0));
+        assert_eq!(Position::read("-33.5"), Some(-33.5));
+        assert_eq!(Position::read("151,12.5E"), Some(151.0 + 12.5 / 60.0));
+        assert_eq!(Position::read("nord"), None);
+        let odd = write_meta(&meta).replace("48,51.502200N", "148,0N");
+        assert_eq!(read_meta(&odd).position, None);
+    }
     /// Les instantanés font l'aller‑retour par le XMP, avec ou sans réglages, masques et
     /// guillemets compris ; le reste des métadonnées n'en souffre pas.
     #[test]

@@ -13,6 +13,7 @@
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
+//! luma geotag <photo>… --gpx t.gpx  place les photos d'après une trace GPX (dans le XMP)
 //! luma import [carte] --to dossier  importe une carte (rangement, renommage, 2nd disque)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
@@ -43,6 +44,7 @@ USAGE
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille] [--enlarge] [--web]
+                     [--auto-tone]
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
@@ -54,6 +56,8 @@ USAGE
       défaut). --name donne le nom du fichier par un modèle : {nom} {date} {heure}
       {année} {mois} {jour} {séquence} (ou {séquence:2}…) {boîtier} {marque} {objectif}
       {iso} {note} {libellé} ; un « / » crée un sous‑dossier ({année}/{mois}/{nom}).
+      --auto-tone : exposition, contraste, hautes lumières et ombres lus sur
+      l'histogramme de la photo (blancs et noirs remis à zéro), sans IA.
       --web : un JPEG allégé pour le web (chrominance 4:2:0 et tables de Huffman
       calculées pour l'image : de 9 à 29 % plus léger ; le préréglage Web le fait).
       --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
@@ -140,6 +144,16 @@ USAGE
       préréglage XMP ou des réglages à chaque image d'une vidéo AVI en Motion JPEG
       (celle de nombreux appareils photo), puis l'enregistre au même format : même
       taille, même rythme, le son recopié tel quel. Pour une vidéo courte (1 Go au plus).
+  luma geotag <photo|dossier>… --gpx trace.gpx [--offset +02:00] [--max-gap 3600]
+              [--replace] [--dry-run]
+      Place les photos d'après une trace GPX (téléphone, montre, GPS) : chacune prend la
+      position de la trace à l'instant de sa prise de vue, entre les deux points qui
+      l'encadrent, écrite dans son XMP (le fichier n'est pas touché ; la photothèque et
+      la carte la lisent). --offset : l'écart de l'horloge du boîtier à l'heure
+      universelle (+02:00 pour un boîtier à l'heure d'été de Paris ; 0 par défaut).
+      --max-gap : le plus long trou de la trace à franchir, en secondes (une heure par
+      défaut). Une photo qui a déjà une position la garde, sauf avec --replace ;
+      --dry-run montre ce qui serait fait.
   luma import [carte|dossier] --to dossier [--folders \"{année}/{année}-{mois}-{jour}\"]
               [--name modèle] [--backup second-disque] [--dry-run] [--catalog f.lumacat]
       Importe les photos d'une carte mémoire (sans carte donnée : la carte montée, celle
@@ -156,7 +170,7 @@ USAGE
   luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords]
                [--smart nom \"règle\"] [--add nom photo]… [--remove-collection nom]
                [--collections] [--collection nom] [--backup] [--backups] [--restore f]
-               [--missing] [--relocate ancien nouveau]
+               [--missing] [--relocate ancien nouveau] [--duplicates]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
       au catalogue de LÜMA, ou le remet à jour ; seuls les fichiers modifiés sont relus.
       --list affiche les photos par date de prise de vue ; --search ne garde que celles
@@ -174,6 +188,9 @@ USAGE
       --restore remet l'une d'elles (le catalogue remplacé est sauvegardé d'abord).
       --missing liste les photos dont le fichier n'est plus là ; --relocate retrouve
       celles d'un dossier déplacé à sa nouvelle place, collections comprises.
+      --duplicates liste les photos en double : même boîtier, même instant, fichiers de
+      même taille et de même type (une carte importée deux fois, une copie ailleurs) ;
+      rien n'est effacé.
   luma cameras [--markdown] [--corpus dossier]
       Les boîtiers pris en charge ; --markdown écrit la matrice publiée (docs/boitiers.md),
       --corpus marque ceux dont un vrai RAW est dans le dossier.
@@ -237,6 +254,8 @@ struct Args {
     web: Option<bool>,
     /// `--enlarge` / `--no-enlarge` : agrandir au‑delà de la pleine définition.
     enlarge: Option<bool>,
+    /// `--auto-tone` : exposition, contraste, hautes lumières et ombres lus sur la photo.
+    auto_tone: bool,
 }
 
 fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
@@ -262,6 +281,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         lut: None,
         web: None,
         enlarge: None,
+        auto_tone: false,
     };
     while let Some(arg) = it.next() {
         let mut value = |name: &str| it.next().ok_or_else(|| format!("{name} attend une valeur"));
@@ -279,6 +299,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--no-web" => a.web = Some(false),
             "--enlarge" => a.enlarge = Some(true),
             "--no-enlarge" => a.enlarge = Some(false),
+            "--auto-tone" => a.auto_tone = true,
             "--name" => a.name = Some(value(&arg)?),
             s if s.starts_with("--watermark") => {
                 let v = if s == "--watermark-dark" {
@@ -368,7 +389,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     let mut edits: Vec<(String, String, String)> = Vec::new();
     let (mut list_collections, mut shown) = (false, None);
     // Sauvegardes et photos manquantes.
-    let (mut save_copy, mut list_backups, mut missing) = (false, false, false);
+    let (mut save_copy, mut list_backups, mut missing, mut duplicates) = (false, false, false, false);
     let mut restore = None;
     let mut relocate = None;
     let mut it = args.into_iter();
@@ -402,6 +423,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             "--backups" => list_backups = true,
             "--restore" => restore = Some(PathBuf::from(it.next().ok_or("--restore attend une sauvegarde")?)),
             "--missing" => missing = true,
+            "--duplicates" => duplicates = true,
             "--relocate" => {
                 let from = it.next().ok_or("--relocate attend l'ancien dossier")?;
                 let to = it.next().ok_or("--relocate attend le nouveau dossier")?;
@@ -465,6 +487,21 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
         println!("{} photos manquantes", gone.len());
         for e in gone {
             println!("  {}", e.path.display());
+        }
+    }
+    if duplicates {
+        let groups = cat.duplicates();
+        let extra: u64 = groups.iter().map(|g| g[0].size * (g.len() as u64 - 1)).sum();
+        println!(
+            "{} photos en double ({:.1} Mo de copies en trop)",
+            groups.len(),
+            extra as f64 / 1e6
+        );
+        for g in &groups {
+            println!("  {} · {}", g[0].date.replace('T', " "), g[0].camera());
+            for e in g {
+                println!("    {}", e.path.display());
+            }
         }
     }
     if !folders.is_empty() || !edits.is_empty() || moved {
@@ -580,15 +617,29 @@ fn info(a: &Args) -> Result<(), String> {
     Ok(())
 }
 
+/// Les tons automatiques posés sur les réglages (`--auto-tone`).
+fn auto_tone(photo: &Photo, s: &mut Settings) {
+    let t = photo.auto_tones(s);
+    s.exposure = t.exposure;
+    s.contrast = t.contrast;
+    s.highlights = t.highlights;
+    s.shadows = t.shadows;
+    s.whites = 0.0;
+    s.blacks = 0.0;
+}
+
 fn develop(a: &Args) -> Result<(), String> {
     let [path] = a.positional.as_slice() else {
         return Err("develop : un seul fichier RAW".into());
     };
     let path = Path::new(path);
-    let settings = load_settings(a, Some(path))?;
+    let mut settings = load_settings(a, Some(path))?;
     let t = Instant::now();
     let photo = Photo::open(path).map_err(|e| e.to_string())?;
     let opened = t.elapsed();
+    if a.auto_tone {
+        auto_tone(&photo, &mut settings);
+    }
     if a.presets.len() > 1 {
         return Err("develop : un seul préréglage (luma export pour en utiliser plusieurs)".into());
     }
@@ -919,8 +970,11 @@ fn export_many(a: &Args) -> Result<(), String> {
     for (k, path) in a.positional.iter().enumerate() {
         let path = Path::new(path);
         let result = (|| -> Result<(), String> {
-            let settings = load_settings(a, Some(path))?;
+            let mut settings = load_settings(a, Some(path))?;
             let photo = Photo::open(path).map_err(|e| e.to_string())?;
+            if a.auto_tone {
+                auto_tone(&photo, &mut settings);
+            }
             let meta = sidecar_meta(a, path);
             let fields = export::NameFields::of_photo(path, &photo, &meta, k + 1);
             for o in &targets {
@@ -1599,6 +1653,71 @@ fn bounded<T: std::str::FromStr + PartialOrd>(option: &str, v: Option<String>, l
         .ok_or_else(|| format!("{option} : valeur hors des bornes"))
 }
 
+/// `luma geotag` : les photos placées d'après une trace GPX.
+fn geotag(args: Vec<String>) -> Result<(), String> {
+    use luma_library::geotag::{self, Outcome};
+    let (mut gpx, mut offset, mut max_gap, mut replace, mut dry) = (None, 0, 3600, false, false);
+    let mut inputs = Vec::new();
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--gpx" => gpx = Some(PathBuf::from(it.next().ok_or("--gpx attend une trace")?)),
+            "--offset" => {
+                let v = it.next().ok_or("--offset attend un écart (+02:00)")?;
+                offset = geotag::offset(&v).ok_or_else(|| format!("--offset : « {v} » n'est pas un écart (+02:00)"))?;
+            }
+            "--max-gap" => max_gap = bounded("--max-gap", it.next(), 1, 86_400 * 7)?,
+            "--replace" => replace = true,
+            "--dry-run" => dry = true,
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => inputs.push(PathBuf::from(a)),
+        }
+    }
+    let gpx = gpx.ok_or("il faut une trace (--gpx trace.gpx)")?;
+    let text = std::fs::read_to_string(&gpx).map_err(|e| format!("{} : {e}", gpx.display()))?;
+    let track = geotag::read_gpx(&text).map_err(|e| format!("{} : {e}", gpx.display()))?;
+    // Les photos : celles données, et celles des dossiers donnés.
+    let mut photos = Vec::new();
+    for p in inputs {
+        if p.is_dir() {
+            let mut found: Vec<PathBuf> = std::fs::read_dir(&p)
+                .map_err(|e| format!("{} : {e}", p.display()))?
+                .flatten()
+                .map(|e| e.path())
+                .filter(|f| f.is_file() && luma_raw::is_photo(f))
+                .collect();
+            found.sort();
+            photos.extend(found);
+        } else {
+            photos.push(p);
+        }
+    }
+    if photos.is_empty() {
+        return Err("aucune photo à placer".into());
+    }
+    let (mut placed, mut kept, mut outside, mut undated) = (0, 0, 0, 0);
+    for p in &photos {
+        match geotag::place(p, &track, offset, max_gap, replace, !dry)? {
+            Outcome::Placed(pos) => {
+                placed += 1;
+                println!("{} : {:.6}, {:.6}", p.display(), pos.latitude, pos.longitude);
+            }
+            Outcome::AlreadyPlaced => kept += 1,
+            Outcome::OutsideTrack => {
+                outside += 1;
+                println!("{} : hors de la trace", p.display());
+            }
+            Outcome::NoDate => undated += 1,
+        }
+    }
+    println!(
+        "{placed} photos placées{}, {kept} déjà placées, {outside} hors de la trace, {undated} sans date ({} points de trace)",
+        if dry { " (essai : rien d'écrit)" } else { "" },
+        track.len()
+    );
+    Ok(())
+}
+
 /// `luma video` : un film ou des réglages sur chaque image d'une vidéo.
 fn video(args: Vec<String>) -> Result<(), String> {
     use luma_render::video;
@@ -2250,6 +2369,15 @@ fn main() -> ExitCode {
             _ => gallery(args.collect()),
         };
         return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "geotag" {
+        return match geotag(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");

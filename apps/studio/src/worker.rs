@@ -321,7 +321,9 @@ impl Worker {
             if let (Some(photo), Some(dir)) = (photo, crate::dialogs::duplicates_dir())
                 && photo.wants_duplicate()
                 && duplicate_fits(&photo)
-                && photo.write_duplicate(&source, &dir).is_ok()
+                && background()
+                    .install(|| photo.write_duplicate(&source, &dir))
+                    .is_ok()
             {
                 drop(photo);
                 if let Ok(next) = Photo::open_with_duplicates(&source, &dir)
@@ -869,7 +871,21 @@ fn thumbnail_file(path: &Path) -> Option<PathBuf> {
 
 /// La vignette rendue par LÜMA, avec les réglages de la photo ; enregistrée pour les
 /// visites suivantes.
+/// Les étapes d'une vignette rendue, avec leur temps, quand `LUMA_TRACE_VIGNETTES` est
+/// posée : de quoi savoir où une vignette qui n'arrive pas s'est arrêtée.
+fn trace(path: &Path, step: &str, start: std::time::Instant) {
+    if std::env::var_os("LUMA_TRACE_VIGNETTES").is_some() {
+        eprintln!(
+            "LÜMA : vignette de {} : {step} ({:.0} ms)",
+            path.display(),
+            start.elapsed().as_secs_f64() * 1000.0
+        );
+    }
+}
+
 fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() + Send + Sync>) {
+    let start = std::time::Instant::now();
+    trace(path, "rendu demandé", start);
     // Une vignette impossible (fichier illisible, rendu en échec) le dit, au lieu de
     // laisser la case vide sans raison.
     let photo = match crate::dialogs::open_photo(path) {
@@ -882,6 +898,7 @@ fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() 
             return;
         }
     };
+    trace(path, "photo ouverte", start);
     let settings = read_sidecar(path).unwrap_or_else(|| photo.default_settings());
     let r = match photo.render(&settings, Size::Fit(320), &Cancel::new()) {
         Ok(r) => r,
@@ -893,6 +910,7 @@ fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() 
             return;
         }
     };
+    trace(path, "rendue", start);
     let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
     if let Some(file) = thumbnail_file(path) {
         let _ =
@@ -903,7 +921,24 @@ fn render_thumbnail(path: &Path, sender: &Sender<Event>, repaint: &Arc<dyn Fn() 
         size: [r.image.width, r.image.height],
         rgba: to_rgba(&rgb, false),
     });
+    trace(path, "envoyée", start);
     repaint();
+}
+
+/// Les fils du travail de fond (l'écriture des doublons) : la moitié des cœurs, pour
+/// que l'aperçu et les vignettes, calculés sur les fils communs, n'attendent pas
+/// derrière. Sur un ordinateur à trois cœurs, une photo ouverte faisait sinon attendre
+/// les vignettes plus de trente secondes.
+fn background() -> &'static rayon::ThreadPool {
+    static POOL: std::sync::OnceLock<rayon::ThreadPool> = std::sync::OnceLock::new();
+    POOL.get_or_init(|| {
+        let n = std::thread::available_parallelism().map_or(2, |n| n.get());
+        rayon::ThreadPoolBuilder::new()
+            .num_threads((n / 2).max(1))
+            .thread_name(|i| format!("luma-fond-{i}"))
+            .build()
+            .expect("fils du travail de fond")
+    })
 }
 
 /// L'écriture d'un doublon dématrice toute l'image d'un coup : sur iPhone et iPad, où

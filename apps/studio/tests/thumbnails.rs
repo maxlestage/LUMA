@@ -55,7 +55,9 @@ fn thumbnails_show_the_edits() {
     std::fs::write(raw.with_extension("xmp"), luma_project::xmp::write(&bw)).unwrap();
     let worker = Worker::new(|| {});
     worker.thumbnail(raw.clone());
+    let start = Instant::now();
     let got = thumbnails(&worker, 1);
+    eprintln!("première vignette après {:?} : {got:?}", start.elapsed());
     std::thread::sleep(Duration::from_millis(300));
     let extra: Vec<Event> = worker
         .poll()

@@ -576,6 +576,7 @@ mod tests {
         );
         // Le téléchargement est fermé tant que LUMA_DOWNLOADS ne vaut pas 1.
         assert!(!html.contains("/download/LUMA-macos.zip") && !html.contains("Télécharger"));
+        assert!(!html.contains("/download/LUMA-linux"));
         assert!(
             html.contains(r#"<span class="brand-mark"><svg"#),
             "le logo de la barre"
