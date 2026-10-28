@@ -77,6 +77,22 @@ pub fn pending() -> bool {
     false
 }
 
+/// Ouvre l'app Fichiers (une carte mémoire branchée, iCloud Drive, un disque) : les
+/// photos choisies (RAW, HEIC, JPEG…) arrivent dans `dest`, comptées comme celles de
+/// Photos ([`imported`], [`failed`]). À appeler sur le fil principal. En cas d'échec, ce
+/// qui a manqué.
+pub fn pick_files(dest: PathBuf) -> Result<(), &'static str> {
+    #[cfg(target_os = "ios")]
+    {
+        ios::pick_files(dest)
+    }
+    #[cfg(not(target_os = "ios"))]
+    {
+        let _ = dest;
+        Err("pas d'app Fichiers ici")
+    }
+}
+
 /// Le sélecteur de Photos existe‑t‑il (iPhone et iPad) ?
 pub const AVAILABLE: bool = cfg!(target_os = "ios");
 
@@ -137,7 +153,10 @@ mod ios {
     use objc2_photos_ui::{
         PHPickerConfiguration, PHPickerConfigurationAssetRepresentationMode, PHPickerFilter, PHPickerResult,
     };
-    use objc2_ui_kit::{UIApplication, UIView, UIViewController, UIWindow, UIWindowScene};
+    use objc2_ui_kit::{
+        UIApplication, UIDocumentPickerDelegate, UIDocumentPickerViewController, UIView, UIViewController, UIWindow,
+        UIWindowScene,
+    };
     use std::sync::atomic::AtomicBool;
 
     use super::{CHOSEN, FAILED, IMPORTED, SAVE_FAILED, SAVED, VIEW, free_name};
@@ -182,9 +201,48 @@ mod ios {
         }
     );
 
+    define_class!(
+        // SAFETY: NSObject n'impose rien à ses sous‑classes ; `FilesDelegate`
+        // n'implémente pas `Drop` et ne vit que sur le fil principal.
+        #[unsafe(super(NSObject))]
+        #[thread_kind = MainThreadOnly]
+        #[name = "LumaFilePickerDelegate"]
+        #[ivars = Ivars]
+        struct FilesDelegate;
+
+        unsafe impl NSObjectProtocol for FilesDelegate {}
+
+        // SAFETY: la signature du protocole (objc2-ui-kit).
+        unsafe impl UIDocumentPickerDelegate for FilesDelegate {
+            #[unsafe(method(documentPicker:didPickDocumentsAtURLs:))]
+            fn picked(&self, _picker: &UIDocumentPickerViewController, urls: &NSArray<NSURL>) {
+                CHOSEN.fetch_add(urls.count(), Ordering::Release);
+                for url in urls {
+                    let dest = &self.ivars().dest;
+                    let taken = url
+                        .path()
+                        .zip(url.lastPathComponent())
+                        .is_some_and(|(path, name)| take(path.to_string().as_ref(), dest, &name.to_string()));
+                    let counter = if taken { &IMPORTED } else { &FAILED };
+                    counter.fetch_add(1, Ordering::Release);
+                }
+            }
+        }
+    );
+
+    /// Range dans `dest` une copie que l'app Fichiers vient de faire (dans le dossier
+    /// temporaire de LÜMA) : déplacée, sinon copiée.
+    fn take(path: &std::path::Path, dest: &std::path::Path, name: &str) -> bool {
+        let target = free_name(dest, name);
+        std::fs::create_dir_all(dest).is_ok()
+            && (std::fs::rename(path, &target).is_ok() || std::fs::copy(path, &target).is_ok())
+    }
+
     thread_local! {
         /// Le délégué du sélecteur en cours : le sélecteur ne le retient pas.
         static DELEGATE: RefCell<Option<Retained<Delegate>>> = const { RefCell::new(None) };
+        /// Le délégué de l'app Fichiers ouverte, pour la même raison.
+        static FILES_DELEGATE: RefCell<Option<Retained<FilesDelegate>>> = const { RefCell::new(None) };
         /// La fenêtre de secours qui présente le sélecteur quand la fenêtre de LÜMA ne
         /// le peut pas (voir `pick`).
         static PRESENTER: RefCell<Option<Retained<UIWindow>>> = const { RefCell::new(None) };
@@ -371,6 +429,36 @@ mod ios {
             })
         });
         Ok(name)
+    }
+
+    /// L'app Fichiers en mode import : le système copie chaque fichier choisi dans le
+    /// dossier temporaire de LÜMA, puis `FilesDelegate` le range dans `dest`.
+    #[allow(deprecated)] // L'initialiseur par types UTI, sans la crate des UTType.
+    pub fn pick_files(dest: PathBuf) -> Result<(), &'static str> {
+        let mtm = MainThreadMarker::new().ok_or("hors du fil principal")?;
+        let top = top_controller(mtm).ok_or("fenêtre introuvable")?;
+        let types = NSArray::from_retained_slice(&[
+            NSString::from_str("public.camera-raw-image"),
+            NSString::from_str("public.image"),
+        ]);
+        let picker = UIDocumentPickerViewController::initWithDocumentTypes_inMode(
+            UIDocumentPickerViewController::alloc(mtm),
+            &types,
+            objc2_ui_kit::UIDocumentPickerMode::Import,
+        );
+        let delegate = FilesDelegate::alloc(mtm).set_ivars(Ivars { dest });
+        // SAFETY: `init` de NSObject sur une instance neuve.
+        let delegate: Retained<FilesDelegate> = unsafe { msg_send![super(delegate), init] };
+        picker.setAllowsMultipleSelection(true);
+        // SAFETY: le délégué est retenu (FILES_DELEGATE) tant que l'app Fichiers peut
+        // lui répondre ; `top` est un contrôleur de l'app, sur le fil principal.
+        unsafe {
+            picker.setDelegate(Some(objc2::runtime::ProtocolObject::from_ref(&*delegate)));
+            let _: () =
+                msg_send![&top, presentViewController: &*picker, animated: true, completion: None::<&Block<dyn Fn()>>];
+        }
+        FILES_DELEGATE.with(|d| *d.borrow_mut() = Some(delegate));
+        Ok(())
     }
 
     /// Vrai quand iOS a confirmé que le sélecteur est à l'écran (bloc de fin de la

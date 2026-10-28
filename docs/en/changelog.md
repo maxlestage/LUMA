@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **Import from the Files app on iPhone and iPad**: “From Files” under “Import photos”
+  (and in the “•••” menu) opens the Files app: RAW files from a memory card in a card
+  reader, from iCloud Drive or from a drive arrive in LÜMA, several at once.
 - **“Sign in with Apple” on iPhone and iPad**: people who were given LÜMA Premium unlock
   it by signing in with their Apple Account from the Premium screen; the server checks
   Apple's token and the email against the list of gifted access.
