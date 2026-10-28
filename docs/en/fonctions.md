@@ -69,6 +69,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | “Sky” mask (“Select sky”): sky and clouds found on the photo, edges followed, reflections in water left out; no AI | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
 | | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
+| | Duplicate a mask, or duplicate it inverted (settings at zero): the ground after the sky, without redrawing the area | ✅ |
 | | Mask area shown (O) in red, green, blue, white or white on black, opacity from 10 to 100% | ✅ |
 | | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing and clone (Q): one click, the source found on its own, area and source movable; size, feather, opacity | ✅ |

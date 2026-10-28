@@ -154,6 +154,8 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Duplicar una máscara** (Máscaras): una copia, o una copia invertida con los
+  ajustes a cero, para ajustar el suelo después del cielo sin volver a trazar la zona.
 - **Eliminación trazada** (Retoque, Eliminar): arrastrar a lo largo de un cable, una
   raya o un alambre lo borra de un solo gesto, sustituido por la foto de alrededor.
   Sin IA.
