@@ -44,10 +44,21 @@ La photothèque professionnelle, étape par étape.
   définition (RAF 26 Mpx : 0,84–0,92 → 0,72 s), mêmes pixels. Puis la réduction du
   bruit de luminance : 104 Mo de mémoire en moins pour 26 Mpx, mêmes pixels. Puis le
   vignetage : 37 % plus court (24 Mpx : 108 → 68 ms), presque deux fois plus rapide
-  avec une rondeur (400 → 210 ms), mêmes pixels.
+  avec une rondeur (400 → 210 ms), mêmes pixels. Puis Supprimer (en cercle ou en
+  trait) : 28 % plus court, mêmes pixels.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
+- **Fiabilité** : relecture complète du code. Plus de hautes lumières rendues noires
+  quand les Blancs montent fort ; plus de plantage sur un fichier HEIC, ICC ou DNG
+  malformé, une image d'un pixel de large, une retouche hors de la photo, un recadrage
+  à proportions verrouillées tiré au plus petit, un panorama démesuré. Un export n'écrase
+  plus jamais une photo originale ; l'import ne remplace plus un XMP de la photothèque ni
+  un fichier du second disque, et garde le XMP de chaque photo d'une prise ; restaurer la
+  plus ancienne sauvegarde du catalogue fonctionne, et un catalogue illisible est gardé
+  dans les sauvegardes. Dans l'app, l'aperçu de la photo d'avant ne recouvre plus celle
+  qu'on ouvre, les masques à bord adouci s'affichent comme ils s'exportent, et un GPU qui
+  ne répond plus laisse le processeur finir l'aperçu.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).

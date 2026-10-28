@@ -5,6 +5,7 @@
 
 pub mod docs;
 pub mod export;
+pub mod offerts;
 pub mod pages;
 pub mod photo;
 pub mod stripe;
@@ -39,6 +40,9 @@ pub fn link(path: &str) -> String {
 pub struct Versions {
     pub css: String,
     pub scenes: String,
+    /// Le bundle WebAssembly (`pkg/`), dont les adresses ne portent pas de version : son
+    /// empreinte entre dans le nom du cache du service worker.
+    pub pkg: String,
 }
 
 pub struct Site {
@@ -77,11 +81,16 @@ impl Site {
             "js/hero.js",
             "js/devices.js",
             "js/screen.js",
-            "js/desktop.js",
+            "js/systems.js",
         ]
         .iter()
         .flat_map(|f| read(f))
         .collect();
+        // Paquets sert `pkg/` depuis le dossier courant.
+        let pkg: Vec<u8> = ["pkg/luma_site.js", "pkg/luma_site_bg.wasm"]
+            .iter()
+            .flat_map(|f| std::fs::read(f).unwrap_or_default())
+            .collect();
         Site {
             site_url: site_url
                 .map(|u| u.trim().trim_end_matches('/').to_owned())
@@ -89,6 +98,7 @@ impl Site {
             versions: Versions {
                 css: version(&read("site.css")),
                 scenes: version(&scenes),
+                pkg: version(&pkg),
             },
         }
     }
@@ -102,9 +112,10 @@ impl Site {
             req.header(name)
                 .map(|v| v.split(',').next().unwrap_or("").trim().to_owned())
         };
-        let host = header("x-forwarded-host")
-            .or_else(|| header("host"))
-            .unwrap_or_default();
+        // L'en-tête Host seulement : `X-Forwarded-Host` vient du client tel quel (le
+        // routeur de Heroku le laisse passer) et finirait dans les liens canoniques et le
+        // sitemap. Derrière un autre proxy, `SITE_URL` donne l'adresse.
+        let host = header("host").unwrap_or_default();
         // Un en-tête Host inattendu ne doit pas finir dans les balises de la page.
         if host.is_empty()
             || !host
@@ -192,7 +203,7 @@ fn manifest(lang: Lang) -> String {
 }
 
 /// Le service worker : les fichiers du site mis de côté pour l'usage hors ligne ; un
-/// nouveau nom de cache à chaque version des styles ou des scripts.
+/// nouveau nom de cache à chaque version des styles, des scripts ou du WebAssembly.
 fn service_worker(site: &Site) -> String {
     let mut precache = vec![
         "/".to_owned(),
@@ -202,7 +213,7 @@ fn service_worker(site: &Site) -> String {
         format!("/js/hero.js?v={}", site.versions.scenes),
         format!("/js/devices.js?v={}", site.versions.scenes),
         format!("/js/screen.js?v={}", site.versions.scenes),
-        format!("/js/desktop.js?v={}", site.versions.scenes),
+        format!("/js/systems.js?v={}", site.versions.scenes),
     ];
     precache.extend(
         [
@@ -254,7 +265,10 @@ fn service_worker(site: &Site) -> String {
     include_str!("sw.js")
         .replace(
             "__VERSION__",
-            &format!("{}-{}", site.versions.css, site.versions.scenes),
+            &format!(
+                "{}-{}-{}",
+                site.versions.css, site.versions.scenes, site.versions.pkg
+            ),
         )
         .replace("__PRECACHE__", &list)
 }
@@ -312,6 +326,29 @@ fn sitemap(origin: &str) -> String {
     }
     xml.push_str("</urlset>\n");
     xml
+}
+
+/// La page de l'accès offert (`/licence/offert/`) : le formulaire, ou la clé quand le
+/// courriel et le code (`form`) sont dans la liste.
+fn offert_page(site: &Site, req: &Request, lang: Lang, form: Option<(String, String)>) -> Response {
+    let here = pages::Here::new(lang, "/licence/offert/");
+    let page = match form {
+        None => pages::offert(site, &site.origin(req), here, None),
+        Some((email, code)) => {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_secs());
+            let result = match stripe::signing_key() {
+                Some(seed) => offerts::key(&offerts::from_env(), &seed, &email, &code, now),
+                None => Err("le serveur de licences n'est pas encore configuré".into()),
+            };
+            match result {
+                Ok(key) => pages::licence(site, &site.origin(req), here, Ok(key), None),
+                Err(e) => pages::offert(site, &site.origin(req), here, Some((email, e))),
+            }
+        }
+    };
+    page.into_response().header("cache-control", "no-store")
 }
 
 /// La page de la clé de licence (`/licence/`, `/en/licence/`…), dans `lang`.
@@ -412,6 +449,32 @@ pub fn app(site: Arc<Site>) -> App {
                 licence_page(&site, &req, lang)
             }
         });
+        // LÜMA Premium offert : le courriel et le code, puis la clé.
+        let offered = site.clone();
+        app.get(
+            &i18n::path(lang, "/licence/offert/"),
+            move |req: Request| {
+                let site = offered.clone();
+                async move { offert_page(&site, &req, lang, None) }
+            },
+        );
+        let offered = site.clone();
+        app.post(
+            &i18n::path(lang, "/licence/offert/"),
+            move |req: Request| {
+                let site = offered.clone();
+                async move {
+                    let body = req.text().await.unwrap_or_default();
+                    let field = |name: &str| {
+                        body.split('&')
+                            .find_map(|kv| kv.strip_prefix(name)?.strip_prefix('='))
+                            .map(|v| percent_decode(&v.replace('+', " ")))
+                            .unwrap_or_default()
+                    };
+                    offert_page(&site, &req, lang, Some((field("email"), field("code"))))
+                }
+            },
+        );
     }
     app.get("/photo.svg", |_req: Request| async {
         svg(photo::svg(false))
@@ -488,12 +551,16 @@ pub fn app(site: Arc<Site>) -> App {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
-        let (status, json) = match (stripe::Stripe::from_env(), stripe::signing_key()) {
-            (Some(api), Some(seed)) => match stripe::refresh(&api, &seed, &key, now) {
-                Ok(k) => (200, format!(r#"{{"key":"{k}"}}"#)),
-                Err(e) => (402, format!(r#"{{"error":"{}"}}"#, e.replace('"', "'"))),
-            },
-            _ => (
+        // Une clé offerte se renouvelle d'après la liste, une clé d'abonnement chez Stripe.
+        let result = stripe::signing_key().and_then(|seed| {
+            offerts::renew(&offerts::from_env(), &seed, &key, now).or_else(|| {
+                stripe::Stripe::from_env().map(|api| stripe::refresh(&api, &seed, &key, now))
+            })
+        });
+        let (status, json) = match result {
+            Some(Ok(k)) => (200, serde_json::json!({ "key": k }).to_string()),
+            Some(Err(e)) => (402, serde_json::json!({ "error": e }).to_string()),
+            None => (
                 503,
                 r#"{"error":"serveur de licences non configuré"}"#.to_owned(),
             ),
@@ -568,7 +635,7 @@ mod tests {
         assert!(!html.contains("/download/LUMA-macos.zip") && !html.contains("Télécharger"));
         assert!(!html.contains("/download/LUMA-linux"));
         // Linux et Windows : la scène 3D, puis une carte par système, avec ce qu'il faut.
-        for id in ["bureau", "desktop-stage", "linux", "windows"] {
+        for id in ["bureau", "desktop-stage", "systems-gl", "linux", "windows"] {
             assert!(html.contains(&format!(r#"id="{id}""#)), "section {id}");
         }
         for need in [
@@ -608,7 +675,7 @@ mod tests {
         let sw = client.get("/sw.js").await.text();
         assert!(sw.contains("const PRECACHE = [\"/\"") && sw.contains("/site.css?v="));
         // Chaque module des scènes, à la version de scenes.js.
-        for module in ["scenes", "hero", "devices", "screen", "desktop"] {
+        for module in ["scenes", "hero", "devices", "screen", "systems"] {
             assert!(
                 sw.contains(&format!("/js/{module}.js?v=")),
                 "{module}.js hors du cache"
@@ -654,6 +721,31 @@ mod tests {
         let res = client.post("/api/licence").body("key=LUMA1.abc").await;
         assert_eq!(res.status().as_u16(), 503);
         assert!(res.text().contains("error"));
+    }
+
+    #[tokio::test]
+    async fn the_gifted_access_page_asks_for_the_email_and_the_code() {
+        let client = client().await;
+        for (path, title) in [
+            ("/licence/offert/", "Accès offert"),
+            ("/en/licence/offert/", "Gifted access"),
+            ("/es/licence/offert/", "Acceso regalado"),
+        ] {
+            let res = client.get(path).await;
+            assert_eq!(res.status().as_u16(), 200, "{path}");
+            let html = res.text();
+            assert!(html.contains(title), "{path}");
+            assert!(html.contains(&format!(r#"action="{path}""#)), "{path}");
+            assert!(html.contains(r#"name="email""#) && html.contains(r#"name="code""#));
+        }
+        // Sans clé de signature : le courriel tapé reste, l'erreur est dite.
+        let res = client
+            .post("/licence/offert/")
+            .body("email=alice%40exemple.fr&code=K7Q2-PX9M")
+            .await;
+        assert_eq!(res.status().as_u16(), 200);
+        let html = res.text();
+        assert!(html.contains("pas encore configuré") && html.contains("alice@exemple.fr"));
     }
 
     #[tokio::test]
