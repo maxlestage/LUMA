@@ -142,6 +142,8 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Traced removal** (Retouch, Remove): dragging along a wire, a scratch or a cable
+  erases it in one gesture, replaced by the surrounding photo. No AI.
 - **Auto tone** (Light, Tone, or `--auto-tone`): one click sets exposure, contrast,
   highlights and shadows from the photo's histogram, a starting point to refine. No
   AI.

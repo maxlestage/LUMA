@@ -76,6 +76,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Red eye: a circle on the eye, the red pupil turns black again, the skin stays | ✅ |
 | | Moiré and defringe (local chromatic aberration) with the brush, in every mask | ✅ |
 | | Remove: a circle over what is in the way (wire, passer-by, litter), filled with pieces of the surrounding photo, texture included, without AI | ✅ |
+| | Traced removal: a stroke along a wire, a scratch or a cable, erased in one gesture; no AI | ✅ |
 | | Liquify (Retouch): push, bloat, pucker with a brush (size, strength), strokes kept in the XMP, undoable; no AI | ✅ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
