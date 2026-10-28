@@ -3737,6 +3737,32 @@ fr = Couleur à demi-résolution (4:2:0) et codage calculé pour chaque image : 
 en = Half-resolution color (4:2:0) and coding computed for each image: 9 to 29% lighter, read by every browser
 es = Color a media resolución (4:2:0) y codificación calculada para cada imagen: de un 9 a un 29 % más ligero, legible por cualquier navegador
 
+# ----- Le poids maximal d'un JPEG -----
+
+fr = Poids maximal
+en = Maximum size
+es = Peso máximo
+
+fr = Au plus
+en = At most
+es = Como máximo
+
+fr = Ko
+en = KB
+es = KB
+
+fr = Poids maximal en kilo-octets
+en = Maximum size in kilobytes
+es = Peso máximo en kilobytes
+
+fr = La meilleure qualité qui tient dans ce poids, métadonnées comprises : pour un site ou un formulaire qui limite la taille des fichiers
+en = The best quality that fits in this size, metadata included: for a website or a form that limits file sizes
+es = La mejor calidad que cabe en este peso, metadatos incluidos: para un sitio o un formulario que limita el tamaño de los archivos
+
+fr = JPEG {q}, {k} Ko au plus
+en = JPEG {q}, {k} KB at most
+es = JPEG {q}, {k} KB como máximo
+
 # ----- La galerie web -----
 
 fr = Galerie web
