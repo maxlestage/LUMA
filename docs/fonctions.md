@@ -104,6 +104,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | RAW Bayer : Sony ARW, Canon CR3, Nikon NEF (et les autres formats RAW courants) | ✅ 3 boîtiers vérifiés en continu |
 | RAW X‑Trans (Fujifilm) | ✅ dématriçage dédié |
 | Dématriçage Bayer directionnel : le vert suit les contours (sans « fermeture éclair » ni pointillés sur les détails fins) | ✅ |
+| Dématriçage X‑Trans directionnel : le vert suit les contours, y compris dans les ombres bruitées | ✅ |
 | DNG linéaire, Apple ProRAW (avec `BaselineExposure`) | ✅ |
 | Images développées : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG ; HEIC, HEIF, AVIF (ImageIO d'Apple) ; extension inconnue lue d'après le contenu | ✅ profil « Original » : identique à l'ouverture |
 | Couleur DNG : deux matrices interpolées selon la température | ✅ |
