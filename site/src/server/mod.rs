@@ -81,6 +81,7 @@ impl Site {
             "js/hero.js",
             "js/devices.js",
             "js/screen.js",
+            "js/systems.js",
         ]
         .iter()
         .flat_map(|f| read(f))
@@ -212,6 +213,7 @@ fn service_worker(site: &Site) -> String {
         format!("/js/hero.js?v={}", site.versions.scenes),
         format!("/js/devices.js?v={}", site.versions.scenes),
         format!("/js/screen.js?v={}", site.versions.scenes),
+        format!("/js/systems.js?v={}", site.versions.scenes),
     ];
     precache.extend(
         [
