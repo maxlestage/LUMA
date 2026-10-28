@@ -1,5 +1,7 @@
 //! Le tampon et le correcteur à l'écran (touche Q) : un clic pose une retouche, sa
-//! source choisie d'elle‑même ; on tire la zone ou sa source pour les déplacer.
+//! source choisie d'elle‑même ; on tire la zone ou sa source pour les déplacer. Avec
+//! « Supprimer », un glissement sur la photo trace la zone à effacer (un fil, une
+//! rayure).
 
 use egui::{Color32, CursorIcon, Pos2, Rect, Sense, Stroke, Ui, pos2};
 use luma_project::{Spot, SpotKind};
@@ -79,19 +81,47 @@ pub fn edit(
             if Some(i) == selected && s.kind.has_source() && p.distance(to_screen(s.source)) < r {
                 return Some(Grip::Source(i));
             }
-            if p.distance(to_screen(s.center)) < r {
+            if s.points().any(|q| p.distance(to_screen(q)) < r) {
                 return Some(Grip::Center(i));
             }
         }
         None
     };
+    let tracing_id = id.with("tracé");
     if response.drag_started()
         && let Some(p) = response.interact_pointer_pos()
-        && let Some(g) = pick(p, spots, *selected)
     {
-        let (Grip::Center(i) | Grip::Source(i)) = g;
-        *selected = Some(i);
-        ui.data_mut(|d| d.insert_temp(grip_id, g));
+        if let Some(g) = pick(p, spots, *selected) {
+            let (Grip::Center(i) | Grip::Source(i)) = g;
+            *selected = Some(i);
+            ui.data_mut(|d| d.insert_temp(grip_id, g));
+        } else if placing == Some(SpotKind::Remove) {
+            // Un glissement hors des retouches : une suppression tracée.
+            spots.push(Spot::new(SpotKind::Remove, to_norm(p), radius));
+            *selected = Some(spots.len() - 1);
+            ui.data_mut(|d| d.insert_temp(tracing_id, spots.len() - 1));
+        }
+    }
+    let tracing: Option<usize> = ui.data(|d| d.get_temp(tracing_id));
+    if let Some(i) = tracing.filter(|&i| i < spots.len()) {
+        if response.dragged()
+            && let Some(p) = response.interact_pointer_pos()
+        {
+            // Un point tous les demi‑rayons : le tracé suit la main sans s'alourdir.
+            let s = &mut spots[i];
+            let last = s.path.last().copied().unwrap_or(s.center);
+            let q = to_norm(p);
+            let aspect = rect.width() / rect.height().max(1.0);
+            let (dx, dy) = (q.0 - last.0, (q.1 - last.1) / aspect);
+            if (dx * dx + dy * dy).sqrt() >= 0.5 * s.radius {
+                s.path.push(q);
+            }
+        }
+        if response.drag_stopped() {
+            ui.data_mut(|d| d.remove::<usize>(tracing_id));
+            change.changed = true;
+            change.committed = true;
+        }
     }
     let grip: Option<Grip> = ui.data(|d| d.get_temp(grip_id));
     if let Some(g) = grip
@@ -101,8 +131,13 @@ pub fn edit(
         let (dx, dy) = (delta.x / rect.width(), delta.y / rect.height());
         match g {
             Grip::Center(i) if i < spots.len() => {
+                // Un tracé se déplace tout entier.
                 spots[i].center.0 += dx;
                 spots[i].center.1 += dy;
+                for q in &mut spots[i].path {
+                    q.0 += dx;
+                    q.1 += dy;
+                }
             }
             Grip::Source(i) if i < spots.len() => {
                 spots[i].source.0 += dx;
@@ -148,6 +183,17 @@ pub fn edit(
     for (i, s) in spots.iter().enumerate() {
         let r = s.radius * rect.width();
         let (c, src) = (to_screen(s.center), to_screen(s.source));
+        // Une suppression tracée : sa bande, puis son trait.
+        if !s.path.is_empty() {
+            let line: Vec<Pos2> = s.points().map(to_screen).collect();
+            let alpha = if Some(i) == *selected { 70 } else { 40 };
+            painter.add(egui::Shape::line(
+                line.clone(),
+                Stroke::new(2.0 * r, Color32::from_white_alpha(alpha)),
+            ));
+            painter.add(egui::Shape::line(line, Stroke::new(1.0, dim)));
+            continue;
+        }
         if Some(i) == *selected {
             painter.circle_stroke(c, r + 1.0, Stroke::new(3.0, Color32::from_black_alpha(110)));
             painter.circle_stroke(c, r, Stroke::new(1.5, white));

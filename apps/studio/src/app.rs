@@ -9332,7 +9332,7 @@ impl Studio {
                         (
                             SpotKind::Remove,
                             tr("Supprimer|retouche"),
-                            tr("Un cercle sur ce qui gêne (fil, passant, déchet) : la photo autour le remplace, texture comprise"),
+                            tr("Un clic sur ce qui gêne (passant, déchet), ou un trait le long d'un fil : la photo autour le remplace, texture comprise"),
                             "retouch_remove",
                         ),
                     ] {
