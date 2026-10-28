@@ -1360,6 +1360,51 @@ fn traced_removal() {
 }
 
 #[test]
+fn traced_heal() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("correcteur-trace") else {
+        return;
+    };
+    // Q : le correcteur ; un trait sur la photo, d'un geste.
+    s.keys(&[(NONE, Key::Q)]);
+    s.wait();
+    assert_eq!(s.studio().retouch, Some(luma_project::SpotKind::Heal));
+    let path: Vec<egui::Pos2> = (0..=10)
+        .map(|i| egui::pos2(420.0 + 25.0 * i as f32, 560.0 - 6.0 * i as f32))
+        .collect();
+    let (a, b) = (path[0], path[path.len() - 1]);
+    let mut events = vec![
+        egui::Event::PointerMoved(a),
+        egui::Event::PointerButton {
+            pos: a,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: NONE,
+        },
+    ];
+    events.extend(path[1..].iter().map(|p| egui::Event::PointerMoved(*p)));
+    events.push(egui::Event::PointerButton {
+        pos: b,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: NONE,
+    });
+    for e in events {
+        s.harness.input_mut().events.push(e);
+        s.harness.step();
+    }
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.spots.len(), 1);
+    let spot = &st.settings.spots[0];
+    assert_eq!(spot.kind, luma_project::SpotKind::Heal);
+    assert!(spot.path.len() >= 3, "{:?}", spot.path);
+    assert!(spot.source != spot.center, "une source cherchée au départ");
+    assert!(st.has_image());
+    s.capture("correcteur-trace");
+}
+
+#[test]
 fn sensor_dust() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("poussieres") else {
