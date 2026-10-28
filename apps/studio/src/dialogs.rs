@@ -53,6 +53,8 @@ pub fn films_dir() -> Option<PathBuf> {
         documents()?.join("Films")
     } else if cfg!(target_os = "macos") {
         PathBuf::from(std::env::var_os("HOME")?).join("Library/Application Support/LÜMA/Films")
+    } else if cfg!(windows) {
+        luma_core::windows_dir(false)?.join("Films")
     } else {
         std::env::var_os("XDG_DATA_HOME")
             .map(PathBuf::from)
@@ -65,10 +67,14 @@ pub fn films_dir() -> Option<PathBuf> {
 
 /// Le dossier des doublons de travail (voir `luma_render::duplicate`) : un cache, que
 /// le système peut vider. Mac : `~/Library/Caches/LÜMA/Doublons` ; iPhone et iPad :
-/// `Library/Caches/Doublons` ; `LUMA_DUPLICATES_DIR` le remplace.
+/// `Library/Caches/Doublons` ; Windows : `%LOCALAPPDATA%\LÜMA\Doublons` ;
+/// `LUMA_DUPLICATES_DIR` le remplace.
 pub fn duplicates_dir() -> Option<PathBuf> {
     if let Some(d) = std::env::var_os("LUMA_DUPLICATES_DIR") {
         return Some(PathBuf::from(d));
+    }
+    if cfg!(windows) {
+        return Some(luma_core::windows_dir(true)?.join("Doublons"));
     }
     let home = PathBuf::from(std::env::var_os("HOME")?);
     Some(if cfg!(target_os = "ios") {
@@ -178,13 +184,13 @@ pub fn pick_scan() -> Option<PathBuf> {
 pub fn presets_dir() -> Option<PathBuf> {
     let dir = match std::env::var_os("LUMA_PRESETS") {
         Some(d) => PathBuf::from(d),
-        None => films_dir()?
-            .parent()?
-            .join(if cfg!(any(target_os = "macos", target_os = "ios")) {
+        None => films_dir()?.parent()?.join(
+            if cfg!(any(target_os = "macos", target_os = "ios", windows)) {
                 "Préréglages"
             } else {
                 "presets"
-            }),
+            },
+        ),
     };
     std::fs::create_dir_all(&dir).ok()?;
     Some(dir)

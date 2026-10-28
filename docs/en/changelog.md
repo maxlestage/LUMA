@@ -56,6 +56,11 @@ The professional photo library, step by step.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).
+- **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
+  an installer that needs no administrator password (Start menu, uninstall) and a .zip
+  archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
+  presets in `%APPDATA%\LÜMA`, caches in `%LOCALAPPDATA%\LÜMA`. Built, installed,
+  launched with a real RAW and uninstalled by CI on every push.
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and

@@ -6,6 +6,17 @@ pub mod image;
 
 pub use image::{Plane, RgbImage};
 
+/// Le dossier de LÜMA sous Windows : `%APPDATA%\LÜMA` pour ce qui suit le compte
+/// (catalogue, préréglages, films, licence), `%LOCALAPPDATA%\LÜMA` pour les caches
+/// (`local`). `None` ailleurs que sur Windows, ou sans ces variables.
+pub fn windows_dir(local: bool) -> Option<std::path::PathBuf> {
+    if !cfg!(windows) {
+        return None;
+    }
+    let var = if local { "LOCALAPPDATA" } else { "APPDATA" };
+    Some(std::path::PathBuf::from(std::env::var_os(var)?).join("LÜMA"))
+}
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
