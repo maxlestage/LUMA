@@ -29,7 +29,9 @@ La photothèque professionnelle, étape par étape.
   écrite directement en octets, sur tous les cœurs, sans seconde copie : 20 à 28 % plus
   courts (24 Mpx : 372 → 299 ms) et 144 Mo de mémoire en moins, mêmes octets. Puis
   l'export par lot avec un logo : le logo lu une seule fois pour tout le lot (40 ms de
-  moins par photo pour un logo de 1200 × 600).
+  moins par photo pour un logo de 1200 × 600). Puis la conversion vers l'espace de
+  sortie (JPEG), huit pixels à la fois : 24 Mpx en sRGB 230 → 150 ms,
+  mêmes octets.
   Puis la réduction du bruit par ondelettes, sans image neuve à chaque échelle : 1,8 fois
   plus rapide (24 Mpx : 1,17 → 0,65 s), et l'accentuation par déconvolution, huit pixels
   à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels. Puis le filtre qui suit

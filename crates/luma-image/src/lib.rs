@@ -533,6 +533,26 @@ impl RenderStage {
     }
 }
 
+/// [`to_output`] sur [`LANES`] pixels à la fois : les deux branches calculées, l'une
+/// choisie, pour que le compilateur les traite ensemble. Mêmes calculs, mêmes bits.
+#[inline]
+pub(crate) fn to_output_lanes(m: &Mat3, px: &[[f32; 3]; LANES]) -> [[f32; 3]; LANES] {
+    let mut out = [[0.0f32; 3]; LANES];
+    for (o, &p) in out.iter_mut().zip(px) {
+        let y = luminance(p).clamp(0.0, 1.0);
+        let mut c = lc::apply(m, p);
+        let lo = c[0].min(c[1]).min(c[2]);
+        let k = y / (y - lo);
+        let low = lo < 0.0 && y > lo;
+        c = c.map(|v| if low { y + (v - y) * k } else { v });
+        let hi = c[0].max(c[1]).max(c[2]);
+        let k = (1.0 - y) / (hi - y);
+        let high = hi > 1.0 && hi > y;
+        *o = c.map(|v| if high { y + (v - y) * k } else { v }.clamp(0.0, 1.0));
+    }
+    out
+}
+
 /// Un pixel converti vers l'espace de sortie, linéaire, dans le gamut (0 à 1).
 #[inline]
 pub(crate) fn to_output(m: &Mat3, p: [f32; 3]) -> [f32; 3] {
@@ -581,7 +601,20 @@ impl Encoder8 {
     /// `src` (linéaire, espace de travail) en octets RGB dans `dst` (trois par pixel).
     #[inline]
     pub fn pixels(&self, src: &[[f32; 3]], dst: &mut [u8]) {
-        for (d, &p) in dst.as_chunks_mut::<3>().0.iter_mut().zip(src) {
+        let dst = dst.as_chunks_mut::<3>().0;
+        let n = src.len().min(dst.len());
+        let (src, dst) = (&src[..n], &mut dst[..n]);
+        // Huit pixels à la fois, puis le reste un par un.
+        let (blocks, rest) = src.as_chunks::<LANES>();
+        let (head, tail) = dst.split_at_mut(blocks.len() * LANES);
+        for (d, p) in head.chunks_exact_mut(LANES).zip(blocks) {
+            for (d, c) in d.iter_mut().zip(to_output_lanes(&self.m, p)) {
+                for i in 0..3 {
+                    d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
+                }
+            }
+        }
+        for (d, &p) in tail.iter_mut().zip(rest) {
             let c = to_output(&self.m, p);
             for i in 0..3 {
                 d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
@@ -907,6 +940,39 @@ mod tests {
             assert!(px[4] > 200 && px[3] < 60, "{space:?} {px:?}");
         }
         assert_eq!(encode16(&img, OutputSpace::Srgb)[0], 65535);
+    }
+
+    #[test]
+    fn eight_bit_bytes_are_the_same_as_before() {
+        // Hors gamut par le bas et par le haut, ombres, blanc, et une largeur qui laisse
+        // un reste après les blocs de huit.
+        let img = RgbImage::from_fn(97, 61, |x, y| {
+            let (a, b) = (x as f32 / 96.0, y as f32 / 60.0);
+            [a * a * 1.4 - 0.08, b * 1.1, (a * b).sqrt() * 0.003 - 0.01 * b]
+        });
+        for space in [
+            OutputSpace::Srgb,
+            OutputSpace::DisplayP3,
+            OutputSpace::Rec2020,
+            OutputSpace::ProPhoto,
+        ] {
+            let lut = EncodeLut::new(|v| space.encode(v));
+            let m = lc::rgb_to_rgb(&lc::WORKING, &space.primaries());
+            let before: Vec<u8> = img
+                .data
+                .iter()
+                .flat_map(|&p| to_output(&m, p))
+                .map(|c| (lut.get(c) * 255.0 + 0.5) as u8)
+                .collect();
+            assert_eq!(encode8(&img, space), before, "{space:?}");
+            // Par morceaux de toutes tailles, comme l'encodeur JPEG.
+            let enc = Encoder8::new(space);
+            for len in [1, 7, 8, 9, 23] {
+                let mut part = vec![0u8; len * 3];
+                enc.pixels(&img.data[100..100 + len], &mut part);
+                assert_eq!(part, before[300..300 + len * 3], "{space:?} {len}");
+            }
+        }
     }
 
     #[test]
