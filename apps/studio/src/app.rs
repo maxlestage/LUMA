@@ -2557,9 +2557,49 @@ impl Studio {
                     ui.label(RichText::new(tr("Durée")).color(theme::DIM));
                     ui.add(egui::Slider::new(&mut self.show.seconds, 1.0..=30.0).suffix(" s").step_by(0.5));
                     ui.end_row();
-                    ui.label(RichText::new(tr("Fondu")).color(theme::DIM));
+                    ui.label(RichText::new(tr("Fondu|durée du diaporama")).color(theme::DIM));
                     ui.add(egui::Slider::new(&mut self.show.fade, 0.0..=3.0).suffix(" s").step_by(0.1));
                     ui.end_row();
+                    ui.label(RichText::new(tr("Transition")).color(theme::DIM));
+                    use luma_render::slideshow::Transition;
+                    let label = |t: Transition| match t {
+                        Transition::Fade => tr("Fondu|transition"),
+                        Transition::Slide => tr("Glissement"),
+                        Transition::Drift => tr("Fondu et zoom lent"),
+                    };
+                    egui::ComboBox::from_id_salt("transition")
+                        .selected_text(label(self.show.transition))
+                        .show_ui(ui, |ui| {
+                            for t in Transition::ALL {
+                                ui.selectable_value(&mut self.show.transition, t, label(t));
+                            }
+                        })
+                        .response
+                        .on_hover_text(tr("Dans le diaporama exporté"));
+                    ui.end_row();
+                    if crate::dialogs::FOLDER_PICKER {
+                        ui.label(RichText::new(tr("Musique")).color(theme::DIM));
+                        ui.horizontal(|ui| {
+                            let name = self
+                                .show
+                                .music
+                                .as_ref()
+                                .and_then(|m| m.file_name())
+                                .map(|n| n.to_string_lossy().into_owned());
+                            if ui
+                                .button(name.as_deref().unwrap_or(tr("Choisir…")))
+                                .on_hover_text(tr("Jouée en boucle dans le diaporama exporté ; M la coupe"))
+                                .clicked()
+                                && let Some(m) = crate::dialogs::pick_music()
+                            {
+                                self.show.music = Some(m);
+                            }
+                            if self.show.music.is_some() && ui.small_button("✕").on_hover_text(tr("Sans musique")).clicked() {
+                                self.show.music = None;
+                            }
+                        });
+                        ui.end_row();
+                    }
                 });
                 ui.checkbox(&mut self.show.captions, tr("Le nom de chaque photo dessous"));
                 ui.horizontal(|ui| {
