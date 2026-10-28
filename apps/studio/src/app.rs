@@ -1676,29 +1676,95 @@ impl Studio {
         if paths.is_empty() {
             return 0;
         }
-        let position = luma_project::xmp::Position {
-            latitude: at[0],
-            longitude: at[1],
-        };
-        self.edit_meta(&paths, |m| m.position = Some(position));
-        self.flush_xmp();
-        for path in &paths {
-            let mut e = self
-                .catalog
-                .get(path)
-                .cloned()
-                .unwrap_or_else(|| luma_library::entry_of(path));
-            e.gps = Some(at);
-            self.catalog.insert(e);
-        }
-        if let Some(file) = &self.catalog_path {
-            let _ = self.catalog.save(file);
-        }
+        let placed: Vec<(PathBuf, [f64; 2])> = paths.iter().map(|p| (p.clone(), at)).collect();
+        self.set_positions(&placed);
         self.status = match paths.as_slice() {
             [one] => trf("{name} placée sur la carte", &[("name", &file_name(one))]),
             _ => trf("{n} photos placées sur la carte", &[("n", &paths.len())]),
         };
         paths.len()
+    }
+
+    /// Écrit ces positions (latitude, longitude) dans le XMP des photos et dans la
+    /// photothèque.
+    fn set_positions(&mut self, placed: &[(PathBuf, [f64; 2])]) {
+        let current = self.current_path().map(Path::to_path_buf);
+        for (path, at) in placed {
+            let position = luma_project::xmp::Position {
+                latitude: at[0],
+                longitude: at[1],
+            };
+            self.edit_meta(std::slice::from_ref(path), |m| m.position = Some(position));
+            if Some(path) == current.as_ref() {
+                self.flush_xmp();
+            }
+            let mut e = self
+                .catalog
+                .get(path)
+                .cloned()
+                .unwrap_or_else(|| luma_library::entry_of(path));
+            e.gps = Some(*at);
+            self.catalog.insert(e);
+        }
+        if let Some(file) = &self.catalog_path {
+            let _ = self.catalog.save(file);
+        }
+    }
+
+    /// Place les photos du film qui n'ont pas de position d'après une trace GPX ;
+    /// l'heure du boîtier est ramenée à l'heure universelle par l'écart qui en place le
+    /// plus. Rend le nombre de photos placées.
+    pub fn follow_gpx(&mut self, gpx: &Path) -> usize {
+        use luma_library::geotag;
+        const GAP: i64 = 3600;
+        let track = match std::fs::read_to_string(gpx)
+            .map_err(|e| e.to_string())
+            .and_then(|t| geotag::read_gpx(&t))
+        {
+            Ok(t) => t,
+            Err(e) => {
+                self.status = trf("Trace GPX illisible : {error}", &[("error", &e)]);
+                return 0;
+            }
+        };
+        let free: Vec<(PathBuf, i64)> = self
+            .folder
+            .iter()
+            .filter_map(|p| {
+                let e = self
+                    .catalog
+                    .get(p)
+                    .cloned()
+                    .unwrap_or_else(|| luma_library::entry_of(p));
+                if e.gps.is_some() {
+                    return None;
+                }
+                Some((p.clone(), geotag::parse_time(&e.date)?))
+            })
+            .collect();
+        let times: Vec<i64> = free.iter().map(|f| f.1).collect();
+        // L'écart se devine serré (cinq minutes au bord de la trace, des trous d'un quart
+        // d'heure) ; le placement franchit ensuite les trous d'une heure au plus.
+        let Some(offset) = geotag::best_offset(&track, &times, 300, 900) else {
+            self.status = tr("Aucune photo de ce film ne tombe dans la trace.").into();
+            return 0;
+        };
+        let placed: Vec<(PathBuf, [f64; 2])> = free
+            .into_iter()
+            .filter_map(|(p, t)| {
+                let at = geotag::position_at(&track, t - offset, GAP)?;
+                Some((p, [at.latitude, at.longitude]))
+            })
+            .collect();
+        self.set_positions(&placed);
+        let (sign, a) = (if offset < 0 { '-' } else { '+' }, offset.abs());
+        let clock = format!("{sign}{:02}:{:02}", a / 3600, a % 3600 / 60);
+        self.status = trf(
+            "{n} photos placées d'après la trace (horloge du boîtier : UTC{offset})",
+            &[("n", &placed.len()), ("offset", &clock)],
+        );
+        self.map = Some(None);
+        placed.len()
     }
 
     /// Montre la carte (cadrée sur les photos) ou revient à la grille.
@@ -6113,6 +6179,18 @@ impl Studio {
             ui.add_space(10.0);
             if ui.button(tr("Cadrer sur les photos")).clicked() {
                 self.map = Some(None);
+            }
+            // Le choix d'un fichier n'existe pas encore sur iPhone et iPad.
+            if !cfg!(target_os = "ios")
+                && ui
+                    .button(tr("Suivre une trace GPX…"))
+                    .on_hover_text(tr(
+                        "Placer les photos sans position d'après une trace GPX (téléphone, montre, GPS)",
+                    ))
+                    .clicked()
+                && let Some(path) = crate::dialogs::pick_gpx()
+            {
+                self.follow_gpx(&path);
             }
         } else if self.place.is_some() {
             ui.add_space(10.0);
