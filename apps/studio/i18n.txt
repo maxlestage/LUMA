@@ -2839,10 +2839,6 @@ fr = Fondu et zoom lent
 en = Fade and slow zoom
 es = Fundido y zoom lento
 
-fr = Dans le diaporama exporté
-en = In the exported slideshow
-es = En la presentación exportada
-
 fr = Musique
 en = Music
 es = Música

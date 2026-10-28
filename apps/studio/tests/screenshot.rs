@@ -2748,6 +2748,8 @@ fn slideshow_and_photo_book() {
 
     // Le diaporama dans l'app : il avance seul, l'espace le met en pause, Échap l'arrête.
     s.studio().show.seconds = 0.5;
+    s.studio().show.fade = 0.4;
+    s.studio().show.transition = luma_render::slideshow::Transition::Slide;
     s.harness.get_by_label("Lancer le diaporama").click();
     s.harness.step();
     assert!(s.studio().is_playing());
@@ -2761,7 +2763,21 @@ fn slideshow_and_photo_book() {
         s.harness.step();
         std::thread::sleep(Duration::from_millis(20));
     }
+    // La photo d'avant reste à l'écran le temps du glissement, puis s'en va.
+    assert!(
+        s.studio().in_transition(),
+        "la photo d'avant part en glissant"
+    );
     s.wait();
+    let start = Instant::now();
+    while s.studio().in_transition() {
+        assert!(
+            start.elapsed() < Duration::from_secs(30),
+            "la transition ne finit pas"
+        );
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(20));
+    }
     s.capture("diaporama");
     s.keys(&[(NONE, Key::Space)]);
     assert!(!s.studio().is_playing(), "en pause");
