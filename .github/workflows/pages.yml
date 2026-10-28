@@ -4,6 +4,8 @@
 #   /download/LUMA-macos.zip (14 jours d'essai, puis LÜMA Premium) ;
 # - linux-app : LÜMA pour Linux, sous /download/LUMA-linux-x86_64.tar.gz et
 #   /download/LUMA-linux-amd64.deb ;
+# - windows-app : LÜMA pour Windows, sous /download/LUMA-windows-x86_64-setup.exe et
+#   /download/LUMA-windows-x86_64.zip ;
 # - build : vérifications (fmt, clippy serveur et WebAssembly, tests), bundle du
 #   navigateur, puis export statique du site par le serveur Paquets lui-même, liens
 #   sous /<dépôt> ;
@@ -96,10 +98,34 @@ jobs:
             target/linux/LUMA-linux-x86_64.tar.gz
             target/linux/LUMA-linux-amd64.deb
 
+  windows-app:
+    name: LÜMA pour Windows à télécharger
+    if: ${{ !github.event.repository.private && vars.LUMA_DOWNLOADS == '1' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Installateur et archive .zip
+        env:
+          LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
+          LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
+          LUMA_LICENCE_PUBLIC: ${{ vars.LUMA_LICENCE_PUBLIC }}
+          LUMA_LICENCE_SERVER: ${{ vars.LUMA_LICENCE_SERVER }}
+          LUMA_BILLING_PORTAL: ${{ vars.LUMA_BILLING_PORTAL }}
+        shell: pwsh
+        run: scripts/bundle-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telechargement-windows
+          path: |
+            target/windows/LUMA-windows-x86_64-setup.exe
+            target/windows/LUMA-windows-x86_64.zip
+
   build:
     name: Vérifier et construire le site
-    needs: [mac-app, linux-app]
-    if: ${{ always() && !github.event.repository.private && (needs.mac-app.result == 'success' || needs.mac-app.result == 'skipped') && (needs.linux-app.result == 'success' || needs.linux-app.result == 'skipped') }}
+    needs: [mac-app, linux-app, windows-app]
+    if: ${{ always() && !github.event.repository.private && (needs.mac-app.result == 'success' || needs.mac-app.result == 'skipped') && (needs.linux-app.result == 'success' || needs.linux-app.result == 'skipped') && (needs.windows-app.result == 'success' || needs.windows-app.result == 'skipped') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -144,6 +170,8 @@ jobs:
           # L'app est notariée quand le certificat et la clé d'API Apple sont là.
           LUMA_MAC_NOTARIZED: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.APPLE_API_KEY_ID != '' && '1' || '' }}
           LUMA_DOWNLOADS: ${{ vars.LUMA_DOWNLOADS }}
+          # Les fichiers Windows arrivent après l'export : la page ne peut pas les voir.
+          LUMA_WINDOWS_DOWNLOADS: ${{ vars.LUMA_DOWNLOADS }}
         run: |
           cargo run --release -- export dist
           test -f dist/index.html && test -f dist/pkg/luma_site_bg.wasm
@@ -159,12 +187,19 @@ jobs:
         with:
           name: telechargement-linux
           path: site/dist/download
+      - uses: actions/download-artifact@v4
+        if: vars.LUMA_DOWNLOADS == '1'
+        with:
+          name: telechargement-windows
+          path: site/dist/download
       - name: Téléchargements présents
         if: vars.LUMA_DOWNLOADS == '1'
         run: |
           test -s dist/download/LUMA-macos.zip
           test -s dist/download/LUMA-linux-x86_64.tar.gz
           test -s dist/download/LUMA-linux-amd64.deb
+          test -s dist/download/LUMA-windows-x86_64-setup.exe
+          test -s dist/download/LUMA-windows-x86_64.zip
 
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'

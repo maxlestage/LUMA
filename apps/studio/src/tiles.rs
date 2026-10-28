@@ -61,6 +61,9 @@ pub fn cache_dir() -> Option<PathBuf> {
     if let Some(d) = std::env::var_os("LUMA_TILES") {
         return Some(PathBuf::from(d));
     }
+    if cfg!(windows) {
+        return Some(luma_core::windows_dir(true)?.join("Tuiles"));
+    }
     let home = PathBuf::from(std::env::var_os("HOME")?);
     Some(if cfg!(target_os = "ios") {
         home.join("Library/Caches/Tuiles")

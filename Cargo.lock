@@ -2259,6 +2259,7 @@ dependencies = [
 name = "luma-library"
 version = "0.2.0"
 dependencies = [
+ "luma-core",
  "luma-project",
  "luma-raw",
  "quick-xml 0.42.0",

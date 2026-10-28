@@ -62,6 +62,12 @@ La photothèque professionnelle, étape par étape.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
+- **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
+  un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
+  une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
+  Réglages, catalogue et préréglages dans `%APPDATA%\LÜMA`, caches dans
+  `%LOCALAPPDATA%\LÜMA`. Fabriqués, installés, lancés avec un vrai RAW et désinstallés
+  à chaque push par la CI.
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
