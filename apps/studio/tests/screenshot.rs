@@ -2118,6 +2118,40 @@ fn a_tap_on_import_photos_imports() {
                 "{name} : toucher en {at:?} ({one_frame})"
             );
         }
+        // Le lien du dessous ouvre l'app Fichiers, sans demander Photos.
+        let (photos, files) = (s.studio().import_asks, s.studio().files_asks);
+        let link = s
+            .harness
+            .get_by_label("Depuis Fichiers (carte mémoire, iCloud Drive)")
+            .rect()
+            .center();
+        s.harness.event(egui::Event::PointerMoved(link));
+        for pressed in [true, false] {
+            s.harness.event(egui::Event::PointerButton {
+                pos: link,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers: Default::default(),
+            });
+        }
+        s.harness.event(egui::Event::PointerGone);
+        for _ in 0..3 {
+            s.harness.step();
+        }
+        assert_eq!(s.studio().files_asks, files + 1, "{name} : Fichiers");
+        assert_eq!(s.studio().import_asks, photos, "{name} : pas Photos");
+        // Sur iPhone, le menu « ••• » le propose aussi.
+        if name.starts_with("iphone") {
+            s.harness.get_by_label("Plus").click();
+            for _ in 0..5 {
+                s.harness.step();
+            }
+            s.harness.get_by_label("Importer depuis Fichiers").click();
+            for _ in 0..3 {
+                s.harness.step();
+            }
+            assert_eq!(s.studio().files_asks, files + 2, "menu « ••• »");
+        }
         s.capture(name);
     }
 }
