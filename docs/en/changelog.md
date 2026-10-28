@@ -83,6 +83,12 @@ The professional photo library, step by step.
 - **Faster DNG distortion**: correcting the distortion recorded in a DNG (phones,
   cameras that record DNG) is about 35% faster (6 Mpx: 230 → 150 ms), without changing a
   pixel.
+- **Exported slideshow: transitions and music**: choose a crossfade, a slide (the next
+  photo pushes the previous one) or a crossfade with a slow zoom on each photo; music
+  (MP3, AAC, Ogg, WAV, FLAC) copied into the folder and played in a loop, paused with the
+  slideshow, muted with M (“Book, slideshow and gallery”, `luma slideshow --transition
+  --music`). The slideshow's “Fade” label is now correctly translated in English and
+  Spanish.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

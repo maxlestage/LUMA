@@ -138,10 +138,13 @@ USAGE
       couverture (1, 2 ou 4), répété jusqu'à la fin ; sans : choisi d'après les photos.
   luma slideshow <photo>… -o dossier [--title titre] [--seconds 5] [--fade 1]
                          [--size 2048] [--quality 85] [--captions]
+                         [--transition fade|slide|drift] [--music fichier]
       Un diaporama qui se suffit à lui‑même : le dossier reçoit index.html et les photos
       (JPEG sRGB, grand côté de 2048 px par défaut), à ouvrir dans un navigateur ou à
-      mettre en ligne. Fondu entre les photos, flèches ou glissement du doigt, espace
-      pour la pause, F pour le plein écran.
+      mettre en ligne. Flèches ou glissement du doigt, espace pour la pause, F pour le
+      plein écran. --transition : fondu (fade, par défaut), glissement (slide), ou fondu
+      avec un lent zoom (drift). --music : une musique (mp3, m4a, aac, ogg, wav, flac)
+      copiée dans le dossier, jouée en boucle ; M la coupe.
   luma gallery <photo>… -o dossier [--title titre] [--description texte] [--size 2048]
                        [--thumb 480] [--quality 85] [--no-captions]
       Une galerie web statique : index.html (la grille des vignettes, chaque photo en
@@ -2010,6 +2013,22 @@ fn slideshow(args: Vec<String>) -> Result<(), String> {
             "--size" => show.size = bounded("--size", it.next(), 320, 8192)?,
             "--quality" => show.quality = bounded("--quality", it.next(), 1, 100)?,
             "--captions" => show.captions = true,
+            "--transition" => {
+                let t = it.next().unwrap_or_default();
+                show.transition = slideshow::Transition::from_key(&t)
+                    .ok_or(format!("--transition : fade, slide ou drift attendu, pas « {t} »"))?;
+            }
+            "--music" => {
+                let m = PathBuf::from(it.next().ok_or("--music : fichier attendu")?);
+                show.music = Some(m.clone());
+                if slideshow::music_file(&show).is_none() {
+                    return Err(format!(
+                        "{} : musique en {} attendue",
+                        m.display(),
+                        slideshow::MUSIC_EXTENSIONS.join(", ")
+                    ));
+                }
+            }
             _ => photos.push(PathBuf::from(a)),
         }
     }

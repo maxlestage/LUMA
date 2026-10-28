@@ -91,6 +91,12 @@ La photothèque professionnelle, étape par étape.
 - **Distorsion des DNG plus rapide** : la correction de la distorsion écrite dans un
   DNG (téléphones, boîtiers qui enregistrent en DNG) environ 35 % plus rapide (6 Mpx :
   230 → 150 ms), sans changer un pixel.
+- **Diaporama exporté : transitions et musique** : au choix, le fondu, le glissement
+  (la photo suivante pousse la précédente) ou un fondu avec un lent zoom sur chaque
+  photo ; une musique (MP3, AAC, Ogg, WAV, FLAC) copiée dans le dossier et jouée en
+  boucle, mise en pause avec le diaporama, coupée par M (« Livre, diaporama et
+  galerie », `luma slideshow --transition --music`). Le libellé « Fondu » du diaporama
+  est aussi bien traduit en anglais et en espagnol.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

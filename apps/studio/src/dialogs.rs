@@ -159,6 +159,23 @@ pub fn pick_gpx() -> Option<PathBuf> {
     None
 }
 
+/// La musique d'un diaporama.
+#[cfg(not(target_os = "ios"))]
+pub fn pick_music() -> Option<PathBuf> {
+    let upper = luma_render::slideshow::MUSIC_EXTENSIONS.map(|e| e.to_uppercase());
+    let mut extensions: Vec<&str> = luma_render::slideshow::MUSIC_EXTENSIONS.to_vec();
+    extensions.extend(upper.iter().map(String::as_str));
+    rfd::FileDialog::new()
+        .set_title(tr("Choisir une musique"))
+        .add_filter(tr("Musique"), &extensions)
+        .pick_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn pick_music() -> Option<PathBuf> {
+    None
+}
+
 /// Le scan d'une pellicule, pour la mesurer.
 #[cfg(not(target_os = "ios"))]
 pub fn pick_scan() -> Option<PathBuf> {
