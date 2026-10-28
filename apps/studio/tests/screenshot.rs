@@ -2782,11 +2782,29 @@ fn import_from_a_memory_card() {
     s.studio().import.dest = Some(lib.clone());
     s.studio().import.backup = Some(second.clone());
     s.studio().import.name = "essai_{séquence:2}".into();
+    s.studio().wait_import_days();
     s.studio().open_import();
     for _ in 0..3 {
         s.harness.step();
     }
     s.capture("importer");
+    // Deux jours sur la carte : en décocher un, puis le reprendre.
+    let days = s.studio().import.days.clone();
+    if days.len() == 2 {
+        let label = format!("{} ({})", days[1].0, days[1].1);
+        s.harness.get_by_label(&label).click();
+        s.harness.step();
+        s.harness.step();
+        assert!(s.harness.query_by_label("Importer 1 photos").is_some());
+        assert_eq!(s.studio().import.chosen_days(), [days[0].0.clone()]);
+        s.harness.get_by_label(&label).click();
+        s.harness.step();
+        s.harness.step();
+        assert!(
+            s.studio().import.chosen_days().is_empty(),
+            "tous : rien à filtrer"
+        );
+    }
     s.harness.get_by_label("Importer 2 photos").click();
     s.harness.step();
     s.wait();
