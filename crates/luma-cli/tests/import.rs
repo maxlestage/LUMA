@@ -70,6 +70,14 @@ fn a_card_to_the_library_and_a_second_disk() {
     let (ok, out) = luma(&args.iter().map(String::as_str).collect::<Vec<_>>());
     assert!(ok && out.contains("3 photo(s) à importer"), "{out}");
     assert!(!lib.exists());
+    // Les jours de la carte (sans EXIF : celui des fichiers), et un autre jour : rien.
+    assert!(out.contains("jours : ") && out.contains(" (3)"), "{out}");
+    let args = with(&["--dry-run", "--days", "2000-01-01"]);
+    let (ok, out) = luma(&args.iter().map(String::as_str).collect::<Vec<_>>());
+    assert!(ok && out.contains("0 photo(s) à importer"), "{out}");
+    let args = with(&["--dry-run", "--days", "hier"]);
+    let (ok, out) = luma(&args.iter().map(String::as_str).collect::<Vec<_>>());
+    assert!(!ok && out.contains("n'est pas un jour"), "{out}");
 
     let args = with(&["--name", "voyage_{séquence:3}"]);
     let (ok, out) = luma(&args.iter().map(String::as_str).collect::<Vec<_>>());

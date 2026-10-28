@@ -483,6 +483,43 @@ pub struct Import {
     pub backup: Option<PathBuf>,
     /// Les photos trouvées sur la source (comptées à son choix).
     found: usize,
+    /// Les jours de prise de vue de la source, leur nombre de photos, et s'ils sont
+    /// choisis ; lus en arrière‑plan (`days_job`).
+    pub days: Vec<(String, usize, bool)>,
+    days_job: Option<std::sync::mpsc::Receiver<Vec<(String, usize)>>>,
+}
+
+impl Import {
+    /// Les jours à importer : vide si tous le sont.
+    pub fn chosen_days(&self) -> Vec<String> {
+        if self.days.iter().all(|d| d.2) {
+            return Vec::new();
+        }
+        self.days
+            .iter()
+            .filter(|d| d.2)
+            .map(|d| d.0.clone())
+            .collect()
+    }
+
+    /// Le nombre de photos à importer : celles des jours choisis.
+    pub fn chosen(&self) -> usize {
+        if self.days.is_empty() {
+            self.found
+        } else {
+            self.days.iter().filter(|d| d.2).map(|d| d.1).sum()
+        }
+    }
+
+    /// Les jours de la source, quand ils sont lus.
+    fn receive_days(&mut self) {
+        if let Some(rx) = &self.days_job
+            && let Ok(days) = rx.try_recv()
+        {
+            self.days = days.into_iter().map(|(d, n)| (d, n, true)).collect();
+            self.days_job = None;
+        }
+    }
 }
 
 impl Default for Import {
@@ -499,6 +536,8 @@ impl Default for Import {
             name: String::new(),
             backup: None,
             found: 0,
+            days: Vec::new(),
+            days_job: None,
         }
     }
 }
@@ -2280,8 +2319,28 @@ impl Studio {
 
     /// Choisit la carte (ou le dossier) à importer, et y compte les photos.
     pub fn set_import_source(&mut self, source: PathBuf) {
-        self.import.found = luma_library::import::photos(&source).len();
+        let photos = luma_library::import::photos(&source);
+        self.import.found = photos.len();
         self.import.source = Some(source);
+        // Les jours de prise de vue, lus en arrière‑plan (l'en‑tête de chaque photo).
+        self.import.days.clear();
+        let (send, receive) = std::sync::mpsc::channel();
+        self.import.days_job = Some(receive);
+        std::thread::spawn(move || {
+            let entries: Vec<luma_library::Entry> =
+                photos.iter().map(|p| luma_library::entry_of(p)).collect();
+            let _ = send.send(luma_library::import::days(&entries));
+            crate::wake();
+        });
+    }
+
+    /// Attend la fin de la lecture des jours de la source (pour les essais).
+    pub fn wait_import_days(&mut self) {
+        if let Some(rx) = self.import.days_job.take()
+            && let Ok(days) = rx.recv()
+        {
+            self.import.days = days.into_iter().map(|(d, n)| (d, n, true)).collect();
+        }
     }
 
     /// Importe en arrière‑plan : lit les photos de la source, fait le plan (rangement,
@@ -2297,6 +2356,7 @@ impl Studio {
             dest,
             folders: self.import.folders.clone(),
             backup: self.import.backup.clone(),
+            days: self.import.chosen_days(),
         };
         let template = Some(self.import.name.trim().to_owned()).filter(|t| !t.is_empty());
         if let Some(t) = &template
@@ -2308,7 +2368,7 @@ impl Studio {
         let (send, done) = std::sync::mpsc::channel();
         let placed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let counter = placed.clone();
-        let total = self.import.found;
+        let total = self.import.chosen();
         let job = move || -> Result<(PathBuf, usize), String> {
             let photos = import::photos(&source);
             let entries: Vec<luma_library::Entry> =
@@ -2392,6 +2452,17 @@ impl Studio {
                         }
                     });
                     ui.end_row();
+                    // Plusieurs jours sur la carte : ne prendre que certains.
+                    self.import.receive_days();
+                    if self.import.days.len() > 1 {
+                        ui.label(RichText::new(tr("Jours")).color(theme::DIM));
+                        ui.horizontal_wrapped(|ui| {
+                            for (day, n, on) in &mut self.import.days {
+                                ui.checkbox(on, format!("{day} ({n})"));
+                            }
+                        });
+                        ui.end_row();
+                    }
                     ui.label(RichText::new(tr("Vers")).color(theme::DIM));
                     ui.horizontal(|ui| {
                         ui.label(shown(&self.import.dest, "Choisissez la photothèque"));
@@ -2445,10 +2516,10 @@ impl Studio {
                     }
                     _ => {
                         let ready = self.printing.is_none()
-                            && self.import.found > 0
+                            && self.import.chosen() > 0
                             && self.import.dest.is_some();
                         go = ui
-                            .add_enabled(ready, egui::Button::new(trf("Importer {n} photos", &[("n", &self.import.found)])))
+                            .add_enabled(ready, egui::Button::new(trf("Importer {n} photos", &[("n", &self.import.chosen())])))
                             .clicked();
                     }
                 }
