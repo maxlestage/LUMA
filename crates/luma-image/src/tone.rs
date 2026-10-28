@@ -74,6 +74,62 @@ pub fn texture_sigma(diag: f32) -> f32 {
     (0.0012 * diag).max(1.0)
 }
 
+/// Les tons proposés par [`auto_tones`] : exposition (IL), contraste, hautes lumières
+/// et ombres (−100 à 100), comme les curseurs du panneau Base.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AutoTones {
+    pub exposure: f32,
+    pub contrast: f32,
+    pub highlights: f32,
+    pub shadows: f32,
+}
+
+/// Les tons automatiques, lus sur l'histogramme de `img` (linéaire, sans réglage de
+/// tons), sans IA. L'exposition amène la moyenne logarithmique de la luminance au gris
+/// moyen, sans pousser le haut de l'histogramme bien au‑delà du blanc ; les hautes
+/// lumières baissent si ce haut reste très clair, les ombres remontent si le bas reste
+/// très sombre ; le contraste vise six IL entre les tons sombres et clairs.
+pub fn auto_tones(img: &RgbImage) -> AutoTones {
+    let every = (img.data.len() / 200_000).max(1);
+    let mut lum: Vec<f32> = img
+        .data
+        .iter()
+        .step_by(every)
+        .map(|p| luminance(*p).max(1e-5))
+        .collect();
+    if lum.len() < 16 {
+        return AutoTones {
+            exposure: 0.0,
+            contrast: 0.0,
+            highlights: 0.0,
+            shadows: 0.0,
+        };
+    }
+    lum.sort_by(f32::total_cmp);
+    let at = |q: f32| lum[((lum.len() - 1) as f32 * q) as usize];
+    let key = (lum.iter().map(|v| f64::from(v.ln())).sum::<f64>() / lum.len() as f64).exp() as f32;
+    // Le gris moyen ; jamais plus d'un IL au‑delà de ce qui amène le haut (99,5 %) au
+    // double du blanc.
+    let mut ev = (0.18 / key).log2();
+    let room = (2.0 / at(0.995)).log2();
+    if ev > room {
+        ev = room.max(ev - 1.0);
+    }
+    let ev = ev.clamp(-3.0, 3.0);
+    let g = ev.exp2();
+    let (lo, hi) = (at(0.05) * g, at(0.99) * g);
+    let highlights = -(((hi - 0.6) / 1.4).clamp(0.0, 1.0) * 70.0);
+    let shadows = ((0.03 / lo).log2() / 4.0).clamp(0.0, 1.0) * 50.0;
+    let spread = (at(0.95) / at(0.05)).log2();
+    let contrast = ((6.0 - spread) * 8.0).clamp(-30.0, 40.0);
+    AutoTones {
+        exposure: (ev * 20.0).round() / 20.0,
+        contrast: contrast.round(),
+        highlights: highlights.round(),
+        shadows: shadows.round(),
+    }
+}
+
 /// Hautes lumières, Ombres, Clarté et Texture, en un gain de luminance.
 pub fn local_tone(img: &mut RgbImage, s: &Settings) {
     let (hl, sh, clarity, texture) = (
@@ -266,6 +322,40 @@ mod tests {
                 .all(|(p, q)| (0..3).all(|c| p[c].to_bits() == q[c].to_bits()));
             assert!(same, "{hl} {sh} {cl} {tx}");
         }
+    }
+
+    /// Une scène de tons répartis en douceur, de `lo` à `hi` (linéaire).
+    fn ramp(lo: f32, hi: f32) -> RgbImage {
+        RgbImage::from_fn(200, 100, |x, _| {
+            let v = lo * (hi / lo).powf(x as f32 / 199.0);
+            [v, v, v]
+        })
+    }
+
+    #[test]
+    fn auto_tones_follow_the_histogram() {
+        // Sous‑exposée de deux IL : l'exposition remonte d'autant, environ.
+        let dark = auto_tones(&ramp(0.18 / 4.0 / 8.0, 0.18 / 4.0 * 8.0));
+        assert!((dark.exposure - 2.0).abs() < 0.15, "{dark:?}");
+        // Surexposée : elle baisse.
+        let bright = auto_tones(&ramp(0.18 * 2.0 / 8.0, 0.18 * 2.0 * 8.0));
+        assert!((bright.exposure + 1.0).abs() < 0.15, "{bright:?}");
+        // Bien exposée, six IL d'écart : presque rien.
+        let fine = auto_tones(&ramp(0.18 / 8.0, 0.18 * 8.0));
+        assert!(fine.exposure.abs() < 0.1 && fine.contrast.abs() <= 8.0, "{fine:?}");
+        // Douze IL de la nuit au ciel : hautes lumières baissées, ombres remontées,
+        // contraste réduit.
+        let wide = auto_tones(&ramp(0.18 / 64.0, 0.18 * 64.0));
+        assert!(
+            wide.highlights < -20.0 && wide.shadows > 20.0 && wide.contrast < 0.0,
+            "{wide:?}"
+        );
+        // Un brouillard de deux IL : contraste relevé, ni ombres ni hautes lumières.
+        let flat = auto_tones(&ramp(0.18 / 2.0, 0.18 * 2.0));
+        assert!(
+            flat.contrast > 20.0 && flat.highlights == 0.0 && flat.shadows == 0.0,
+            "{flat:?}"
+        );
     }
 
     #[test]

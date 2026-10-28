@@ -331,6 +331,24 @@ impl Photo {
         }
     }
 
+    /// Tons automatiques ([`luma_image::tone::auto_tones`]) : lus sur la photo telle
+    /// que réglée (balance, objectif, recadrage), sans ses réglages de tons.
+    pub fn auto_tones(&self, settings: &Settings) -> luma_image::tone::AutoTones {
+        let neutral = Settings {
+            exposure: 0.0,
+            contrast: 0.0,
+            highlights: 0.0,
+            shadows: 0.0,
+            whites: 0.0,
+            blacks: 0.0,
+            ..settings.clone()
+        };
+        match self.base(&neutral, Size::Fit(512), &Cancel::new(), &mut Timings::default()) {
+            Ok(base) => luma_image::tone::auto_tones(&base.image),
+            Err(_) => luma_image::tone::auto_tones(&RgbImage::new(0, 0)),
+        }
+    }
+
     /// Balance automatique : la moyenne des tons proches du gris (ni sombres, ni
     /// écrêtés, ni très colorés), affinée trois fois à partir de la balance du boîtier.
     pub fn auto_white_balance(&self) -> TempTint {
