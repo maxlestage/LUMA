@@ -32,7 +32,9 @@ La fototeca profesional, paso a paso.
   por foto con un logotipo de 1200 × 600). Después la conversión al espacio de salida
   (JPEG), ocho píxeles a la vez: 24 Mpx en sRGB 230 → 150 ms, mismos bytes; y para
   TIFF y PNG de 16 bits: sRGB alrededor de un 35 % más corto (24 Mpx: 295–366 →
-  190–204 ms), mismos bytes.
+  190–204 ms), mismos bytes. Después el color con el mezclador y el etalonaje: los
+  pasos a OKLab y de vuelta, ocho píxeles a la vez, alrededor de un 30 % más cortos
+  (vista previa de 2048 px: 50–60 → 34–43 ms), mismos bits.
   Después la reducción de ruido por ondículas, sin imagen nueva en cada escala: 1,8
   veces más rápida (24 Mpx: 1,17 → 0,65 s), y el enfoque por deconvolución, ocho píxeles
   a la vez: un 28 % más corto (0,83 → 0,60 s), mismos píxeles. Después el filtro que
