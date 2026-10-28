@@ -79,6 +79,9 @@ La photothèque professionnelle, étape par étape.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
+- **Corrections d'objectif toujours appliquées** : un doublon de travail écrit par une
+  version d'avant la lecture des corrections d'objectif du fichier (Sony, Fujifilm,
+  Olympus, Panasonic, DNG) est refait une fois, au lieu de montrer la photo sans elles.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

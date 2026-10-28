@@ -134,6 +134,29 @@ fn the_preview_has_its_own_level() {
 }
 
 #[test]
+fn a_duplicate_from_before_the_lens_corrections_is_made_again() {
+    let (source, dir) = setup("avant-corrections");
+    let path = Photo::new(bayer(400, 300)).write_duplicate(&source, &dir).unwrap();
+    assert!(Duplicate::open(&source, &path).is_some());
+    // Le même doublon, écrit par une version d'avant la lecture des corrections
+    // d'objectif : son en‑tête n'en dit rien.
+    let bytes = std::fs::read(&path).unwrap();
+    let n = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
+    let header = String::from_utf8(bytes[12..12 + n].to_vec()).unwrap();
+    let old = header
+        .replace(",\"corrections_read\":true", "")
+        .replace("\"corrections_read\":true,", "");
+    assert_ne!(old, header, "{header}");
+    let mut file = bytes[..8].to_vec();
+    file.extend_from_slice(&(old.len() as u32).to_le_bytes());
+    file.extend_from_slice(old.as_bytes());
+    file.extend_from_slice(&bytes[12 + n..]);
+    std::fs::write(&path, file).unwrap();
+    assert!(Duplicate::open(&source, &path).is_none(), "refait, pas servi");
+    let _ = std::fs::remove_dir_all(dir.parent().unwrap());
+}
+
+#[test]
 fn a_changed_original_is_read_again() {
     let (source, dir) = setup("modifie");
     Photo::new(bayer(400, 300)).write_duplicate(&source, &dir).unwrap();

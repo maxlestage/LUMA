@@ -80,6 +80,10 @@ La fototeca profesional, paso a paso.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
+- **Correcciones de objetivo siempre aplicadas**: un duplicado de trabajo escrito por
+  una versión anterior a la lectura de las correcciones de objetivo del archivo (Sony,
+  Fujifilm, Olympus, Panasonic, DNG) se rehace una vez, en lugar de mostrar la foto sin
+  ellas.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
