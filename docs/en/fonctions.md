@@ -63,7 +63,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Crop overlays: thirds, golden ratio, diagonals, golden triangles, golden spiral, grid (O to switch, Shift+O to rotate) | ✅ |
 | | Auto straighten (Shift+R): horizon and verticals read with a Hough transform; nothing when in doubt (close-up, vanishing lines) | ✅ |
 | | Auto verticals (Shift+V): the vanishing point of the verticals measured, the Transform's Vertical set to make them parallel | ✅ |
-| | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity, texture, sharpness (raised or softened), dehaze | ✅ |
+| | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity, texture, sharpness (raised or softened), noise reduction, dehaze | ✅ |
 | | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
 | | “Sky” mask (“Select sky”): sky and clouds found on the photo, edges followed, reflections in water left out; no AI | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
