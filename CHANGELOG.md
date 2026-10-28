@@ -95,8 +95,9 @@ La photothèque professionnelle, étape par étape.
   (la photo suivante pousse la précédente) ou un fondu avec un lent zoom sur chaque
   photo ; une musique (MP3, AAC, Ogg, WAV, FLAC) copiée dans le dossier et jouée en
   boucle, mise en pause avec le diaporama, coupée par M (« Livre, diaporama et
-  galerie », `luma slideshow --transition --music`). Le libellé « Fondu » du diaporama
-  est aussi bien traduit en anglais et en espagnol.
+  galerie », `luma slideshow --transition --music`). Le diaporama en plein écran de
+  l'app passe d'une photo à l'autre avec la même transition (avant : d'un coup). Le
+  libellé « Fondu » du diaporama est aussi bien traduit en anglais et en espagnol.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
