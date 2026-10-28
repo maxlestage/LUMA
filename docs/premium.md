@@ -1,6 +1,6 @@
 # LÜMA Premium : abonnements et téléchargement
 
-LÜMA se télécharge librement et s'essaie **14 jours**, tout compris. Ensuite, il faut
+LÜMA se télécharge librement et s'essaie **un mois**, tout compris. Ensuite, il faut
 un abonnement **LÜMA Premium** :
 
 | Formule | Prix TTC | |

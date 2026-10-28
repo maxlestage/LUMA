@@ -71,6 +71,8 @@ La fototeca profesional, paso a paso.
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
   catálogo y preajustes en `%APPDATA%\LÜMA`, cachés en `%LOCALAPPDATA%\LÜMA`. La CI lo
   fabrica, instala, abre con un RAW real y desinstala en cada push.
+- **Un mes de prueba en todas partes**: también en Mac, Linux y Windows, la prueba
+  completa dura ahora un mes (antes 14 días), como en iPhone y iPad.
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
   focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en

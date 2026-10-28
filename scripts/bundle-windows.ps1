@@ -46,7 +46,7 @@ bin\luma.exe.
 Vos réglages, le catalogue et les préréglages : %APPDATA%\LÜMA
 Les caches (doublons de travail, tuiles de la carte) : %LOCALAPPDATA%\LÜMA
 
-14 jours d'essai, complet, puis LÜMA Premium : https://maxlestage.github.io/LUMA/
+Un mois d'essai, complet, puis LÜMA Premium : https://maxlestage.github.io/LUMA/
 "@ | Set-Content -Encoding UTF8 (Join-Path $root 'LISEZMOI.txt')
 
 $zip = Join-Path $out "$name.zip"
