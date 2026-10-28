@@ -74,7 +74,9 @@ La fototeca profesional, paso a paso.
   que deja de responder deja al procesador terminar la vista previa. Dos pruebas hacen
   guardia: los RAW dañados (copia cortada, bytes revueltos, archivo vacío) se abren como
   imagen o como error, nunca como cierre, y los ajustes con valores absurdos (infinitos,
-  enormes) dan píxeles sanos, también en máscaras, retoques y licuado.
+  enormes) dan píxeles sanos, también en máscaras, retoques y licuado. Una eliminación
+  trazada larga y muy ancha ya no congela la exportación (24 Mpx: 2 minutos → 4
+  segundos), mismos píxeles.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
