@@ -885,7 +885,7 @@ fn cta(lang: Lang) -> Element {
         .child(div().class("cta-orb").attr("aria-hidden", "true"))
         .child(h2().class("reveal").text(before).child(br()).child(em().text(accent)).child(text(after)))
         .child(p().class("reveal").text(t(lang,
-            "Quatorze jours pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.",
+            "Un mois pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.",
         )))
         .child(
             div()
@@ -975,7 +975,7 @@ fn pricing(lang: Lang) -> Element {
         .id("tarifs")
         .child(section_head(
             "LÜMA Premium",
-            heading(h2, t(lang, "Quatorze jours pour *essayer*, puis à vous de choisir.")),
+            heading(h2, t(lang, "Un mois pour *essayer*, puis à vous de choisir.")),
             Some(p().class("lede").text(t(lang,
                 "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, Linux et Windows, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.",
             ))),
