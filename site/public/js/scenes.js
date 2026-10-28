@@ -46,6 +46,19 @@ function start() {
     }, { rootMargin: '600px 0px' });
     io.observe(apple);
   }
+
+  // L'écran 3D de la section « Sur votre bureau » (Linux et Windows), chargé à l'approche.
+  const systemsCanvas = document.getElementById('systems-gl');
+  if (systemsCanvas) {
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      import(`./systems.js${V}`)
+        .then(({ initSystems }) => initSystems(systemsCanvas, opts))
+        .catch((e) => console.warn('LÜMA : écran 3D indisponible', e));
+    }, { rootMargin: '600px 0px' });
+    io.observe(systemsCanvas);
+  }
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

@@ -83,6 +83,7 @@ const BRAND_SVG: &str = include_str!("../../public/assets/marque.svg");
 const IRIS_SVG: &str = r##"<svg class="loader-iris" viewBox="-50 -50 100 100"><defs><linearGradient id="spec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b3d"/><stop offset=".35" stop-color="#ffcf4a"/><stop offset=".65" stop-color="#4af2c8"/><stop offset="1" stop-color="#8b7bff"/></linearGradient></defs><circle r="46" fill="none" stroke="url(#spec)" stroke-width="1.2"/><g class="blades"><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/></g></svg>"##;
 
 const LINUX_SVG: &str = r#"<svg class="linux-logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>"#;
+const WINDOWS_SVG: &str = r#"<svg class="win-logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M11 9.5v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>"#;
 const APPLE_SVG: &str = r#"<svg class="apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM13.9 4.9c.7-.9 1.2-2 1-3.2-1 .1-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>"#;
 
 // ----- Cadre --------------------------------------------------------------------------
@@ -372,6 +373,58 @@ fn apple(lang: Lang) -> Element {
                     .child(div().class("apple-dots").children([i(), i(), i(), i()])),
             ),
     )
+}
+
+/// Sur votre bureau : Linux (disponible) et Windows (en préparation), le même moteur
+/// qu'Apple. Une scène 3D (un écran qui tourne lentement) occupe le fond de la section.
+fn systems(lang: Lang) -> Element {
+    let logo = |name: &str| if name == "Linux" { LINUX_SVG } else { WINDOWS_SVG };
+    section()
+        .class("systems")
+        .id("systemes")
+        .child(
+            canvas()
+                .id("systems-gl")
+                .class("systems-gl")
+                .attr("aria-hidden", "true"),
+        )
+        .child(section_head(
+            t(lang, "Sur votre bureau"),
+            heading(h2, t(lang, "Pas seulement Apple. *Linux et Windows*, même moteur.")),
+            Some(p().text(t(lang,
+                "Le même moteur partout, sans rien qui dépende du système : une photo développée sur Linux ou sur Windows a le même rendu que sur Mac, au pixel près.",
+            ))),
+        ))
+        .child(div().class("systems-grid").children(SYSTEMS.iter().map(|s| {
+            article()
+                .class("system reveal tilt")
+                .child(
+                    div()
+                        .class("system-head")
+                        .child(
+                            span()
+                                .class("system-logo")
+                                .attr("aria-hidden", "true")
+                                .html(logo(s.name)),
+                        )
+                        .child(h3().text(s.name))
+                        .child(
+                            span()
+                                .class(if s.phase == "Disponible" { "badge badge-on" } else { "badge" })
+                                .text(t(lang, s.phase)),
+                        ),
+                )
+                .child(p().class("system-lede").text(t(lang, s.lede)))
+                .child(ul().class("system-points").children(s.points.iter().map(|pt| {
+                    li().child(
+                        span()
+                            .class("cap-check")
+                            .attr("aria-hidden", "true")
+                            .text("✔"),
+                    )
+                    .child(span().text(t(lang, pt)))
+                })))
+        })))
 }
 
 fn platforms(lang: Lang) -> Element {
@@ -1249,6 +1302,7 @@ pub fn home(site: &Site, origin: &str, lang: Lang) -> Page {
                 .child(lab(lang))
                 .child(films(lang))
                 .child(apple(lang))
+                .child(systems(lang))
                 .child(capabilities(lang))
                 .child(privacy(lang))
                 .child(performance(lang))
