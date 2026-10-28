@@ -4603,9 +4603,9 @@ fr = Supprimer|retouche
 en = Remove
 es = Eliminar
 
-fr = Un cercle sur ce qui gêne (fil, passant, déchet) : la photo autour le remplace, texture comprise
-en = A circle over what is in the way (wire, passer-by, litter): the surrounding photo replaces it, texture included
-es = Un círculo sobre lo que molesta (cable, transeúnte, basura): la foto de alrededor lo sustituye, textura incluida
+fr = Un clic sur ce qui gêne (passant, déchet), ou un trait le long d'un fil : la photo autour le remplace, texture comprise
+en = A click on what is in the way (passer-by, litter), or a stroke along a wire: the surrounding photo replaces it, texture included
+es = Un clic sobre lo que molesta (transeúnte, basura), o un trazo a lo largo de un cable: la foto de alrededor lo sustituye, textura incluida
 
 # ----- Les 125 films de la troisième série -----
 
