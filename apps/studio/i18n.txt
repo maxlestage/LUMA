@@ -2819,6 +2819,46 @@ fr = Fondu
 en = Smoothness
 es = Suavizado
 
+fr = Fondu|durée du diaporama
+en = Fade
+es = Fundido
+
+fr = Fondu|transition
+en = Fade
+es = Fundido
+
+fr = Transition
+en = Transition
+es = Transición
+
+fr = Glissement
+en = Slide
+es = Deslizamiento
+
+fr = Fondu et zoom lent
+en = Fade and slow zoom
+es = Fundido y zoom lento
+
+fr = Dans le diaporama exporté
+en = In the exported slideshow
+es = En la presentación exportada
+
+fr = Musique
+en = Music
+es = Música
+
+fr = Jouée en boucle dans le diaporama exporté ; M la coupe
+en = Played in a loop in the exported slideshow; M mutes it
+es = Se reproduce en bucle en la presentación exportada; M la silencia
+
+fr = Sans musique
+en = No music
+es = Sin música
+
+fr = Choisir une musique
+en = Choose music
+es = Elegir una música
+
 fr = Largeur
 en = Width
 es = Anchura
