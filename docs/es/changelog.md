@@ -331,6 +331,9 @@ La fototeca profesional, paso a paso.
   `--restore` (el catálogo reemplazado se guarda antes). **Fotos que faltan**:
   `--missing` las lista, `--relocate antigua nueva` recupera una carpeta movida fuera de
   LÜMA, colecciones incluidas.
+- **Duplicados** (`luma catalog --duplicates`): las fotos repetidas del catálogo
+  (misma cámara, mismo instante, archivos del mismo tamaño y tipo, como una tarjeta
+  importada dos veces), listadas con el espacio que ocupan, sin borrar nada.
 - **Impresión** («Imprimir…» en las fotos seleccionadas, `luma print`): un PDF al
   tamaño exacto del papel (A4, A3, A3+, 10 × 15 cm…), vertical u horizontal, márgenes,
   una foto por página o una **hoja de contactos** (cuadrícula, nombre bajo cada foto),

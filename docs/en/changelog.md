@@ -308,6 +308,9 @@ The professional photo library, step by step.
   (the last ten kept); `luma catalog --backup`, `--backups`, `--restore` (the replaced
   catalogue is backed up first). **Missing photos**: `--missing` lists them,
   `--relocate old new` finds a folder moved outside LÜMA, collections included.
+- **Duplicates** (`luma catalog --duplicates`): the photos in the catalogue twice (same
+  camera, same moment, files of the same size and type, like a card imported twice),
+  listed with the space they take, without deleting anything.
 - **Printing** (“Print…” on the selected photos, `luma print`): a PDF at the paper's
   exact size (A4, A3, A3+, 10 × 15 cm…), portrait or landscape, margins, one photo per
   page or a **contact sheet** (grid, name under each photo), photos whole or filling

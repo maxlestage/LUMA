@@ -326,6 +326,9 @@ La photothèque professionnelle, étape par étape.
   `--restore` (le catalogue remplacé est sauvegardé d'abord). **Photos manquantes** :
   `--missing` les liste, `--relocate ancien nouveau` retrouve un dossier déplacé hors de
   LÜMA, collections comprises.
+- **Doublons** (`luma catalog --duplicates`) : les photos en double du catalogue — même
+  boîtier, même instant, fichiers de même taille et de même type, comme une carte
+  importée deux fois — listées avec la place qu'elles prennent, sans rien effacer.
 - **Carte** (Bibliothèque, « Carte ») : les photos du film à l'endroit de leur prise
   de vue (position GPS de l'EXIF, gardée dans la photothèque), regroupées quand elles
   sont proches ; glisser, zoomer à la molette ou à deux doigts, toucher un groupe pour
