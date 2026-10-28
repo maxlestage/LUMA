@@ -148,6 +148,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Tonos automáticos** (Luz, Tono, o `--auto-tone`): un clic ajusta la
+  exposición, el contraste, las altas luces y las sombras según el histograma de la
+  foto, un punto de partida para afinar. Sin IA.
 - **Reducción de ruido en las máscaras**: suavizar sombras levantadas o un cielo con
   ruido con el pincel, manteniendo los contornos nítidos, sin suavizar el resto de la
   foto.

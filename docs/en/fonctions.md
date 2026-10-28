@@ -27,6 +27,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Manufacturer profiles | ⏳ |
 | Basic | As Shot white balance, temperature and tint (DNG scale) | ✅ |
 | | Auto white balance, presets (Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash), eyedropper (W) | ✅ |
+| | Auto tone (“Auto tone”, `--auto-tone`): exposure, contrast, highlights and shadows read from the photo's histogram, no AI | ✅ |
 | | Exposure, Contrast | ✅ |
 | | Highlights, Shadows (image-adaptive) | ✅ |
 | | Whites, Blacks (adaptive: bring the photo's real extremes to white and black) | ✅ |

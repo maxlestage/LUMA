@@ -28,6 +28,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Perfiles del fabricante | ⏳ |
 | Básicos | Balance de blancos «Como se tomó», temperatura y matiz (escala DNG) | ✅ |
 | | Balance de blancos automático, ajustes preestablecidos (luz de día, nublado, sombra, tungsteno, fluorescente, flash), cuentagotas (W) | ✅ |
+| | Tonos automáticos («Tonos automáticos», `--auto-tone`): exposición, contraste, altas luces y sombras leídos en el histograma de la foto, sin IA | ✅ |
 | | Exposición, Contraste | ✅ |
 | | Altas luces, Sombras (adaptativas a la imagen) | ✅ |
 | | Blancos, Negros (adaptativos: llevan los extremos reales de la foto al blanco y al negro) | ✅ |
