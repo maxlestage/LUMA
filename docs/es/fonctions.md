@@ -36,6 +36,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Intensidad, Saturación | ✅ |
 | Curva de tonos | Paramétrica (4 regiones, 3 divisiones) | ✅ |
 | | Curvas de puntos: luminosidad, rojo, verde, azul | ✅ |
+| | Editor de curvas de puntos en la app (Luz, Curva de tonos): un clic añade un punto, se arrastra, un doble clic lo quita; la curva paramétrica en tenue debajo; se puede deshacer | ✅ |
 | Mezclador de color | Tono, saturación y luminancia de 8 colores | ✅ |
 | | Mezcla de blanco y negro (±3 EV, `crs:GrayMixer*`) | ✅ |
 | | Herramienta de ajuste selectivo (T): arrastrar sobre un color de la foto ajusta su tono, saturación o luminancia | ✅ |

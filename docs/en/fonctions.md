@@ -35,6 +35,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Vibrance, Saturation | ✅ |
 | Tone Curve | Parametric (4 regions, 3 splits) | ✅ |
 | | Point curves: luminance, red, green, blue | ✅ |
+| | Point curve editor in the app (Light, Tone curve): a click adds a point, drag it, a double-click removes it; the parametric curve shown faintly underneath; undoable | ✅ |
 | Color Mixer | Hue, saturation and luminance for 8 colours | ✅ |
 | | Black & white mix (±3 EV, `crs:GrayMixer*`) | ✅ |
 | | Targeted adjustment tool (T): drag on a colour in the photo to adjust that colour's hue, saturation or luminance | ✅ |
