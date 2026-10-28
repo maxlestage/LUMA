@@ -577,6 +577,181 @@ pub fn format_control(lang: Lang, key: &str, v: f64) -> String {
     }
 }
 
+/// Les nouveautés récentes de l'accueil, d'après `CHANGELOG.md` et `docs/fonctions.md` :
+/// (scène animée dessinée par `public/js/showcase.js`, domaine, titre, texte).
+pub const RECENT: [(&str, &str, &str, &str); 9] = [
+    (
+        "liquify",
+        "Retouche",
+        "Fluidité",
+        "Pousser, gonfler et dégonfler au pinceau, avec sa taille et sa force : redresser une ligne, affiner une forme, corriger un pli. Chaque coup est gardé et s'annule. Sans IA.",
+    ),
+    (
+        "stroke",
+        "Retouche",
+        "Suppression, correcteur et tampon tracés",
+        "Glissez le long d'un fil, d'une rayure ou d'un câble : il s'efface d'un seul geste, remplacé par la photo qui l'entoure. Le correcteur et le tampon suivent le trait de la même façon.",
+    ),
+    (
+        "autotone",
+        "Lumière",
+        "Tons auto",
+        "Un clic règle l'exposition, le contraste, les hautes lumières et les ombres d'après l'histogramme de la photo : un point de départ à affiner. Sans IA.",
+    ),
+    (
+        "gpx",
+        "Photothèque",
+        "Traces GPX",
+        "Chaque photo prend la position de la trace à l'instant de sa prise de vue et se pose sur la carte ; l'écart de l'horloge du boîtier est deviné.",
+    ),
+    (
+        "enlarge",
+        "Export",
+        "Agrandir à l'export",
+        "Une taille plus grande que la photo l'agrandit, jusqu'à quatre fois chaque côté, nette et sans halo autour des contours : pour les grands tirages. Sans IA.",
+    ),
+    (
+        "maskfx",
+        "Masques",
+        "Texture, voile, netteté et bruit dans les masques",
+        "Adoucir une peau, déboucher un ciel voilé, relever un regard, lisser des ombres bruitées : au pinceau ou dans un dégradé, sans toucher au reste de la photo.",
+    ),
+    (
+        "duplicate",
+        "Masques",
+        "Dupliquer un masque",
+        "Une copie, ou une copie inversée aux réglages à zéro : le sol se règle après le ciel, sans retracer la zone.",
+    ),
+    (
+        "xtrans",
+        "RAW",
+        "X‑Trans directionnel",
+        "Sur les RAW Fujifilm, le vert suit les contours au lieu de les moyenner en travers, jusque dans les ombres bruitées : 3 dB de mieux sur nos essais.",
+    ),
+    (
+        "windows",
+        "Plateforme",
+        "LÜMA pour Windows",
+        "Windows 10 et 11, rendu par DirectX 12 ou Vulkan : un installateur sans mot de passe administrateur, ou une archive .zip. Le même moteur que sur Mac et Linux.",
+    ),
+];
+
+/// Le comparatif : les critères, dans l'ordre des lignes du tableau.
+pub const COMPARE_ROWS: [&str; 6] = [
+    "Systèmes",
+    "Modèle de prix",
+    "Hors ligne",
+    "Moteur RAW",
+    "Films et rendus",
+    "iPhone et iPad",
+];
+
+/// LÜMA dans le comparatif, critère par critère. Le prix s'écrit avec ceux de [`PLANS`]
+/// (`{month}`, `{year}`).
+pub const COMPARE_LUMA: [&str; 6] = [
+    "macOS, Linux et Windows ; bientôt iPhone et iPad",
+    "Abonnement sur ordinateur : {month} par mois ou {year} par an ; achat unique sur iPhone et iPad",
+    "Oui, sans compte ni cloud",
+    "Moteur propre, sur le GPU : 735 boîtiers et l'iPhone ProRAW",
+    "275 films intégrés, et vos pellicules mesurées",
+    "Bientôt sur l'App Store, avec le même moteur et le même rendu",
+];
+
+/// Les autres logiciels du comparatif : (nom, une case par critère). Des informations
+/// publiques et stables, sans montant : le modèle de prix seulement.
+pub const COMPARE_OTHERS: [(&str, [&str; 6]); 3] = [
+    (
+        "Adobe Lightroom Classic",
+        [
+            "macOS et Windows",
+            "Abonnement mensuel ou annuel",
+            "Oui ; l'abonnement se vérifie en ligne régulièrement",
+            "Moteur d'Adobe Camera Raw",
+            "Profils créatifs et préréglages",
+            "Par l'app Lightroom, synchronisée en ligne",
+        ],
+    ),
+    (
+        "Capture One",
+        [
+            "macOS et Windows",
+            "Abonnement, ou licence selon les offres du moment",
+            "Oui",
+            "Moteur propre",
+            "Styles et préréglages",
+            "Oui, avec des apps dédiées",
+        ],
+    ),
+    (
+        "darktable",
+        [
+            "Linux, macOS et Windows",
+            "Gratuit, open source",
+            "Oui, sans compte",
+            "Moteur open source",
+            "Styles et LUT 3D",
+            "Non",
+        ],
+    ),
+];
+
+/// L'adresse de contact (celle de l'éditeur, en attendant celle des mentions légales).
+pub const CONTACT_EMAIL: &str = "maxlestage@icloud.com";
+
+/// La galerie : (indice dans [`FILMS`], graine et teinte de la photo dessinée).
+pub const GALLERY: [(usize, u32, i32); 6] = [
+    (0, 3, 0),
+    (1, 7, -24),
+    (3, 11, 36),
+    (4, 5, 12),
+    (6, 13, -48),
+    (5, 9, 20),
+];
+
+/// Les premiers pas, dans l'aide : (titre, texte).
+pub const HELP_STEPS: [(&str, &str); 4] = [
+    (
+        "Installer",
+        "LÜMA s'installe sur Mac, Linux et Windows, et s'essaie un mois, complet, sans carte bancaire ni compte.",
+    ),
+    (
+        "Ouvrir",
+        "Ouvrez un dossier ou importez une carte mémoire : vos RAW entrent dans la photothèque, les originaux restent où ils sont.",
+    ),
+    (
+        "Développer",
+        "Lumière, couleur, masques, films : chaque réglage s'affiche aussitôt et se reprend à tout moment.",
+    ),
+    (
+        "Exporter",
+        "JPEG, PNG ou TIFF 16 bits, à la taille voulue, avec votre filigrane et vos informations d'auteur si vous le souhaitez.",
+    ),
+];
+
+/// Les liens de l'aide : (titre, texte, adresse ; comme dans [`FOOTER`]).
+pub const HELP_LINKS: [(&str, &str, &str); 4] = [
+    (
+        "Fonctions",
+        "Tout ce que LÜMA sait faire, domaine par domaine, et ce qui vient.",
+        "/docs/fonctions/",
+    ),
+    (
+        "Boîtiers pris en charge",
+        "Votre appareil photo dans la liste des 735 boîtiers reconnus.",
+        "/docs/boitiers/",
+    ),
+    (
+        "Notes de version",
+        "Ce qui change à chaque version, en détail.",
+        "/nouveautes/",
+    ),
+    (
+        "Questions fréquentes",
+        "L'essai, l'abonnement, vos fichiers, les systèmes.",
+        "#questions",
+    ),
+];
+
 /// Le pied de page : des colonnes de liens (titre, puis libellé et adresse ; une adresse
 /// en `#` est une section de l'accueil, en `/` une page du site, sinon un lien externe).
 pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
@@ -586,7 +761,10 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
             ("Les étapes", "#etapes"),
             ("Les films", "#films"),
             ("Essayer en direct", "#labo"),
+            ("Galerie avant / après", "#galerie"),
+            ("Nouveautés récentes", "#recentes"),
             ("Mac, iPhone et iPad", "#apple"),
+            ("Comparatif", "#comparatif"),
             ("Tarifs", "#tarifs"),
         ],
     ),
@@ -603,10 +781,11 @@ pub const FOOTER: [(&str, &[(&str, &str)]); 4] = [
     (
         "Assistance",
         &[
+            ("Aide et premiers pas", "#aide"),
             ("Abonnement et clé de licence", "/conditions/#abonnement"),
             ("Gérer mon abonnement", "/abonnement/"),
-            ("Signaler un problème", "/mentions-legales/#contact"),
-            ("Contact", "/mentions-legales/#contact"),
+            ("Signaler un problème", "#contact"),
+            ("Contact", "#contact"),
         ],
     ),
     (

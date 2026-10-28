@@ -82,6 +82,7 @@ impl Site {
             "js/devices.js",
             "js/screen.js",
             "js/systems.js",
+            "js/showcase.js",
         ]
         .iter()
         .flat_map(|f| read(f))
@@ -214,6 +215,7 @@ fn service_worker(site: &Site) -> String {
         format!("/js/devices.js?v={}", site.versions.scenes),
         format!("/js/screen.js?v={}", site.versions.scenes),
         format!("/js/systems.js?v={}", site.versions.scenes),
+        format!("/js/showcase.js?v={}", site.versions.scenes),
     ];
     precache.extend(
         [
@@ -598,6 +600,7 @@ pub fn run() -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::content::{GALLERY, RECENT};
 
     async fn client() -> paquets::test::TestClient {
         let mut app = app(Arc::new(Site::load(None)));
@@ -656,6 +659,52 @@ mod tests {
             html.contains(r#"<span class="brand-mark"><svg"#),
             "le logo de la barre"
         );
+        // Galerie, nouveautés récentes, comparatif, aide : leurs sections et leurs liens
+        // dans le pied de page.
+        for id in ["galerie", "recentes", "comparatif", "aide", "contact"] {
+            assert!(html.contains(&format!(r#"id="{id}""#)), "section {id}");
+            assert!(
+                html.contains(&format!(r##"href="/#{id}""##)),
+                "lien vers {id}"
+            );
+        }
+        // Une barre avant / après par photo de la galerie, sans témoignage inventé.
+        assert_eq!(html.matches(r#"class="ba-range""#).count(), GALLERY.len());
+        assert!(!html.contains("★") && !html.contains("<blockquote"));
+        assert!(html.contains("mailto:maxlestage@icloud.com"));
+        // Une scène animée par nouveauté.
+        for (demo, _, title, _) in RECENT {
+            assert!(
+                html.contains(&format!(r#"data-demo="{demo}""#)),
+                "scène {demo}"
+            );
+            let title = title.replace('\'', "&#x27;");
+            assert!(html.contains(&title), "nouveauté {title}");
+        }
+        assert!(html.contains("Fluidité") && html.contains("Traces GPX"));
+        // Le comparatif : les prix de LÜMA (ceux des tarifs), les autres en modèle,
+        // et la note de prudence.
+        for name in ["Adobe Lightroom Classic", "Capture One", "darktable"] {
+            assert!(
+                html.contains(&format!(r#"<th scope="col">{name}</th>"#)),
+                "{name}"
+            );
+        }
+        assert!(html.contains("19,99 € par mois ou 239,88 € par an"));
+        assert!(html.contains("Informations publiques, octobre 2026"));
+        // L'aide : les quatre premiers pas et les liens vers la documentation.
+        assert_eq!(html.matches(r#"class="help-step reveal""#).count(), 4);
+        for doc in [
+            "/docs/fonctions/",
+            "/docs/boitiers/",
+            "/nouveautes/",
+            "/#questions",
+        ] {
+            assert!(
+                html.contains(&format!(r#"class="help-link reveal" href="{doc}""#)),
+                "{doc}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -869,6 +918,17 @@ mod tests {
         assert!(es.contains("<title>LÜMA — El editor de fotos que revela la luz</title>"));
         assert!(es.contains(">19,99</i> €") && es.contains("al mes"));
         assert!(es.contains(r#"data-props="es""#));
+        assert!(
+            en.contains("LÜMA, <em>and the others</em>.")
+                && en.contains("€19.99 per month or €239.88 per year")
+                && en.contains("Get started <em>in four steps</em>.")
+                && en.contains("Liquify")
+        );
+        assert!(
+            es.contains("LÜMA, <em>y los demás</em>.")
+                && es.contains("19,99 € al mes o 239,88 € al año")
+                && es.contains("Novedades recientes")
+        );
         assert!(
             es.contains("El mismo LÜMA, <em>en tu PC</em>.")
                 && es.contains("Muy pronto en Windows")

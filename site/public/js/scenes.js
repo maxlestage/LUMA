@@ -1,4 +1,4 @@
-// Les trois scènes du site : l'objectif 3D du haut de page (three.js), le Mac et
+// Les scènes du site : l'objectif 3D du haut de page (three.js), le Mac et
 // l'iPhone de la section Apple (HTML et CSS), et l'écran qui tourne de la section
 // Linux et Windows (three.js). Tout le reste de la page (animations, labo, îlots) est
 // en Rust, compilé en WebAssembly ; ce module ne fait que démarrer les scènes.
@@ -61,6 +61,17 @@ function start() {
     nearby(desk, () => import(`./systems.js${V}`)
       .then(({ initSystems }) => initSystems(deskCanvas, opts))
       .catch((e) => { console.warn('LÜMA : écran 3D indisponible', e); deskCanvas.parentElement.classList.add('desktop-off'); }));
+  }
+
+  // Les nouveautés récentes (une petite scène par fonction) et la galerie avant / après :
+  // des photos dessinées au canvas 2D, à l'approche de leur section.
+  for (const [id, init] of [['recentes', 'initRecent'], ['galerie', 'initGallery']]) {
+    const section = document.getElementById(id);
+    if (section) {
+      nearby(section, () => import(`./showcase.js${V}`)
+        .then((m) => m[init](section, opts))
+        .catch((e) => console.warn('LÜMA : illustrations indisponibles', e)));
+    }
   }
 }
 
