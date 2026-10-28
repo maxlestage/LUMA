@@ -45,7 +45,8 @@ La photothèque professionnelle, étape par étape.
   bruit de luminance : 104 Mo de mémoire en moins pour 26 Mpx, mêmes pixels. Puis le
   vignetage : 37 % plus court (24 Mpx : 108 → 68 ms), presque deux fois plus rapide
   avec une rondeur (400 → 210 ms), mêmes pixels. Puis Supprimer (en cercle ou en
-  trait) : 28 % plus court, mêmes pixels.
+  trait) : 28 % plus court, puis encore 22 % (presque deux fois plus rapide en tout),
+  mêmes pixels.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
