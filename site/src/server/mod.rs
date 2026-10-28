@@ -174,7 +174,7 @@ fn manifest(lang: Lang) -> String {
                     t(lang, "Télécharger pour Mac"),
                     t(lang, "Télécharger"),
                     &format!("{home}#tarifs"),
-                    t(lang, "LÜMA pour Mac, 14 jours d'essai"),
+                    t(lang, "LÜMA pour Mac, un mois d'essai"),
                 )
             })
             .into_iter()

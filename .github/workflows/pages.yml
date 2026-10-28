@@ -1,7 +1,7 @@
 # Publie le site sur GitHub Pages à chaque push sur master (et à la demande).
 #
 # - mac-app : LÜMA.app universelle (Apple Silicon et Intel), publiée avec le site sous
-#   /download/LUMA-macos.zip (14 jours d'essai, puis LÜMA Premium) ;
+#   /download/LUMA-macos.zip (un mois d'essai, puis LÜMA Premium) ;
 # - linux-app : LÜMA pour Linux, sous /download/LUMA-linux-x86_64.tar.gz et
 #   /download/LUMA-linux-amd64.deb ;
 # - windows-app : LÜMA pour Windows, sous /download/LUMA-windows-x86_64-setup.exe et
