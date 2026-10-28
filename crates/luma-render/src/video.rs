@@ -265,8 +265,13 @@ pub fn write(clip: &Clip) -> Result<Vec<u8>, String> {
         if k == clip.video {
             put_list(&mut hdrl, b"strl", &video);
         } else if let Some(s) = clip.streams.get(k) {
-            // Les autres flux (le son) : leur liste telle quelle.
-            put_list(&mut hdrl, &[s[0], s[1], s[2], s[3]], &s[4..]);
+            // Les autres flux (le son) : leur liste telle quelle, sans l'index OpenDML
+            // (`indx`), dont les positions comptent dans l'ancien fichier.
+            let mut kept = Vec::new();
+            for (id, d) in riff_chunks(&s[4..]).filter(|(id, _)| id != b"indx") {
+                put_chunk(&mut kept, &id, d);
+            }
+            put_list(&mut hdrl, &[s[0], s[1], s[2], s[3]], &kept);
         }
     }
 
@@ -433,6 +438,21 @@ mod tests {
         let back = read(&write(&clip).unwrap()).unwrap();
         assert_eq!(back.frame_count(), 4);
         assert_eq!(back.chunks.iter().filter(|c| &c.id == b"01wb").count(), 4);
+    }
+
+    #[test]
+    fn the_sound_index_of_the_old_file_is_dropped() {
+        // Un fichier OpenDML : le son porte un `indx` aux positions de l'ancien fichier.
+        let mut clip = read(&sample(2, 16, 16)).unwrap();
+        put_chunk(&mut clip.streams[1], b"indx", &[0xAB; 24]);
+        let bytes = write(&clip).unwrap();
+        assert!(!bytes.windows(4).any(|w| w == b"indx"));
+        let back = read(&bytes).unwrap();
+        assert!(
+            back.streams[1].windows(4).any(|w| w == b"strf"),
+            "le reste de l'en‑tête reste"
+        );
+        assert_eq!(back.chunks.iter().filter(|c| &c.id == b"01wb").count(), 2);
     }
 
     #[test]

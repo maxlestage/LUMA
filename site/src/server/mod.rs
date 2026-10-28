@@ -110,9 +110,10 @@ impl Site {
             req.header(name)
                 .map(|v| v.split(',').next().unwrap_or("").trim().to_owned())
         };
-        let host = header("x-forwarded-host")
-            .or_else(|| header("host"))
-            .unwrap_or_default();
+        // L'en-tête Host seulement : `X-Forwarded-Host` vient du client tel quel (le
+        // routeur de Heroku le laisse passer) et finirait dans les liens canoniques et le
+        // sitemap. Derrière un autre proxy, `SITE_URL` donne l'adresse.
+        let host = header("host").unwrap_or_default();
         // Un en-tête Host inattendu ne doit pas finir dans les balises de la page.
         if host.is_empty()
             || !host
