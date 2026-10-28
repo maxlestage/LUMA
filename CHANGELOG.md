@@ -148,6 +148,8 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Netteté dans les masques** : relever le détail d'un regard ou d'une matière au
+  pinceau, ou adoucir un fond, sans toucher au reste de la photo.
 - **Dématriçage X‑Trans directionnel** (Fujifilm) : le vert suit les contours au lieu de
   les moyenner en travers, jusque dans les ombres bruitées (3 dB de mieux sur nos
   essais). Les doublons de travail sont refaits une fois.
