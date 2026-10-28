@@ -114,12 +114,26 @@ fn sources(level: &Level) -> Vec<bool> {
     ok
 }
 
+/// Pas un pixel du trou, dans [`hole_index`].
+const NONE: u32 = u32::MAX;
+
+/// Pour chaque pixel du niveau, son rang dans `holes` (ou [`NONE`]) : un tableau plein,
+/// lu en une instruction, au lieu d'une table de hachage interrogée des dizaines de
+/// fois par pixel.
+fn hole_index(len: usize, holes: &[usize]) -> Vec<u32> {
+    let mut index = vec![NONE; len];
+    for (k, &i) in holes.iter().enumerate() {
+        index[i] = k as u32;
+    }
+    index
+}
+
 /// Les pixels du trou : chacun la moyenne des pixels que lui donnent les patchs qui le
 /// recouvrent (ceux centrés sur un pixel du trou), selon leurs correspondances.
 fn vote(level: &mut Level, nnf: &[(isize, isize)], holes: &[usize]) {
     let w = level.w as isize;
     let mut acc = vec![[0.0f32; 4]; holes.len()];
-    let index: std::collections::HashMap<usize, usize> = holes.iter().enumerate().map(|(k, &i)| (i, k)).collect();
+    let index = hole_index(level.w * level.h, holes);
     for (k, &p) in holes.iter().enumerate() {
         let (px, py) = ((p as isize) % w, (p as isize) / w);
         let (sx, sy) = nnf[k];
@@ -129,9 +143,10 @@ fn vote(level: &mut Level, nnf: &[(isize, isize)], holes: &[usize]) {
                 if qx < 0 || qy < 0 || qx >= w || qy >= level.h as isize {
                     continue;
                 }
-                if let Some(&m) = index.get(&((qy * w + qx) as usize)) {
+                let m = index[(qy * w + qx) as usize];
+                if m != NONE {
                     let v = level.px[((sy + j) * w + sx + i) as usize];
-                    let a = &mut acc[m];
+                    let a = &mut acc[m as usize];
                     for c in 0..3 {
                         a[c] += v[c];
                     }
@@ -153,7 +168,7 @@ fn vote(level: &mut Level, nnf: &[(isize, isize)], holes: &[usize]) {
 /// hasard de plus en plus proches.
 fn improve(level: &Level, ok: &[bool], holes: &[usize], nnf: &mut [(isize, isize)], pass: u64) {
     let w = level.w as isize;
-    let index: std::collections::HashMap<usize, usize> = holes.iter().enumerate().map(|(k, &i)| (i, k)).collect();
+    let index = hole_index(level.w * level.h, holes);
     let forward = pass.is_multiple_of(2);
     let order: Vec<usize> = if forward {
         (0..holes.len()).collect()
@@ -171,7 +186,9 @@ fn improve(level: &Level, ok: &[bool], holes: &[usize], nnf: &mut [(isize, isize
             if nx < 0 || ny < 0 || nx >= w || ny >= level.h as isize {
                 continue;
             }
-            if let Some(&m) = index.get(&((ny * w + nx) as usize)) {
+            let m = index[(ny * w + nx) as usize];
+            if m != NONE {
+                let m = m as usize;
                 let c = (nnf[m].0 - (nx - t.0), nnf[m].1 - (ny - t.1));
                 if level.source_ok(c.0, c.1, ok) {
                     let d = level.distance(t, c, best_d);
@@ -292,7 +309,7 @@ pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, 
         radius /= 2.0;
     }
     let mut nnf: Vec<(isize, isize)> = Vec::new();
-    let mut prev_w = 0usize;
+    let (mut prev_w, mut prev_h) = (0usize, 0usize);
     let mut prev_holes: Vec<usize> = Vec::new();
     let top = levels.len() - 1;
     for li in (0..levels.len()).rev() {
@@ -305,16 +322,17 @@ pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, 
         let seed = li as u64 * 0x1000_0000;
         // Les correspondances : au plus grossier au hasard, ensuite celles du niveau
         // au‑dessus, doublées.
-        let coarse: std::collections::HashMap<usize, (isize, isize)> =
-            prev_holes.iter().copied().zip(nnf.iter().copied()).collect();
+        let coarse = hole_index(prev_w * prev_h, &prev_holes);
         nnf = holes
             .iter()
             .map(|&p| {
                 let (x, y) = ((p % level.w) as isize, (p / level.w) as isize);
                 let parent = (y as usize / 2) * prev_w + x as usize / 2;
                 coarse
-                    .get(&parent)
-                    .map(|&(sx, sy)| (sx * 2 + x % 2, sy * 2 + y % 2))
+                    .get(parent)
+                    .filter(|&&m| m != NONE)
+                    .map(|&m| nnf[m as usize])
+                    .map(|(sx, sy)| (sx * 2 + x % 2, sy * 2 + y % 2))
                     .filter(|&(sx, sy)| level.source_ok(sx, sy, &ok))
                     .or_else(|| random_source(level, &ok, seed ^ p as u64))
                     .expect("une source existe")
@@ -363,6 +381,7 @@ pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, 
             }
         }
         prev_w = levels[li].w;
+        prev_h = levels[li].h;
         prev_holes = holes;
     }
     // Le résultat, fondu sur le bord de la zone.
@@ -403,6 +422,31 @@ mod tests {
             fill(&mut img, cx, cy, 2.0, 0.5, 1.0);
             assert_eq!(img.data, clean.data);
         }
+    }
+
+    /// L'empreinte des pixels de trois suppressions (un grand disque, un petit, un
+    /// tracé) : celle d'avant l'index plein ; une modification qui change le résultat la
+    /// change, une accélération non.
+    #[test]
+    fn removal_gives_the_same_pixels_as_before() {
+        let (w, h) = (520, 360);
+        let img = RgbImage::from_fn(w, h, |x, y| {
+            let s = if (x / 7 + y / 11) % 2 == 0 { 0.6 } else { 0.25 };
+            [s, s * 0.8 + (x % 13) as f32 * 0.01, 0.3 + (y % 17) as f32 * 0.01]
+        });
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for (path, r) in [
+            (vec![(260.0, 180.0)], 30.0),
+            (vec![(100.0, 60.0)], 8.0),
+            (vec![(40.0, 40.0), (200.0, 120.0), (480.0, 300.0)], 5.0),
+        ] {
+            let mut a = img.clone();
+            fill_path(&mut a, &path, r, 0.3, 1.0);
+            for c in a.data.iter().flatten() {
+                hash = (hash ^ u64::from(c.to_bits())).wrapping_mul(0x100_0000_01b3);
+            }
+        }
+        assert_eq!(hash, 0xf6f4_e2fc_4c9a_b4ad);
     }
 
     /// Des rayures et un dégradé, et la même image avec un « objet » rouge dessus.
