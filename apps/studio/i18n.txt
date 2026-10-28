@@ -917,9 +917,13 @@ fr = impossible de joindre le serveur de licences ({detail})
 en = can't reach the license server ({detail})
 es = no se puede conectar con el servidor de licencias ({detail})
 
-fr = pas de vérification en ligne sur iPhone et iPad
-en = no online check on iPhone and iPad
-es = sin verificación en línea en iPhone y iPad
+fr = « Se connecter avec Apple » n'est pas disponible ici.
+en = “Sign in with Apple” isn't available here.
+es = «Iniciar sesión con Apple» no está disponible aquí.
+
+fr = Apple a refusé la connexion : {detail}
+en = Apple declined the sign-in: {detail}
+es = Apple rechazó el inicio de sesión: {detail}
 
 fr = réponse illisible
 en = unreadable response
@@ -2914,6 +2918,22 @@ es = ¿Ya tienes una suscripción con esta cuenta de Apple?
 fr = Restaurer les achats
 en = Restore Purchases
 es = Restaurar compras
+
+fr = aucun accès offert pour ce compte Apple
+en = no gifted access for this Apple Account
+es = ningún acceso regalado para esta cuenta de Apple
+
+fr = LÜMA vous est offert ?
+en = Were you given LÜMA?
+es = ¿Te han regalado LÜMA?
+
+fr = Se connecter avec Apple
+en = Sign in with Apple
+es = Iniciar sesión con Apple
+
+fr = LÜMA Premium vous est offert ({email}) : sur vos autres iPhone et iPad, « Se connecter avec Apple » avec le même compte.
+en = LÜMA Premium is a gift to you ({email}): on your other iPhones and iPads, “Sign in with Apple” with the same account.
+es = LÜMA Premium es un regalo para ti ({email}): en tus otros iPhone y iPad, «Iniciar sesión con Apple» con la misma cuenta.
 
 fr = Alerte de gamut
 en = Gamut warning

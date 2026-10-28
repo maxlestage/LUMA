@@ -62,15 +62,39 @@ def call(method, path, body=None):
 
 def bundle_id(identifier, name):
     query = urllib.parse.urlencode({"filter[identifier]": identifier})
-    for item in call("GET", f"/bundleIds?{query}")["data"]:
-        if item["attributes"]["identifier"] == identifier:
-            return item["id"]
-    created = call(
+    found = [i["id"] for i in call("GET", f"/bundleIds?{query}")["data"] if i["attributes"]["identifier"] == identifier]
+    if found:
+        bundle = found[0]
+    else:
+        created = call(
+            "POST",
+            "/bundleIds",
+            {"data": {"type": "bundleIds", "attributes": {"identifier": identifier, "name": name, "platform": "IOS"}}},
+        )
+        bundle = created["data"]["id"]
+    # « Se connecter avec Apple » (l'accès offert) : le profil en porte alors le droit.
+    sign_in_with_apple(bundle)
+    return bundle
+
+
+def sign_in_with_apple(bundle):
+    capabilities = call("GET", f"/bundleIds/{bundle}/bundleIdCapabilities")["data"]
+    if any(c["attributes"]["capabilityType"] == "APPLE_ID_AUTH" for c in capabilities):
+        return
+    call(
         "POST",
-        "/bundleIds",
-        {"data": {"type": "bundleIds", "attributes": {"identifier": identifier, "name": name, "platform": "IOS"}}},
+        "/bundleIdCapabilities",
+        {
+            "data": {
+                "type": "bundleIdCapabilities",
+                "attributes": {
+                    "capabilityType": "APPLE_ID_AUTH",
+                    "settings": [{"key": "APPLE_ID_AUTH_APP_CONSENT", "options": [{"key": "PRIMARY_APP_CONSENT"}]}],
+                },
+                "relationships": {"bundleId": {"data": {"type": "bundleIds", "id": bundle}}},
+            }
+        },
     )
-    return created["data"]["id"]
 
 
 def app(identifier):

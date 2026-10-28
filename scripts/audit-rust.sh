@@ -6,7 +6,8 @@
 #    bibliothèque native (-sys), pas de compilateur C (cc, cmake), pas de bindgen.
 #    Suivent la règle 2 : luma-gpu, qui parle au pilote graphique (Metal, Vulkan),
 #    luma-apple, qui parle au décodeur d'images d'Apple (ImageIO : HEIC, AVIF…) et à
-#    l'App Store (StoreKit, sur iPhone et iPad), et la
+#    l'App Store (StoreKit) et à « Se connecter avec Apple » (AuthenticationServices),
+#    sur iPhone et iPad, et la
 #    ligne de commande luma-cli, qui l'utilise.
 # 2. L'application (apps/studio) et luma-gpu, sur macOS, iOS (la cible prioritaire), Linux et Windows : seules
 #    les liaisons vers des composants du système d'exploitation sont admises, une par
