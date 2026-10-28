@@ -69,7 +69,8 @@ fn apply_one(img: &mut RgbImage, spot: &Spot) {
     }
     let d = disc(spot, w, h);
     if spot.kind == SpotKind::Remove {
-        crate::inpaint::fill(img, d.cx, d.cy, d.r, spot.feather / 100.0, opacity);
+        let path: Vec<(f32, f32)> = spot.points().map(|(x, y)| (x * w as f32, y * h as f32)).collect();
+        crate::inpaint::fill_path(img, &path, d.r, spot.feather / 100.0, opacity);
         return;
     }
     let inner = d.r * (1.0 - (spot.feather / 100.0).clamp(0.0, 1.0));
@@ -314,7 +315,56 @@ mod tests {
             radius: 0.05,
             feather: 0.0,
             opacity: 100.0,
+            path: Vec::new(),
         }
+    }
+
+    #[test]
+    fn a_traced_removal_erases_a_wire() {
+        // Des rayures verticales, et un « fil » noir en diagonale par‑dessus.
+        let (w, h) = (240, 160);
+        let clean = RgbImage::from_fn(w, h, |x, _| {
+            let v = if (x / 8) % 2 == 0 { 0.6 } else { 0.3 };
+            [v, v * 0.9, 0.35]
+        });
+        let on_wire = |x: usize, y: usize| ((y as f32 - (20.0 + 0.5 * x as f32)).abs()) < 1.5 && (20..220).contains(&x);
+        let spoiled = RgbImage::from_fn(w, h, |x, y| {
+            if on_wire(x, y) {
+                [0.02; 3]
+            } else {
+                clean.data[y * w + x]
+            }
+        });
+        let wire = |(x, y): (f32, f32)| (x / w as f32, y / h as f32);
+        let mut s = Spot::new(SpotKind::Remove, wire((20.0, 30.0)), 4.0 / w as f32);
+        s.path = vec![wire((120.0, 80.0)), wire((220.0, 130.0))];
+        s.feather = 0.0;
+        let mut fixed = spoiled.clone();
+        apply(&mut fixed, &[s]);
+        // Le long du fil, l'erreur à l'image propre fond.
+        let err = |img: &RgbImage| {
+            let (mut e, mut n) = (0.0f32, 0.0f32);
+            for y in 0..h {
+                for x in 0..w {
+                    if on_wire(x, y) {
+                        e += (0..3)
+                            .map(|c| (img.data[y * w + x][c] - clean.data[y * w + x][c]).abs())
+                            .sum::<f32>();
+                        n += 3.0;
+                    }
+                }
+            }
+            e / n
+        };
+        assert!(
+            err(&fixed) < 0.25 * err(&spoiled),
+            "{} → {}",
+            err(&spoiled),
+            err(&fixed)
+        );
+        // Loin du fil, rien ne bouge.
+        assert_eq!(fixed.data[150 * w + 5], spoiled.data[150 * w + 5]);
+        assert_eq!(fixed.data[5 * w + 230], spoiled.data[5 * w + 230]);
     }
 
     #[test]
