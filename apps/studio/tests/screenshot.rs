@@ -2876,6 +2876,13 @@ fn import_from_a_memory_card() {
     s.harness.step();
     s.harness.step();
     s.capture("importer-photo-par-photo");
+    // L'éjection, proposée pour une carte (un dossier DCIM) : ici un simple dossier,
+    // que le système refuse d'éjecter ; l'import le dit sans échouer.
+    s.harness
+        .get_by_label("Éjecter la carte après l'import")
+        .click();
+    s.harness.step();
+    assert!(s.studio().import.eject);
     s.harness.get_by_label("Importer 1 photos").click();
     s.harness.step();
     s.wait();
@@ -2896,6 +2903,14 @@ fn import_from_a_memory_card() {
     assert!(
         card.join("_DSC0009.ARW").is_file(),
         "la carte reste intacte"
+    );
+    assert!(
+        s.studio()
+            .import
+            .report
+            .contains("la carte n'a pas pu être éjectée"),
+        "{}",
+        s.studio().import.report
     );
     let shown = s.studio().photos().to_vec();
     assert!(

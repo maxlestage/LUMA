@@ -34,6 +34,36 @@ pub fn cards() -> Vec<PathBuf> {
     out
 }
 
+/// Éjecte la carte montée en `mount`, une fois l'import fini : sur Mac par `diskutil` ;
+/// sous Linux par `gio` (le bureau), sinon `umount`. Le message du système en cas
+/// d'échec (une app qui lit encore la carte, un dossier qui n'est pas une carte).
+pub fn eject(mount: &Path) -> Result<(), String> {
+    let tries: &[(&str, &[&str])] = if cfg!(target_os = "macos") {
+        &[("diskutil", &["eject"])]
+    } else if cfg!(target_os = "linux") {
+        &[("gio", &["mount", "--eject"]), ("umount", &[])]
+    } else {
+        &[]
+    };
+    let mut last = String::from("éjection non prise en charge ici");
+    for (program, args) in tries {
+        match std::process::Command::new(program).args(*args).arg(mount).output() {
+            Ok(out) if out.status.success() => return Ok(()),
+            Ok(out) => {
+                let text = String::from_utf8_lossy(&out.stderr).trim().to_owned();
+                last = if text.is_empty() {
+                    format!("{program} : échec ({})", out.status)
+                } else {
+                    text
+                };
+            }
+            // Ce programme n'est pas là : le suivant.
+            Err(_) => {}
+        }
+    }
+    Err(last)
+}
+
 /// Les photos d'un dossier et de ses sous‑dossiers (les fichiers cachés exceptés).
 pub fn photos(source: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
@@ -353,6 +383,16 @@ mod tests {
             .map(|i| i.source.file_name().unwrap().to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, ["IMG_0001.CR3", "IMG_0001.JPG", "IMG_0003.CR3"]);
+    }
+
+    #[test]
+    fn a_folder_that_is_not_a_card_is_not_ejected() {
+        let dir = std::env::temp_dir().join(format!("luma-ejecter-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("DCIM")).unwrap();
+        let e = eject(&dir).unwrap_err();
+        assert!(!e.is_empty());
+        assert!(dir.join("DCIM").is_dir(), "le dossier reste");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

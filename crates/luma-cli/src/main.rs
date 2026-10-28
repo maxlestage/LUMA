@@ -170,7 +170,7 @@ USAGE
       --dry-run montre ce qui serait fait.
   luma import [carte|dossier] --to dossier [--folders \"{année}/{année}-{mois}-{jour}\"]
               [--name modèle] [--backup second-disque] [--dry-run] [--catalog f.lumacat]
-              [--days 2026-10-26,2026-10-27] [--skip photo]…
+              [--days 2026-10-26,2026-10-27] [--skip photo]… [--eject]
       Importe les photos d'une carte mémoire (sans carte donnée : la carte montée, celle
       qui a un dossier DCIM) ou d'un dossier : copiées dans --to, rangées par date de
       prise de vue (--folders, vide : tout au même endroit), renommées avec --name (les
@@ -180,6 +180,7 @@ USAGE
       jamais modifiée. Les photos importées entrent dans la photothèque. Les jours de
       prise de vue de la carte s'affichent ; --days n'importe que ceux‑là. --skip laisse
       une photo sur la carte (avec les autres fichiers de sa prise : son JPEG, son RAW).
+      --eject éjecte la carte une fois tout copié et vérifié (Mac, Linux).
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
@@ -2179,6 +2180,7 @@ fn import(args: Vec<String>) -> Result<(), String> {
         skip: Vec::new(),
     };
     let (mut source, mut dest, mut template, mut dry, mut file) = (None, None, None, false, None);
+    let mut eject = false;
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -2203,6 +2205,7 @@ fn import(args: Vec<String>) -> Result<(), String> {
                 }
             }
             "--catalog" => file = Some(PathBuf::from(it.next().ok_or("--catalog : fichier attendu")?)),
+            "--eject" => eject = true,
             "--skip" => o.skip.push(PathBuf::from(it.next().ok_or("--skip : photo attendue")?)),
             _ => source = Some(PathBuf::from(a)),
         }
@@ -2280,6 +2283,12 @@ fn import(args: Vec<String>) -> Result<(), String> {
             catalog.add_folder(d, false);
         }
         catalog.save(&file).map_err(|e| e.to_string())?;
+    }
+    if eject {
+        match import::eject(&source) {
+            Ok(()) => eprintln!("{} : carte éjectée", source.display()),
+            Err(e) => return Err(format!("{} : la carte n'a pas pu être éjectée : {e}", source.display())),
+        }
     }
     Ok(())
 }

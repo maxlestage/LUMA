@@ -111,6 +111,9 @@ La photothèque professionnelle, étape par étape.
   seul cœur ; la copie se fait maintenant dans la première passe, sur tous les cœurs.
   Un rendu aux réglages de base 4 à 23 % plus court selon le boîtier (DNG d'iPhone
   120 → 97 ms, ORF 86 → 67 ms), sans changer un pixel.
+- **La carte éjectée après l'import** (Mac, Linux) : « Éjecter la carte après
+  l'import », une fois chaque photo copiée et vérifiée (`luma import --eject`) ; si le
+  système refuse (une app lit encore la carte), l'import le dit, sans échouer.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

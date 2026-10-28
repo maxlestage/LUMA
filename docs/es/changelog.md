@@ -113,6 +113,10 @@ La fototeca profesional, paso a paso.
   aparte, en un solo núcleo; la copia se hace ahora en la primera pasada, en todos los
   núcleos. Un render con los ajustes básicos es de un 4 a un 23 % más corto según la
   cámara (DNG de iPhone 120 → 97 ms, ORF 86 → 67 ms), sin cambiar un píxel.
+- **La tarjeta expulsada tras la importación** (Mac, Linux): «Expulsar la tarjeta
+  después de importar», una vez copiada y verificada cada foto (`luma import --eject`);
+  si el sistema se niega (una app aún lee la tarjeta), la importación lo indica, sin
+  fallar.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

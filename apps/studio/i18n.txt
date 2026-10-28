@@ -5675,6 +5675,18 @@ fr = Choisir photo par photo
 en = Choose photo by photo
 es = Elegir foto a foto
 
+fr = Éjecter la carte après l'import
+en = Eject the card after importing
+es = Expulsar la tarjeta después de importar
+
+fr = carte éjectée
+en = card ejected
+es = tarjeta expulsada
+
+fr = la carte n'a pas pu être éjectée : {error}
+en = the card could not be ejected: {error}
+es = no se pudo expulsar la tarjeta: {error}
+
 fr = Aucune|photo
 en = None
 es = Ninguna
