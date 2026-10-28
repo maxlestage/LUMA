@@ -1205,6 +1205,60 @@ fr = L'image est réduite avant d'être tournée : 5 fois moins de temps pour la
 en = The image is reduced before it is rotated: 5 times less time to rotate it (91 → 18 ms for an iPhone ProRAW).
 es = La imagen se reduce antes de girarla: 5 veces menos tiempo para girarla (91 → 18 ms en un ProRAW del iPhone).
 
+# ----- Accès offert -----------------------------------------------------------------
+
+fr = Votre accès LÜMA Premium offert est actif{email}.
+en = Your gifted LÜMA Premium access is active{email}.
+es = Tu acceso LÜMA Premium regalado está activo{email}.
+
+fr = Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils (Mac, Linux, Windows), et se renouvelle seule tant que votre accès offert court.
+en = Copy it, then paste it into LÜMA: the “Trial” chip at the top of the app, “License key” field, Activate. It works on all your devices (Mac, Linux, Windows) and renews itself as long as your gifted access lasts.
+es = Cópiala y pégala en LÜMA: la etiqueta «Prueba» arriba en la app, campo «Clave de licencia», Activar. Funciona en todos tus dispositivos (Mac, Linux, Windows) y se renueva sola mientras dure tu acceso regalado.
+
+fr = Votre courriel et votre code redonnent votre clé à tout moment, sur cette page.
+en = Your email and your code give you your key again at any time, on this page.
+es = Tu correo y tu código te devuelven la clave en cualquier momento, en esta página.
+
+fr = Accès offert
+en = Gifted access
+es = Acceso regalado
+
+fr = On vous a offert LÜMA Premium ? Tapez le courriel et le code reçus : votre clé de licence s'affiche, prête à coller dans l'app.
+en = Were you given LÜMA Premium? Enter the email and the code you received: your license key appears, ready to paste into the app.
+es = ¿Te han regalado LÜMA Premium? Escribe el correo y el código que recibiste: aparece tu clave de licencia, lista para pegar en la app.
+
+fr = Courriel
+en = Email
+es = Correo
+
+fr = Code
+en = Code
+es = Código
+
+fr = Obtenir ma clé
+en = Get my key
+es = Obtener mi clave
+
+fr = Le code vous est donné avec l'invitation. Pas de code ? LÜMA s'essaie gratuitement, puis s'achète sur ce site.
+en = The code comes with your invitation. No code? LÜMA can be tried for free, then bought on this site.
+es = El código viene con la invitación. ¿Sin código? Puedes probar LÜMA gratis y luego comprarlo en este sitio.
+
+fr = indiquez votre courriel et votre code
+en = enter your email and your code
+es = escribe tu correo y tu código
+
+fr = ce courriel et ce code ne correspondent à aucun accès offert
+en = this email and code don't match any gifted access
+es = este correo y este código no corresponden a ningún acceso regalado
+
+fr = cet accès offert a pris fin
+en = this gifted access has ended
+es = este acceso regalado ha terminado
+
+fr = le serveur de licences n'est pas encore configuré
+en = the license server isn't set up yet
+es = el servidor de licencias aún no está configurado
+
 # ----- Sur votre bureau (Linux & Windows) -------------------------------------------
 
 fr = En préparation
