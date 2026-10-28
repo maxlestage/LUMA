@@ -1,6 +1,8 @@
 //! Les courbes à points à l'écran : luminosité, rouge, vert, bleu. Un clic sur la
 //! courbe ajoute un point, on le glisse pour le régler, un double‑clic le retire ; les
-//! deux points des extrémités restent à leur place en largeur.
+//! deux points des extrémités restent à leur place en largeur. Un glissement qui ne
+//! part pas d'un point fait défiler le panneau : au doigt, sur iPhone et iPad, la
+//! courbe ne retient pas le défilement.
 
 use egui::{Color32, CursorIcon, Pos2, Sense, Stroke, Ui, pos2, vec2};
 use luma_image::curve::Lut;
@@ -75,8 +77,7 @@ pub fn editor(
     sanitize(&mut points);
     let points = &mut points;
     let w = ui.available_width();
-    let (rect, response) = ui.allocate_exact_size(vec2(w, w * 0.75), Sense::click_and_drag());
-    let response = response.accessible_name(tr("Courbe à points"));
+    let (rect, _) = ui.allocate_exact_size(vec2(w, w * 0.75), Sense::hover());
     let to_screen = |(x, y): (f32, f32)| {
         pos2(
             rect.min.x + x / 255.0 * rect.width(),
@@ -99,17 +100,24 @@ pub fn editor(
             .map(|(i, _)| i)
     };
     let held = ui.scope_id().with(id).with("point tenu");
+    // Le glissement n'est pris que s'il part d'un point (ou en tient déjà un) ;
+    // sinon il revient au panneau, qui défile.
+    let pointer = ui.input(|i| i.pointer.press_origin().or(i.pointer.hover_pos()));
+    let grab = ui.data(|d| d.get_temp::<usize>(held)).is_some()
+        || pointer.is_some_and(|p| rect.contains(p) && nearest(p, points).is_some());
+    let sense = if grab {
+        Sense::click_and_drag()
+    } else {
+        Sense::click()
+    };
+    let response = ui
+        .interact(rect, ui.scope_id().with(id), sense)
+        .accessible_name(tr("Courbe à points"));
     if response.drag_started()
-        && let Some(p) = response.interact_pointer_pos()
+        && let Some(i) = ui
+            .input(|i| i.pointer.press_origin())
+            .and_then(|p| nearest(p, points))
     {
-        let i = match nearest(p, points) {
-            Some(i) => i,
-            None => {
-                let (x, y) = to_curve(p);
-                change.changed = true;
-                insert(points, x, y)
-            }
-        };
         ui.data_mut(|d| d.insert_temp(held, i));
     }
     if response.dragged()

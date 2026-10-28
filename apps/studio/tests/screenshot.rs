@@ -1438,10 +1438,13 @@ fn point_curve() {
     let Some(mut s) = Session::open("courbe-points") else {
         return;
     };
-    // La courbe de luminosité, amenée à l'écran, puis le milieu de la diagonale tiré
-    // vers le haut : un point, des tons moyens éclaircis.
+    // La courbe de luminosité, amenée à l'écran ; un clic au milieu de la diagonale y
+    // pose un point, puis ce point tiré vers le haut : des tons moyens éclaircis.
     s.harness.get_by_label("Courbe à points").scroll_to_me();
     s.wait();
+    s.harness.get_by_label("Courbe à points").click();
+    s.wait();
+    assert_eq!(s.studio().settings.tone_curve.point.len(), 3);
     let r = s.harness.get_by_label("Courbe à points").rect();
     let (a, b) = (r.center(), r.center() - egui::vec2(0.0, 0.2 * r.height()));
     let mut events = vec![
@@ -1473,7 +1476,9 @@ fn point_curve() {
     );
     assert!(s.studio().has_image());
     s.capture("courbe-points");
-    // Annulable d'un coup.
+    // Annulable geste par geste : le point remis en place, puis retiré.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.tone_curve.point.len(), 3);
     s.keys(&[(Modifiers::COMMAND, Key::Z)]);
     assert_eq!(s.studio().settings.tone_curve.point.len(), 2);
     // L'onglet Rouge : un clic sur la courbe y ajoute un point.
