@@ -83,7 +83,8 @@ const BRAND_SVG: &str = include_str!("../../public/assets/marque.svg");
 const IRIS_SVG: &str = r##"<svg class="loader-iris" viewBox="-50 -50 100 100"><defs><linearGradient id="spec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b3d"/><stop offset=".35" stop-color="#ffcf4a"/><stop offset=".65" stop-color="#4af2c8"/><stop offset="1" stop-color="#8b7bff"/></linearGradient></defs><circle r="46" fill="none" stroke="url(#spec)" stroke-width="1.2"/><g class="blades"><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/><path d="M0,-44 L38,-22 L12,-6 Z"/></g></svg>"##;
 
 const LINUX_SVG: &str = r#"<svg class="linux-logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>"#;
-const WINDOWS_SVG: &str = r#"<svg class="win-logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M11 9.5v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>"#;
+/// Windows : une fenêtre en quatre carreaux (un pictogramme, pas le logo).
+const WINDOWS_SVG: &str = r#"<svg class="windows-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.2l7.4-1v7.3H3zM11.6 4l9.4-1.3v8.8h-9.4zM3 12.6h7.4v7.3L3 18.8zM11.6 12.6H21v8.7l-9.4-1.3z"/></svg>"#;
 const APPLE_SVG: &str = r#"<svg class="apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM13.9 4.9c.7-.9 1.2-2 1-3.2-1 .1-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>"#;
 
 // ----- Cadre --------------------------------------------------------------------------
@@ -198,7 +199,7 @@ fn hero(lang: Lang) -> Element {
                 .child(
                     p().class("eyebrow reveal")
                         .child(span().class("dot"))
-                        .child(text(format!(" {}", t(lang, "Éditeur photo · Mac, iPhone, iPad et Linux")))),
+                        .child(text(format!(" {}", t(lang, "Éditeur photo · Mac, iPhone, iPad, Linux et Windows")))),
                 )
                 .child(h1().class("hero-title").attr("aria-label", "LÜMA").child(title))
                 .child(heading(p, t(lang, "La lumière, *développée*.")).class("hero-sub reveal"))
@@ -219,7 +220,7 @@ fn hero(lang: Lang) -> Element {
         .child(
             div()
                 .class("hero-meta reveal")
-                .children(["RAW", t(lang, "275 films"), t(lang, "Masques"), "Mac · iPhone · iPad · Linux"].map(|s| span().text(s))),
+                .children(["RAW", t(lang, "275 films"), t(lang, "Masques"), "Mac · iPhone · iPad · Linux · Windows"].map(|s| span().text(s))),
         )
         .child(
             a().class("scroll-hint")
@@ -375,62 +376,142 @@ fn apple(lang: Lang) -> Element {
     )
 }
 
-/// Sur votre bureau : Linux (disponible) et Windows (en préparation), le même moteur
-/// qu'Apple. Une scène 3D (un écran qui tourne lentement) occupe le fond de la section.
-fn systems(lang: Lang) -> Element {
-    let logo = |name: &str| {
-        if name == "Linux" {
-            LINUX_SVG
-        } else {
-            WINDOWS_SVG
-        }
+/// Linux et Windows : un écran 3D qui tourne lentement (`systems.js`), puis une
+/// carte par système : ce qu'on télécharge, ce qu'il faut, et le bouton. Windows
+/// n'affiche son téléchargement que quand ses fichiers sont là (voir [`windows_asset`]).
+fn desktop(lang: Lang) -> Element {
+    let spec = |items: [(&'static str, &'static str); 3]| {
+        dl().class("desktop-spec").children(
+            items
+                .into_iter()
+                .map(|(k, v)| div().child(dt().text(k)).child(dd().text(v))),
+        )
+    };
+    let linux_action = if downloads_open() {
+        div()
+            .class("desktop-actions")
+            .child(
+                a().class("btn magnetic")
+                    .href(link("/download/LUMA-linux-x86_64.tar.gz"))
+                    .attr("download", "")
+                    .child(span().html(LINUX_SVG))
+                    .child(span().text(t(lang, "Télécharger pour Linux"))),
+            )
+            .child(
+                a().class("desktop-alt")
+                    .href(link("/download/LUMA-linux-amd64.deb"))
+                    .attr("download", "")
+                    .text(t(lang, "Paquet .deb (Debian, Ubuntu)")),
+            )
+    } else {
+        div().class("desktop-actions").child(
+            a().class("btn btn-ghost magnetic")
+                .href("#tarifs")
+                .child(span().text(t(lang, "Voir les tarifs"))),
+        )
+    };
+    let windows = windows_open();
+    let windows_action = match windows_primary() {
+        Some(file) => div()
+            .class("desktop-actions")
+            .child(
+                a().class("btn magnetic")
+                    .href(link(&format!("/download/{file}")))
+                    .attr("download", "")
+                    .child(span().html(WINDOWS_SVG))
+                    .child(span().text(t(lang, "Télécharger pour Windows"))),
+            )
+            .children(
+                (file == WINDOWS_SETUP && windows_asset(WINDOWS_ZIP)).then(|| {
+                    a().class("desktop-alt")
+                        .href(link(&format!("/download/{WINDOWS_ZIP}")))
+                        .attr("download", "")
+                        .text(t(lang, "Archive .zip, sans installation"))
+                }),
+            ),
+        None => div().class("desktop-actions").child(
+            span()
+                .class("btn btn-ghost btn-disabled")
+                .attr("aria-disabled", "true")
+                .child(span().html(WINDOWS_SVG))
+                .child(span().text(t(lang, "Bientôt sur Windows"))),
+        ),
+    };
+    let card = |id: &'static str, logo: &'static str, name: &str, ready: bool| {
+        article()
+            .class(if ready {
+                "desktop-card reveal tilt"
+            } else {
+                "desktop-card desktop-soon reveal tilt"
+            })
+            .id(id)
+            .child(
+                p().class("desktop-os")
+                    .child(span().class("kicker-mark").html(logo))
+                    .child(text(format!(" {name}")))
+                    .child(span().class("badge").text(if ready {
+                        t(lang, "Disponible")
+                    } else {
+                        t(lang, "Bientôt")
+                    })),
+            )
     };
     section()
-        .class("systems")
-        .id("systemes")
-        .child(
-            canvas()
-                .id("systems-gl")
-                .class("systems-gl")
-                .attr("aria-hidden", "true"),
-        )
+        .class("desktop")
+        .id("bureau")
         .child(section_head(
-            t(lang, "Sur votre bureau"),
-            heading(h2, t(lang, "Pas seulement Apple. *Linux et Windows*, même moteur.")),
+            t(lang, "Linux et Windows"),
+            heading(h2, t(lang, "Le même LÜMA, *sur votre PC*.")),
             Some(p().text(t(lang,
-                "Le même moteur partout, sans rien qui dépende du système : une photo développée sur Linux ou sur Windows a le même rendu que sur Mac, au pixel près.",
+                "Le moteur du Mac, tel quel : les mêmes réglages, les mêmes films, le même rendu au pixel près. Linux est déjà là, Windows arrive, avec le même abonnement.",
             ))),
         ))
-        .child(div().class("systems-grid").children(SYSTEMS.iter().map(|s| {
-            article()
-                .class("system reveal tilt")
+        .child(
+            div()
+                .class("desktop-stage")
+                .id("desktop-stage")
+                .attr("aria-hidden", "true")
+                .child(canvas().id("systems-gl").class("systems-gl")),
+        )
+        .child(
+            div()
+                .class("desktop-grid")
                 .child(
-                    div()
-                        .class("system-head")
-                        .child(
-                            span()
-                                .class("system-logo")
-                                .attr("aria-hidden", "true")
-                                .html(logo(s.name)),
-                        )
-                        .child(h3().text(s.name))
-                        .child(
-                            span()
-                                .class(if s.phase == "Disponible" { "badge badge-on" } else { "badge" })
-                                .text(t(lang, s.phase)),
-                        ),
+                    card("linux", LINUX_SVG, "Linux", true)
+                        .child(heading(h3, t(lang, "Linux, *déjà là*.")))
+                        .child(p().text(t(lang,
+                            "Une archive .tar.gz qui s'installe sans mot de passe dans votre dossier personnel, avec son lanceur et ses icônes, ou un paquet .deb pour Debian et Ubuntu. Le même moteur que sur Mac, sur votre carte graphique.",
+                        )))
+                        .child(spec([
+                            (t(lang, "Processeur"), t(lang, "x86_64 (64 bits)")),
+                            (t(lang, "Système"), t(lang, "glibc 2.35 ou plus récente : Ubuntu 22.04, Debian 12, Fedora 36…")),
+                            (t(lang, "Graphisme"), t(lang, "Un pilote Vulkan")),
+                        ]))
+                        .child(linux_action),
                 )
-                .child(p().class("system-lede").text(t(lang, s.lede)))
-                .child(ul().class("system-points").children(s.points.iter().map(|pt| {
-                    li().child(
-                        span()
-                            .class("cap-check")
-                            .attr("aria-hidden", "true")
-                            .text("✔"),
-                    )
-                    .child(span().text(t(lang, pt)))
-                })))
-        })))
+                .child(
+                    card("windows", WINDOWS_SVG, "Windows", windows)
+                        .child(heading(h3, if windows {
+                            t(lang, "Windows, *c'est parti*.")
+                        } else {
+                            t(lang, "Windows, *bientôt*.")
+                        }))
+                        .child(p().text(if windows {
+                            t(lang, "Un installateur, ou une archive .zip à décompresser où vous voulez. Le même moteur que sur Mac et Linux, et le même abonnement.")
+                        } else {
+                            t(lang, "Le portage est en cours : un installateur et une archive .zip à décompresser, le même moteur que sur Mac et Linux, et le même abonnement. Le bouton apparaîtra ici dès la sortie.")
+                        }))
+                        .child(spec([
+                            (t(lang, "Processeur"), t(lang, "x86_64 (64 bits)")),
+                            (t(lang, "Système"), t(lang, "Windows 10 ou Windows 11")),
+                            (t(lang, "Graphisme"), t(lang, "DirectX 12 ou Vulkan")),
+                        ]))
+                        .child(windows_action),
+                ),
+        )
+        .child(p().class("desktop-note reveal").text(t(lang,
+            "Un seul abonnement LÜMA Premium vaut pour Mac, Linux et Windows : la clé achetée sur ce site se saisit dans l'app, sur chacun de vos ordinateurs.",
+        )))
 }
 
 fn platforms(lang: Lang) -> Element {
@@ -440,11 +521,17 @@ fn platforms(lang: Lang) -> Element {
             t(lang, "Ordre de sortie"),
             heading(h2, t(lang, "Apple en premier. *Les autres suivent*, sur le même cœur.")),
             Some(p().text(t(lang,
-                "Linux est déjà là ; Windows et Android suivront, avec le même moteur : une photo aura le même rendu partout.",
+                "Linux est déjà là, Windows arrive ; Android suivra, avec le même moteur : une photo aura le même rendu partout.",
             ))),
         ))
         .child(div().class("platform-grid").children(PLATFORMS.iter().map(
             |&(name, phase, detail, prime)| {
+                // Windows passe « Disponible » dès que son téléchargement est là.
+                let (phase, prime) = if name == "Windows" && windows_open() {
+                    ("Disponible", true)
+                } else {
+                    (phase, prime)
+                };
                 div()
                     .class(if prime { "platform prime reveal tilt" } else { "platform reveal tilt" })
                     .child(span().class("badge").text(t(lang, phase)))
@@ -890,7 +977,7 @@ fn pricing(lang: Lang) -> Element {
             "LÜMA Premium",
             heading(h2, t(lang, "Quatorze jours pour *essayer*, puis à vous de choisir.")),
             Some(p().class("lede").text(t(lang,
-                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac et Linux, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.",
+                "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, Linux et Windows, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.",
             ))),
         ))
         .children(downloads_open().then(|| {
@@ -930,6 +1017,7 @@ fn pricing(lang: Lang) -> Element {
                                 ),
                         ),
                 )
+                .child(windows_download(lang))
         }))
         .child(
             div()
@@ -988,7 +1076,7 @@ fn site_footer(here: Here) -> Element {
                         )
                         .child(p().class("footer-tagline").text(t(
                             lang,
-                            "L'éditeur photo qui développe la lumière. Pour Mac, iPhone, iPad et Linux.",
+                            "L'éditeur photo qui développe la lumière. Pour Mac, iPhone, iPad, Linux et Windows.",
                         )))
                         .child(
                             div()
@@ -1025,6 +1113,27 @@ fn site_footer(here: Here) -> Element {
                                                 .child(strong().text("Linux")),
                                         )
                                 }))
+                                .child(match windows_primary() {
+                                    Some(file) => a()
+                                        .class("store")
+                                        .href(link(&format!("/download/{file}")))
+                                        .attr("download", "")
+                                        .child(span().html(WINDOWS_SVG))
+                                        .child(
+                                            span()
+                                                .child(small().text(t(lang, "Télécharger pour")))
+                                                .child(strong().text("Windows")),
+                                        ),
+                                    None => span()
+                                        .class("store store-soon")
+                                        .attr("aria-disabled", "true")
+                                        .child(span().html(WINDOWS_SVG))
+                                        .child(
+                                            span()
+                                                .child(small().text(t(lang, "Bientôt sur")))
+                                                .child(strong().text("Windows")),
+                                        ),
+                                })
                                 .child(
                                     span()
                                         .class("store store-soon")
@@ -1134,8 +1243,10 @@ pub fn licence(
                 .child(div().class("hero-cta")
                     .children(downloads_open().then(|| a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac")))))
                     .children(downloads_open().then(|| a().class("btn btn-ghost").href(link("/download/LUMA-linux-x86_64.tar.gz")).attr("download", "").child(span().text(t(lang, "Télécharger pour Linux")))))
+                    .children(windows_primary().map(|file| a().class("btn btn-ghost").href(link(&format!("/download/{file}"))).attr("download", "").child(span().text(t(lang, "Télécharger pour Windows")))))
                     .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement")))))))
         }
+
         Err(e) => div()
             .child(h1().text(t(lang, "Clé de licence")))
             .child(p().class("lede").text(fill(t(lang, "Impossible d'afficher la clé : {error}."), &[("error", t(lang, &e))])))
@@ -1386,7 +1497,7 @@ pub fn home(site: &Site, origin: &str, lang: Lang) -> Page {
                 .child(lab(lang))
                 .child(films(lang))
                 .child(apple(lang))
-                .child(systems(lang))
+                .child(desktop(lang))
                 .child(capabilities(lang))
                 .child(privacy(lang))
                 .child(performance(lang))
@@ -1465,9 +1576,87 @@ pub fn downloads_open() -> bool {
     std::env::var("LUMA_DOWNLOADS").is_ok_and(|v| v == "1")
 }
 
+/// L'archive de LÜMA pour Windows, telle que la Release la publie.
+pub const WINDOWS_ZIP: &str = "LUMA-windows-x86_64.zip";
+/// L'installateur de LÜMA pour Windows.
+pub const WINDOWS_SETUP: &str = "LUMA-windows-x86_64-setup.exe";
+
+/// Ce fichier de Windows est‑il à télécharger ? Comme pour Mac et Linux, il faut que le
+/// téléchargement soit ouvert (`LUMA_DOWNLOADS=1`) ; il faut en plus que la Release
+/// l'ait apporté sous `public/download/` (Heroku, `heroku-build.sh`), ou, pour un export
+/// statique où les fichiers sont copiés après le rendu, que `LUMA_WINDOWS_DOWNLOADS=1`
+/// l'annonce. Sinon, le site dit « Bientôt » : aucun bouton vers une page introuvable.
+pub fn windows_asset(name: &str) -> bool {
+    downloads_open()
+        && (std::env::var("LUMA_WINDOWS_DOWNLOADS").is_ok_and(|v| v == "1")
+            || super::site_dir()
+                .join("public/download")
+                .join(name)
+                .is_file())
+}
+
+/// Le téléchargement pour Windows est‑il là (l'installateur ou l'archive) ?
+pub fn windows_open() -> bool {
+    windows_primary().is_some()
+}
+
+/// Le fichier du bouton « Télécharger pour Windows » : l'installateur s'il est là,
+/// l'archive sinon.
+fn windows_primary() -> Option<&'static str> {
+    [WINDOWS_SETUP, WINDOWS_ZIP]
+        .into_iter()
+        .find(|f| windows_asset(f))
+}
+
+/// La colonne Windows des téléchargements (tarifs) : le bouton et l'archive quand ils
+/// sont là, « Bientôt » sinon.
+fn windows_download(lang: Lang) -> Element {
+    let note = p().class("download-note").text(t(
+        lang,
+        "Windows 10 ou 11, 64 bits (x86_64), avec DirectX 12 ou Vulkan.",
+    ));
+    match windows_primary() {
+        Some(file) => div()
+            .class("download-option")
+            .child(
+                a().class("btn btn-ghost magnetic")
+                    .href(link(&format!("/download/{file}")))
+                    .attr("download", "")
+                    .child(span().html(WINDOWS_SVG))
+                    .child(span().text(t(lang, "Télécharger pour Windows"))),
+            )
+            .child(if file == WINDOWS_SETUP && windows_asset(WINDOWS_ZIP) {
+                note.child(text(" ")).child(
+                    a().href(link(&format!("/download/{WINDOWS_ZIP}")))
+                        .attr("download", "")
+                        .text(t(lang, "Archive .zip, sans installation")),
+                )
+            } else {
+                note
+            }),
+        None => div()
+            .class("download-option")
+            .child(
+                span()
+                    .class("btn btn-ghost btn-disabled")
+                    .attr("aria-disabled", "true")
+                    .child(span().html(WINDOWS_SVG))
+                    .child(span().text(t(lang, "Bientôt sur Windows"))),
+            )
+            .child(note),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::plain;
+    use super::{WINDOWS_SETUP, WINDOWS_ZIP, plain};
+
+    #[test]
+    fn windows_files_match_the_release() {
+        // Les noms que publie scripts/bundle-windows.ps1 (et la Release).
+        assert_eq!(WINDOWS_ZIP, "LUMA-windows-x86_64.zip");
+        assert_eq!(WINDOWS_SETUP, "LUMA-windows-x86_64-setup.exe");
+    }
 
     #[test]
     fn features_lose_their_code() {

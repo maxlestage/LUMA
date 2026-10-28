@@ -1,4 +1,4 @@
-// Scène 3D de la section « Sur votre bureau » : un écran (boîtier arrondi en verre
+// Scène 3D de la section Linux et Windows (#bureau) : un écran (boîtier arrondi en verre
 // physique) qui tourne lentement, éclairé par l'environnement, la face avant allumée aux
 // couleurs de LÜMA. Elle évoque LÜMA sur Linux et sur Windows : le même moteur, la même
 // image, hors d'Apple. Chargée à l'approche de la section (scenes.js), et ne tourne que
@@ -64,7 +64,8 @@ export function initSystems(canvas, { reduced = false } = {}) {
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   } catch (e) {
-    canvas.style.display = 'none';
+    // Sans WebGL, la scène s'efface et laisse la place aux cartes.
+    canvas.parentElement.classList.add('desktop-off');
     return { dispose() {} };
   }
   const mobile = matchMedia('(max-width: 820px)').matches || matchMedia('(pointer: coarse)').matches;
