@@ -67,7 +67,10 @@ The professional photo library, step by step.
   copy, scrambled bytes, an empty file) open as an image or an error, never a crash, and
   settings with absurd values (infinite, huge) render to sound pixels, in masks,
   retouches and liquify too. A long, very wide traced removal no longer freezes the
-  export (24 MP: 2 minutes → 4 seconds), same pixels.
+  export (24 MP: 2 minutes → 4 seconds), same pixels. In the app, a computation that
+  fails on an unusual photo no longer freezes anything: the next preview arrives,
+  opening, export, merge or film measurement report the error, and an export batch goes
+  on with the others.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).

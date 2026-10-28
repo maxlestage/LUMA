@@ -305,9 +305,11 @@ impl Worker {
                 });
                 repaint();
             }
-            let result = crate::dialogs::open_photo(&path)
-                .map(|p| (Arc::new(p), read_sidecar(&path).map(Box::new)))
-                .map_err(|e| e.to_string());
+            let result = caught(|| {
+                crate::dialogs::open_photo(&path)
+                    .map(|p| (Arc::new(p), read_sidecar(&path).map(Box::new)))
+                    .map_err(|e| e.to_string())
+            });
             let photo = result.as_ref().ok().map(|(p, _)| p.clone());
             let _ = sender.send(Event::Loaded {
                 path: path.clone(),
@@ -391,7 +393,7 @@ impl Worker {
         std::thread::Builder::new()
             .name("luma-mesure".into())
             .spawn(move || {
-                let result = (|| -> Result<(String, f32, f32), String> {
+                let result = caught(|| -> Result<(String, f32, f32), String> {
                     use luma_merge::film;
                     let pair = film::Pair {
                         digital: film::reference(&photo).map_err(|e| e.to_string())?,
@@ -417,7 +419,7 @@ impl Worker {
                         .map_err(|e| format!("{} : {e}", path.display()))?;
                     luma_image::cube::register(&name, m.cube);
                     Ok((name, m.before, m.after))
-                })();
+                });
                 let _ = sender.send(Event::Measured { result });
                 repaint();
             })
@@ -453,7 +455,7 @@ impl Worker {
                         progress_repaint();
                     }
                 };
-                let result = (|| -> Result<PathBuf, String> {
+                let result = caught(|| -> Result<PathBuf, String> {
                     let size = if job.full_size {
                         Size::Full
                     } else {
@@ -493,7 +495,7 @@ impl Worker {
                         .save(&out, &template, job.auto_crop)
                         .map_err(|e| e.to_string())?;
                     Ok(out)
-                })();
+                });
                 let _ = sender.send(Event::Merged { result });
                 repaint();
             })
@@ -509,10 +511,12 @@ impl Worker {
             .name("luma-balance-auto".into())
             .spawn(move || {
                 for path in paths {
-                    let Ok(photo) = crate::dialogs::open_photo(&path) else {
+                    let Ok(balance) = caught(|| {
+                        let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
+                        Ok(photo.auto_white_balance())
+                    }) else {
                         continue;
                     };
-                    let balance = photo.auto_white_balance();
                     let _ = sender.send(Event::AutoBalanced { path, balance });
                     repaint();
                 }
@@ -528,11 +532,13 @@ impl Worker {
             .name("luma-comparaison".into())
             .spawn(move || {
                 for (index, path) in paths.iter().enumerate() {
-                    let Ok(photo) = crate::dialogs::open_photo(path) else {
-                        continue;
-                    };
-                    let settings = read_sidecar(path).unwrap_or_default();
-                    let Ok(r) = photo.render(&settings, Size::Fit(side), &Cancel::new()) else {
+                    let Ok(r) = caught(|| {
+                        let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+                        let settings = read_sidecar(path).unwrap_or_default();
+                        photo
+                            .render(&settings, Size::Fit(side), &Cancel::new())
+                            .map_err(|e| e.to_string())
+                    }) else {
                         continue;
                     };
                     let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
@@ -552,7 +558,11 @@ impl Worker {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::spawn(move || {
             for (index, s) in settings.iter().enumerate() {
-                let Ok(r) = photo.render(s, Size::Fit(240), &Cancel::new()) else {
+                let Ok(r) = caught(|| {
+                    photo
+                        .render(s, Size::Fit(240), &Cancel::new())
+                        .map_err(|e| e.to_string())
+                }) else {
                     continue;
                 };
                 let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
@@ -584,9 +594,11 @@ impl Worker {
             for (k, job) in jobs.into_iter().enumerate() {
                 let photo = match job.photo {
                     Some(p) => Ok(p),
-                    None => crate::dialogs::open_photo(&job.source)
-                        .map(Arc::new)
-                        .map_err(|e| e.to_string()),
+                    None => caught(|| {
+                        crate::dialogs::open_photo(&job.source)
+                            .map(Arc::new)
+                            .map_err(|e| e.to_string())
+                    }),
                 };
                 // Le nom vient du modèle : date, boîtier, note… et le rang dans l'export.
                 let meta = read_meta(&job.source);
@@ -599,7 +611,8 @@ impl Worker {
                                 export_path(&job.source, options, &fields),
                                 &mut taken,
                             );
-                            export_one(&photo, &job.settings, &out, options, &meta).map(|()| out)
+                            caught(|| export_one(&photo, &job.settings, &out, options, &meta))
+                                .map(|()| out)
                         })
                         .map_err(|e| format!("{} : {e}", job.source.display()));
                     done += 1;
@@ -627,11 +640,43 @@ fn render_loop(
     } else {
         luma_gpu::Gpu::new()
     };
+    serve(jobs, |job| {
+        render_job(job, &mut gpu, &sender, &running, &repaint)
+    });
+}
+
+/// `f`, une panique devenant une erreur : un calcul qui échoue rend un message à l'app,
+/// qui sinon attendrait sans fin un résultat qui ne viendrait pas (une photo qui
+/// s'ouvre, un export, une fusion).
+fn caught<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f))
+        .unwrap_or_else(|_| Err(crate::i18n::tr("Erreur inattendue pendant le calcul").to_owned()))
+}
+
+/// Sert les demandes une à une, seule la dernière arrivée comptant. Une demande qui
+/// panique (le défaut d'une étape, une photo singulière) est abandonnée et le fil
+/// continue : sans cela, plus aucun aperçu n'arriverait de la séance.
+fn serve<J>(jobs: Receiver<J>, mut each: impl FnMut(J)) {
     while let Ok(mut job) = jobs.recv() {
-        // Seule la dernière demande compte.
         while let Ok(newer) = jobs.try_recv() {
             job = newer;
         }
+        if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| each(job))).is_err() {
+            crate::journal("un rendu a échoué : l'aperçu suivant repart de zéro");
+        }
+    }
+}
+
+/// Un aperçu : la base, puis la fin sur le GPU ou le processeur, l'épreuvage, les
+/// histogrammes et les surimpressions.
+fn render_job(
+    job: RenderJob,
+    gpu: &mut Option<luma_gpu::Gpu>,
+    sender: &Sender<Event>,
+    running: &Mutex<Cancel>,
+    repaint: &Arc<dyn Fn() + Send + Sync>,
+) {
+    {
         let cancel = Cancel::new();
         *running.lock().expect("annulation") = cancel.clone();
         let start = Instant::now();
@@ -640,7 +685,7 @@ fn render_loop(
             .photo
             .base(&job.settings, job.size, &cancel, &mut timings)
         else {
-            continue;
+            return;
         };
         let (w, h) = (base.image.width, base.image.height);
         let layers = luma_image::look_layers(&job.settings);
@@ -665,7 +710,7 @@ fn render_loop(
         if usable.is_some() && finished.is_none() {
             // Le GPU ne répond plus : le processeur finit, cette fois et les suivantes.
             crate::journal("le GPU ne répond plus : rendu sur le processeur");
-            gpu = None;
+            *gpu = None;
         }
         let (mut rgba, on_gpu) = match finished {
             Some(rgba) => (rgba, true),
@@ -679,7 +724,7 @@ fn render_loop(
                     &cancel,
                     &mut timings,
                 ) else {
-                    continue;
+                    return;
                 };
                 (
                     to_rgba(&luma_image::encode8(&image, OutputSpace::Srgb), false),
@@ -1019,6 +1064,44 @@ fn srgb_luts() -> &'static ([f32; 256], luma_color::EncodeLut) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_render_that_panics_does_not_stop_the_next_ones() {
+        // La première demande panique ; le fil continue et sert la suivante.
+        let (send, jobs) = channel::<u32>();
+        let (done, served) = channel::<u32>();
+        let (ack, started) = channel::<()>();
+        let thread = std::thread::spawn(move || {
+            serve(jobs, |job| {
+                let _ = ack.send(());
+                if job == 1 {
+                    panic!("rendu impossible");
+                }
+                let _ = done.send(job);
+            })
+        });
+        send.send(1).unwrap();
+        started.recv().unwrap();
+        send.send(2).unwrap();
+        started.recv().unwrap();
+        drop(send);
+        thread.join().expect("le fil de rendu survit");
+        assert_eq!(served.try_iter().collect::<Vec<_>>(), vec![2]);
+    }
+
+    #[test]
+    fn a_panic_becomes_an_error_the_app_can_show() {
+        assert_eq!(caught(|| Ok::<_, String>(3)), Ok(3));
+        assert_eq!(
+            caught(|| Err::<u8, _>("illisible".to_owned())),
+            Err("illisible".to_owned())
+        );
+        let failed = caught(|| -> Result<u8, String> { panic!("indice hors bornes") });
+        assert_eq!(
+            failed,
+            Err("Erreur inattendue pendant le calcul".to_owned())
+        );
+    }
 
     #[test]
     fn clipping_overlay() {

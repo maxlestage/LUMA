@@ -75,7 +75,9 @@ La photothèque professionnelle, étape par étape.
   erreur, jamais en plantage, et des réglages aux valeurs aberrantes (infinies, énormes)
   se rendent en pixels sains, dans les masques, les retouches et la fluidité aussi. Une
   suppression tracée longue et très large ne fige plus l'export (24 Mpx : 2 minutes →
-  4 secondes), mêmes pixels.
+  4 secondes), mêmes pixels. Dans l'app, un calcul qui échoue sur une photo singulière
+  ne fige plus rien : l'aperçu suivant arrive, l'ouverture, l'export, la fusion ou la
+  mesure d'une pellicule disent l'erreur, et un lot d'export continue avec les autres.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).

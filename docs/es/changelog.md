@@ -76,7 +76,10 @@ La fototeca profesional, paso a paso.
   imagen o como error, nunca como cierre, y los ajustes con valores absurdos (infinitos,
   enormes) dan píxeles sanos, también en máscaras, retoques y licuado. Una eliminación
   trazada larga y muy ancha ya no congela la exportación (24 Mpx: 2 minutos → 4
-  segundos), mismos píxeles.
+  segundos), mismos píxeles. En la app, un cálculo que falla con una foto singular ya
+  no congela nada: llega la vista previa siguiente, la apertura, la exportación, la
+  fusión o la medición de una película indican el error, y un lote de exportación sigue
+  con las demás.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
