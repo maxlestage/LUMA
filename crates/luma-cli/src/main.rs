@@ -61,7 +61,8 @@ USAGE
       --web : un JPEG allégé pour le web (chrominance 4:2:0 et tables de Huffman
       calculées pour l'image : de 9 à 29 % plus léger ; le préréglage Web le fait).
       --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
-      (l'image tient dans le cadre), 12mp (mégapixels) ; jamais d'agrandissement, sauf
+      (l'image tient dans le cadre), 12mp (mégapixels), 30x40cm@300 (tirage : le cadre
+      en centimètres à 300 ppp, inscrits dans le JPEG et le TIFF) ; jamais d'agrandissement, sauf
       avec --enlarge (Lanczos sans halo, jusqu'à quatre fois chaque côté et 200 Mpx).
       --output-sharpen : l'accentuation de sortie, à la taille finale, pour l'écran ou
       le papier mat ou brillant (écran, mat, brillant ; faible, normale, forte aussi).
