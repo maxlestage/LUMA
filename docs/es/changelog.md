@@ -450,6 +450,9 @@ La fototeca profesional, paso a paso.
   toma, se renombran si se quiere y se copian también en un segundo disco; cada copia
   se relee y se compara con el original, el RAW, su JPEG y su XMP conservan el mismo
   nombre, una foto ya importada se omite y la tarjeta nunca se modifica.
+- **Importar solo algunos días**: la ventana de importación muestra los días de la toma
+  de la tarjeta, cada uno con su número de fotos; se desmarcan los que no se quieren
+  (`luma import --days 2026-10-26,2026-10-27`).
 - **Atajos de teclado personalizables** (menú del idioma, «Atajos de teclado…»): cada
   comando y sus teclas; hacer clic y pulsar las nuevas teclas; una tecla ya usada pasa
   al nuevo comando; vuelta a las teclas por defecto, una a una o todas. **Tab** oculta
