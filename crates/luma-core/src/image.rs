@@ -187,13 +187,19 @@ impl Plane {
     /// d'un flou réutilisent deux tampons au lieu d'allouer chacune une image neuve (une
     /// mémoire neuve coûte une faute de page par page à la première écriture).
     fn box_rows_into(&self, r: usize, out: &mut Plane) {
+        self.box_rows_map_into(r, out, |v| v);
+    }
+
+    /// `box_rows_into` de `f(v)` : chaque valeur transformée à la lecture (le carré du
+    /// filtre guidé, sans plan intermédiaire).
+    fn box_rows_map_into(&self, r: usize, out: &mut Plane, f: impl Fn(f32) -> f32 + Sync) {
         let w = self.width;
         let norm = 1.0 / (2 * r + 1) as f32;
         out.data
             .par_chunks_mut(w)
             .zip(self.data.par_chunks(w))
             .for_each(|(dst, src)| {
-                let at = |i: isize| src[i.clamp(0, w as isize - 1) as usize];
+                let at = |i: isize| f(src[i.clamp(0, w as isize - 1) as usize]);
                 let ri = r as isize;
                 let mut sum: f32 = (-ri..=ri).map(at).sum();
                 let lo = (r + 1).min(w);
@@ -204,7 +210,7 @@ impl Plane {
                 }
                 for (x, d) in dst.iter_mut().enumerate().take(hi).skip(lo) {
                     *d = sum * norm;
-                    sum += src[x + r + 1] - src[x - r];
+                    sum += f(src[x + r + 1]) - f(src[x - r]);
                 }
                 for (x, d) in dst.iter_mut().enumerate().skip(hi) {
                     *d = sum * norm;
@@ -278,10 +284,27 @@ impl Plane {
             let small = self.downscale(factor).blur(sigma / factor as f32);
             return small.upsample(self.width, self.height);
         }
-        let r = Self::box_radius(sigma);
-        // Six passes, deux tampons qui alternent.
+        self.box_blur(Self::box_radius(sigma), |v| v)
+    }
+
+    /// Le flou de `f(v)` : les mêmes valeurs que `self.map(f).blur(sigma)` ; au petit
+    /// rayon (pleine taille), `f` s'applique à la lecture de la première passe, sans plan
+    /// intermédiaire.
+    pub fn blur_map(&self, sigma: f32, f: impl Fn(f32) -> f32 + Sync) -> Plane {
+        let factor = ((sigma / 3.0).floor() as usize)
+            .min(self.width / 8)
+            .min(self.height / 8);
+        if sigma < 0.3 || self.width < 2 || self.height < 2 || factor >= 2 {
+            return self.map(f).blur(sigma);
+        }
+        self.box_blur(Self::box_radius(sigma), f)
+    }
+
+    /// Trois flous boîte en ligne puis trois en colonne, de rayon `r`, sur `f(v)`. Six
+    /// passes, deux tampons qui alternent.
+    fn box_blur(&self, r: usize, f: impl Fn(f32) -> f32 + Sync) -> Plane {
         let (mut a, mut b) = (Plane::new(self.width, self.height), Plane::new(self.width, self.height));
-        self.box_rows_into(r, &mut a);
+        self.box_rows_map_into(r, &mut a, f);
         a.box_rows_into(r, &mut b);
         b.box_rows_into(r, &mut a);
         a.box_cols_into(r, &mut b);
@@ -457,7 +480,7 @@ impl Plane {
         let mean_i = guide.blur(sigma);
         let mean_p = self.blur(sigma);
         let corr_ip = guide.zip(self, |i, p| i * p).blur(sigma);
-        let corr_ii = guide.map(|v| v * v).blur(sigma);
+        let corr_ii = guide.blur_map(sigma, |v| v * v);
         // a et b ensemble, en une passe.
         let mut a = Plane::new(self.width, self.height);
         let mut b = Plane::new(self.width, self.height);
@@ -476,7 +499,7 @@ impl Plane {
 
     fn guided_coefficients(&self, sigma: f32, eps: f32) -> (Plane, Plane) {
         let mean = self.blur(sigma);
-        let sq = self.map(|v| v * v).blur(sigma);
+        let sq = self.blur_map(sigma, |v| v * v);
         let mut a = Plane::new(self.width, self.height);
         let mut b = Plane::new(self.width, self.height);
         a.data
@@ -614,6 +637,23 @@ mod tests {
         assert!((sum - 1.0).abs() < 1e-3, "{sum}");
         assert!(b.data[50 * 101 + 50] < 0.05);
         assert!(b.data[50 * 101 + 53] > 0.0);
+    }
+
+    #[test]
+    fn blur_of_a_mapped_plane_needs_no_intermediate_plane() {
+        let p = Plane {
+            width: 61,
+            height: 43,
+            data: (0..61 * 43).map(|i| ((i as f32) * 0.618).fract() - 0.3).collect(),
+        };
+        for sigma in [0.2, 0.8, 1.5, 2.9, 7.0] {
+            let a = p.blur_map(sigma, |v| v * v);
+            let b = p.map(|v| v * v).blur(sigma);
+            assert!(
+                a.data.iter().zip(&b.data).all(|(x, y)| x.to_bits() == y.to_bits()),
+                "sigma {sigma}"
+            );
+        }
     }
 
     #[test]
