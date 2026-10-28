@@ -1664,6 +1664,33 @@ fn mask_texture_and_dehaze() {
 }
 
 #[test]
+fn auto_tone() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("tons-auto") else {
+        return;
+    };
+    // La veste du RW2, nettement sous‑exposée.
+    let rw2 = s.dir.join("P1000951.RW2");
+    s.studio().open_path(&rw2);
+    s.wait();
+    s.studio().tool = luma_studio::app::Tool::Light;
+    s.wait();
+    s.harness.get_by_label("Tons auto").click();
+    s.wait();
+    let st = s.studio();
+    assert!(
+        st.settings.exposure > 0.3,
+        "exposition {}",
+        st.settings.exposure
+    );
+    assert!(st.has_image());
+    s.capture("tons-auto");
+    // Annulable d'un coup.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.exposure, 0.0);
+}
+
+#[test]
 fn crop_guides() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("guides") else {
