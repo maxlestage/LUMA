@@ -70,6 +70,9 @@ pub struct Options {
     pub backup: Option<PathBuf>,
     /// Seulement les photos de ces jours de prise de vue (`AAAA-MM-JJ`) ; vide : toutes.
     pub days: Vec<String>,
+    /// Les photos laissées sur la carte, chacune avec les fichiers de sa prise (son
+    /// JPEG, son RAW).
+    pub skip: Vec<PathBuf>,
 }
 
 /// Une photo à copier.
@@ -128,19 +131,28 @@ pub fn days(entries: &[Entry]) -> Vec<(String, usize)> {
     count.into_iter().collect()
 }
 
+/// La prise d'un fichier : son dossier et son nom sans extension (le RAW et son JPEG
+/// en ont une seule).
+pub fn shot(path: &Path) -> (Option<PathBuf>, Option<std::ffi::OsString>) {
+    (
+        path.parent().map(Path::to_path_buf),
+        path.file_stem().map(|s| s.to_os_string()),
+    )
+}
+
 pub fn plan(entries: &[Entry], o: &Options, name: impl Fn(&Entry, usize) -> Option<String>) -> Plan {
+    // Les prises laissées sur la carte, comparées en chemins absolus (`--skip` peut en
+    // donner un relatif).
+    let absolute = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let skipped: HashSet<_> = o.skip.iter().map(|p| shot(&absolute(p))).collect();
     let mut sorted: Vec<&Entry> = entries
         .iter()
         .filter(|e| o.days.is_empty() || o.days.iter().any(|d| d == day(e)))
+        .filter(|e| skipped.is_empty() || !skipped.contains(&shot(&absolute(&e.path))))
         .collect();
     sorted.sort_by(|a, b| (&a.date, &a.path).cmp(&(&b.date, &b.path)));
     // Les prises : même dossier, même nom sans extension (le RAW et son JPEG).
-    let shot = |e: &Entry| {
-        (
-            e.path.parent().map(Path::to_path_buf),
-            e.path.file_stem().map(|s| s.to_os_string()),
-        )
-    };
+    let shot = |e: &Entry| shot(&e.path);
     let mut shots: BTreeMap<(Option<PathBuf>, Option<std::ffi::OsString>), String> = BTreeMap::new();
     let mut taken: HashSet<PathBuf> = HashSet::new();
     let mut plan = Plan::default();
@@ -331,6 +343,7 @@ mod tests {
             folders: String::new(),
             backup: None,
             days: Vec::new(),
+            skip: Vec::new(),
         };
         assert_eq!(plan(&entries, &o, |_, _| None).items.len(), 4, "tous les jours");
         o.days = vec!["2026-10-26".into(), "2026-10-28".into()];
@@ -340,6 +353,31 @@ mod tests {
             .map(|i| i.source.file_name().unwrap().to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, ["IMG_0001.CR3", "IMG_0001.JPG", "IMG_0003.CR3"]);
+    }
+
+    #[test]
+    fn photos_left_on_the_card() {
+        let root = std::env::temp_dir().join(format!("luma-import-laisser-{}", std::process::id()));
+        let entries = vec![
+            entry(&root.join("IMG_0001.CR3"), "2026-10-26T09:00:00"),
+            entry(&root.join("IMG_0001.JPG"), "2026-10-26T09:00:00"),
+            entry(&root.join("IMG_0002.CR3"), "2026-10-26T09:01:00"),
+            entry(&root.join("IMG_0003.CR3"), "2026-10-27T08:30:00"),
+        ];
+        let o = Options {
+            dest: root.join("Photos"),
+            folders: String::new(),
+            backup: None,
+            days: vec!["2026-10-26".into()],
+            // Le JPEG désigne sa prise : le RAW reste aussi sur la carte.
+            skip: vec![root.join("IMG_0001.JPG")],
+        };
+        let names: Vec<String> = plan(&entries, &o, |_, _| None)
+            .items
+            .iter()
+            .map(|i| i.source.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["IMG_0002.CR3"]);
     }
 
     #[test]
@@ -379,6 +417,7 @@ mod tests {
             folders: "{année}/{année}-{mois}-{jour}".into(),
             backup: Some(root.join("Second")),
             days: Vec::new(),
+            skip: Vec::new(),
         };
         // Renommées dans l'ordre de prise de vue ; le RAW et son JPEG ensemble.
         let name = |e: &Entry, n: usize| Some(format!("{}_{n:03}", &e.date[..10]));
@@ -437,6 +476,7 @@ mod tests {
             folders: String::new(),
             backup: Some(root.join("Second")),
             days: Vec::new(),
+            skip: Vec::new(),
         };
         std::fs::create_dir_all(&o.dest).unwrap();
         std::fs::write(o.dest.join("IMG_1.xmp"), b"reglages de la phototheque").unwrap();
@@ -471,6 +511,7 @@ mod tests {
             folders: String::new(),
             backup: None,
             days: Vec::new(),
+            skip: Vec::new(),
         };
         let p = plan(&[entry(&root.join("A.NEF"), "2026-01-01T00:00:00")], &o, |_, _| None);
         assert_eq!(p.items[0].target, root.join("Photos/A-2.NEF"));

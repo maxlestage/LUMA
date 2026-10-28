@@ -98,6 +98,10 @@ La photothèque professionnelle, étape par étape.
   galerie », `luma slideshow --transition --music`). Le diaporama en plein écran de
   l'app passe d'une photo à l'autre avec la même transition (avant : d'un coup). Le
   libellé « Fondu » du diaporama est aussi bien traduit en anglais et en espagnol.
+- **Import photo par photo** : « Choisir photo par photo » montre l'aperçu de chaque
+  photo de la carte (celui intégré au RAW, lu en arrière‑plan) ; un clic en laisse une
+  sur la carte, avec son JPEG ; « Toutes », « Aucune » ; avec les jours choisis
+  (`luma import --skip photo`).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
