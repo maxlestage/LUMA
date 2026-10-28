@@ -3087,6 +3087,18 @@ fr = Photos ne s'ouvre pas ({why}).
 en = Photos won't open ({why}).
 es = Fotos no se abre ({why}).
 
+fr = Fichiers ne s'ouvre pas ({why}).
+en = Files won't open ({why}).
+es = Archivos no se abre ({why}).
+
+fr = Depuis Fichiers (carte mémoire, iCloud Drive)
+en = From Files (memory card, iCloud Drive)
+es = Desde Archivos (tarjeta de memoria, iCloud Drive)
+
+fr = Importer depuis Fichiers
+en = Import from Files
+es = Importar desde Archivos
+
 fr = {n} photo(s) importée(s).
 en = {n} photo(s) imported.
 es = {n} foto(s) importada(s).
