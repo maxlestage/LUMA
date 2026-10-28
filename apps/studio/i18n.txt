@@ -5530,3 +5530,15 @@ es = Ninguna foto de esta tira cae dentro del track.
 fr = {n} photos placées d'après la trace (horloge du boîtier : UTC{offset})
 en = {n} photos placed from the track (camera clock: UTC{offset})
 es = {n} fotos situadas a partir del track (reloj de la cámara: UTC{offset})
+
+fr = Repères de coupe aux coins des photos
+en = Crop marks at the corners of the photos
+es = Marcas de corte en las esquinas de las fotos
+
+fr = Texte au bas de la page
+en = Text at the bottom of the page
+es = Texto al pie de la página
+
+fr = un titre, un nom, des droits
+en = a title, a name, a copyright
+es = un título, un nombre, unos derechos

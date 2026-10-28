@@ -404,6 +404,9 @@ La photothèque professionnelle, étape par étape.
   entières ou remplissant leur case, accentuation pour papier mat ou brillant, aperçu
   de la page ; les pages converties vers le **profil de l'imprimante** (celui de
   l'épreuvage, noir compensé), à imprimer sans gestion des couleurs du pilote.
+- **Repères de coupe et texte au bas de la page** (« Imprimer… », `luma print
+  --crop-marks --text`) : des traits fins aux coins de chaque photo, pour couper au
+  massicot, et une ligne de texte (un titre, un nom, des droits) dans la marge du bas.
 - **Livre photo** (« Livre, diaporama, galerie… », `luma book`) : un PDF avec sa couverture
   (la première photo, le titre et le sous‑titre), puis des pages d'une, deux ou quatre
   photos choisies d'après leur orientation ; formats 20 × 20, 30 × 30, A4, 21 × 28, A3.

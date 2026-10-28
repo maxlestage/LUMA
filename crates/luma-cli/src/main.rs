@@ -113,6 +113,7 @@ USAGE
                      [--landscape] [--margin mm] [--grid 4x5] [--gap mm] [--dpi 300]
                      [--captions] [--fill] [--profile imprimante.icc]
                      [--intent perceptual|relative|saturation|absolute]
+                     [--crop-marks] [--text \"© Nom 2026\"]
                      [--output-sharpen matte|glossy[:low|standard|high]]
       Met les photos en page pour l'imprimante, dans un PDF à la taille exacte du papier :
       une photo par page (entière, ou remplissant la page avec --fill), ou une planche
@@ -120,6 +121,8 @@ USAGE
       --captions). Marges de 10 mm et 300 points par pouce par défaut. --profile
       convertit chaque page vers le profil RVB de l'imprimante (colorimétrique relative
       par défaut, noir compensé) : imprimez alors sans gestion des couleurs du pilote.
+      --crop-marks : des repères de coupe aux coins de chaque photo ; --text : une ligne
+      de texte au bas de chaque page (un titre, un nom, des droits).
   luma book <photo>… -o livre.pdf [--title titre] [--subtitle texte]
                     [--format 20x20|30x30|A4|21x28|A3|LxH] [--landscape] [--margin mm]
                     [--gap mm] [--dpi 300] [--captions] [--profile imprimante.icc]
@@ -2045,6 +2048,8 @@ fn print(args: Vec<String>) -> Result<(), String> {
             }
             "--captions" => layout.captions = true,
             "--fill" => layout.fill = true,
+            "--crop-marks" => layout.crop_marks = true,
+            "--text" => layout.text = it.next().ok_or("--text attend un texte")?,
             "--profile" => profile = Some(PathBuf::from(it.next().ok_or("--profile : fichier ICC attendu")?)),
             "--intent" => {
                 intent = match it.next().as_deref() {

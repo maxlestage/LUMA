@@ -2729,6 +2729,18 @@ impl Studio {
                     &mut l.fill,
                     tr("Remplir les cases (photos recadrées au centre)"),
                 );
+                ui.checkbox(
+                    &mut l.crop_marks,
+                    tr("Repères de coupe aux coins des photos"),
+                );
+                ui.horizontal(|ui| {
+                    ui.label(tr("Texte au bas de la page"));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut l.text)
+                            .hint_text(tr("un titre, un nom, des droits"))
+                            .desired_width(220.0),
+                    );
+                });
                 let (pages, (w, h)) = (l.pages(n), l.page_mm());
                 let layout = l.clone();
                 ui.add_space(6.0);
