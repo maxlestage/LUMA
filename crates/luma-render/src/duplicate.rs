@@ -28,8 +28,8 @@ use serde_json::{Value, json};
 
 // 3 : l'auteur, le copyright et la position GPS (recopiés à l'export) ; 4 : les écarts
 // au pixel de gauche (moitié moins gros) ; 5 : le dématriçage directionnel (les doublons
-// d'avant sont refaits).
-const MAGIC: &[u8; 8] = b"LUMADUP5";
+// d'avant sont refaits) ; 6 : le vert X‑Trans directionnel.
+const MAGIC: &[u8; 8] = b"LUMADUP6";
 /// Lignes par bande compressée.
 const BAND: usize = 64;
 /// Le plus petit niveau de la pyramide (grand côté), sous lequel on s'arrête.
