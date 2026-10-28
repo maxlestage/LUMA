@@ -146,6 +146,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Reducción de ruido en las máscaras**: suavizar sombras levantadas o un cielo con
+  ruido con el pincel, manteniendo los contornos nítidos, sin suavizar el resto de la
+  foto.
 - **Nitidez en las máscaras**: realzar el detalle de una mirada o de una materia con
   el pincel, o suavizar un fondo, sin tocar el resto de la foto.
 - **Interpolación cromática X‑Trans direccional** (Fujifilm): el verde sigue los
