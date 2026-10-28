@@ -293,8 +293,13 @@ pub struct StoreSubscription {
 }
 
 /// Les clés de licence ouvrent‑elles LÜMA ici ? Sur Mac (et ailleurs), oui ; sur iPhone
-/// et iPad, non : seul l'App Store y vend l'abonnement.
+/// et iPad, non : seul l'App Store y vend l'abonnement. Les clés offertes ([`OFFERED`])
+/// comptent partout : rien n'y est vendu.
 pub const KEYS_ALLOWED: bool = !cfg!(target_os = "ios");
+
+/// L'« abonnement » d'une clé offerte (délivrée par le site, sans paiement, aux
+/// personnes de la liste des accès offerts).
+pub const OFFERED: &str = "offert";
 
 /// Enregistre un achat (ou un renouvellement, une restauration) de l'App Store : le
 /// produit `product`, payé à `date` (secondes Unix). Un produit inconnu ne change rien.
@@ -372,8 +377,11 @@ impl State {
                 until: s.until,
             };
         }
-        if keys
-            && let Some(c) = self.claims(public)
+        let claims = self.claims(public);
+        // Une clé compte là où les clés sont vendues ; une clé offerte, partout.
+        let counts = |c: &Claims| keys || c.sub == OFFERED;
+        if let Some(c) = &claims
+            && counts(c)
             && now < c.exp
             && c.iat <= now + DAY
         {
@@ -390,14 +398,20 @@ impl State {
                 days_left: TRIAL_DAYS - used,
             };
         }
+        let had_key = if keys {
+            self.key.is_some()
+        } else {
+            claims.as_ref().is_some_and(counts)
+        };
         Access::Expired {
-            had_key: (keys && self.key.is_some()) || self.store.is_some(),
+            had_key: had_key || self.store.is_some(),
         }
     }
 
-    /// Faut‑il demander une clé fraîche ?
+    /// Faut‑il demander une clé fraîche ? (Sur iPhone et iPad, seule une clé offerte
+    /// y entre : elle se renouvelle aussi.)
     pub fn needs_check(&self, now: u64) -> bool {
-        KEYS_ALLOWED && self.key.is_some() && now.saturating_sub(self.checked_at) >= RECHECK_HOURS * 3600
+        self.key.is_some() && now.saturating_sub(self.checked_at) >= RECHECK_HOURS * 3600
     }
 }
 
@@ -465,6 +479,35 @@ pub fn refresh(
             Ok(())
         }
         (None, e) => Err(Refused::Invalid(e.unwrap_or_else(|| "abonnement inactif".into()))),
+    }
+}
+
+/// « Se connecter avec Apple » (iPhone et iPad) : le jeton d'identité `token`, signé
+/// par Apple, est envoyé au serveur, qui rend une clé offerte si le courriel du compte
+/// Apple est dans la liste des accès offerts. La clé est enregistrée comme une clé
+/// saisie.
+pub fn apple_sign_in(
+    state: &mut State,
+    server: &str,
+    public: Option<&[u8; 32]>,
+    net: &dyn Transport,
+    token: &str,
+    now: u64,
+) -> Result<Claims, Refused> {
+    let text = net
+        .post(&format!("{server}/api/licence/apple"), &[("token", token)])
+        .map_err(Refused::Offline)?;
+    #[derive(Deserialize)]
+    struct Answer {
+        key: Option<String>,
+        error: Option<String>,
+    }
+    let answer: Answer = serde_json::from_str(&text).map_err(|_| Refused::Offline("réponse illisible".into()))?;
+    match (answer.key, answer.error) {
+        (Some(key), _) => activate(state, &key, public, now),
+        (None, e) => Err(Refused::Invalid(
+            e.unwrap_or_else(|| "aucun accès offert pour ce compte Apple".into()),
+        )),
     }
 }
 
@@ -541,6 +584,77 @@ mod tests {
             state.access_with(1_000_000 + DAY, Some(&public), true),
             Access::Premium { .. }
         ));
+    }
+
+    #[test]
+    fn an_offered_key_opens_luma_even_where_keys_are_not_sold() {
+        let public = public();
+        let offered = Claims {
+            sub: OFFERED.into(),
+            ..claims(30 * DAY)
+        };
+        let mut state = State::new(0);
+        activate(&mut state, &sign(&offered, &SEED), Some(&public), 0).unwrap();
+        // Sur iPhone et iPad (les clés ne comptent pas), la clé offerte compte.
+        assert!(matches!(
+            state.access_with(DAY, Some(&public), false),
+            Access::Premium { .. }
+        ));
+        assert!(state.needs_check(RECHECK_HOURS * 3600));
+        // Une clé d'abonnement (vendue par Stripe), non.
+        activate(&mut state, &sign(&claims(30 * DAY), &SEED), Some(&public), 0).unwrap();
+        assert_eq!(
+            state.access_with(TRIAL_DAYS * DAY, Some(&public), false),
+            Access::Expired { had_key: false }
+        );
+        assert!(matches!(
+            state.access_with(TRIAL_DAYS * DAY, Some(&public), true),
+            Access::Premium { .. }
+        ));
+    }
+
+    /// Le serveur, pour « Se connecter avec Apple » : une réponse toute faite.
+    struct Apple(Result<String, String>);
+
+    impl Transport for Apple {
+        fn post(&self, url: &str, form: &[(&str, &str)]) -> Result<String, String> {
+            assert!(url.ends_with("/api/licence/apple"));
+            assert_eq!(form, [("token", "jeton")]);
+            self.0.clone()
+        }
+    }
+
+    #[test]
+    fn signing_in_with_apple_records_the_offered_key() {
+        let public = public();
+        let offered = Claims {
+            sub: OFFERED.into(),
+            ..claims(30 * DAY)
+        };
+        let answer = format!(r#"{{"key":"{}"}}"#, sign(&offered, &SEED));
+        let mut state = State::new(0);
+        let got = apple_sign_in(&mut state, "https://x", Some(&public), &Apple(Ok(answer)), "jeton", 0).unwrap();
+        assert_eq!(got, offered);
+        assert!(state.key.is_some());
+        // Refusé (pas dans la liste) : le message du serveur, et rien d'enregistré.
+        let mut state = State::new(0);
+        let refused = Apple(Ok(r#"{"error":"aucun accès offert"}"#.into()));
+        assert_eq!(
+            apple_sign_in(&mut state, "https://x", Some(&public), &refused, "jeton", 0),
+            Err(Refused::Invalid("aucun accès offert".into()))
+        );
+        assert!(matches!(
+            apple_sign_in(
+                &mut state,
+                "https://x",
+                Some(&public),
+                &Apple(Err("hors ligne".into())),
+                "jeton",
+                0
+            ),
+            Err(Refused::Offline(_))
+        ));
+        assert!(state.key.is_none());
     }
 
     const SEED: [u8; 32] = [7; 32];

@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **“Sign in with Apple” on iPhone and iPad**: people who were given LÜMA Premium unlock
+  it by signing in with their Apple Account from the Premium screen; the server checks
+  Apple's token and the email against the list of gifted access.
 - **LÜMA for Linux**: the same engine and the same rendering as on Mac, with the same
   subscription. An archive that installs without a password (`./install.sh`, with its
   launcher in the applications menu and RAW files opening through “Open With”), or a

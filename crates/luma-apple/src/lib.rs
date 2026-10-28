@@ -14,6 +14,7 @@
 
 pub mod net;
 pub mod photos;
+pub mod signin;
 pub mod store;
 pub mod tether;
 
