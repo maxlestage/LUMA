@@ -607,7 +607,7 @@ impl Encoder8 {
         // Huit pixels à la fois, puis le reste un par un.
         let (blocks, rest) = src.as_chunks::<LANES>();
         let (head, tail) = dst.split_at_mut(blocks.len() * LANES);
-        for (d, p) in head.chunks_exact_mut(LANES).zip(blocks) {
+        for (d, p) in head.as_chunks_mut::<LANES>().0.iter_mut().zip(blocks) {
             for (d, c) in d.iter_mut().zip(to_output_lanes(&self.m, p)) {
                 for i in 0..3 {
                     d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
