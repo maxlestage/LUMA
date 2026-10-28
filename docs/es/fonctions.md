@@ -104,6 +104,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | RAW Bayer: Sony ARW, Canon CR3, Nikon NEF (y los demás formatos RAW habituales) | ✅ 3 cámaras verificadas de forma continua |
 | RAW X‑Trans (Fujifilm) | ✅ interpolación cromática específica |
 | Interpolación cromática Bayer direccional: el verde sigue los contornos (sin efecto cremallera ni punteado en los detalles finos) | ✅ |
+| Interpolación cromática X‑Trans direccional: el verde sigue los contornos, también en las sombras con ruido | ✅ |
 | DNG lineal, Apple ProRAW (con `BaselineExposure`) | ✅ |
 | Imágenes reveladas: JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG; HEIC, HEIF, AVIF (ImageIO de Apple); extensión desconocida leída por su contenido | ✅ perfil «Original»: idéntica al abrir |
 | Color DNG: dos matrices interpoladas según la temperatura | ✅ |

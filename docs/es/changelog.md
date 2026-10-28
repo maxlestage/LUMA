@@ -143,6 +143,9 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Interpolación cromática X‑Trans direccional** (Fujifilm): el verde sigue los
+  contornos en lugar de promediarlos de través, incluso en las sombras con ruido (3 dB
+  mejor en nuestras pruebas). Las copias de trabajo se rehacen una vez.
 - **Textura y Neblina en las máscaras**: suavizar una piel o un fondo con el pincel,
   despejar un cielo brumoso en un degradado, sin tocar el resto de la foto.
 - **Ampliar si es necesario** (Exportar, Dimensiones, o `--enlarge`): un tamaño mayor
