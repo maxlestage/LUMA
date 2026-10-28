@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{Catalog, Entry, unix_date};
+use crate::{Catalog, Entry, exists, unix_date};
 
 /// Le nombre de sauvegardes gardées.
 pub const KEEP: usize = 10;
@@ -99,7 +99,7 @@ impl Catalog {
     /// Les photos du catalogue dont le fichier n'est plus là (disque débranché,
     /// dossier déplacé ou renommé hors de LÜMA).
     pub fn missing(&self) -> Vec<&Entry> {
-        self.entries().filter(|e| !e.path.is_file()).collect()
+        self.entries().filter(|e| !exists(&e.path)).collect()
     }
 
     /// Les doublons : les photos du même boîtier, prises au même instant, dont les
@@ -110,8 +110,9 @@ impl Catalog {
         let mut groups: std::collections::BTreeMap<(&str, String, u64, String), Vec<&Entry>> =
             std::collections::BTreeMap::new();
         for e in self.entries() {
-            // Sans date ni taille, rien ne permet de dire que deux photos sont la même.
-            if e.date.is_empty() || e.size == 0 {
+            // Sans date ni taille, rien ne permet de dire que deux photos sont la même ;
+            // une copie virtuelle partage, par nature, le fichier de son original.
+            if e.date.is_empty() || e.size == 0 || luma_project::copies::number(&e.path).is_some() {
                 continue;
             }
             let kind = e
@@ -144,7 +145,7 @@ impl Catalog {
             .filter_map(|e| {
                 let rest = e.path.strip_prefix(from).ok()?;
                 let new = to.join(rest);
-                new.is_file().then(|| (e.path.clone(), new))
+                exists(&new).then(|| (e.path.clone(), new))
             })
             .collect();
         for (a, b) in &moves {
@@ -173,7 +174,7 @@ impl Catalog {
                 continue;
             }
             let new = home.join(e.path.strip_prefix(&old).unwrap_or(&e.path));
-            if new.is_file() {
+            if exists(&new) {
                 moves.push((e.path.clone(), new));
             } else {
                 gone.push(e.path.clone());
