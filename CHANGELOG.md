@@ -435,7 +435,8 @@ La photothèque professionnelle, étape par étape.
 - **Des pages de texte dans le livre** (« Livre, diaporama, galerie… », `luma book
   --opening --closing`) : une page après la couverture (une dédicace, un mot
   d'introduction) et une dernière page (un lieu, une date, des remerciements), leurs
-  lignes centrées au milieu de la page.
+  lignes centrées au milieu de la page. Et la disposition au choix : le nombre de photos
+  de chaque page (« 1,2,4 », répété ; `--pages`).
 - **Diaporama** : en plein écran dans l'app (la photo seule, elle avance d'elle‑même,
   Espace pour la pause, Échap pour sortir), et **exporté** (`luma slideshow`) : un
   dossier qui se suffit à lui‑même, index.html et les photos, à ouvrir dans n'importe
