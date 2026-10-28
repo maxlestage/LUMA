@@ -162,6 +162,34 @@ pub fn position_at(track: &[Point], time: i64, max_gap: i64) -> Option<Position>
     }
 }
 
+/// L'écart de l'horloge du boîtier à l'heure universelle, deviné : celui (par quarts
+/// d'heure, de −12 h à +14 h) qui fait tomber le plus de photos dans la trace (à moins
+/// de `edge` secondes de ses bouts, ses trous franchis jusqu'à `max_gap`) ; à égalité,
+/// le plus proche de zéro. `None` si aucun n'en place une seule.
+pub fn best_offset(track: &[Point], camera_times: &[i64], edge: i64, max_gap: i64) -> Option<i64> {
+    let (Some(first), Some(last)) = (track.first(), track.last()) else {
+        return None;
+    };
+    let mut best: Option<(usize, i64)> = None;
+    for q in -48..=56 {
+        let offset = q * 900;
+        let n = camera_times
+            .iter()
+            .map(|t| t - offset)
+            .filter(|&t| t >= first.time - edge && t <= last.time + edge)
+            .filter(|&t| position_at(track, t, max_gap).is_some())
+            .count();
+        let better = match best {
+            None => n > 0,
+            Some((m, o)) => n > m || (n == m && offset.abs() < o.abs()),
+        };
+        if better {
+            best = Some((n, offset));
+        }
+    }
+    best.map(|b| b.1)
+}
+
 /// Ce que fait le placement d'une photo.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Outcome {
@@ -299,6 +327,25 @@ mod tests {
         // L'heure du boîtier, réglé à l'heure de Paris.
         let local = photo_time("2026-06-01T10:20:00", offset("+02:00").unwrap()).unwrap();
         assert_eq!(position_at(&t, local, 3600), Some(mid));
+    }
+
+    #[test]
+    fn the_camera_clock_is_guessed() {
+        let t = read_gpx(TRACE).unwrap();
+        // Trois photos prises à 10:02, 10:15 et 10:28 à l'heure de Paris (+02:00) : un
+        // seul écart les fait toutes tomber dans la trace.
+        let times: Vec<i64> = ["2026-06-01T10:02:00", "2026-06-01T10:15:00", "2026-06-01T10:28:00"]
+            .iter()
+            .map(|d| parse_time(d).unwrap())
+            .collect();
+        assert_eq!(best_offset(&t, &times, 600, 600), Some(7200));
+        // Un trou long, franchi largement, ferait croire à un autre écart : la devinette
+        // ne franchit que des trous courts.
+        assert_ne!(best_offset(&t, &times, 600, 3600), Some(7200));
+        // À l'heure universelle : zéro, pas un autre écart qui en placerait autant.
+        let utc: Vec<i64> = times.iter().map(|t| t - 7200).collect();
+        assert_eq!(best_offset(&t, &utc, 600, 600), Some(0));
+        assert_eq!(best_offset(&t, &[0], 600, 600), None, "1970 : rien");
     }
 
     #[test]
