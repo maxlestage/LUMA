@@ -258,13 +258,14 @@ impl ColorStage {
         if c0 > 1e-9 { c / c0 } else { 0.0 }
     }
 
-    /// [`Self::apply`] sur `px` (au plus [`crate::LANES`] pixels), en colonnes quand seul
-    /// le chroma change (le profil, la Saturation, la Vibrance) : plusieurs fois plus
-    /// vite, mêmes bits. Les autres réglages, et un bloc incomplet, passent pixel par
-    /// pixel.
+    /// [`Self::apply`] sur `px` (au plus [`crate::LANES`] pixels) : les passages vers
+    /// OKLab et retour en colonnes, plusieurs fois plus vite, mêmes bits. Quand seul le
+    /// chroma change (le profil, la Saturation, la Vibrance), tout le calcul ; sinon, le
+    /// réglage de chaque pixel entre les deux ([`Self::adjust`]). Un bloc incomplet passe
+    /// pixel par pixel.
     pub fn apply_lanes(&self, px: &mut [Vec3]) {
         const N: usize = crate::LANES;
-        if !(self.simple || self.chroma_only) || px.len() < N {
+        if px.len() < N {
             for p in px.iter_mut() {
                 *p = self.apply(*p);
             }
@@ -279,13 +280,19 @@ impl ColorStage {
             let v = color::apply(&lms_to_lab, lms.map(color::fast_cbrt));
             *out = [v[0], v[1] - v[0] * white.0, v[2] - v[0] * white.1];
         }
-        // Le gain de chroma de chacun.
+        // Le gain de chroma de chacun ; ou, pour les autres réglages, chaque pixel réglé
+        // dans OKLab (gain 1 : le retour ne change rien de plus).
         let mut k = [0.0f32; N];
         if self.simple {
             k = [(1.0 + self.saturation) * self.profile_chroma; N];
-        } else {
+        } else if self.chroma_only {
             for (g, [_, a, b]) in k.iter_mut().zip(&lab) {
                 *g = self.chroma_gain(*a, *b);
+            }
+        } else {
+            for (g, v) in k.iter_mut().zip(&mut lab) {
+                *v = self.adjust(*v);
+                *g = 1.0;
             }
         }
         // Et retour (les calculs de `OkLab::to_rgb`).
@@ -310,7 +317,13 @@ impl ColorStage {
             let k = (1.0 + self.saturation) * self.profile_chroma;
             return self.ok.to_rgb([l, a * k, b * k]);
         }
-        let [mut l, a, b] = self.ok.from_rgb(rgb);
+        self.ok.to_rgb(self.adjust(self.ok.from_rgb(rgb)))
+    }
+
+    /// Les réglages de couleur d'un pixel dans OKLab : Vibrance, Saturation, mélangeur,
+    /// noir et blanc, étalonnage.
+    #[inline]
+    fn adjust(&self, [mut l, a, b]: Vec3) -> Vec3 {
         let c0 = (a * a + b * b).sqrt();
         let mut c = c0;
         let h = color::fast_atan2(b, a);
@@ -375,7 +388,7 @@ impl ColorStage {
             }
             l = l.max(0.0);
         }
-        self.ok.to_rgb([l, a, b])
+        [l, a, b]
     }
 }
 
@@ -468,6 +481,23 @@ mod tests {
             },
         ];
         settings.push(Settings::default());
+        // Le mélangeur (teinte, saturation, luminance), l'étalonnage, et tout à la fois.
+        let mut mixer = Settings::default();
+        mixer.hsl.hue[0] = 30.0;
+        mixer.hsl.saturation[5] = -20.0;
+        mixer.hsl.luminance[4] = 25.0;
+        let mut grading = Settings::default();
+        grading.color_grading.shadows.saturation = 20.0;
+        grading.color_grading.shadows.hue = 220.0;
+        grading.color_grading.highlights.saturation = 15.0;
+        grading.color_grading.highlights.hue = 40.0;
+        let mut all = mixer.clone();
+        all.color_grading = grading.color_grading.clone();
+        all.vibrance = 20.0;
+        all.saturation = -10.0;
+        let mut mono_mix = mixer.clone();
+        mono_mix.profile = luma_project::Profile::Monochrome;
+        settings.extend([mixer, grading, all, mono_mix]);
         for s in &settings {
             let Some(stage) = ColorStage::new(s) else {
                 continue;

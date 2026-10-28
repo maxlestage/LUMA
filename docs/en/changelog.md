@@ -29,7 +29,9 @@ The professional photo library, step by step.
   once for the whole batch (40 ms less per photo for a 1200 × 600 logo). Then the
   conversion to the output space (JPEG), eight pixels at a time: 24 MP in sRGB 230 →
   150 ms, same bytes; and for 16-bit TIFF and PNG: sRGB about 35% shorter (24 MP:
-  295–366 → 190–204 ms), same bytes.
+  295–366 → 190–204 ms), same bytes. Then colour with the mixer and colour grading: the
+  trips to OKLab and back eight pixels at a time, about 30% shorter (2048 px preview:
+  50–60 → 34–43 ms), same bits.
   Then wavelet noise reduction, without a new image at each scale: 1.8 times faster
   (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
   shorter (0.83 → 0.60 s), same pixels. Then the edge-following filter (Shadows,
