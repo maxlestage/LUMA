@@ -434,7 +434,8 @@ La fototeca profesional, paso a paso.
 - **Páginas de texto en el libro** («Libro, presentación, galería…», `luma book
   --opening --closing`): una página tras la portada (una dedicatoria, unas palabras de
   introducción) y una última página (un lugar, una fecha, agradecimientos), con sus
-  líneas centradas en la página.
+  líneas centradas en la página. Y la disposición a elegir: el número de fotos de cada
+  página («1,2,4», repetido; `--pages`).
 - **Presentación**: a pantalla completa en la app (la foto sola, avanza por sí misma,
   Espacio para pausar, Esc para salir) y **exportada** (`luma slideshow`): una carpeta
   autónoma, index.html y las fotos, para abrir en cualquier navegador o publicar
