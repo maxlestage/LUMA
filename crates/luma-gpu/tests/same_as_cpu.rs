@@ -46,7 +46,7 @@ fn compare_on(gpu: &Gpu, base: &RgbImage, name: &str, s: &Settings, space: Outpu
     luma_image::finish(&mut cpu, scale, s, &Cancel::new(), &mut Timings::default()).unwrap();
     let cpu = luma_image::encode8(&cpu, space);
     assert!(gpu.can_finish(s, base.width, base.height, scale), "{name}");
-    let out = gpu.finish(&base, 1, scale, s, space);
+    let out = gpu.finish(&base, 1, scale, s, space).expect("relecture du GPU");
     let mut worst = 0u8;
     let mut sum = 0u64;
     for (c, g) in cpu.chunks(3).zip(out.chunks(4)) {
@@ -220,7 +220,9 @@ fn several_bases_stay_uploaded_and_never_mix() {
     };
     let (ra, rb) = (reference(&a), reference(&b));
     for (img, id, cpu) in [(&a, 10, &ra), (&b, 11, &rb), (&a, 10, &ra), (&b, 11, &rb)] {
-        let out = gpu.finish(img, id, 0.25, &s, OutputSpace::Srgb);
+        let out = gpu
+            .finish(img, id, 0.25, &s, OutputSpace::Srgb)
+            .expect("relecture du GPU");
         let worst = cpu
             .chunks(3)
             .zip(out.chunks(4))

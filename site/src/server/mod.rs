@@ -39,6 +39,9 @@ pub fn link(path: &str) -> String {
 pub struct Versions {
     pub css: String,
     pub scenes: String,
+    /// Le bundle WebAssembly (`pkg/`), dont les adresses ne portent pas de version : son
+    /// empreinte entre dans le nom du cache du service worker.
+    pub pkg: String,
 }
 
 pub struct Site {
@@ -82,6 +85,11 @@ impl Site {
         .iter()
         .flat_map(|f| read(f))
         .collect();
+        // Paquets sert `pkg/` depuis le dossier courant.
+        let pkg: Vec<u8> = ["pkg/luma_site.js", "pkg/luma_site_bg.wasm"]
+            .iter()
+            .flat_map(|f| std::fs::read(f).unwrap_or_default())
+            .collect();
         Site {
             site_url: site_url
                 .map(|u| u.trim().trim_end_matches('/').to_owned())
@@ -89,6 +97,7 @@ impl Site {
             versions: Versions {
                 css: version(&read("site.css")),
                 scenes: version(&scenes),
+                pkg: version(&pkg),
             },
         }
     }
@@ -102,9 +111,10 @@ impl Site {
             req.header(name)
                 .map(|v| v.split(',').next().unwrap_or("").trim().to_owned())
         };
-        let host = header("x-forwarded-host")
-            .or_else(|| header("host"))
-            .unwrap_or_default();
+        // L'en-tête Host seulement : `X-Forwarded-Host` vient du client tel quel (le
+        // routeur de Heroku le laisse passer) et finirait dans les liens canoniques et le
+        // sitemap. Derrière un autre proxy, `SITE_URL` donne l'adresse.
+        let host = header("host").unwrap_or_default();
         // Un en-tête Host inattendu ne doit pas finir dans les balises de la page.
         if host.is_empty()
             || !host
@@ -192,7 +202,7 @@ fn manifest(lang: Lang) -> String {
 }
 
 /// Le service worker : les fichiers du site mis de côté pour l'usage hors ligne ; un
-/// nouveau nom de cache à chaque version des styles ou des scripts.
+/// nouveau nom de cache à chaque version des styles, des scripts ou du WebAssembly.
 fn service_worker(site: &Site) -> String {
     let mut precache = vec![
         "/".to_owned(),
@@ -254,7 +264,10 @@ fn service_worker(site: &Site) -> String {
     include_str!("sw.js")
         .replace(
             "__VERSION__",
-            &format!("{}-{}", site.versions.css, site.versions.scenes),
+            &format!(
+                "{}-{}-{}",
+                site.versions.css, site.versions.scenes, site.versions.pkg
+            ),
         )
         .replace("__PRECACHE__", &list)
 }
@@ -490,8 +503,8 @@ pub fn app(site: Arc<Site>) -> App {
             .map_or(0, |d| d.as_secs());
         let (status, json) = match (stripe::Stripe::from_env(), stripe::signing_key()) {
             (Some(api), Some(seed)) => match stripe::refresh(&api, &seed, &key, now) {
-                Ok(k) => (200, format!(r#"{{"key":"{k}"}}"#)),
-                Err(e) => (402, format!(r#"{{"error":"{}"}}"#, e.replace('"', "'"))),
+                Ok(k) => (200, serde_json::json!({ "key": k }).to_string()),
+                Err(e) => (402, serde_json::json!({ "error": e }).to_string()),
             },
             _ => (
                 503,

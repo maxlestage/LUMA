@@ -373,8 +373,10 @@ impl Gpu {
     }
 
     /// Finit `base` (sortie de `develop_base`, identifiée par `id`) et l'encode en RGBA
-    /// 8 bits dans `space`. La base n'est envoyée au GPU que si `id` a changé.
-    pub fn finish(&self, base: &RgbImage, id: u64, scale: f32, s: &Settings, space: OutputSpace) -> Vec<u8> {
+    /// 8 bits dans `space`. La base n'est envoyée au GPU que si `id` a changé. `None` si
+    /// le GPU ne rend pas le résultat (pilote perdu, mémoire épuisée) : au processeur de
+    /// finir.
+    pub fn finish(&self, base: &RgbImage, id: u64, scale: f32, s: &Settings, space: OutputSpace) -> Option<Vec<u8>> {
         // Les Blancs et les Noirs, adaptés à la base comme sur le processeur.
         let adapted = luma_image::adaptive_ends(base, s);
         let s = &adapted;
@@ -525,14 +527,20 @@ impl Gpu {
         self.queue.submit([encoder.finish()]);
 
         let slice = u.readback.slice(..);
-        slice.map_async(wgpu::MapMode::Read, |_| {});
-        let _ = self.device.poll(wgpu::PollType::Wait {
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            let _ = tx.send(r.is_ok());
+        });
+        let polled = self.device.poll(wgpu::PollType::Wait {
             submission_index: None,
             timeout: None,
         });
-        let out = slice.get_mapped_range().expect("relecture du GPU").to_vec();
+        if polled.is_err() || rx.try_recv() != Ok(true) {
+            return None;
+        }
+        let out = slice.get_mapped_range().ok()?.to_vec();
         u.readback.unmap();
-        out
+        Some(out)
     }
 }
 

@@ -49,6 +49,16 @@ La fototeca profesional, paso a paso.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
+- **Fiabilidad**: revisión completa del código. Las altas luces ya no se vuelven negras
+  al subir mucho los Blancos; ya no hay cierres con un archivo HEIC, ICC o DNG mal
+  formado, una imagen de un píxel de ancho, un retoque fuera de la foto, un recorte de
+  proporciones bloqueadas llevado al mínimo o un panorama desmesurado. Una exportación ya
+  nunca sobrescribe una foto original; la importación ya no reemplaza un XMP de la
+  fototeca ni un archivo del segundo disco, y conserva el XMP de cada foto de una toma;
+  restaurar la copia de seguridad más antigua del catálogo funciona, y un catálogo
+  ilegible se guarda en las copias. En la app, la vista previa de la foto anterior ya no
+  tapa la que se abre, las máscaras de borde suavizado se ven como se exportan, y una GPU
+  que deja de responder deja al procesador terminar la vista previa.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).

@@ -383,7 +383,7 @@ fn olympus_corrections(path: &Path) -> Option<opcodes::Opcode> {
         let Some(&(_, 11, count, pos)) = entries.iter().find(|e| e.0 == tag) else {
             return Vec::new();
         };
-        let Some(at) = (if count * 4 <= 4 {
+        let Some(at) = (if count <= 1 {
             Some(pos)
         } else {
             u32_at(pos).map(|o| base + o as usize)
@@ -653,8 +653,13 @@ impl RawPhoto {
         let cpp = raw.cpp;
         let area = raw.crop_area.or(raw.active_area);
         let (ox, oy, width, height) = area.map_or((0, 0, raw.width, raw.height), |r| {
-            (r.p.x, r.p.y, r.d.w.min(raw.width), r.d.h.min(raw.height))
+            // Le recadrage du fichier, ramené dans le capteur.
+            let (x, y) = (r.p.x.min(raw.width), r.p.y.min(raw.height));
+            (x, y, r.d.w.min(raw.width - x), r.d.h.min(raw.height - y))
         });
+        if width == 0 || height == 0 {
+            return Err(Error::Decode("zone recadrée vide".into()));
+        }
 
         let mosaic = match &raw.photometric {
             P::Cfa(config) => {
@@ -696,7 +701,7 @@ impl RawPhoto {
         for py in 0..bh {
             for px in 0..bw {
                 for c in 0..cpp {
-                    let bi = (py * black.width + px) * black.cpp + c.min(black.cpp - 1);
+                    let bi = (py * black.width + px) * black.cpp + c.min(black.cpp.max(1) - 1);
                     let b = black_levels.get(bi).copied().unwrap_or(0.0);
                     let w = whites.get(c).or(whites.first()).copied().unwrap_or(65535.0);
                     levels.push((b, (w - b).max(1.0)));
@@ -903,6 +908,10 @@ impl RawPhoto {
 
     /// [`binned`](Self::binned), sans les corrections d'objectif du fichier.
     pub fn binned_uncorrected(&self) -> RgbImage {
+        // Moins d'un bloc du motif sur un côté : rien à réduire.
+        if self.binned_size() == (self.width, self.height) {
+            return self.demosaic_uncorrected();
+        }
         match &self.mosaic {
             Mosaic::Bayer(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 2, 2),
             Mosaic::XTrans(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 3, 6),
@@ -912,10 +921,14 @@ impl RawPhoto {
 
     /// La taille de [`binned`](Self::binned).
     pub fn binned_size(&self) -> (usize, usize) {
-        match &self.mosaic {
-            Mosaic::XTrans(_) => (self.width / 3, self.height / 3),
-            _ => (self.width / 2, self.height / 2),
+        let step = match &self.mosaic {
+            Mosaic::XTrans(_) => 3,
+            _ => 2,
+        };
+        if self.width < step || self.height < step {
+            return (self.width, self.height);
         }
+        (self.width / step, self.height / step)
     }
 }
 

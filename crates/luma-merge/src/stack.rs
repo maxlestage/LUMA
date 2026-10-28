@@ -300,6 +300,20 @@ pub fn stack(
         return Err(Error::Decode("les poses n'ont pas pu être alignées entre elles".into()));
     }
     let px = w * h;
+    // Sur trépied (sans alignement), rien n'a encore comparé les tailles : une pose en
+    // portrait parmi des paysages serait fondue de travers.
+    let load = |i: usize| -> Result<Arc<RgbImage>> {
+        let img = frames.load(i)?;
+        if (img.width, img.height) != (w, h) {
+            return Err(Error::Decode(format!(
+                "la pose {} n'a pas la taille des autres ({} × {} au lieu de {w} × {h})",
+                i + 1,
+                img.width,
+                img.height
+            )));
+        }
+        Ok(img)
+    };
     let warp = |img: &RgbImage, m: &Homography, x: usize, y: usize| -> Option<[f32; 3]> {
         let (u, v) = m.apply((x as f64, y as f64))?;
         sample(img, u, v)
@@ -312,7 +326,7 @@ pub fn stack(
             for (k, &i) in used.iter().enumerate() {
                 cancel.check()?;
                 step(k, "Empilement");
-                let img = frames.load(i)?;
+                let img = load(i)?;
                 let m = models[i].expect("alignée");
                 acc.par_chunks_mut(w)
                     .zip(count.par_chunks_mut(w))
@@ -362,7 +376,7 @@ pub fn stack(
             for (k, &i) in used.iter().enumerate() {
                 cancel.check()?;
                 step(k, "Alignement des poses");
-                let img = frames.load(i)?;
+                let img = load(i)?;
                 let m = models[i].expect("alignée");
                 // Hors de la pose : un rouge négatif, que le format compact ramènerait à 0 ;
                 // la couverture est donc gardée à part.
@@ -408,7 +422,7 @@ pub fn stack(
             for (k, &i) in used.iter().enumerate() {
                 cancel.check()?;
                 step(k / 2, "Statistiques du ciel");
-                let img = frames.load(i)?;
+                let img = load(i)?;
                 let m = models[i].expect("alignée");
                 sum.par_chunks_mut(w)
                     .zip(sum2.par_chunks_mut(w))
@@ -442,7 +456,7 @@ pub fn stack(
             for (k, &i) in used.iter().enumerate() {
                 cancel.check()?;
                 step(used.len() / 2 + k / 2, "Empilement des étoiles");
-                let img = frames.load(i)?;
+                let img = load(i)?;
                 let m = models[i].expect("alignée");
                 acc.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
                     for (x, a) in row.iter_mut().enumerate() {
@@ -477,7 +491,7 @@ pub fn stack(
         }
         StackMode::Focus => focus(frames, &used, &models, w, h, &mut count, &step, cancel)?,
         StackMode::Hdr => {
-            let img = frames.load(reference)?;
+            let img = load(reference)?;
             hdr(
                 frames, &used, &models, &gains, reference, &img, &mut count, &step, cancel,
             )?
