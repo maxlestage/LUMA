@@ -1356,3 +1356,341 @@ es = este acceso regalado ha terminado
 fr = le serveur de licences n'est pas encore configuré
 en = the license server isn't set up yet
 es = el servidor de licencias aún no está configurado
+
+# ----- Galerie, nouveautés récentes, comparatif, aide ----------------------------------
+
+fr = Galerie
+en = Gallery
+es = Galería
+
+fr = Galerie avant / après
+en = Before / after gallery
+es = Galería antes / después
+
+fr = Avant
+en = Before
+es = Antes
+
+fr = Après
+en = After
+es = Después
+
+fr = Avant / après : {film}
+en = Before / after: {film}
+es = Antes / después: {film}
+
+fr = Avant, après. *Développées avec LÜMA.*
+en = Before, after. *Developed with LÜMA.*
+es = Antes, después. *Reveladas con LÜMA.*
+
+fr = Glissez la barre de chaque photo : à gauche, l'image telle qu'elle sort du boîtier, terne et plate ; à droite, la même développée, avec son film.
+en = Drag the bar across each photo: on the left, the image straight out of the camera, dull and flat; on the right, the same one developed, with its film.
+es = Desliza la barra de cada foto: a la izquierda, la imagen tal como sale de la cámara, apagada y plana; a la derecha, la misma revelada, con su película.
+
+fr = Images d'illustration dessinées par le site ; les films y sont approchés.
+en = Illustrations drawn by the website; the films are approximated.
+es = Imágenes de ilustración dibujadas por el sitio; las películas son aproximadas.
+
+fr = Partagez vos photos *développées avec LÜMA*.
+en = Share your photos *developed with LÜMA*.
+es = Comparte tus fotos *reveladas con LÜMA*.
+
+fr = Envoyez‑nous un avant / après, avec le film et les réglages qui vous plaisent : les plus belles images pourront rejoindre cette galerie, avec votre accord et votre nom.
+en = Send us a before / after, with the film and settings you like: the finest images may join this gallery, with your consent and your name.
+es = Envíanos un antes / después, con la película y los ajustes que te gustan: las imágenes más bonitas podrán unirse a esta galería, con tu permiso y tu nombre.
+
+fr = Nouveautés récentes
+en = What's new
+es = Novedades recientes
+
+fr = Ce qui vient *d'arriver*.
+en = Just *arrived*.
+es = Lo que acaba *de llegar*.
+
+fr = Les dernières fonctions de LÜMA, faites et vérifiées par les tests. Sans IA : seulement la photo elle‑même.
+en = The latest features in LÜMA, built and checked by the tests. No AI: only the photo itself.
+es = Las últimas funciones de LÜMA, hechas y comprobadas por las pruebas. Sin IA: solo la propia foto.
+
+fr = Toutes les notes de version →
+en = All release notes →
+es = Todas las notas de la versión →
+
+fr = Retouche
+en = Retouch
+es = Retoque
+
+fr = Plateforme
+en = Platform
+es = Plataforma
+
+fr = Fluidité
+en = Liquify
+es = Licuar
+
+fr = Pousser, gonfler et dégonfler au pinceau, avec sa taille et sa force : redresser une ligne, affiner une forme, corriger un pli. Chaque coup est gardé et s'annule. Sans IA.
+en = Push, bloat and pucker with a brush, with its own size and strength: straighten a line, slim a shape, fix a crease. Every stroke is kept and can be undone. No AI.
+es = Empujar, inflar y desinflar con el pincel, con su tamaño y su fuerza: enderezar una línea, afinar una forma, corregir un pliegue. Cada trazo se guarda y se puede deshacer. Sin IA.
+
+fr = Suppression, correcteur et tampon tracés
+en = Stroke removal, healing and clone
+es = Eliminar, corrector y tampón por trazo
+
+fr = Glissez le long d'un fil, d'une rayure ou d'un câble : il s'efface d'un seul geste, remplacé par la photo qui l'entoure. Le correcteur et le tampon suivent le trait de la même façon.
+en = Drag along a wire, a scratch or a cable: it disappears in a single stroke, replaced by the photo around it. The healing brush and the clone stamp follow the stroke the same way.
+es = Desliza a lo largo de un hilo, un arañazo o un cable: desaparece de un solo gesto, sustituido por la foto que lo rodea. El corrector y el tampón siguen el trazo de la misma manera.
+
+fr = Tons auto
+en = Auto tone
+es = Tonos automáticos
+
+fr = Un clic règle l'exposition, le contraste, les hautes lumières et les ombres d'après l'histogramme de la photo : un point de départ à affiner. Sans IA.
+en = One click sets exposure, contrast, highlights and shadows from the photo's histogram: a starting point to refine. No AI.
+es = Un clic ajusta la exposición, el contraste, las altas luces y las sombras según el histograma de la foto: un punto de partida para afinar. Sin IA.
+
+fr = Traces GPX
+en = GPX tracks
+es = Trazas GPX
+
+fr = Chaque photo prend la position de la trace à l'instant de sa prise de vue et se pose sur la carte ; l'écart de l'horloge du boîtier est deviné.
+en = Each photo takes the track's position at the moment it was shot and lands on the map; the camera clock's offset is worked out for you.
+es = Cada foto toma la posición de la traza en el instante de la toma y se coloca en el mapa; el desfase del reloj de la cámara se deduce solo.
+
+fr = Agrandir à l'export
+en = Enlarge on export
+es = Ampliar al exportar
+
+fr = Une taille plus grande que la photo l'agrandit, jusqu'à quatre fois chaque côté, nette et sans halo autour des contours : pour les grands tirages. Sans IA.
+en = A size larger than the photo enlarges it, up to four times on each side, sharp and with no halo around edges: for big prints. No AI.
+es = Un tamaño mayor que la foto la amplía, hasta cuatro veces cada lado, nítida y sin halo alrededor de los contornos: para las copias grandes. Sin IA.
+
+fr = Texture, voile, netteté et bruit dans les masques
+en = Texture, dehaze, sharpness and noise in masks
+es = Textura, neblina, nitidez y ruido en las máscaras
+
+fr = Adoucir une peau, déboucher un ciel voilé, relever un regard, lisser des ombres bruitées : au pinceau ou dans un dégradé, sans toucher au reste de la photo.
+en = Soften skin, clear a hazy sky, bring out a gaze, smooth noisy shadows: with a brush or in a gradient, without touching the rest of the photo.
+es = Suavizar una piel, despejar un cielo con neblina, realzar una mirada, alisar sombras con ruido: con el pincel o en un degradado, sin tocar el resto de la foto.
+
+fr = Dupliquer un masque
+en = Duplicate a mask
+es = Duplicar una máscara
+
+fr = Une copie, ou une copie inversée aux réglages à zéro : le sol se règle après le ciel, sans retracer la zone.
+en = A copy, or an inverted copy with its settings at zero: adjust the ground after the sky, without redrawing the area.
+es = Una copia, o una copia invertida con los ajustes a cero: el suelo se ajusta después del cielo, sin volver a trazar la zona.
+
+fr = X‑Trans directionnel
+en = Directional X‑Trans
+es = X‑Trans direccional
+
+fr = Sur les RAW Fujifilm, le vert suit les contours au lieu de les moyenner en travers, jusque dans les ombres bruitées : 3 dB de mieux sur nos essais.
+en = On Fujifilm RAW files, green follows the edges instead of averaging across them, even in noisy shadows: 3 dB better in our tests.
+es = En los RAW de Fujifilm, el verde sigue los contornos en lugar de promediarlos de través, incluso en las sombras con ruido: 3 dB mejor en nuestras pruebas.
+
+fr = LÜMA pour Windows
+en = LÜMA for Windows
+es = LÜMA para Windows
+
+fr = Windows 10 et 11, rendu par DirectX 12 ou Vulkan : un installateur sans mot de passe administrateur, ou une archive .zip. Le même moteur que sur Mac et Linux.
+en = Windows 10 and 11, rendered with DirectX 12 or Vulkan: an installer that needs no administrator password, or a .zip archive. The same engine as on Mac and Linux.
+es = Windows 10 y 11, renderizado con DirectX 12 o Vulkan: un instalador sin contraseña de administrador, o un archivo .zip. El mismo motor que en Mac y Linux.
+
+fr = Comparatif
+en = Comparison
+es = Comparativa
+
+fr = LÜMA, *et les autres*.
+en = LÜMA, *and the others*.
+es = LÜMA, *y los demás*.
+
+fr = Quatre éditeurs RAW, chacun avec ses choix : où ils tournent, comment ils se paient, et ce qu'ils savent faire hors ligne.
+en = Four RAW editors, each with its own choices: where they run, how you pay for them, and what they can do offline.
+es = Cuatro editores RAW, cada uno con sus decisiones: dónde funcionan, cómo se pagan y qué saben hacer sin conexión.
+
+fr = Critère
+en = Criterion
+es = Criterio
+
+fr = Systèmes
+en = Systems
+es = Sistemas
+
+fr = Modèle de prix
+en = Pricing model
+es = Modelo de precio
+
+fr = Hors ligne
+en = Offline
+es = Sin conexión
+
+fr = Moteur RAW
+en = RAW engine
+es = Motor RAW
+
+fr = Films et rendus
+en = Films and looks
+es = Películas y estilos
+
+fr = iPhone et iPad
+en = iPhone and iPad
+es = iPhone y iPad
+
+fr = macOS, Linux et Windows ; bientôt iPhone et iPad
+en = macOS, Linux and Windows; iPhone and iPad soon
+es = macOS, Linux y Windows; pronto iPhone y iPad
+
+fr = Abonnement sur ordinateur : {month} par mois ou {year} par an ; achat unique sur iPhone et iPad
+en = Subscription on computers: {month} per month or {year} per year; one-time purchase on iPhone and iPad
+es = Suscripción en ordenador: {month} al mes o {year} al año; compra única en iPhone y iPad
+
+fr = Oui, sans compte ni cloud
+en = Yes, no account or cloud
+es = Sí, sin cuenta ni nube
+
+fr = Moteur propre, sur le GPU : 735 boîtiers et l'iPhone ProRAW
+en = Its own engine, on the GPU: 735 cameras and iPhone ProRAW
+es = Motor propio, en la GPU: 735 cámaras y el iPhone ProRAW
+
+fr = 275 films intégrés, et vos pellicules mesurées
+en = 275 built-in films, plus your own measured film stocks
+es = 275 películas integradas, y tus carretes medidos
+
+fr = Bientôt sur l'App Store, avec le même moteur et le même rendu
+en = Coming soon to the App Store, with the same engine and the same rendering
+es = Pronto en la App Store, con el mismo motor y el mismo resultado
+
+fr = macOS et Windows
+en = macOS and Windows
+es = macOS y Windows
+
+fr = Abonnement mensuel ou annuel
+en = Monthly or yearly subscription
+es = Suscripción mensual o anual
+
+fr = Oui ; l'abonnement se vérifie en ligne régulièrement
+en = Yes; the subscription is checked online regularly
+es = Sí; la suscripción se verifica en línea con regularidad
+
+fr = Moteur d'Adobe Camera Raw
+en = Adobe Camera Raw engine
+es = Motor de Adobe Camera Raw
+
+fr = Profils créatifs et préréglages
+en = Creative profiles and presets
+es = Perfiles creativos y ajustes preestablecidos
+
+fr = Par l'app Lightroom, synchronisée en ligne
+en = Through the Lightroom app, synced online
+es = Con la app Lightroom, sincronizada en línea
+
+fr = Abonnement, ou licence selon les offres du moment
+en = Subscription, or a license depending on current offers
+es = Suscripción, o licencia según las ofertas del momento
+
+fr = Oui
+en = Yes
+es = Sí
+
+fr = Moteur propre
+en = Its own engine
+es = Motor propio
+
+fr = Styles et préréglages
+en = Styles and presets
+es = Estilos y ajustes preestablecidos
+
+fr = Oui, avec des apps dédiées
+en = Yes, with dedicated apps
+es = Sí, con apps dedicadas
+
+fr = Linux, macOS et Windows
+en = Linux, macOS and Windows
+es = Linux, macOS y Windows
+
+fr = Gratuit, open source
+en = Free, open source
+es = Gratis, de código abierto
+
+fr = Oui, sans compte
+en = Yes, no account
+es = Sí, sin cuenta
+
+fr = Moteur open source
+en = Open-source engine
+es = Motor de código abierto
+
+fr = Styles et LUT 3D
+en = Styles and 3D LUTs
+es = Estilos y LUT 3D
+
+fr = Non
+en = No
+es = No
+
+fr = Informations publiques, octobre 2026 ; vérifiez auprès de chaque éditeur. Les noms cités sont des marques de leurs propriétaires.
+en = Public information, October 2026; check with each publisher. The names mentioned are trademarks of their owners.
+es = Información pública, octubre de 2026; compruébala con cada editor. Los nombres citados son marcas de sus propietarios.
+
+fr = Aide et contact
+en = Help and contact
+es = Ayuda y contacto
+
+fr = Aide et premiers pas
+en = Help and getting started
+es = Ayuda y primeros pasos
+
+fr = Bien démarrer, *en quatre gestes*.
+en = Get started *in four steps*.
+es = Empieza bien, *en cuatro gestos*.
+
+fr = Installer
+en = Install
+es = Instalar
+
+fr = LÜMA s'installe sur Mac, Linux et Windows, et s'essaie un mois, complet, sans carte bancaire ni compte.
+en = LÜMA installs on Mac, Linux and Windows, with a full one-month trial, no credit card or account needed.
+es = LÜMA se instala en Mac, Linux y Windows, y se prueba un mes, completo, sin tarjeta bancaria ni cuenta.
+
+fr = Ouvrir
+en = Open
+es = Abrir
+
+fr = Ouvrez un dossier ou importez une carte mémoire : vos RAW entrent dans la photothèque, les originaux restent où ils sont.
+en = Open a folder or import a memory card: your RAW files enter the library, and the originals stay where they are.
+es = Abre una carpeta o importa una tarjeta de memoria: tus RAW entran en la fototeca, los originales se quedan donde están.
+
+fr = Lumière, couleur, masques, films : chaque réglage s'affiche aussitôt et se reprend à tout moment.
+en = Light, color, masks, films: every adjustment shows up instantly and can be changed at any time.
+es = Luz, color, máscaras, películas: cada ajuste se ve al instante y se puede retomar en cualquier momento.
+
+fr = Exporter
+en = Export
+es = Exportar
+
+fr = JPEG, PNG ou TIFF 16 bits, à la taille voulue, avec votre filigrane et vos informations d'auteur si vous le souhaitez.
+en = JPEG, PNG or 16-bit TIFF, at the size you want, with your watermark and author details if you like.
+es = JPEG, PNG o TIFF de 16 bits, al tamaño que quieras, con tu marca de agua y tus datos de autor si lo deseas.
+
+fr = Tout ce que LÜMA sait faire, domaine par domaine, et ce qui vient.
+en = Everything LÜMA can do, area by area, and what's coming.
+es = Todo lo que LÜMA sabe hacer, área por área, y lo que viene.
+
+fr = Votre appareil photo dans la liste des 735 boîtiers reconnus.
+en = Find your camera in the list of 735 supported models.
+es = Tu cámara en la lista de las 735 reconocidas.
+
+fr = Ce qui change à chaque version, en détail.
+en = What changes in each version, in detail.
+es = Lo que cambia en cada versión, en detalle.
+
+fr = L'essai, l'abonnement, vos fichiers, les systèmes.
+en = The trial, the subscription, your files, the systems.
+es = La prueba, la suscripción, tus archivos, los sistemas.
+
+fr = Une question ? *Écrivez‑nous.*
+en = A question? *Write to us.*
+es = ¿Una pregunta? *Escríbenos.*
+
+fr = Un RAW qui s'ouvre mal, une question sur l'abonnement, une idée : écrivez avec la version de LÜMA et, si possible, le fichier concerné.
+en = A RAW file that won't open properly, a question about the subscription, an idea: write to us with your LÜMA version and, if possible, the file in question.
+es = Un RAW que no se abre bien, una pregunta sobre la suscripción, una idea: escríbenos con la versión de LÜMA y, si es posible, el archivo en cuestión.

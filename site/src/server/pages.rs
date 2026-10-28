@@ -601,6 +601,240 @@ fn films(lang: Lang) -> Element {
         )))
 }
 
+/// La galerie : des photos développées avec LÜMA, chacune avec sa barre avant / après.
+/// Les photos sont dessinées dans le navigateur (`showcase.js`, `drawPhoto`) : l'image
+/// brute à gauche de la barre, la photo développée et son film à droite.
+fn gallery(lang: Lang) -> Element {
+    let items = GALLERY.iter().enumerate().map(|(k, &(film, seed, hue))| {
+        let (name, family, filter) = FILMS[film];
+        figure()
+            .class("ba reveal")
+            .style(format!("--k:{k}"))
+            .attr("data-seed", seed.to_string())
+            .attr("data-hue", hue.to_string())
+            .child(
+                div()
+                    .class("ba-frame")
+                    .style("--split:50%")
+                    .child(canvas().class("ba-before").attr("aria-hidden", "true"))
+                    .child(
+                        canvas()
+                            .class("ba-after")
+                            .attr("aria-hidden", "true")
+                            .style(format!("filter:{filter}")),
+                    )
+                    .child(
+                        span()
+                            .class("ba-line")
+                            .attr("aria-hidden", "true")
+                            .child(span()),
+                    )
+                    .child(
+                        span()
+                            .class("ba-tag ba-tag-l")
+                            .attr("aria-hidden", "true")
+                            .text(t(lang, "Avant")),
+                    )
+                    .child(
+                        span()
+                            .class("ba-tag ba-tag-r")
+                            .attr("aria-hidden", "true")
+                            .text(t(lang, "Après")),
+                    )
+                    .child(
+                        input()
+                            .class("ba-range")
+                            .attr("type", "range")
+                            .attr("min", "0")
+                            .attr("max", "100")
+                            .attr("value", "50")
+                            .attr(
+                                "aria-label",
+                                fill(t(lang, "Avant / après : {film}"), &[("film", name)]),
+                            ),
+                    ),
+            )
+            .child(
+                figcaption()
+                    .child(b().text(name))
+                    .child(span().text(t(lang, family))),
+            )
+    });
+    section()
+        .class("gallery")
+        .id("galerie")
+        .child(section_head(
+            t(lang, "Galerie"),
+            heading(h2, t(lang, "Avant, après. *Développées avec LÜMA.*")),
+            Some(p().text(t(lang,
+                "Glissez la barre de chaque photo : à gauche, l'image telle qu'elle sort du boîtier, terne et plate ; à droite, la même développée, avec son film.",
+            ))),
+        ))
+        .child(div().class("ba-grid").children(items))
+        .child(p().class("films-note reveal").text(t(lang,
+            "Images d'illustration dessinées par le site ; les films y sont approchés.",
+        )))
+        .child(
+            div()
+                .class("share reveal")
+                .child(heading(h3, t(lang, "Partagez vos photos *développées avec LÜMA*.")))
+                .child(p().text(t(lang,
+                    "Envoyez‑nous un avant / après, avec le film et les réglages qui vous plaisent : les plus belles images pourront rejoindre cette galerie, avec votre accord et votre nom.",
+                )))
+                .child(
+                    a().class("btn btn-ghost magnetic")
+                        .href(format!("mailto:{CONTACT_EMAIL}"))
+                        .child(span().text(CONTACT_EMAIL)),
+                ),
+        )
+}
+
+/// Les nouveautés récentes : une carte par fonction, avec sa petite scène animée
+/// (`showcase.js`, chargé à l'approche de la section).
+fn recent(lang: Lang) -> Element {
+    section()
+        .class("recent")
+        .id("recentes")
+        .child(section_head(
+            t(lang, "Nouveautés récentes"),
+            heading(h2, t(lang, "Ce qui vient *d'arriver*.")),
+            Some(p().text(t(lang,
+                "Les dernières fonctions de LÜMA, faites et vérifiées par les tests. Sans IA : seulement la photo elle‑même.",
+            ))),
+        ))
+        .child(div().class("recent-grid").children(RECENT.iter().map(|&(demo, tag, title, body)| {
+            article()
+                .class("recent-card reveal tilt")
+                .child(
+                    div()
+                        .class("recent-demo")
+                        .attr("aria-hidden", "true")
+                        .child(canvas().attr("data-demo", demo).attr("width", "640").attr("height", "400")),
+                )
+                .child(
+                    div()
+                        .class("recent-copy")
+                        .child(span().class("recent-tag").text(t(lang, tag)))
+                        .child(h3().text(t(lang, title)))
+                        .child(p().text(t(lang, body))),
+                )
+        })))
+        .child(
+            p().class("cap-more reveal").child(
+                a().href(page_link(lang, "/nouveautes/"))
+                    .text(t(lang, "Toutes les notes de version →")),
+            ),
+        )
+}
+
+/// Le comparatif : LÜMA à côté de Lightroom Classic, Capture One et darktable, sur des
+/// informations publiques ; les prix des autres en modèle, sans montant.
+fn compare(lang: Lang) -> Element {
+    let luma: Vec<String> = COMPARE_LUMA
+        .iter()
+        .map(|s| {
+            fill(
+                t(lang, s),
+                &[
+                    ("month", t(lang, PLANS[0].1)),
+                    ("year", t(lang, PLANS[1].1)),
+                ],
+            )
+        })
+        .collect();
+    let head = thead().child(
+        tr().child(
+            th().attr("scope", "col")
+                .child(span().class("sr-only").text(t(lang, "Critère"))),
+        )
+        .child(th().attr("scope", "col").class("cmp-luma").text("LÜMA"))
+        .children(
+            COMPARE_OTHERS
+                .iter()
+                .map(|(name, _)| th().attr("scope", "col").text(*name)),
+        ),
+    );
+    let rows = COMPARE_ROWS.iter().enumerate().map(|(r, row)| {
+        tr().child(th().attr("scope", "row").text(t(lang, row)))
+            .child(
+                td().class("cmp-luma")
+                    .attr("data-label", "LÜMA")
+                    .text(luma[r].clone()),
+            )
+            .children(
+                COMPARE_OTHERS
+                    .iter()
+                    .map(|(name, cells)| td().attr("data-label", *name).text(t(lang, cells[r]))),
+            )
+    });
+    section()
+        .class("compare")
+        .id("comparatif")
+        .child(section_head(
+            t(lang, "Comparatif"),
+            heading(h2, t(lang, "LÜMA, *et les autres*.")),
+            Some(p().text(t(lang,
+                "Quatre éditeurs RAW, chacun avec ses choix : où ils tournent, comment ils se paient, et ce qu'ils savent faire hors ligne.",
+            ))),
+        ))
+        .child(
+            div()
+                .class("cmp-wrap reveal")
+                .child(table().class("cmp").child(head).child(tbody().children(rows))),
+        )
+        .child(p().class("films-note reveal").text(t(lang,
+            "Informations publiques, octobre 2026 ; vérifiez auprès de chaque éditeur. Les noms cités sont des marques de leurs propriétaires.",
+        )))
+}
+
+/// L'aide : les premiers pas, la documentation, les questions, et l'adresse où écrire.
+fn help(lang: Lang) -> Element {
+    section()
+        .class("help")
+        .id("aide")
+        .child(section_head(
+            t(lang, "Aide et contact"),
+            heading(h2, t(lang, "Bien démarrer, *en quatre gestes*.")),
+            None,
+        ))
+        .child(ol().class("help-steps").children(HELP_STEPS.iter().enumerate().map(|(n, &(title, body))| {
+            li().class("help-step reveal")
+                .child(span().class("help-num").attr("aria-hidden", "true").text(format!("{}", n + 1)))
+                .child(h3().text(t(lang, title)))
+                .child(p().text(t(lang, body)))
+        })))
+        .child(
+            div()
+                .class("help-grid")
+                .child(
+                    nav()
+                        .class("help-links")
+                        .attr("aria-label", t(lang, "Documentation"))
+                        .children(HELP_LINKS.iter().map(|&(title, body, href)| {
+                            a().class("help-link reveal")
+                                .href(target(lang, href))
+                                .child(b().text(t(lang, title)))
+                                .child(span().text(t(lang, body)))
+                        })),
+                )
+                .child(
+                    div()
+                        .class("help-contact reveal")
+                        .id("contact")
+                        .child(p().class("kicker").text(t(lang, "Contact")))
+                        .child(heading(h3, t(lang, "Une question ? *Écrivez‑nous.*")))
+                        .child(p().text(t(lang,
+                            "Un RAW qui s'ouvre mal, une question sur l'abonnement, une idée : écrivez avec la version de LÜMA et, si possible, le fichier concerné.",
+                        )))
+                        .child(
+                            a().class("btn magnetic")
+                                .href(format!("mailto:{CONTACT_EMAIL}"))
+                                .child(span().text(CONTACT_EMAIL)),
+                        ),
+                ),
+        )
+}
+
 /// Vos photos restent chez vous.
 fn privacy(lang: Lang) -> Element {
     section()
@@ -1496,14 +1730,18 @@ pub fn home(site: &Site, origin: &str, lang: Lang) -> Page {
                 .child(pipeline(lang))
                 .child(lab(lang))
                 .child(films(lang))
+                .child(gallery(lang))
+                .child(recent(lang))
                 .child(apple(lang))
                 .child(desktop(lang))
                 .child(capabilities(lang))
                 .child(privacy(lang))
                 .child(performance(lang))
                 .child(platforms(lang))
+                .child(compare(lang))
                 .child(pricing(lang))
                 .child(faq(lang))
+                .child(help(lang))
                 .child(cta(lang)),
         )
         .child(site_footer(here));

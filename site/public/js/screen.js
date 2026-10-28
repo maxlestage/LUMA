@@ -231,6 +231,11 @@ const denser = (r, g, b) => {
   return [r, g, b].map((v) => clamp(Math.pow(clamp(l + (v - l) * 1.5), 1.45) * 0.95));
 };
 
+/** La photo telle qu'elle sort du boîtier (terne, plate), d'après la photo développée. */
+export function rawOf(src) {
+  return grade(src, asRaw);
+}
+
 function photoStates(w, h, opts) {
   const edited = photoURL(w, h, opts);
   return { edited, raw: grade(edited, asRaw), bright: grade(edited, brighter) };
