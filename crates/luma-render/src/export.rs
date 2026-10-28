@@ -56,8 +56,12 @@ pub fn write_file(
     let profile = icc::profile(space);
     let err = |e: image::ImageError| e.to_string();
     let sixteen = bits == 16 && ext != "jpg" && ext != "jpeg";
+    let jpeg = matches!(ext.as_str(), "jpg" | "jpeg");
+    // L'image en octets, sauf pour le JPEG ordinaire, converti bande par bande.
     let (bytes, kind) = if sixteen {
         (luma_image::encode16_bytes(img, space), ExtendedColorType::Rgb16)
+    } else if jpeg && !web {
+        (Vec::new(), ExtendedColorType::Rgb8)
     } else {
         (luma_image::encode8(img, space), ExtendedColorType::Rgb8)
     };
@@ -66,12 +70,17 @@ pub fn write_file(
         "jpg" | "jpeg" => {
             // Sur tous les cœurs, octet pour octet le JPEG d'avant ; en mémoire d'abord :
             // le paquet XMP s'insère après les premiers segments.
-            let encode = if web {
-                crate::jpeg::encode_web
+            let mut out = if web {
+                crate::jpeg::encode_web(&bytes, img.width, img.height, quality, &meta.exif, &profile)?
             } else {
-                crate::jpeg::encode
+                let enc = luma_image::Encoder8::new(space);
+                let w = img.width;
+                let lines = |y: usize, x0: usize, dst: &mut [u8]| {
+                    let start = y * w + x0;
+                    enc.pixels(&img.data[start..start + dst.len() / 3], dst);
+                };
+                crate::jpeg::encode_with(&lines, img.width, img.height, quality, &meta.exif, &profile)?
             };
-            let mut out = encode(&bytes, img.width, img.height, quality, &meta.exif, &profile)?;
             if let Some(x) = &meta.xmp {
                 insert_jpeg_xmp(&mut out, x);
             }
@@ -1584,6 +1593,31 @@ mod tests {
             ..Options::default()
         };
         assert_eq!(describe(&big), "JPEG 92, sRGB, 12000 px, LÜMA/, agrandie au besoin");
+    }
+
+    #[test]
+    fn jpeg_converted_strip_by_strip_is_byte_identical() {
+        let dir = std::env::temp_dir().join(format!("luma-bandes-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // Des tailles qui tombent juste ou non sur les blocs de 8, des couleurs hors du
+        // gamut de sortie.
+        for (w, h) in [(48, 32), (37, 23), (8, 9), (1, 1), (130, 7)] {
+            let img = RgbImage {
+                width: w,
+                height: h,
+                data: (0..w * h)
+                    .map(|i| [(i % w) as f32 / w as f32 * 1.3, 0.3, (i / w) as f32 / h as f32 - 0.1])
+                    .collect(),
+            };
+            for space in [OutputSpace::Srgb, OutputSpace::DisplayP3] {
+                let path = dir.join(format!("{w}x{h}.jpg"));
+                write_file(&path, &img, space, 90, 8, &Embedded::default(), false).unwrap();
+                let profile = icc::profile(space);
+                let before = crate::jpeg::encode(&luma_image::encode8(&img, space), w, h, 90, &[], &profile).unwrap();
+                assert_eq!(std::fs::read(&path).unwrap(), before, "{w} × {h}");
+            }
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -555,20 +555,39 @@ pub(crate) fn to_output(m: &Mat3, p: [f32; 3]) -> [f32; 3] {
 
 /// L'image encodée sur 8 bits (RGB entrelacé), prête pour un JPEG ou l'écran.
 pub fn encode8(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
-    let lut = EncodeLut::new(|v| space.encode(v));
-    let m = lc::rgb_to_rgb(&lc::WORKING, &space.primaries());
+    let enc = Encoder8::new(space);
     let mut out = vec![0u8; img.data.len() * 3];
     out.par_chunks_mut(3 * img.width.max(1))
         .zip(img.data.par_chunks(img.width.max(1)))
-        .for_each(|(dst, src)| {
-            for (d, &p) in dst.as_chunks_mut::<3>().0.iter_mut().zip(src) {
-                let c = to_output(&m, p);
-                for i in 0..3 {
-                    d[i] = (lut.get(c[i]) * 255.0 + 0.5) as u8;
-                }
-            }
-        });
+        .for_each(|(dst, src)| enc.pixels(src, dst));
     out
+}
+
+/// La conversion de [`encode8`], pixel par pixel : un morceau d'image se convertit
+/// quand on en a besoin (l'encodeur JPEG, bande par bande), aux mêmes octets.
+pub struct Encoder8 {
+    lut: EncodeLut,
+    m: Mat3,
+}
+
+impl Encoder8 {
+    pub fn new(space: OutputSpace) -> Encoder8 {
+        Encoder8 {
+            lut: EncodeLut::new(|v| space.encode(v)),
+            m: lc::rgb_to_rgb(&lc::WORKING, &space.primaries()),
+        }
+    }
+
+    /// `src` (linéaire, espace de travail) en octets RGB dans `dst` (trois par pixel).
+    #[inline]
+    pub fn pixels(&self, src: &[[f32; 3]], dst: &mut [u8]) {
+        for (d, &p) in dst.as_chunks_mut::<3>().0.iter_mut().zip(src) {
+            let c = to_output(&self.m, p);
+            for i in 0..3 {
+                d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
+            }
+        }
+    }
 }
 
 /// L'image encodée sur 16 bits (TIFF, PNG).
