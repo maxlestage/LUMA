@@ -28,13 +28,14 @@ if ($Remove) {
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
 Copy-Item -Force (Join-Path $here 'bin\*') $dest -Recurse
 
-# Le raccourci au menu Démarrer, avec l'icône embarquée dans l'exécutable.
+# Le raccourci au menu Démarrer, avec l'icône de LÜMA (luma.ico, à côté des programmes).
 $exe = Join-Path $dest 'luma-studio.exe'
 $ws = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut($shortcut)
 $lnk.TargetPath = $exe
 $lnk.WorkingDirectory = $dest
-$lnk.IconLocation = $exe
+$icon = Join-Path $dest 'luma.ico'
+$lnk.IconLocation = if (Test-Path $icon) { $icon } else { $exe }
 $lnk.Description = 'LÜMA, développement photo RAW'
 $lnk.Save()
 
