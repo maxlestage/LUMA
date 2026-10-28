@@ -132,6 +132,9 @@ pub struct Local {
     /// Netteté : positive, le détail le plus fin ressort (yeux, cils, matières) ;
     /// négative, la zone s'adoucit (un flou doux de la luminance).
     pub sharpness: f32,
+    /// Réduction du bruit de la luminance dans la zone (0 à 100), en suivant les
+    /// contours.
+    pub noise: f32,
     /// Correction du voile dans la zone (positif : le retire ; négatif : en ajoute).
     pub dehaze: f32,
     /// Moiré : les couleurs parasites d'un motif fin (tissu, grille) adoucies.
@@ -165,7 +168,7 @@ impl Local {
         ] {
             fix(v, 100.0);
         }
-        for v in [&mut self.moire, &mut self.defringe] {
+        for v in [&mut self.moire, &mut self.defringe, &mut self.noise] {
             *v = if v.is_finite() { v.clamp(0.0, 100.0) } else { 0.0 };
         }
     }
