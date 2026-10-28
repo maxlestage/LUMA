@@ -378,7 +378,13 @@ fn apple(lang: Lang) -> Element {
 /// Sur votre bureau : Linux (disponible) et Windows (en préparation), le même moteur
 /// qu'Apple. Une scène 3D (un écran qui tourne lentement) occupe le fond de la section.
 fn systems(lang: Lang) -> Element {
-    let logo = |name: &str| if name == "Linux" { LINUX_SVG } else { WINDOWS_SVG };
+    let logo = |name: &str| {
+        if name == "Linux" {
+            LINUX_SVG
+        } else {
+            WINDOWS_SVG
+        }
+    };
     section()
         .class("systems")
         .id("systemes")
