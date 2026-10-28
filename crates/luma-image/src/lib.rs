@@ -167,6 +167,40 @@ pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: 
         let render = RenderStage::new(s);
         img.data.par_chunks_mut(LANES).for_each(|c| render.apply_lanes(c));
     });
+    finish_after_render(img, scale, s, cancel, t)
+}
+
+/// [`finish`] sur une copie de `base` : la copie se fait dans la passe du rendu, sur
+/// tous les cœurs, au lieu d'une copie à part sur un seul (16 à 22 ms par aperçu, le
+/// plus souvent en fautes de pages). Les mêmes calculs dans le même ordre : les mêmes
+/// pixels que `finish` sur `base.clone()`.
+pub fn finish_from(base: &RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
+    let adapted = t.time("blancs et noirs", || adaptive_ends(base, s));
+    let s = &adapted;
+    let mut img = t.time("rendu", || {
+        let render = RenderStage::new(s);
+        // Une image neuve à zéro : ses pages arrivent à la première écriture, sur le
+        // cœur qui l'écrit.
+        let mut img = RgbImage {
+            width: base.width,
+            height: base.height,
+            data: vec![[0.0; 3]; base.data.len()],
+        };
+        img.data
+            .par_chunks_mut(LANES)
+            .zip(base.data.par_chunks(LANES))
+            .for_each(|(c, b)| {
+                c.copy_from_slice(b);
+                render.apply_lanes(c);
+            });
+        img
+    });
+    finish_after_render(&mut img, scale, s, cancel, t)?;
+    Ok(img)
+}
+
+/// Les étapes de [`finish`] après le rendu (`s` : les réglages déjà adaptés).
+fn finish_after_render(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<()> {
     cancel.check()?;
     t.time("couleur", || {
         if let Some(stage) = color::ColorStage::new(s) {
@@ -219,22 +253,20 @@ pub fn finish_layers(
     cancel: &Cancel,
     t: &mut Timings,
 ) -> Result<RgbImage> {
-    let mut out = base.clone();
-    finish(&mut out, scale, s, cancel, t)?;
+    let mut out = finish_from(base, scale, s, cancel, t)?;
     for (mask, look, k) in look_layers(s) {
-        let mut alt = if needs_own_base(s, &look) {
-            let own = base_for(&look, t)?;
-            // Même recadrage, même taille : sinon (ne devrait pas arriver), la base commune.
-            if (own.width, own.height) == (base.width, base.height) {
-                Arc::unwrap_or_clone(own)
-            } else {
-                base.clone()
-            }
+        let own = if needs_own_base(s, &look) {
+            Some(base_for(&look, t)?)
         } else {
-            base.clone()
+            None
         };
+        // Même recadrage, même taille : sinon (ne devrait pas arriver), la base commune.
+        let from = own
+            .as_deref()
+            .filter(|o| (o.width, o.height) == (base.width, base.height))
+            .unwrap_or(base);
         cancel.check()?;
-        finish(&mut alt, scale, &look, cancel, t)?;
+        let alt = finish_from(from, scale, &look, cancel, t)?;
         // La zone se lit sur la base (même taille que la sortie), plage comprise.
         let weights = t.time("films des masques", || local::weights_on(mask, base));
         out.data
@@ -676,6 +708,36 @@ pub fn histogram(encoded: &[u8]) -> [[u32; 256]; 3] {
 
 #[cfg(test)]
 mod tests {
+
+    /// La copie fondue dans la passe du rendu donne exactement les pixels de `finish` sur
+    /// une copie à part : réglages de base, puis toutes les étapes (blancs et noirs
+    /// adaptés, couleur, accentuation, effets), sur une image de largeur impaire.
+    #[test]
+    fn finish_from_gives_the_same_pixels() {
+        use super::*;
+        let base = RgbImage::from_fn(203, 77, |x, y| {
+            let v = ((x * 7919 + y * 104729) % 1000) as f32 / 400.0;
+            [v, v * 0.7 + 0.02, 1.2 - v * 0.4]
+        });
+        let mut heavy = Settings {
+            exposure: 0.4,
+            contrast: 20.0,
+            whites: 30.0,
+            blacks: -20.0,
+            vibrance: 25.0,
+            ..Settings::default()
+        };
+        heavy.detail.sharpen_amount = 60.0;
+        heavy.effects.vignette_amount = -30.0;
+        heavy.color_grading.shadows.saturation = 20.0;
+        heavy.color_grading.shadows.hue = 220.0;
+        for s in [Settings::default(), heavy] {
+            let mut copy = base.clone();
+            finish(&mut copy, 0.5, &s, &Cancel::new(), &mut Timings::default()).unwrap();
+            let fused = finish_from(&base, 0.5, &s, &Cancel::new(), &mut Timings::default()).unwrap();
+            assert!(fused.data == copy.data && (fused.width, fused.height) == (203, 77));
+        }
+    }
 
     /// Les Blancs et les Noirs suivent la photo : à +100, une photo terne s'ouvre
     /// jusqu'au blanc, une photo déjà claire ne brûle pas ; à −100, l'extrême sombre

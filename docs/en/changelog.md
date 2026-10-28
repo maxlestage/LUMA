@@ -98,6 +98,10 @@ The professional photo library, step by step.
   on the card (the one embedded in the RAW, read in the background); a click leaves one
   on the card, with its JPEG; “All”, “None”; together with the chosen days (`luma import
   --skip photo`).
+- **Snappier sliders**: every preview render copied its base separately, on a single
+  core; the copy now happens in the first pass, on all cores. A render with basic
+  settings is 4 to 23% shorter depending on the camera (iPhone DNG 120 → 97 ms, ORF 86 →
+  67 ms), without changing a pixel.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
