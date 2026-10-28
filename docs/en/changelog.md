@@ -382,6 +382,9 @@ The professional photo library, step by step.
 - **Photo book** (“Book, slideshow, gallery…”, `luma book`): a PDF with its cover (the first
   photo, the title and subtitle), then pages of one, two or four photos chosen from
   their orientation; 20 × 20, 30 × 30, A4, 21 × 28, A3 formats.
+- **Text pages in the book** (“Book, slideshow, gallery…”, `luma book --opening
+  --closing`): a page after the cover (a dedication, a few words of introduction) and a
+  last page (a place, a date, acknowledgements), their lines centred on the page.
 - **Slideshow**: full screen in the app (the photo alone, advancing by itself, Space to
   pause, Esc to leave), and **exported** (`luma slideshow`): a self-contained folder,
   index.html and the photos, to open in any browser or put online (crossfade, arrows,

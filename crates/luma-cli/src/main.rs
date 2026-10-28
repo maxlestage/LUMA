@@ -126,10 +126,13 @@ USAGE
   luma book <photo>… -o livre.pdf [--title titre] [--subtitle texte]
                     [--format 20x20|30x30|A4|21x28|A3|LxH] [--landscape] [--margin mm]
                     [--gap mm] [--dpi 300] [--captions] [--profile imprimante.icc]
+                    [--opening texte] [--closing texte]
       Un livre photo : la couverture (la première photo, le titre et le sous‑titre
       dessous), puis des pages d'une, deux ou quatre photos selon leur orientation (deux
       paysages l'un sous l'autre, deux portraits côte à côte). 20 × 20 cm, marges de
-      15 mm et 300 points par pouce par défaut.
+      15 mm et 300 points par pouce par défaut. --opening : une page de texte après la
+      couverture (une dédicace) ; --closing : une dernière page de texte ; « \\n » dans
+      le texte passe à la ligne.
   luma slideshow <photo>… -o dossier [--title titre] [--seconds 5] [--fade 1]
                          [--size 2048] [--quality 85] [--captions]
       Un diaporama qui se suffit à lui‑même : le dossier reçoit index.html et les photos
@@ -1843,6 +1846,9 @@ fn book(args: Vec<String>) -> Result<(), String> {
             "-o" | "--output" => out = Some(PathBuf::from(it.next().ok_or("-o : fichier attendu")?)),
             "--title" => b.title = it.next().unwrap_or_default(),
             "--subtitle" => b.subtitle = it.next().unwrap_or_default(),
+            // « \n » dans le texte : une nouvelle ligne.
+            "--opening" => b.opening = it.next().unwrap_or_default().replace("\\n", "\n"),
+            "--closing" => b.closing = it.next().unwrap_or_default().replace("\\n", "\n"),
             "--format" | "--paper" => {
                 let v = it.next().unwrap_or_default();
                 let n = v.to_lowercase().replace(['×', ' '], "x");
@@ -1890,8 +1896,9 @@ fn book(args: Vec<String>) -> Result<(), String> {
     }
     let layout = b.layout();
     let mut pages = Vec::new();
-    for sheet in book::plan(&landscape) {
-        let cells = b.cells(sheet.kind, landscape[sheet.photos[0]]);
+    for sheet in b.sheets(&landscape) {
+        let orientation = sheet.photos.first().is_none_or(|&k| landscape[k]);
+        let cells = b.cells(sheet.kind, orientation);
         let mut pictures = Vec::with_capacity(sheet.photos.len());
         for (&k, cell) in sheet.photos.iter().zip(&cells) {
             let (photo, settings) = open_with_settings(&photos[k])?;

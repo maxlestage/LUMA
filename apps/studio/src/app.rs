@@ -2126,8 +2126,9 @@ impl Studio {
             }
             let layout = b.layout();
             let mut pages = Vec::new();
-            for sheet in book::plan(&landscape) {
-                let cells = b.cells(sheet.kind, landscape[sheet.photos[0]]);
+            for sheet in b.sheets(&landscape) {
+                let orientation = sheet.photos.first().is_none_or(|&k| landscape[k]);
+                let cells = b.cells(sheet.kind, orientation);
                 let mut pictures = Vec::with_capacity(sheet.photos.len());
                 for (&k, cell) in sheet.photos.iter().zip(&cells) {
                     let (photo, settings) = open(&photos[k])?;
@@ -2529,12 +2530,26 @@ impl Studio {
                     ui.end_row();
                 });
                 ui.checkbox(&mut b.captions, tr("Le nom de chaque photo dessous"));
+                ui.label(RichText::new(tr("Page de texte après la couverture")).color(theme::DIM));
+                ui.add(
+                    egui::TextEdit::multiline(&mut b.opening)
+                        .hint_text(tr("une dédicace, un mot d'introduction"))
+                        .desired_rows(2)
+                        .desired_width(f32::INFINITY),
+                );
+                ui.label(RichText::new(tr("Dernière page")).color(theme::DIM));
+                ui.add(
+                    egui::TextEdit::multiline(&mut b.closing)
+                        .hint_text(tr("un lieu, une date, des remerciements"))
+                        .desired_rows(2)
+                        .desired_width(f32::INFINITY),
+                );
                 // Les pages d'après l'orientation des vignettes.
                 let landscape: Vec<bool> = photos
                     .iter()
                     .map(|p| self.thumbs.get(p).is_none_or(|t| t.size()[0] >= t.size()[1]))
                     .collect();
-                let pages = book::plan(&landscape).len();
+                let pages = b.sheets(&landscape).len();
                 ui.label(
                     RichText::new(trf(
                         "Environ {pages} pages : la couverture, puis une, deux ou quatre photos par page",
