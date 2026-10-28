@@ -28,9 +28,9 @@ fn center(o: usize, n: usize, m: usize) -> f32 {
     (o as f32 + 0.5) * n as f32 / m as f32 - 0.5
 }
 
-/// Pour chaque pixel de sortie : le premier pixel d'origine lu et les six poids (de
-/// somme 1), bords prolongés.
-fn taps(n: usize, m: usize) -> Vec<(isize, [f32; 6])> {
+/// Pour chaque pixel de sortie : les six pixels d'origine lus (bords prolongés, indices
+/// calculés une fois pour toutes) et leurs six poids, de somme 1.
+fn taps(n: usize, m: usize) -> Vec<([usize; 6], [f32; 6])> {
     (0..m)
         .map(|o| {
             let c = center(o, n, m);
@@ -38,13 +38,19 @@ fn taps(n: usize, m: usize) -> Vec<(isize, [f32; 6])> {
             let mut w: [f32; 6] = std::array::from_fn(|k| lanczos(c - (first + k as isize) as f32));
             let sum: f32 = w.iter().sum();
             w.iter_mut().for_each(|v| *v /= sum);
-            (first, w)
+            (std::array::from_fn(|k| clamp_index(first + k as isize, n)), w)
         })
         .collect()
 }
 
 fn clamp_index(i: isize, n: usize) -> usize {
     i.clamp(0, n as isize - 1) as usize
+}
+
+/// Les deux pixels d'origine qui encadrent le centre du pixel de sortie `o`.
+fn neighbours(o: usize, n: usize, m: usize) -> (usize, usize) {
+    let f = center(o, n, m).floor() as isize;
+    (clamp_index(f, n), clamp_index(f + 1, n))
 }
 
 /// `img` agrandie à `width × height` (au moins aussi grande que l'original sur chaque
@@ -60,10 +66,10 @@ pub fn enlarge(img: &RgbImage, width: usize, height: usize) -> RgbImage {
     let mut rows = RgbImage::new(width, sh);
     rows.data.par_chunks_mut(width).enumerate().for_each(|(y, out)| {
         let src = &img.data[y * sw..(y + 1) * sw];
-        for (o, (first, w)) in out.iter_mut().zip(&tx) {
+        for (o, (idx, w)) in out.iter_mut().zip(&tx) {
             let mut acc = [0.0f32; 3];
-            for (k, wk) in w.iter().enumerate() {
-                let p = src[clamp_index(first + k as isize, sw)];
+            for (&i, wk) in idx.iter().zip(w) {
+                let p = src[i];
                 for c in 0..3 {
                     acc[c] += wk * p[c];
                 }
@@ -73,46 +79,34 @@ pub fn enlarge(img: &RgbImage, width: usize, height: usize) -> RgbImage {
     });
     // Puis les colonnes, et le garde‑fou sur les quatre voisins d'origine.
     let ty = taps(sh, height);
+    let nx: Vec<(usize, usize)> = (0..width).map(|x| neighbours(x, sw, width)).collect();
     let mut out = RgbImage::new(width, height);
     out.data.par_chunks_mut(width).enumerate().for_each(|(y, line)| {
-        let (first, w) = ty[y];
-        let lines: [&[[f32; 3]]; 6] = std::array::from_fn(|k| {
-            let r = clamp_index(first + k as isize, sh);
-            &rows.data[r * width..(r + 1) * width]
-        });
-        let cy = center(y, sh, height);
-        let (y0, y1) = (
-            clamp_index(cy.floor() as isize, sh),
-            clamp_index(cy.floor() as isize + 1, sh),
-        );
-        for (x, o) in line.iter_mut().enumerate() {
-            let mut acc = [0.0f32; 3];
-            for (k, wk) in w.iter().enumerate() {
-                let p = lines[k][x];
+        let (idx, w) = &ty[y];
+        // Ligne par ligne d'origine sur toute la largeur : le même ordre de sommes pour
+        // chaque pixel qu'un pixel après l'autre, mais en boucles que le compilateur
+        // vectorise.
+        line.fill([0.0; 3]);
+        for (&r, &wk) in idx.iter().zip(w) {
+            let src = &rows.data[r * width..(r + 1) * width];
+            for (o, p) in line.iter_mut().zip(src) {
                 for c in 0..3 {
-                    acc[c] += wk * p[c];
+                    o[c] += wk * p[c];
                 }
             }
-            let cx = center(x, sw, width);
-            let (x0, x1) = (
-                clamp_index(cx.floor() as isize, sw),
-                clamp_index(cx.floor() as isize + 1, sw),
-            );
-            let near = [
-                img.data[y0 * sw + x0],
-                img.data[y0 * sw + x1],
-                img.data[y1 * sw + x0],
-                img.data[y1 * sw + x1],
-            ];
+        }
+        let (y0, y1) = neighbours(y, sh, height);
+        let (r0, r1) = (&img.data[y0 * sw..(y0 + 1) * sw], &img.data[y1 * sw..(y1 + 1) * sw]);
+        for (o, &(x0, x1)) in line.iter_mut().zip(&nx) {
+            let near = [r0[x0], r0[x1], r1[x0], r1[x1]];
             for c in 0..3 {
                 let lo = near.iter().map(|p| p[c]).fold(f32::INFINITY, f32::min);
                 let hi = near.iter().map(|p| p[c]).fold(f32::NEG_INFINITY, f32::max);
                 // Quatre voisins NaN : pas de bornes (et `clamp` paniquerait).
                 if lo <= hi {
-                    acc[c] = acc[c].clamp(lo, hi);
+                    o[c] = o[c].clamp(lo, hi);
                 }
             }
-            *o = acc;
         }
     });
     out
@@ -157,6 +151,91 @@ mod tests {
             .sum::<f32>()
             / (3 * a.data.len()) as f32;
         10.0 * (1.0 / mse).log10()
+    }
+
+    /// L'agrandissement tel qu'il était avant les indices précalculés et la somme des
+    /// colonnes sur toute la ligne, pixel après pixel : la référence du résultat exact.
+    fn reference(img: &RgbImage, width: usize, height: usize) -> RgbImage {
+        let (sw, sh) = (img.width, img.height);
+        let weights = |n: usize, m: usize| -> Vec<(isize, [f32; 6])> {
+            (0..m)
+                .map(|o| {
+                    let c = center(o, n, m);
+                    let first = c.floor() as isize - 2;
+                    let mut w: [f32; 6] = std::array::from_fn(|k| lanczos(c - (first + k as isize) as f32));
+                    let sum: f32 = w.iter().sum();
+                    w.iter_mut().for_each(|v| *v /= sum);
+                    (first, w)
+                })
+                .collect()
+        };
+        let (tx, ty) = (weights(sw, width), weights(sh, height));
+        let mut rows = RgbImage::new(width, sh);
+        for y in 0..sh {
+            for (o, (first, w)) in tx.iter().enumerate() {
+                let mut acc = [0.0f32; 3];
+                for (k, wk) in w.iter().enumerate() {
+                    let p = img.data[y * sw + clamp_index(first + k as isize, sw)];
+                    for c in 0..3 {
+                        acc[c] += wk * p[c];
+                    }
+                }
+                rows.data[y * width + o] = acc;
+            }
+        }
+        let mut out = RgbImage::new(width, height);
+        for (y, (first, w)) in ty.iter().enumerate() {
+            let cy = center(y, sh, height);
+            let (y0, y1) = (
+                clamp_index(cy.floor() as isize, sh),
+                clamp_index(cy.floor() as isize + 1, sh),
+            );
+            for x in 0..width {
+                let mut acc = [0.0f32; 3];
+                for (k, wk) in w.iter().enumerate() {
+                    let p = rows.data[clamp_index(first + k as isize, sh) * width + x];
+                    for c in 0..3 {
+                        acc[c] += wk * p[c];
+                    }
+                }
+                let cx = center(x, sw, width);
+                let (x0, x1) = (
+                    clamp_index(cx.floor() as isize, sw),
+                    clamp_index(cx.floor() as isize + 1, sw),
+                );
+                let near = [
+                    img.data[y0 * sw + x0],
+                    img.data[y0 * sw + x1],
+                    img.data[y1 * sw + x0],
+                    img.data[y1 * sw + x1],
+                ];
+                for c in 0..3 {
+                    let lo = near.iter().map(|p| p[c]).fold(f32::INFINITY, f32::min);
+                    let hi = near.iter().map(|p| p[c]).fold(f32::NEG_INFINITY, f32::max);
+                    if lo <= hi {
+                        acc[c] = acc[c].clamp(lo, hi);
+                    }
+                }
+                out.data[y * width + x] = acc;
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn enlarging_gives_exactly_the_same_pixels_as_before() {
+        let mut odd = scene(13, 9);
+        odd.data[40] = [f32::NAN; 3];
+        for (img, w, h) in [
+            (scene(40, 30), 97, 71),
+            (scene(5, 4), 50, 9),
+            (odd, 29, 30),
+            (scene(64, 48), 128, 96),
+        ] {
+            let (a, b) = (enlarge(&img, w, h), reference(&img, w, h));
+            let bits = |i: &RgbImage| i.data.iter().flat_map(|p| p.map(f32::to_bits)).collect::<Vec<_>>();
+            assert_eq!(bits(&a), bits(&b), "{w}×{h}");
+        }
     }
 
     #[test]
