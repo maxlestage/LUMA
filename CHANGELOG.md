@@ -177,6 +177,8 @@ La photothèque professionnelle, étape par étape.
   les croiser ; les branches, cheveux et textures fines n'ont plus de pointillés ni
   d'effet « fermeture éclair » (4 dB de mieux sur nos essais). Les doublons de travail
   sont refaits une fois.
+- **Correcteur et tampon tracés** (Retouche) : glisser le long d'une ride ou d'une
+  rayure la reprend d'un seul geste, la source suivant le trait.
 - **Taille de tirage** (Exporter, Dimensions, « Tirage (cm) », ou
   `--resize 30x40cm@300`) : le cadre en centimètres et la résolution en points par
   pouce, inscrite dans le JPEG, le PNG et le TIFF pour l'imprimeur.
