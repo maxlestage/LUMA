@@ -76,6 +76,9 @@ pub struct Embedded {
     pub xmp: Option<String>,
     /// Les mêmes balises EXIF, pour les écrire dans un TIFF.
     pub tags: Option<ExifTags>,
+    /// La résolution d'un tirage (points par pouce) ; `None` : celle de toujours (72 dans
+    /// un TIFF, aucune dans un JPEG).
+    pub dpi: Option<u32>,
 }
 
 impl Embedded {
@@ -103,7 +106,12 @@ impl Embedded {
         info.creator = author.clone().unwrap_or_default();
         info.rights = copyright.clone().unwrap_or_default();
         let xmp = (info != Meta::default()).then(|| xmp_packet(&info));
-        Embedded { exif, xmp, tags }
+        Embedded {
+            exif,
+            xmp,
+            tags,
+            dpi: None,
+        }
     }
 }
 
@@ -353,8 +361,8 @@ pub fn tiff_header(
         short(0x0115, 3),
         long(0x0116, height as u32),
         long(0x0117, pixel_bytes as u32),
-        rationals(0x011A, &[(72, 1)]),
-        rationals(0x011B, &[(72, 1)]),
+        rationals(0x011A, &[(meta.dpi.unwrap_or(72), 1)]),
+        rationals(0x011B, &[(meta.dpi.unwrap_or(72), 1)]),
         short(0x011C, 1),
         short(0x0128, 2),
     ];

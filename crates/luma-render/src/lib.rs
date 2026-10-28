@@ -634,6 +634,67 @@ mod tests {
     }
 
     #[test]
+    fn a_print_size_is_written_with_its_resolution() {
+        let p = photo();
+        let dir = std::env::temp_dir().join(format!("luma-export-tirage-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // 2,54 × 5,08 cm à 20 ppp : un cadre de 20 × 40 pixels ; la photo, 48 × 64,
+        // y tient en 20 × 27.
+        let resize = Some(export::Resize::Print {
+            width_cm: 2.54,
+            height_cm: 5.08,
+            dpi: 20,
+        });
+        let jpg = dir.join("tirage.jpg");
+        let o = export::Options {
+            resize,
+            ..export::Options::default()
+        };
+        export::develop(&p, &Settings::default(), &jpg, &o, &Default::default()).unwrap();
+        let bytes = std::fs::read(&jpg).unwrap();
+        assert_eq!(&bytes[6..11], b"JFIF\0");
+        assert_eq!(bytes[13], 1, "en points par pouce");
+        assert_eq!(&bytes[14..18], &[0, 20, 0, 20]);
+        let img = image::open(&jpg).unwrap();
+        assert_eq!((img.width(), img.height()), (20, 27));
+        // Le TIFF porte les mêmes 20 ppp (XResolution, YResolution).
+        let tif = dir.join("tirage.tif");
+        let o = export::Options {
+            format: export::Format::Tiff,
+            resize,
+            ..export::Options::default()
+        };
+        export::develop(&p, &Settings::default(), &tif, &o, &Default::default()).unwrap();
+        let t = std::fs::read(&tif).unwrap();
+        let u16_at = |i: usize| u16::from_le_bytes([t[i], t[i + 1]]);
+        let u32_at = |i: usize| u32::from_le_bytes([t[i], t[i + 1], t[i + 2], t[i + 3]]);
+        let ifd = u32_at(4) as usize;
+        let resolution = |tag: u16| {
+            (0..usize::from(u16_at(ifd)))
+                .map(|k| ifd + 2 + 12 * k)
+                .find(|&e| u16_at(e) == tag)
+                .map(|e| {
+                    let at = u32_at(e + 8) as usize;
+                    (u32_at(at), u32_at(at + 4))
+                })
+        };
+        assert_eq!(resolution(0x011A), Some((20, 1)));
+        assert_eq!(resolution(0x011B), Some((20, 1)));
+        // Sans tirage, rien ne change : 72 dans le TIFF, aucune unité dans le JPEG.
+        let plain = dir.join("simple.jpg");
+        export::develop(
+            &p,
+            &Settings::default(),
+            &plain,
+            &export::Options::default(),
+            &Default::default(),
+        )
+        .unwrap();
+        assert_eq!(std::fs::read(&plain).unwrap()[13], 0);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn sources_are_cached_and_oriented() {
         let p = photo();
         assert_eq!(p.full_size(), (48, 64));

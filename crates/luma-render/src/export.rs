@@ -81,6 +81,9 @@ pub fn write_file(
                 };
                 crate::jpeg::encode_with(&lines, img.width, img.height, quality, &meta.exif, &profile)?
             };
+            if let Some(dpi) = meta.dpi {
+                crate::jpeg::set_density(&mut out, dpi);
+            }
             if let Some(x) = &meta.xmp {
                 insert_jpeg_xmp(&mut out, x)?;
             }
@@ -314,6 +317,9 @@ pub enum Resize {
     Fit { width: usize, height: usize },
     /// Le nombre de pixels, en millions.
     Megapixels(f32),
+    /// Un tirage : l'image tient dans ce cadre (en centimètres, le grand côté de la photo
+    /// sur le grand côté du cadre) à `dpi` points par pouce, inscrits dans le fichier.
+    Print { width_cm: f32, height_cm: f32, dpi: u32 },
 }
 
 impl Resize {
@@ -332,6 +338,10 @@ impl Resize {
             Resize::ShortEdge(n) => n as f64 / w.min(h),
             Resize::Fit { width: fw, height: fh } => (fw as f64 / w).min(fh as f64 / h),
             Resize::Megapixels(m) => (f64::from(m) * 1e6 / (w * h)).sqrt(),
+            Resize::Print { .. } => {
+                let (bw, bh) = self.print_pixels(width >= height);
+                (bw as f64 / w).min(bh as f64 / h)
+            }
         };
         if scale.is_nan() || scale == 1.0 || (scale > 1.0 && !enlarge) {
             return (width, height);
@@ -357,11 +367,65 @@ impl Resize {
         }
     }
 
+    /// Le cadre d'un tirage en pixels, posé dans le sens de la photo (`landscape` : plus
+    /// large que haute). `(0, 0)` pour une autre taille.
+    pub fn print_pixels(self, landscape: bool) -> (usize, usize) {
+        let Resize::Print {
+            width_cm,
+            height_cm,
+            dpi,
+        } = self
+        else {
+            return (0, 0);
+        };
+        let px = |cm: f32| ((f64::from(cm) / 2.54 * f64::from(dpi)).round() as usize).max(1);
+        let (long, short) = (px(width_cm.max(height_cm)), px(width_cm.min(height_cm)));
+        if landscape { (long, short) } else { (short, long) }
+    }
+
+    /// Les points par pouce à inscrire dans le fichier (un tirage seulement).
+    pub fn dpi(self) -> Option<u32> {
+        match self {
+            Resize::Print { dpi, .. } => Some(dpi),
+            _ => None,
+        }
+    }
+
     /// Lit une taille : `2048` ou `long:2048` (grand côté), `short:1080` (petit côté),
-    /// `1920x1080` (cadre), `12mp` (mégapixels). `None` si la valeur est vide ou nulle.
+    /// `1920x1080` (cadre), `12mp` (mégapixels), `30x40cm@300` (tirage, 300 ppp par
+    /// défaut). `None` si la valeur est vide ou nulle.
     pub fn parse(s: &str) -> Option<Resize> {
         let s = s.trim().to_lowercase();
         let num = |v: &str| v.trim().parse::<usize>().ok().filter(|&n| n > 0);
+        if s.contains("cm") {
+            let (size, dpi) = match s.split_once('@') {
+                Some((a, b)) => (
+                    a,
+                    b.trim()
+                        .trim_end_matches("ppp")
+                        .trim_end_matches("dpi")
+                        .trim()
+                        .parse::<u32>()
+                        .ok()?,
+                ),
+                None => (s.as_str(), 300),
+            };
+            let (a, b) = size.trim().trim_end_matches("cm").split_once(['x', '×'])?;
+            let cm = |v: &str| {
+                v.trim()
+                    .trim_end_matches("cm")
+                    .trim()
+                    .replace(',', ".")
+                    .parse::<f32>()
+                    .ok()
+                    .filter(|v| v.is_finite() && *v > 0.0 && *v <= 500.0)
+            };
+            return (1..=2400).contains(&dpi).then_some(Resize::Print {
+                width_cm: cm(a)?,
+                height_cm: cm(b)?,
+                dpi,
+            });
+        }
         if let Some(v) = s.strip_suffix("mpx").or_else(|| s.strip_suffix("mp")) {
             let m: f32 = v.trim().replace(',', ".").parse().ok()?;
             return (m > 0.0 && m.is_finite()).then_some(Resize::Megapixels(m));
@@ -389,6 +453,11 @@ impl Resize {
             Resize::ShortEdge(n) => format!("short:{n}"),
             Resize::Fit { width, height } => format!("{width}x{height}"),
             Resize::Megapixels(m) => format!("{m}mp"),
+            Resize::Print {
+                width_cm,
+                height_cm,
+                dpi,
+            } => format!("{width_cm}x{height_cm}cm@{dpi}"),
         }
     }
 
@@ -399,6 +468,14 @@ impl Resize {
             Resize::ShortEdge(n) => format!("petit côté {n} px"),
             Resize::Fit { width, height } => format!("{width} × {height} px"),
             Resize::Megapixels(m) => format!("{m} Mpx"),
+            Resize::Print {
+                width_cm,
+                height_cm,
+                dpi,
+            } => {
+                let cm = |v: f32| format!("{v}").replace('.', ",");
+                format!("{} × {} cm à {dpi} ppp", cm(width_cm), cm(height_cm))
+            }
         }
     }
 }
@@ -758,7 +835,7 @@ pub fn develop(
         options.bits
     };
     let raw = photo.raw();
-    let embedded = Embedded::new(
+    let mut embedded = Embedded::new(
         &PhotoMetadata {
             make: raw.make.clone(),
             model: raw.model.clone(),
@@ -769,6 +846,7 @@ pub fn develop(
         image.width,
         image.height,
     );
+    embedded.dpi = options.resize.and_then(Resize::dpi);
     let web = options.web && options.format == Format::Jpeg;
     write_file(out, &image, options.space, options.quality, bits, &embedded, web)
 }
@@ -1335,8 +1413,49 @@ mod tests {
         assert_eq!(Resize::LongEdge(9000).fit(w, h, true), (9000, 6000));
         assert_eq!(Resize::LongEdge(2048).fit(w, h, true), (2048, 1365));
         assert_eq!(Resize::LongEdge(4000).fit(800, 600, true), (3200, 2400));
+        // Un tirage de 30 × 40 cm à 300 ppp : 3543 × 4724 pixels, posés dans le sens de
+        // la photo (le grand côté sur le grand côté).
+        let print = Resize::Print {
+            width_cm: 30.0,
+            height_cm: 40.0,
+            dpi: 300,
+        };
+        assert_eq!(print.print_pixels(true), (4724, 3543));
+        assert_eq!(print.fit(6000, 4000, false), (4724, 3149));
+        assert_eq!(print.fit(4000, 6000, false), (3149, 4724));
+        assert_eq!(print.dpi(), Some(300));
+        assert_eq!(Resize::LongEdge(10).dpi(), None);
         let (bw, bh) = Resize::Megapixels(500.0).fit(w, h, true);
         assert!(bw * bh <= 200_000_000 && bw * bh > 199_000_000, "{bw} × {bh}");
+    }
+
+    #[test]
+    fn print_sizes_are_parsed_written_and_described() {
+        let p = Resize::parse("30x40cm@240").unwrap();
+        assert_eq!(
+            p,
+            Resize::Print {
+                width_cm: 30.0,
+                height_cm: 40.0,
+                dpi: 240
+            }
+        );
+        assert_eq!(Resize::parse(&p.id()), Some(p));
+        assert_eq!(p.describe(), "30 × 40 cm à 240 ppp");
+        // Virgule décimale, espaces, 300 ppp par défaut.
+        let a4 = Resize::parse("21 × 29,7 cm").unwrap();
+        assert_eq!(
+            a4,
+            Resize::Print {
+                width_cm: 21.0,
+                height_cm: 29.7,
+                dpi: 300
+            }
+        );
+        assert_eq!(Resize::parse(&a4.id()), Some(a4));
+        for bad in ["0x40cm", "30x40cm@0", "30cm", "30x40cm@abc"] {
+            assert_eq!(Resize::parse(bad), None, "{bad}");
+        }
     }
 
     #[test]
