@@ -2621,7 +2621,7 @@ impl Studio {
                 );
                 // La disposition : le nombre de photos de chaque page, au choix ; le texte
                 // tapé est gardé tant qu'il n'est pas valable.
-                let id = ui.id().with("disposition-livre");
+                let id = ui.scope_id().with("disposition-livre");
                 let mut text: String = ui.data_mut(|d| d.get_temp(id)).unwrap_or_else(|| {
                     b.rhythm.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")
                 });
