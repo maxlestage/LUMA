@@ -302,6 +302,9 @@ The professional photo library, step by step.
 - **Phone photos at their date and on the map**: the EXIF of developed images (JPEG,
   HEIC, AVIF, PNG, WebP, TIFF) is read like a RAW's — capture date, camera, lens,
   settings, GPS position. Photos already in the library are read again once.
+- **A GPX track to place photos** (`luma geotag --gpx track.gpx`): each photo takes the
+  track's position at the moment it was taken, written to its XMP; the camera clock's
+  offset is given with `--offset`. The library and the map show it at once.
 - **Scopes** (above the histogram, or Shift+J): **waveform** (luminance, column by
   column), **RGB parade** (each channel on its own) and **vectorscope** (hue and
   saturation, with the 75% primary targets and the skin‑tone line), computed on the

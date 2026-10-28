@@ -2261,6 +2261,7 @@ version = "0.2.0"
 dependencies = [
  "luma-project",
  "luma-raw",
+ "quick-xml 0.42.0",
  "rayon",
  "serde",
  "serde_json",

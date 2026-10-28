@@ -13,6 +13,7 @@
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
+//! luma geotag <photo>… --gpx t.gpx  place les photos d'après une trace GPX (dans le XMP)
 //! luma import [carte] --to dossier  importe une carte (rangement, renommage, 2nd disque)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
@@ -140,6 +141,16 @@ USAGE
       préréglage XMP ou des réglages à chaque image d'une vidéo AVI en Motion JPEG
       (celle de nombreux appareils photo), puis l'enregistre au même format : même
       taille, même rythme, le son recopié tel quel. Pour une vidéo courte (1 Go au plus).
+  luma geotag <photo|dossier>… --gpx trace.gpx [--offset +02:00] [--max-gap 3600]
+              [--replace] [--dry-run]
+      Place les photos d'après une trace GPX (téléphone, montre, GPS) : chacune prend la
+      position de la trace à l'instant de sa prise de vue, entre les deux points qui
+      l'encadrent, écrite dans son XMP (le fichier n'est pas touché ; la photothèque et
+      la carte la lisent). --offset : l'écart de l'horloge du boîtier à l'heure
+      universelle (+02:00 pour un boîtier à l'heure d'été de Paris ; 0 par défaut).
+      --max-gap : le plus long trou de la trace à franchir, en secondes (une heure par
+      défaut). Une photo qui a déjà une position la garde, sauf avec --replace ;
+      --dry-run montre ce qui serait fait.
   luma import [carte|dossier] --to dossier [--folders \"{année}/{année}-{mois}-{jour}\"]
               [--name modèle] [--backup second-disque] [--dry-run] [--catalog f.lumacat]
       Importe les photos d'une carte mémoire (sans carte donnée : la carte montée, celle
@@ -1616,6 +1627,71 @@ fn bounded<T: std::str::FromStr + PartialOrd>(option: &str, v: Option<String>, l
         .ok_or_else(|| format!("{option} : valeur hors des bornes"))
 }
 
+/// `luma geotag` : les photos placées d'après une trace GPX.
+fn geotag(args: Vec<String>) -> Result<(), String> {
+    use luma_library::geotag::{self, Outcome};
+    let (mut gpx, mut offset, mut max_gap, mut replace, mut dry) = (None, 0, 3600, false, false);
+    let mut inputs = Vec::new();
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--gpx" => gpx = Some(PathBuf::from(it.next().ok_or("--gpx attend une trace")?)),
+            "--offset" => {
+                let v = it.next().ok_or("--offset attend un écart (+02:00)")?;
+                offset = geotag::offset(&v).ok_or_else(|| format!("--offset : « {v} » n'est pas un écart (+02:00)"))?;
+            }
+            "--max-gap" => max_gap = bounded("--max-gap", it.next(), 1, 86_400 * 7)?,
+            "--replace" => replace = true,
+            "--dry-run" => dry = true,
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => inputs.push(PathBuf::from(a)),
+        }
+    }
+    let gpx = gpx.ok_or("il faut une trace (--gpx trace.gpx)")?;
+    let text = std::fs::read_to_string(&gpx).map_err(|e| format!("{} : {e}", gpx.display()))?;
+    let track = geotag::read_gpx(&text).map_err(|e| format!("{} : {e}", gpx.display()))?;
+    // Les photos : celles données, et celles des dossiers donnés.
+    let mut photos = Vec::new();
+    for p in inputs {
+        if p.is_dir() {
+            let mut found: Vec<PathBuf> = std::fs::read_dir(&p)
+                .map_err(|e| format!("{} : {e}", p.display()))?
+                .flatten()
+                .map(|e| e.path())
+                .filter(|f| f.is_file() && luma_raw::is_photo(f))
+                .collect();
+            found.sort();
+            photos.extend(found);
+        } else {
+            photos.push(p);
+        }
+    }
+    if photos.is_empty() {
+        return Err("aucune photo à placer".into());
+    }
+    let (mut placed, mut kept, mut outside, mut undated) = (0, 0, 0, 0);
+    for p in &photos {
+        match geotag::place(p, &track, offset, max_gap, replace, !dry)? {
+            Outcome::Placed(pos) => {
+                placed += 1;
+                println!("{} : {:.6}, {:.6}", p.display(), pos.latitude, pos.longitude);
+            }
+            Outcome::AlreadyPlaced => kept += 1,
+            Outcome::OutsideTrack => {
+                outside += 1;
+                println!("{} : hors de la trace", p.display());
+            }
+            Outcome::NoDate => undated += 1,
+        }
+    }
+    println!(
+        "{placed} photos placées{}, {kept} déjà placées, {outside} hors de la trace, {undated} sans date ({} points de trace)",
+        if dry { " (essai : rien d'écrit)" } else { "" },
+        track.len()
+    );
+    Ok(())
+}
+
 /// `luma video` : un film ou des réglages sur chaque image d'une vidéo.
 fn video(args: Vec<String>) -> Result<(), String> {
     use luma_render::video;
@@ -2267,6 +2343,15 @@ fn main() -> ExitCode {
             _ => gallery(args.collect()),
         };
         return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "geotag" {
+        return match geotag(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");
