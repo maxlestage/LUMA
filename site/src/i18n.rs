@@ -269,6 +269,22 @@ mod catalog_tests {
             add(question);
             add(answer);
         }
+        for (_, tag, title, body) in RECENT {
+            [tag, title, body].into_iter().for_each(&mut add);
+        }
+        COMPARE_ROWS.into_iter().for_each(&mut add);
+        COMPARE_LUMA.into_iter().for_each(&mut add);
+        for (_, cells) in COMPARE_OTHERS {
+            cells.into_iter().for_each(&mut add);
+        }
+        for (title, body) in HELP_STEPS {
+            add(title);
+            add(body);
+        }
+        for (title, body, _) in HELP_LINKS {
+            add(title);
+            add(body);
+        }
         for (title, links) in FOOTER {
             add(title);
             links.iter().for_each(|l| add(l.0));
