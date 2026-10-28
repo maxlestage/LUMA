@@ -90,12 +90,25 @@ pub fn write_file(
             std::fs::write(path, out).map_err(|e| format!("{} : {e}", path.display()))
         }
         "png" => {
-            let mut enc = image::codecs::png::PngEncoder::new(std::io::BufWriter::new(create()?));
+            let Some(dpi) = meta.dpi else {
+                let mut enc = image::codecs::png::PngEncoder::new(std::io::BufWriter::new(create()?));
+                let _ = enc.set_icc_profile(profile);
+                if !meta.exif.is_empty() {
+                    let _ = enc.set_exif_metadata(meta.exif.clone());
+                }
+                return enc.write_image(&bytes, w, h, kind).map_err(err);
+            };
+            // Un tirage : le PNG en mémoire, puis sa résolution (bloc pHYs) juste après
+            // l'en‑tête.
+            let mut png = Vec::new();
+            let mut enc = image::codecs::png::PngEncoder::new(&mut png);
             let _ = enc.set_icc_profile(profile);
             if !meta.exif.is_empty() {
                 let _ = enc.set_exif_metadata(meta.exif.clone());
             }
-            enc.write_image(&bytes, w, h, kind).map_err(err)
+            enc.write_image(&bytes, w, h, kind).map_err(err)?;
+            insert_png_density(&mut png, dpi);
+            std::fs::write(path, png).map_err(|e| format!("{} : {e}", path.display()))
         }
         "tif" | "tiff" => {
             // Écrit par LÜMA : une bande RVB non compressée, avec ICC, EXIF et XMP ; les
@@ -118,6 +131,37 @@ pub fn write_file(
         }
         other => Err(format!("format de sortie inconnu « {other} » (jpg, png, tif)")),
     }
+}
+
+/// Le CRC‑32 des blocs PNG (polynôme 0xEDB88320).
+fn crc32(data: &[u8]) -> u32 {
+    let mut c = 0xFFFF_FFFFu32;
+    for &b in data {
+        c ^= u32::from(b);
+        for _ in 0..8 {
+            c = if c & 1 != 0 { (c >> 1) ^ 0xEDB8_8320 } else { c >> 1 };
+        }
+    }
+    !c
+}
+
+/// Ajoute la résolution `dpi` (bloc pHYs, en points par mètre) à un PNG, juste après
+/// son en‑tête ; ce qui n'est pas un PNG ne bouge pas.
+fn insert_png_density(png: &mut Vec<u8>, dpi: u32) {
+    const SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    if png.len() < 33 || png[..8] != SIGNATURE || &png[12..16] != b"IHDR" {
+        return;
+    }
+    let per_metre = (f64::from(dpi) / 0.0254).round() as u32;
+    let mut body = b"pHYs".to_vec();
+    body.extend_from_slice(&per_metre.to_be_bytes());
+    body.extend_from_slice(&per_metre.to_be_bytes());
+    body.push(1);
+    let mut chunk = 9u32.to_be_bytes().to_vec();
+    chunk.extend_from_slice(&body);
+    chunk.extend_from_slice(&crc32(&body).to_be_bytes());
+    // La signature (8), puis l'en‑tête : longueur, nom, 13 octets, CRC.
+    png.splice(33..33, chunk);
 }
 
 /// Le format de fichier de l'export.
@@ -1431,6 +1475,37 @@ mod tests {
         assert_eq!(Resize::LongEdge(10).dpi(), None);
         let (bw, bh) = Resize::Megapixels(500.0).fit(w, h, true);
         assert!(bw * bh <= 200_000_000 && bw * bh > 199_000_000, "{bw} × {bh}");
+    }
+
+    #[test]
+    fn png_prints_carry_their_resolution() {
+        // Le CRC des blocs PNG, sur la valeur de référence du format.
+        assert_eq!(crc32(b"IEND"), 0xAE42_6082);
+        let dir = std::env::temp_dir().join(format!("luma-png-ppp-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let img = RgbImage {
+            width: 12,
+            height: 8,
+            data: (0..96).map(|i| [i as f32 / 96.0, 0.4, 0.2]).collect(),
+        };
+        let path = dir.join("tirage.png");
+        let meta = Embedded {
+            dpi: Some(300),
+            ..Embedded::default()
+        };
+        write_file(&path, &img, OutputSpace::Srgb, 90, 8, &meta, false).unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        // Juste après l'en‑tête : pHYs, 11811 points par mètre (300 ppp), en mètres.
+        assert_eq!(&bytes[37..41], b"pHYs");
+        assert_eq!(&bytes[41..45], &11_811u32.to_be_bytes());
+        assert_eq!(bytes[49], 1);
+        // Le fichier se relit, aux mêmes pixels qu'un PNG sans résolution.
+        let plain = dir.join("simple.png");
+        write_file(&plain, &img, OutputSpace::Srgb, 90, 8, &Embedded::default(), false).unwrap();
+        let (a, b) = (image::open(&path).unwrap(), image::open(&plain).unwrap());
+        assert_eq!(a.as_bytes(), b.as_bytes());
+        assert!(!std::fs::read(&plain).unwrap().windows(4).any(|w| w == b"pHYs"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
