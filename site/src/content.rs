@@ -42,7 +42,7 @@ pub const PREMIUM: [&str; 6] = [
     "Masques, films empilés, recadrage et géométrie",
     "Empilements, HDR, mise au point, ciel étoilé, panoramas en DNG",
     "Export JPEG, PNG, TIFF 16 bits, en P3 et ProPhoto",
-    "Sur Mac et Linux, avec toutes les mises à jour",
+    "Sur Mac, Linux et Windows, avec toutes les mises à jour",
 ];
 
 pub const MARQUEE: [&str; 9] = [
@@ -235,11 +235,11 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Faut‑il un compte ou une connexion ?",
-        "Non. LÜMA fonctionne sans compte. Sur Mac et Linux, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.",
+        "Non. LÜMA fonctionne sans compte. Sur Mac, Linux et Windows, une fois par jour s'il y a du réseau, l'app vérifie simplement que l'abonnement court ; sans réseau, elle continue.",
     ),
     (
         "Que se passe‑t‑il après l'essai ?",
-        "Tout est ouvert pendant l'essai : 14 jours sur Mac et Linux, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.",
+        "Tout est ouvert pendant l'essai : 14 jours sur Mac, Linux et Windows, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.",
     ),
     (
         "Où acheter LÜMA ?",
