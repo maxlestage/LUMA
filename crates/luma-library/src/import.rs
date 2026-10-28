@@ -151,8 +151,14 @@ pub fn plan(entries: &[Entry], o: &Options, name: impl Fn(&Entry, usize) -> Opti
             plan.skipped.push(e.path.clone());
             continue;
         }
+        // Le second disque aussi : un fichier du même nom n'y est jamais remplacé.
+        let on_backup = |t: &Path| {
+            o.backup
+                .as_ref()
+                .is_some_and(|b| b.join(t.strip_prefix(&o.dest).unwrap_or(t)).exists())
+        };
         let mut k = 2;
-        while target.exists() || taken.contains(&target) {
+        while target.exists() || taken.contains(&target) || on_backup(&target) {
             target = dir.join(format!("{stem}-{k}{ext}"));
             k += 1;
         }
@@ -211,9 +217,28 @@ pub fn copy_verified(from: &Path, to: &Path) -> Result<(), String> {
     std::fs::rename(&tmp, to).map_err(err)
 }
 
-/// Le XMP d'une photo copiée : à côté d'elle, sous son nouveau nom.
-fn sidecar_target(photo: &Path) -> PathBuf {
-    photo.with_extension("xmp")
+/// Le XMP d'une photo copiée : à côté d'elle, sous son nouveau nom, dans la forme de
+/// l'original (`IMG.CR3.xmp` ou `IMG.xmp`). Si ce nom est déjà pris (le XMP d'une autre
+/// photo du même nom), la forme longue, propre à la photo ; `None` si elle l'est aussi,
+/// ou si le même XMP y est déjà (celui d'une prise, partagé par le RAW et son JPEG) :
+/// un XMP déjà là n'est jamais écrasé.
+fn sidecar_target(source: &Path, sidecar: &Path, photo: &Path) -> Option<PathBuf> {
+    let long = PathBuf::from(format!("{}.xmp", photo.display()));
+    let short = photo.with_extension("xmp");
+    let first = if *sidecar == source.with_extension("xmp") {
+        short
+    } else {
+        long.clone()
+    };
+    for p in [first, long] {
+        if !p.exists() {
+            return Some(p);
+        }
+        if same(sidecar, &p).unwrap_or(false) {
+            return None;
+        }
+    }
+    None
 }
 
 /// Ce que l'import a fait.
@@ -231,8 +256,10 @@ pub fn run(plan: &Plan, progress: impl Fn(usize)) -> Result<Report, String> {
     for item in &plan.items {
         for to in std::iter::once(&item.target).chain(item.backup.as_ref()) {
             copy_verified(&item.source, to)?;
-            if let Some(x) = &item.sidecar {
-                copy_verified(x, &sidecar_target(to))?;
+            if let Some(x) = &item.sidecar
+                && let Some(to) = sidecar_target(&item.source, x, to)
+            {
+                copy_verified(x, &to)?;
             }
         }
         report.copied += 1;
@@ -337,6 +364,44 @@ mod tests {
             |_, _| None,
         );
         assert!(other.items[0].target.ends_with("2026/2026-10-27/IMG_0002.CR3"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Les XMP d'une prise (forme longue, un par photo) arrivent chacun sous son nom ; un
+    /// XMP de la photothèque, et un fichier du second disque, ne sont jamais remplacés.
+    #[test]
+    fn sidecars_and_the_second_disk_are_never_overwritten() {
+        let root = dir("xmp");
+        let card = root.join("CARTE");
+        std::fs::create_dir_all(&card).unwrap();
+        std::fs::write(card.join("IMG_1.CR3"), b"raw").unwrap();
+        std::fs::write(card.join("IMG_1.JPG"), b"jpeg").unwrap();
+        std::fs::write(card.join("IMG_1.CR3.xmp"), b"reglages du raw").unwrap();
+        std::fs::write(card.join("IMG_1.JPG.xmp"), b"reglages du jpeg").unwrap();
+        let o = Options {
+            dest: root.join("Photos"),
+            folders: String::new(),
+            backup: Some(root.join("Second")),
+        };
+        std::fs::create_dir_all(&o.dest).unwrap();
+        std::fs::write(o.dest.join("IMG_1.xmp"), b"reglages de la phototheque").unwrap();
+        std::fs::create_dir_all(o.backup.as_ref().unwrap()).unwrap();
+        std::fs::write(root.join("Second/IMG_1.CR3"), b"autre photo du second disque").unwrap();
+        let entries = [
+            entry(&card.join("IMG_1.CR3"), "2026-10-26T09:00:00"),
+            entry(&card.join("IMG_1.JPG"), "2026-10-26T09:00:00"),
+        ];
+        let p = plan(&entries, &o, |_, _| None);
+        assert!(p.items[0].target.ends_with("IMG_1-2.CR3"), "{:?}", p.items[0].target);
+        run(&p, |_| {}).unwrap();
+        let read = |p: &str| std::fs::read(o.dest.join(p)).unwrap();
+        assert_eq!(read("IMG_1.xmp"), b"reglages de la phototheque");
+        assert_eq!(read("IMG_1-2.CR3.xmp"), b"reglages du raw");
+        assert_eq!(read("IMG_1.JPG.xmp"), b"reglages du jpeg");
+        assert_eq!(
+            std::fs::read(root.join("Second/IMG_1.CR3")).unwrap(),
+            b"autre photo du second disque"
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 

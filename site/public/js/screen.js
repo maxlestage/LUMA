@@ -253,10 +253,8 @@ function pointer(ctx, x, y, k) {
  * L'interface de LÜMA sur Mac : film, photo, panneau de réglages.
  * Rend `draw({ t, edit, split })` : `edit` (0 à 1) amène les curseurs du RAW brut à la
  * photo développée, `split` (0 à 1, ou moins pour rien) place la barre avant / après.
- * `os` habille la fenêtre : `'mac'` (feux à gauche), `'linux'` (boutons ronds à droite,
- * Vulkan) ou `'windows'` (réduire, agrandir et fermer à droite, DirectX 12).
  */
-export function macScreen(canvas, { os = 'mac' } = {}) {
+export function macScreen(canvas) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height, s = W / 1280;
   const font = (w, px) => `${w} ${px * s}px -apple-system, Inter, sans-serif`;
@@ -268,40 +266,13 @@ export function macScreen(canvas, { os = 'mac' } = {}) {
   const b = base.getContext('2d');
   b.fillStyle = '#0d0d12'; b.fillRect(0, 0, W, H);
   b.fillStyle = '#16161d'; b.fillRect(0, 0, W, 38 * s);
-  // Les boutons de la fenêtre, à la manière de chaque système.
-  const right = os === 'mac' ? 0 : 120;
-  if (os === 'mac') {
-    ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { b.fillStyle = c; b.beginPath(); b.arc((20 + i * 20) * s, 19 * s, 6 * s, 0, 7); b.fill(); });
-  } else if (os === 'linux') {
-    b.strokeStyle = 'rgba(255,255,255,.85)'; b.lineWidth = 1.4 * s;
-    [0, 1, 2].forEach((i) => {
-      const cx = W - (78 - i * 28) * s, cy = 19 * s;
-      b.fillStyle = 'rgba(255,255,255,.12)'; b.beginPath(); b.arc(cx, cy, 10 * s, 0, 7); b.fill();
-      b.beginPath();
-      if (i === 0) { b.moveTo(cx - 4 * s, cy + 3 * s); b.lineTo(cx + 4 * s, cy + 3 * s); }
-      if (i === 1) b.rect(cx - 3.5 * s, cy - 3.5 * s, 7 * s, 7 * s);
-      if (i === 2) { b.moveTo(cx - 3.5 * s, cy - 3.5 * s); b.lineTo(cx + 3.5 * s, cy + 3.5 * s); b.moveTo(cx + 3.5 * s, cy - 3.5 * s); b.lineTo(cx - 3.5 * s, cy + 3.5 * s); }
-      b.stroke();
-    });
-  } else {
-    b.strokeStyle = 'rgba(255,255,255,.85)'; b.lineWidth = 1.2 * s;
-    [0, 1, 2].forEach((i) => {
-      const cx = W - (115 - i * 46) * s, cy = 19 * s;
-      if (i === 2) { b.fillStyle = '#c42b1c'; b.fillRect(cx - 23 * s, 0, 46 * s, 38 * s); }
-      b.beginPath();
-      if (i === 0) { b.moveTo(cx - 5 * s, cy); b.lineTo(cx + 5 * s, cy); }
-      if (i === 1) b.rect(cx - 5 * s, cy - 5 * s, 10 * s, 10 * s);
-      if (i === 2) { b.moveTo(cx - 5 * s, cy - 5 * s); b.lineTo(cx + 5 * s, cy + 5 * s); b.moveTo(cx + 5 * s, cy - 5 * s); b.lineTo(cx - 5 * s, cy + 5 * s); }
-      b.stroke();
-    });
-  }
+  ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { b.fillStyle = c; b.beginPath(); b.arc((20 + i * 20) * s, 19 * s, 6 * s, 0, 7); b.fill(); });
   b.fillStyle = '#fff'; b.font = font(600, 13);
-  if (os === 'windows') b.fillText(`LÜMA — ${tr('Islande_0427.ARW')}`, 16 * s, 24 * s);
-  else { b.textAlign = 'center'; b.fillText(`LÜMA — ${tr('Islande_0427.ARW')}`, W / 2, 24 * s); b.textAlign = 'left'; }
+  b.textAlign = 'center'; b.fillText(`LÜMA — ${tr('Islande_0427.ARW')}`, W / 2, 24 * s); b.textAlign = 'left';
   b.font = font(400, 12);
   ['Bibliothèque', 'Développement', 'Masques', 'Export'].forEach((t, i) => {
     b.fillStyle = i === 1 ? '#fff' : 'rgba(255,255,255,.4)';
-    b.fillText(tr(t), W - (420 + right - i * 100) * s, 24 * s);
+    b.fillText(tr(t), W - (420 - i * 100) * s, 24 * s);
   });
   const fx = 14 * s, fw = 150 * s;
   for (let i = 0; i < 6; i++) {
@@ -312,7 +283,7 @@ export function macScreen(canvas, { os = 'mac' } = {}) {
     if (i === 0) { b.strokeStyle = '#fff'; b.lineWidth = 2 * s; roundRect(b, fx, ty, fw, 92 * s, 8 * s); b.stroke(); }
   }
   b.fillStyle = 'rgba(255,255,255,.35)'; b.font = `${10 * s}px ui-monospace, monospace`;
-  b.fillText({ mac: 'f32 · Display P3 · Metal', linux: 'f32 · Vulkan', windows: 'f32 · DirectX 12' }[os] || '', rx, H - 22 * s);
+  b.fillText('f32 · Display P3 · Metal', rx, H - 22 * s);
   const photo = photoStates(pw, ph, { seed: 3 });
 
   const LIGHT = [['Exposition', 0.18], ['Contraste', 0.22], ['Hautes lumières', -0.56], ['Ombres', 0.34], ['Blancs', 0.08], ['Noirs', -0.12]];
