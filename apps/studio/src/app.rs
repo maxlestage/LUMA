@@ -491,6 +491,12 @@ pub struct Import {
     pub shots: Vec<ImportShot>,
     /// Le choix photo par photo est ouvert.
     pub pick: bool,
+    /// Éjecter la carte une fois l'import fini et vérifié.
+    pub eject: bool,
+    /// Ce qu'a donné l'éjection de la carte, à la fin de l'import.
+    ejected: Arc<std::sync::Mutex<Option<Result<(), String>>>>,
+    /// Le compte rendu du dernier import (photos, dossier, éjection).
+    pub report: String,
     /// Les aperçus des prises, lus en arrière‑plan à l'ouverture du choix.
     previews: HashMap<PathBuf, TextureHandle>,
     previews_job: Option<std::sync::mpsc::Receiver<Preview>>,
@@ -618,6 +624,9 @@ impl Default for Import {
             days_job: None,
             shots: Vec::new(),
             pick: false,
+            eject: false,
+            ejected: Arc::default(),
+            report: String::new(),
             previews: HashMap::new(),
             previews_job: None,
         }
@@ -2133,10 +2142,23 @@ impl Studio {
                         "Diaporama prêt : {n} photos, {file} (ouvrir index.html)",
                         &[("n", &n), ("file", &file)],
                     ),
-                    Output::Import => trf(
-                        "{n} photos importées et vérifiées dans {file}",
-                        &[("n", &n), ("file", &file)],
-                    ),
+                    Output::Import => {
+                        let done = trf(
+                            "{n} photos importées et vérifiées dans {file}",
+                            &[("n", &n), ("file", &file)],
+                        );
+                        match self.import.ejected.lock().expect("éjection").take() {
+                            Some(Ok(())) => format!("{done} · {}", tr("carte éjectée")),
+                            Some(Err(e)) => format!(
+                                "{done} · {}",
+                                trf(
+                                    "la carte n'a pas pu être éjectée : {error}",
+                                    &[("error", &e)]
+                                )
+                            ),
+                            None => done,
+                        }
+                    }
                     Output::Gallery => trf(
                         "Galerie prête : {n} photos, {file} (à mettre en ligne telle quelle)",
                         &[("n", &n), ("file", &file)],
@@ -2146,6 +2168,9 @@ impl Studio {
                     self.print_open = false;
                 }
                 let imported = p.output == Output::Import;
+                if imported {
+                    self.import.report = self.status.clone();
+                }
                 self.printing = None;
                 if imported && n > 0 {
                     self.import_open = false;
@@ -2568,6 +2593,10 @@ impl Studio {
         let placed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let counter = placed.clone();
         let total = self.import.chosen();
+        // Une carte seulement (un dossier DCIM) : un dossier ordinaire ne s'éjecte pas.
+        let eject = self.import.eject && source.join("DCIM").is_dir();
+        let ejected = self.import.ejected.clone();
+        *ejected.lock().expect("éjection") = None;
         let job = move || -> Result<(PathBuf, usize), String> {
             let photos = import::photos(&source);
             let entries: Vec<luma_library::Entry> =
@@ -2593,6 +2622,10 @@ impl Studio {
                 .first()
                 .and_then(|i| i.target.parent().map(Path::to_path_buf))
                 .unwrap_or(options.dest);
+            // Tout est copié et relu : la carte peut partir.
+            if eject {
+                *ejected.lock().expect("éjection") = Some(import::eject(&source));
+            }
             Ok((first, report.copied))
         };
         std::thread::spawn(move || {
@@ -2704,6 +2737,11 @@ impl Studio {
                             .desired_width(f32::INFINITY),
                     );
                     ui.end_row();
+                    if self.import.source.as_ref().is_some_and(|s| s.join("DCIM").is_dir()) && !cfg!(any(target_os = "ios", windows)) {
+                        ui.label("");
+                        ui.checkbox(&mut self.import.eject, tr("Éjecter la carte après l'import"));
+                        ui.end_row();
+                    }
                     ui.label(RichText::new(tr("Second disque")).color(theme::DIM));
                     ui.horizontal(|ui| {
                         ui.label(shown(&self.import.backup, "Aucun"));
