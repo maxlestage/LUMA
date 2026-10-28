@@ -162,6 +162,8 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Traced healing and clone** (Retouch): dragging along a wrinkle or a scratch fixes it
+  in one gesture, the source following the stroke.
 - **Print size** (Export, Dimensions, “Print (cm)”, or `--resize 30x40cm@300`): the
   frame in centimetres and the resolution in dots per inch, written into the JPEG, the
   PNG and the TIFF for the printer.
