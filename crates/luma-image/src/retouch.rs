@@ -73,6 +73,41 @@ fn apply_one(img: &mut RgbImage, spot: &Spot) {
         crate::inpaint::fill_path(img, &path, d.r, spot.feather / 100.0, opacity);
         return;
     }
+    // Un tampon ou un correcteur tracé : des touches en disque le long du trait, une
+    // tous les demi‑rayons, la source au même décalage tout du long (comme un pinceau).
+    if !spot.path.is_empty() && spot.kind.has_source() {
+        let offset = (spot.source.0 - spot.center.0, spot.source.1 - spot.center.1);
+        let step = 0.5 * spot.radius;
+        let aspect = w as f32 / h as f32;
+        let points: Vec<(f32, f32)> = spot.points().collect();
+        let mut dabs = vec![points[0]];
+        let mut last = points[0];
+        for &p in &points[1..] {
+            loop {
+                // Les distances en fractions de la largeur (le rayon l'est aussi).
+                let (dx, dy) = (p.0 - last.0, (p.1 - last.1) / aspect);
+                let len = (dx * dx + dy * dy).sqrt();
+                if len < step {
+                    break;
+                }
+                last = (last.0 + dx / len * step, last.1 + dy / len * step * aspect);
+                dabs.push(last);
+            }
+        }
+        if dabs.last() != points.last() {
+            dabs.extend(points.last().copied());
+        }
+        for c in dabs {
+            let dab = Spot {
+                center: c,
+                source: (c.0 + offset.0, c.1 + offset.1),
+                path: Vec::new(),
+                ..spot.clone()
+            };
+            apply_one(img, &dab);
+        }
+        return;
+    }
     let inner = d.r * (1.0 - (spot.feather / 100.0).clamp(0.0, 1.0));
     let x0 = (d.cx - d.r).floor().max(0.0) as usize;
     let y0 = (d.cy - d.r).floor().max(0.0) as usize;
@@ -317,6 +352,36 @@ mod tests {
             opacity: 100.0,
             path: Vec::new(),
         }
+    }
+
+    #[test]
+    fn a_traced_clone_copies_its_source_along_the_stroke() {
+        // Une moitié haute blanche, une moitié basse grise ; un trait de tampon dans le
+        // gris, sa source 40 pixels plus haut, dans le blanc.
+        let (w, h) = (200, 120);
+        let img = RgbImage::from_fn(w, h, |_, y| if y < 60 { [0.9; 3] } else { [0.3; 3] });
+        let norm = |(x, y): (f32, f32)| (x / w as f32, y / h as f32);
+        let mut s = spot(SpotKind::Clone, norm((40.0, 90.0)), norm((40.0, 50.0)));
+        s.radius = 6.0 / w as f32;
+        s.path = vec![norm((100.0, 90.0)), norm((160.0, 90.0))];
+        let mut out = img.clone();
+        apply(&mut out, &[s.clone()]);
+        // Tout le long du trait, le blanc de la source.
+        for x in [40, 70, 100, 130, 160] {
+            assert!((out.data[90 * w + x][0] - 0.9).abs() < 1e-4, "x = {x}");
+        }
+        // À côté du trait, rien ne bouge.
+        assert_eq!(out.data[110 * w + 100], img.data[110 * w + 100]);
+        assert_eq!(out.data[90 * w + 190], img.data[90 * w + 190]);
+        // Le même trait au correcteur : la texture de la source, la lumière du bord.
+        s.kind = SpotKind::Heal;
+        let mut healed = img.clone();
+        apply(&mut healed, &[s]);
+        assert!(
+            (healed.data[90 * w + 100][0] - 0.3).abs() < 0.05,
+            "{:?}",
+            healed.data[90 * w + 100]
+        );
     }
 
     #[test]
