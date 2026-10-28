@@ -1123,6 +1123,34 @@ fn export_enlarge() {
 }
 
 #[test]
+fn export_max_weight() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("export-poids") else {
+        return;
+    };
+    // Sans limite, pas de poids à régler ; la case le fait paraître, à 500 Ko.
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::E)]);
+    assert!(
+        s.harness
+            .query_by_label("Poids maximal en kilo-octets")
+            .is_none()
+    );
+    s.harness.get_by_label("Au plus").click();
+    s.wait();
+    assert_eq!(s.studio().export_options.max_kb, Some(500));
+    assert!(
+        s.harness
+            .query_by_label("Poids maximal en kilo-octets")
+            .is_some()
+    );
+    s.capture("export-poids");
+    // Décochée : plus de limite.
+    s.harness.get_by_label("Au plus").click();
+    s.wait();
+    assert_eq!(s.studio().export_options.max_kb, None);
+}
+
+#[test]
 fn export_print_size() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("export-tirage") else {

@@ -5092,6 +5092,9 @@ impl Studio {
                                 .on_hover_text(tr(
                                     "Couleur à demi-résolution (4:2:0) et codage calculé pour chaque image : de 9 à 29 % plus léger, que tout navigateur lit",
                                 ));
+                            form_end(ui, compact);
+                            form_row(ui, compact, tr("Poids maximal"));
+                            ui.horizontal(|ui| max_weight_editor(ui, &mut o.max_kb));
                         } else {
                             form_row(ui, compact, tr("Profondeur"));
                             ui.horizontal(|ui| {
@@ -11829,12 +11832,39 @@ fn resize_editor(ui: &mut Ui, resize: &mut Option<luma_render::export::Resize>) 
     }
 }
 
+/// Le poids maximal d'un JPEG : une case, puis le poids en kilo‑octets (500 par
+/// défaut, assez pour la plupart des sites).
+fn max_weight_editor(ui: &mut Ui, max_kb: &mut Option<u32>) {
+    let mut on = max_kb.is_some();
+    if ui
+        .checkbox(&mut on, tr("Au plus"))
+        .on_hover_text(tr(
+            "La meilleure qualité qui tient dans ce poids, métadonnées comprises : pour un site ou un formulaire qui limite la taille des fichiers",
+        ))
+        .changed()
+    {
+        *max_kb = on.then_some(500);
+    }
+    if let Some(k) = max_kb {
+        ui.add(
+            egui::DragValue::new(k)
+                .range(20..=100_000)
+                .speed(10.0)
+                .suffix(format!(" {}", tr("Ko"))),
+        )
+        .accessible_name(tr("Poids maximal en kilo-octets"));
+    }
+}
+
 /// Le résumé d'un préréglage d'export dans la langue de l'interface : format, espace,
 /// taille.
 fn export_summary(o: &ExportOptions) -> String {
     use luma_render::export::Resize;
     let format = match o.format {
-        Format::Jpeg => format!("JPEG {}", o.quality),
+        Format::Jpeg => match o.max_kb {
+            Some(k) => trf("JPEG {q}, {k} Ko au plus", &[("q", &o.quality), ("k", &k)]),
+            None => format!("JPEG {}", o.quality),
+        },
         Format::Png => format!("PNG {} bits", o.bits),
         Format::Tiff => format!("TIFF {} bits", o.bits),
     };
