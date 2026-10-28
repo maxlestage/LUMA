@@ -372,7 +372,8 @@ La photothèque professionnelle, étape par étape.
   carte la montrent aussitôt.
 - **Placer une photo sur la carte à la main** : sur la carte, la photo affichée qui n'a
   pas de position montre un viseur au centre ; on fait glisser la carte dessous, puis
-  « Placer ici » l'inscrit dans son XMP et dans la photothèque.
+  « Placer ici » l'inscrit dans son XMP et dans la photothèque. Les photos choisies qui
+  n'ont pas de position se placent d'un coup (« Placer les 12 photos ici »).
 - **Impression** (« Imprimer… » sur les photos choisies, `luma print`) : un PDF à la
   taille exacte du papier (A4, A3, A3+, 10 × 15 cm…), portrait ou paysage, marges, une
   photo par page ou une **planche contact** (grille, nom sous chaque photo), photos
