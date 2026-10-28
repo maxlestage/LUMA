@@ -1043,26 +1043,40 @@ pub fn licence(
 ) -> Page {
     let lang = here.lang;
     let content = match result {
-        Ok((claims, key)) => div()
+        Ok((claims, key)) => {
+            let offered = claims.sub == super::offerts::SUB;
+            let email = if claims.email.is_empty() { String::new() } else { format!(" ({})", claims.email) };
+            let lede = if offered {
+                fill(t(lang, "Votre accès LÜMA Premium offert est actif{email}."), &[("email", email.as_str())])
+            } else {
+                fill(
+                    t(lang, "Votre abonnement LÜMA Premium {plan} est actif{email}."),
+                    &[("plan", t(lang, claims.plan.name()).to_lowercase().as_str()), ("email", email.as_str())],
+                )
+            };
+            div()
             .child(h1().text(t(lang, "Merci !")))
-            .child(p().class("lede").text(fill(
-                t(lang, "Votre abonnement LÜMA Premium {plan} est actif{email}."),
-                &[
-                    ("plan", t(lang, claims.plan.name()).to_lowercase().as_str()),
-                    ("email", if claims.email.is_empty() { String::new() } else { format!(" ({})", claims.email) }.as_str()),
-                ],
-            )))
+            .child(p().class("lede").text(lede))
             .child(section().id("cle")
                 .child(h2().text(t(lang, "Votre clé de licence")))
-                .child(p().text(t(lang, "Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils, et se renouvelle seule tant que l'abonnement court.")))
+                .child(p().text(if offered {
+                    t(lang, "Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils (Mac, Linux, Windows), et se renouvelle seule tant que votre accès offert court.")
+                } else {
+                    t(lang, "Copiez‑la, puis collez‑la dans LÜMA : la puce « Essai » en haut de l'app, champ « Clé de licence », Activer. Elle marche sur tous vos appareils, et se renouvelle seule tant que l'abonnement court.")
+                }))
                 .child(textarea().class("licence-key").attr("readonly", "").attr("rows", "4").attr("aria-label", t(lang, "Clé de licence")).text(key))
-                .child(p().class("todo").text(t(lang, "Gardez l'adresse de cette page (favori) : elle redonne votre clé à tout moment."))))
+                .child(p().class("todo").text(if offered {
+                    t(lang, "Votre courriel et votre code redonnent votre clé à tout moment, sur cette page.")
+                } else {
+                    t(lang, "Gardez l'adresse de cette page (favori) : elle redonne votre clé à tout moment.")
+                })))
             .child(section()
                 .child(h2().text(t(lang, "Pas encore l'app ?")))
                 .child(div().class("hero-cta")
                     .children(downloads_open().then(|| a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac")))))
                     .children(downloads_open().then(|| a().class("btn btn-ghost").href(link("/download/LUMA-linux-x86_64.tar.gz")).attr("download", "").child(span().text(t(lang, "Télécharger pour Linux")))))
-                    .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement"))))))),
+                    .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement")))))))
+        }
         Err(e) => div()
             .child(h1().text(t(lang, "Clé de licence")))
             .child(p().class("lede").text(fill(t(lang, "Impossible d'afficher la clé : {error}."), &[("error", t(lang, &e))])))
@@ -1085,6 +1099,70 @@ pub fn licence(
         origin,
         here,
         &format!("{} — LÜMA", t(lang, "Votre clé de licence")),
+        t(lang, DESCRIPTION),
+        body,
+    )
+    .seo(Seo::new().noindex(true))
+}
+
+/// La page de l'accès offert : le courriel et le code reçus, pour obtenir sa clé.
+/// `error` : le courriel tapé et ce qui n'a pas marché.
+pub fn offert(site: &Site, origin: &str, here: Here, error: Option<(String, String)>) -> Page {
+    let lang = here.lang;
+    let (email, problem) = error.map_or((String::new(), None), |(e, why)| (e, Some(why)));
+    let field = |name: &'static str,
+                 kind: &'static str,
+                 title: &'static str,
+                 value: String,
+                 auto: &'static str| {
+        label()
+            .class("offert-field")
+            .child(span().text(title))
+            .child(
+                input()
+                    .attr("type", kind)
+                    .attr("name", name)
+                    .attr("required", "")
+                    .attr("autocomplete", auto)
+                    .attr("value", value),
+            )
+    };
+    let content = div()
+        .child(h1().text(t(lang, "Accès offert")))
+        .child(p().class("lede").text(t(lang, "On vous a offert LÜMA Premium ? Tapez le courriel et le code reçus : votre clé de licence s'affiche, prête à coller dans l'app.")))
+        .children(problem.map(|why| {
+            p().class("offert-error").attr("role", "alert").text(fill(
+                t(lang, "Impossible d'afficher la clé : {error}."),
+                &[("error", t(lang, &why))],
+            ))
+        }))
+        .child(
+            form()
+                .class("offert-form")
+                .attr("method", "post")
+                .attr("action", page_link(lang, "/licence/offert/"))
+                .child(field("email", "email", t(lang, "Courriel"), email, "email"))
+                .child(field("code", "text", t(lang, "Code"), String::new(), "off"))
+                .child(button().class("btn").attr("type", "submit").child(span().text(t(lang, "Obtenir ma clé")))),
+        )
+        .child(p().text(t(lang, "Le code vous est donné avec l'invitation. Pas de code ? LÜMA s'essaie gratuitement, puis s'achète sur ce site.")));
+    let body = div()
+        .class("site site--plain")
+        .child(navbar(here))
+        .child(
+            html::main().child(
+                article()
+                    .class("legal")
+                    .child(kicker("LÜMA Premium"))
+                    .child(content),
+            ),
+        )
+        .child(site_footer(here));
+    layout(
+        site,
+        origin,
+        here,
+        &format!("{} — LÜMA", t(lang, "Accès offert")),
         t(lang, DESCRIPTION),
         body,
     )
