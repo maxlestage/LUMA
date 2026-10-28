@@ -6,11 +6,12 @@ use crate::i18n::{Lang, t};
 pub const TITLE: &str = "LÜMA — L'éditeur photo qui développe la lumière";
 pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad et Linux. 14 jours d'essai.";
 
-pub const NAV: [(&str, &str); 6] = [
+pub const NAV: [(&str, &str); 7] = [
     ("#etapes", "Fonctions"),
     ("#films", "Films"),
     ("#labo", "Essayer"),
     ("#apple", "Apple"),
+    ("#bureau", "Linux · Windows"),
     ("#questions", "Questions"),
     ("#tarifs", "Tarifs"),
 ];
@@ -242,7 +243,7 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Où acheter LÜMA ?",
-        "Sur Mac et Linux, uniquement sur ce site, par abonnement (le même vaut pour les deux). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.",
+        "Sur Mac, Linux et Windows, uniquement sur ce site, par abonnement (le même vaut pour les trois). Sur iPhone et iPad, uniquement dans l'App Store : 89,99 € une fois pour toutes, après un mois d'essai.",
     ),
     (
         "Où vont mes photos exportées sur iPhone ?",
@@ -250,7 +251,7 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Et Linux, Windows ou Android ?",
-        "Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu, avec le même abonnement que sur Mac. Windows et Android viendront ensuite, avec le même moteur : une photo aura le même rendu partout.",
+        "Linux est déjà là : une archive qui s'installe sans mot de passe, ou un paquet .deb pour Debian et Ubuntu (x86_64, avec un pilote Vulkan). Windows arrive : un installateur et une archive .zip pour Windows 10 et 11, avec DirectX 12 ou Vulkan. Les deux avec le même abonnement que sur Mac. Android viendra ensuite, avec le même moteur : une photo aura le même rendu partout.",
     ),
 ];
 
@@ -296,7 +297,12 @@ pub const PLATFORMS: [(&str, &str, &str, bool); 6] = [
         "Archive ou paquet .deb, le même rendu que sur Mac.",
         true,
     ),
-    ("Windows", "Plus tard", "Le même rendu que sur Mac.", false),
+    (
+        "Windows",
+        "Bientôt",
+        "Windows 10 et 11 : installateur ou archive .zip, le même rendu que sur Mac.",
+        false,
+    ),
     (
         "Android",
         "Plus tard",
