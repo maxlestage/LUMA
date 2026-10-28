@@ -50,13 +50,28 @@ pub fn store(path: &Path, rgb: &[u8], width: u32, height: u32) -> std::io::Resul
         std::fs::create_dir_all(dir)?;
     }
     let tmp = path.with_extension("tmp");
-    std::fs::write(&tmp, &bytes)?;
-    std::fs::rename(&tmp, path)
+    let written = std::fs::write(&tmp, &bytes).and_then(|()| std::fs::rename(&tmp, path));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    written
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_failed_write_leaves_nothing_behind() {
+        let dir = std::env::temp_dir().join(format!("luma-vig-ratee-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        // La place de la vignette est prise par un dossier plein : le renommage échoue.
+        let path = dir.join(format!("vignette.{EXTENSION}"));
+        std::fs::create_dir_all(path.join("occupé")).unwrap();
+        assert!(store(&path, &[128; 4 * 4 * 3], 4, 4).is_err());
+        assert!(!path.with_extension("tmp").exists(), "pas de fichier à moitié écrit");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn a_thumbnail_follows_its_photo_and_settings() {

@@ -44,6 +44,9 @@ The professional photo library, step by step.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
+- **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
+  full) or is interrupted (app closed) no longer leaves a half-written file behind; the
+  clean-up removes earlier ones (5.3 GB recovered on the test machine).
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and

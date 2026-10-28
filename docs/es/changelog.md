@@ -48,6 +48,9 @@ La fototeca profesional, paso a paso.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
+- **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
+  (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
+  limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
 - **Catálogo local**: `luma catalog` añade carpetas (subcarpetas incluidas) a la
   fototeca de LÜMA; fecha de captura, cámara, objetivo, ISO, apertura, velocidad y
   focal se leen en la cabecera de los RAW, sin decodificar la imagen (5 RAW en

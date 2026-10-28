@@ -48,6 +48,9 @@ La photothèque professionnelle, étape par étape.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
+- **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
+  échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
+  écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
 - **Catalogue local** : `luma catalog` ajoute des dossiers (sous‑dossiers compris) à la
   photothèque de LÜMA ; date de prise de vue, boîtier, objectif, ISO, ouverture,
   vitesse et focale sont lus dans l'en‑tête des RAW, sans décoder l'image (5 RAW en
