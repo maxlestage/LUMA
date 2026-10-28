@@ -2458,7 +2458,7 @@ impl Studio {
     /// La fenêtre « Livre, diaporama et galerie » : le diaporama (dans l'app ou exporté),
     /// le livre photo et la galerie web.
     fn outputs_window(&mut self, ctx: &egui::Context) {
-        use luma_render::book::{self, FORMATS};
+        use luma_render::book::FORMATS;
         let mut open = self.outputs_open;
         let photos = self.output_targets();
         let n = photos.len();
