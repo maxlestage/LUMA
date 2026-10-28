@@ -1491,6 +1491,42 @@ fn point_curve() {
 }
 
 #[test]
+fn paste_retouches() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("coller-retouches") else {
+        return;
+    };
+    // Une poussière retirée et une exposition, copiées ; puis une photo sans réglages.
+    s.studio().settings.spots = vec![luma_project::Spot::new(
+        luma_project::SpotKind::Remove,
+        (0.3, 0.4),
+        0.02,
+    )];
+    s.studio().settings.exposure = 0.5;
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::C)]);
+    s.studio().settings = luma_project::Settings::default();
+    // Coller une partie : les retouches ne sont pas cochées d'abord, on les coche.
+    s.keys(&[(
+        Modifiers::ALT | Modifiers::COMMAND | Modifiers::SHIFT,
+        Key::V,
+    )]);
+    s.wait();
+    let name = "Retouches (poussières, correcteur, tampon, suppression)";
+    assert!(
+        !s.studio()
+            .paste_groups_contain(luma_project::paste::Group::Retouch)
+    );
+    s.harness.get_by_label(name).click();
+    s.wait();
+    s.capture("coller-retouches");
+    s.harness.get_by_label("Coller (13)").click();
+    s.wait();
+    let st = s.studio();
+    assert_eq!(st.settings.spots.len(), 1);
+    assert_eq!(st.settings.exposure, 0.5);
+}
+
+#[test]
 fn sensor_dust() {
     let _gpu = one_at_a_time();
     let Some(mut s) = Session::open("poussieres") else {
