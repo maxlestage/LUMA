@@ -173,6 +173,8 @@ La fototeca profesional, paso a paso.
   en lugar de cruzarlos; ramas, cabello y texturas finas ya no muestran punteado ni
   efecto cremallera (4 dB mejor en nuestras pruebas). Las copias de trabajo se rehacen
   una vez.
+- **Corrector y tampón trazados** (Retoque): arrastrar a lo largo de una arruga o una
+  raya la corrige de un solo gesto, con la fuente siguiendo el trazo.
 - **Tamaño de copia** (Exportar, Dimensiones, «Copia impresa (cm)», o
   `--resize 30x40cm@300`): el marco en centímetros y la resolución en puntos por
   pulgada, escrita en el JPEG, el PNG y el TIFF para la imprenta.
