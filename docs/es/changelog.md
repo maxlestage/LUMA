@@ -350,8 +350,9 @@ La fototeca profesional, paso a paso.
   se vuelven a leer una vez.
 - **Un track GPX para situar las fotos** (`luma geotag --gpx track.gpx`): cada foto
   toma la posición del track en el instante de la toma, escrita en su XMP; el desfase
-  del reloj de la cámara se indica con `--offset`. La fototeca y el mapa la muestran
-  enseguida.
+  del reloj de la cámara se indica con `--offset`, o se adivina (`--offset auto`). La
+  fototeca y el mapa la muestran enseguida. En la app en Mac: «Seguir un track GPX…» en
+  el mapa, con el desfase adivinado.
 - **Situar una foto en el mapa a mano**: en el mapa, la foto mostrada que no tiene
   posición enseña una mira en el centro; se arrastra el mapa debajo y «Situar aquí» la
   escribe en su XMP y en la fototeca. Las fotos elegidas que no tienen posición se

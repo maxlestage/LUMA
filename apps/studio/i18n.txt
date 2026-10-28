@@ -5482,3 +5482,31 @@ es = Situar las {n} fotos aquí
 fr = {n} photos placées sur la carte
 en = {n} photos placed on the map
 es = {n} fotos situadas en el mapa
+
+fr = Choisir une trace GPX
+en = Choose a GPX track
+es = Elegir un track GPX
+
+fr = Trace GPX
+en = GPX track
+es = Track GPX
+
+fr = Suivre une trace GPX…
+en = Follow a GPX track…
+es = Seguir un track GPX…
+
+fr = Placer les photos sans position d'après une trace GPX (téléphone, montre, GPS)
+en = Place the photos without a position from a GPX track (phone, watch, GPS)
+es = Situar las fotos sin posición a partir de un track GPX (teléfono, reloj, GPS)
+
+fr = Trace GPX illisible : {error}
+en = Unreadable GPX track: {error}
+es = Track GPX ilegible: {error}
+
+fr = Aucune photo de ce film ne tombe dans la trace.
+en = No photo of this filmstrip falls within the track.
+es = Ninguna foto de esta tira cae dentro del track.
+
+fr = {n} photos placées d'après la trace (horloge du boîtier : UTC{offset})
+en = {n} photos placed from the track (camera clock: UTC{offset})
+es = {n} fotos situadas a partir del track (reloj de la cámara: UTC{offset})

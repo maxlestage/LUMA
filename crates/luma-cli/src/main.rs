@@ -150,7 +150,8 @@ USAGE
       position de la trace à l'instant de sa prise de vue, entre les deux points qui
       l'encadrent, écrite dans son XMP (le fichier n'est pas touché ; la photothèque et
       la carte la lisent). --offset : l'écart de l'horloge du boîtier à l'heure
-      universelle (+02:00 pour un boîtier à l'heure d'été de Paris ; 0 par défaut).
+      universelle (+02:00 pour un boîtier à l'heure d'été de Paris ; 0 par défaut ;
+      auto : l'écart qui fait tomber le plus de photos dans la trace).
       --max-gap : le plus long trou de la trace à franchir, en secondes (une heure par
       défaut). Une photo qui a déjà une position la garde, sauf avec --replace ;
       --dry-run montre ce qui serait fait.
@@ -1656,7 +1657,7 @@ fn bounded<T: std::str::FromStr + PartialOrd>(option: &str, v: Option<String>, l
 /// `luma geotag` : les photos placées d'après une trace GPX.
 fn geotag(args: Vec<String>) -> Result<(), String> {
     use luma_library::geotag::{self, Outcome};
-    let (mut gpx, mut offset, mut max_gap, mut replace, mut dry) = (None, 0, 3600, false, false);
+    let (mut gpx, mut offset, mut max_gap, mut replace, mut dry) = (None, Some(0), 3600, false, false);
     let mut inputs = Vec::new();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -1664,7 +1665,11 @@ fn geotag(args: Vec<String>) -> Result<(), String> {
             "--gpx" => gpx = Some(PathBuf::from(it.next().ok_or("--gpx attend une trace")?)),
             "--offset" => {
                 let v = it.next().ok_or("--offset attend un écart (+02:00)")?;
-                offset = geotag::offset(&v).ok_or_else(|| format!("--offset : « {v} » n'est pas un écart (+02:00)"))?;
+                offset = if v == "auto" {
+                    None
+                } else {
+                    Some(geotag::offset(&v).ok_or_else(|| format!("--offset : « {v} » n'est pas un écart (+02:00)"))?)
+                };
             }
             "--max-gap" => max_gap = bounded("--max-gap", it.next(), 1, 86_400 * 7)?,
             "--replace" => replace = true,
@@ -1695,6 +1700,25 @@ fn geotag(args: Vec<String>) -> Result<(), String> {
     if photos.is_empty() {
         return Err("aucune photo à placer".into());
     }
+    // --offset auto : l'écart qui fait tomber le plus de photos dans la trace.
+    let offset = match offset {
+        Some(o) => o,
+        None => {
+            let times: Vec<i64> = photos
+                .iter()
+                .filter_map(|p| geotag::parse_time(&luma_library::entry_of(p).date))
+                .collect();
+            let o = geotag::best_offset(&track, &times, 300, max_gap.min(900)).unwrap_or(0);
+            let a = o.abs();
+            println!(
+                "horloge du boîtier : UTC{}{:02}:{:02} (devinée)",
+                if o < 0 { '-' } else { '+' },
+                a / 3600,
+                a % 3600 / 60
+            );
+            o
+        }
+    };
     let (mut placed, mut kept, mut outside, mut undated) = (0, 0, 0, 0);
     for p in &photos {
         match geotag::place(p, &track, offset, max_gap, replace, !dry)? {
