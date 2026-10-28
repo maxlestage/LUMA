@@ -49,7 +49,9 @@ La fototeca profesional, paso a paso.
   de rápida con redondez (400 → 210 ms), mismos píxeles. Después Eliminar (en círculo
   o en trazo): un 28 % más corto, y otro 22 % después (casi el doble de rápido en
   total), mismos píxeles. Después la ampliación al exportar: un 18 % más corta
-  (6 → 24 Mpx: 440 → 360 ms), mismos píxeles.
+  (6 → 24 Mpx: 440 → 360 ms), mismos píxeles. Después el peso máximo de un JPEG,
+  hallado casi siempre en tres codificaciones en lugar de ocho: exportar un RAW de
+  24 Mpx por debajo de 2000 KB, un 17 % más corto (3,95 → 3,3 s), mismos archivos.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
