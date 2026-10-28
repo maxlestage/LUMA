@@ -113,7 +113,7 @@ jobs:
         run: |
           case "$TAG" in v[0-9]*) ;; *) echo "version invalide : $TAG"; exit 1 ;; esac
           find dist -type f
-          notes="LÜMA ${TAG#v} — sur Mac, Linux et Windows, 14 jours d'essai puis LÜMA Premium (19,99 € par mois ou 239,88 € par an) ; sur iPhone et iPad, un mois d'essai puis 89,99 € une fois pour toutes.
+          notes="LÜMA ${TAG#v} — sur Mac, Linux et Windows, un mois d'essai puis LÜMA Premium (19,99 € par mois ou 239,88 € par an) ; sur iPhone et iPad, un mois d'essai puis 89,99 € une fois pour toutes.
 
           - **LUMA-macos.zip** : l'app pour Mac (Apple Silicon et Intel, macOS 11+).
           - **LUMA-linux-x86_64.tar.gz** : l'app pour Linux, avec la ligne de commande \`luma\` ; \`./install.sh\` l'installe sans mot de passe.

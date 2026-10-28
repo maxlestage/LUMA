@@ -210,7 +210,7 @@ fn hero(lang: Lang) -> Element {
                     div()
                         .class("hero-cta reveal")
                         .child(a().class("btn magnetic").href("#tarifs").child(span().text(if downloads_open() {
-                            t(lang, "Télécharger · 14 jours d'essai")
+                            t(lang, "Télécharger · un mois d'essai")
                         } else {
                             t(lang, "Voir les tarifs")
                         })))
@@ -891,7 +891,7 @@ fn cta(lang: Lang) -> Element {
             div()
                 .class("hero-cta reveal")
                 .child(a().class("btn magnetic").href("#tarifs").child(span().text(if downloads_open() {
-                    t(lang, "Télécharger · 14 jours d'essai")
+                    t(lang, "Télécharger · un mois d'essai")
                 } else {
                     t(lang, "Voir les tarifs")
                 })))
@@ -908,7 +908,7 @@ fn price_parts(price: &str) -> (&str, &str, &str) {
     (&price[..start], &price[start..end], &price[end..])
 }
 
-/// Tarifs et téléchargement : LÜMA Premium, 14 jours d'essai, puis au mois ou à l'an.
+/// Tarifs et téléchargement : LÜMA Premium, un mois d'essai, puis au mois ou à l'an.
 /// Les liens de paiement viennent de `LUMA_CHECKOUT_MONTHLY` et `LUMA_CHECKOUT_ANNUAL`
 /// (liens de paiement Stripe) ; sans eux, les boutons attendent.
 fn pricing(lang: Lang) -> Element {
