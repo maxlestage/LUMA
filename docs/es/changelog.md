@@ -39,7 +39,9 @@ La fototeca profesional, paso a paso.
   valores. Después la exportación JPEG, convertida a 8 bits por franjas: 72 MB menos de
   memoria para 24 Mpx, mismos archivos byte a byte. Después Altas luces, Sombras,
   Claridad y Textura, aplicadas en una sola pasada: de un 15 a un 20 % más rápidas a
-  resolución completa (RAF de 26 Mpx: 0,84–0,92 → 0,72 s), mismos píxeles.
+  resolución completa (RAF de 26 Mpx: 0,84–0,92 → 0,72 s), mismos píxeles. Después la
+  reducción de ruido de luminancia: 104 MB menos de memoria para 26 Mpx, mismos
+  píxeles.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
