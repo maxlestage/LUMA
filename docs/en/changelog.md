@@ -102,6 +102,9 @@ The professional photo library, step by step.
   core; the copy now happens in the first pass, on all cores. A render with basic
   settings is 4 to 23% shorter depending on the camera (iPhone DNG 120 → 97 ms, ORF 86 →
   67 ms), without changing a pixel.
+- **The card ejected after importing** (Mac, Linux): “Eject the card after importing”,
+  once every photo has been copied and verified (`luma import --eject`); if the system
+  refuses (an app is still reading the card), the import says so, without failing.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
