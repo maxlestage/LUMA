@@ -73,7 +73,9 @@ La photothèque professionnelle, étape par étape.
   ne répond plus laisse le processeur finir l'aperçu. Deux essais montent la garde :
   des RAW abîmés (copie coupée, octets brouillés, fichier vide) s'ouvrent en image ou en
   erreur, jamais en plantage, et des réglages aux valeurs aberrantes (infinies, énormes)
-  se rendent en pixels sains, dans les masques, les retouches et la fluidité aussi.
+  se rendent en pixels sains, dans les masques, les retouches et la fluidité aussi. Une
+  suppression tracée longue et très large ne fige plus l'export (24 Mpx : 2 minutes →
+  4 secondes), mêmes pixels.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
