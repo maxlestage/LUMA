@@ -34,7 +34,9 @@ La photothèque professionnelle, étape par étape.
   mêmes octets ; et pour les TIFF et PNG en 16 bits : sRGB environ 35 % plus court
   (24 Mpx : 295–366 → 190–204 ms), mêmes octets. Puis la couleur avec le mélangeur
   et l'étalonnage : les passages vers OKLab et retour huit pixels à la fois, environ
-  30 % plus courts (aperçu 2048 px : 50–60 → 34–43 ms), mêmes bits.
+  30 % plus courts (aperçu 2048 px : 50–60 → 34–43 ms), mêmes bits. Puis la tonalité
+  locale (hautes lumières, ombres, clarté, texture) : ses trois bases calculées en même
+  temps, 12 à 18 % plus courte (aperçu 2048 px : 48–55 → 42–45 ms), mêmes pixels.
   Puis la réduction du bruit par ondelettes, sans image neuve à chaque échelle : 1,8 fois
   plus rapide (24 Mpx : 1,17 → 0,65 s), et l'accentuation par déconvolution, huit pixels
   à la fois : 28 % plus courte (0,83 → 0,60 s), mêmes pixels. Puis le filtre qui suit
