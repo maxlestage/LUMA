@@ -330,6 +330,9 @@ La fototeca profesional, paso a paso.
   toma la posición del track en el instante de la toma, escrita en su XMP; el desfase
   del reloj de la cámara se indica con `--offset`. La fototeca y el mapa la muestran
   enseguida.
+- **Situar una foto en el mapa a mano**: en el mapa, la foto mostrada que no tiene
+  posición enseña una mira en el centro; se arrastra el mapa debajo y «Situar aquí» la
+  escribe en su XMP y en la fototeca.
 - **Instrumentos de medida** (encima del histograma, o Mayús+J): **forma de onda**
   (la luminancia, columna por columna), **desfile RGB** (cada canal por separado) y
   **vectorscopio** (tono y saturación, con los objetivos de los primarios al 75 % y la

@@ -5438,3 +5438,15 @@ es = LÜMA Premium es tuyo, para siempre: en tus otros iPhone y iPad, «Restaura
 fr = Déjà acheté avec ce compte Apple ?
 en = Already bought with this Apple Account?
 es = ¿Ya lo compraste con esta cuenta de Apple?
+
+fr = Placer « {name} » ici
+en = Place “{name}” here
+es = Situar «{name}» aquí
+
+fr = {name} placée sur la carte
+en = {name} placed on the map
+es = {name} situada en el mapa
+
+fr = Glisser la carte pour mettre le viseur à l'endroit de la prise de vue
+en = Drag the map to put the crosshair where the photo was taken
+es = Arrastra el mapa para poner la mira donde se tomó la foto

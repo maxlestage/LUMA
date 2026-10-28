@@ -2266,6 +2266,36 @@ fn map_of_geotagged_photos() {
     assert!(s.studio().map_tiles() >= 4, "{}", s.studio().map_tiles());
     s.capture("carte");
 
+    // La photo affichée n'a pas de position : le viseur et le bouton la placent au
+    // centre de la carte, dans son XMP et dans la photothèque.
+    let current = s.studio().current_path().unwrap().to_path_buf();
+    if s.studio()
+        .catalog()
+        .get(&current)
+        .is_some_and(|e| e.gps.is_none())
+    {
+        let name = current.file_name().unwrap().to_string_lossy().into_owned();
+        s.harness
+            .get_by_label(&format!("Placer « {name} » ici"))
+            .click();
+        s.harness.step();
+        s.harness.step();
+        let gps = s.studio().catalog().get(&current).unwrap().gps.unwrap();
+        let expected = luma_library::map::unproject(view.center);
+        assert!((gps[0] - expected[0]).abs() < 1e-6 && (gps[1] - expected[1]).abs() < 1e-6);
+        let side = std::fs::read_to_string(luma_project::xmp::sidecar_path(&current)).unwrap();
+        assert!(
+            luma_project::xmp::read_meta(&side).position.is_some(),
+            "{side}"
+        );
+        assert!(
+            s.harness
+                .query_by_label(&format!("Placer « {name} » ici"))
+                .is_none(),
+            "placée : plus de bouton"
+        );
+    }
+
     // Toucher le groupe de Paris : ses deux photos dans la grille.
     let paris = groups.iter().find(|g| g.1 == 2).unwrap().0;
     s.harness.event(egui::Event::PointerMoved(paris));
