@@ -2254,8 +2254,8 @@ fn premium_screen_after_the_trial() {
     let dir = std::env::temp_dir().join("luma-premium-licence");
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
-    // Un essai commencé il y a 20 jours.
-    let started = luma_studio::licence::now() - 20 * 86_400;
+    // Un essai commencé il y a 40 jours (il dure un mois).
+    let started = luma_studio::licence::now() - 40 * 86_400;
     std::fs::write(
         dir.join("licence.json"),
         luma_licence::State::new(started).to_json(),

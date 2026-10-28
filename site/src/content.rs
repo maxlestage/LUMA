@@ -4,7 +4,7 @@
 use crate::i18n::{Lang, t};
 
 pub const TITLE: &str = "LÜMA — L'éditeur photo qui développe la lumière";
-pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad et Linux. 14 jours d'essai.";
+pub const DESCRIPTION: &str = "LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad, Linux et Windows. Un mois d'essai.";
 
 pub const NAV: [(&str, &str); 7] = [
     ("#etapes", "Fonctions"),
@@ -82,8 +82,8 @@ pub const STATS: [Stat; 4] = [
     },
     Stat {
         prefix: "",
-        value: 14,
-        unit: "jours",
+        value: 1,
+        unit: "mois",
         text: "D'essai complet, sans carte bancaire.",
     },
     Stat {
@@ -239,7 +239,7 @@ pub const FAQ: [(&str, &str); 8] = [
     ),
     (
         "Que se passe‑t‑il après l'essai ?",
-        "Tout est ouvert pendant l'essai : 14 jours sur Mac, Linux et Windows, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.",
+        "Tout est ouvert pendant l'essai : un mois, sur Mac, Linux, Windows, iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.",
     ),
     (
         "Où acheter LÜMA ?",
@@ -717,13 +717,13 @@ pub const LEGAL: [Legal; 3] = [
     Legal {
         path: "/conditions/",
         title: "Conditions d'abonnement",
-        lede: "Quatorze jours pour essayer, puis au mois ou à l'an. Sans surprise.",
+        lede: "Un mois pour essayer, puis au mois ou à l'an. Sans surprise.",
         sections: &[
             (
                 "essai",
                 "Essai gratuit",
                 &[
-                    "LÜMA se télécharge librement. Au premier lancement commence un essai de 14 jours, complet, sans carte bancaire. À la fin de l'essai, l'app demande un abonnement pour continuer à développer vos photos ; vos fichiers et vos réglages restent à vous.",
+                    "LÜMA se télécharge librement. Au premier lancement commence un essai d'un mois, complet, sans carte bancaire. À la fin de l'essai, l'app demande un abonnement pour continuer à développer vos photos ; vos fichiers et vos réglages restent à vous.",
                 ],
             ),
             (

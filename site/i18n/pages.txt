@@ -20,9 +20,9 @@ fr = LÜMA sur iPhone
 en = LÜMA on iPhone
 es = LÜMA en el iPhone
 
-fr = LÜMA pour Mac, 14 jours d'essai
-en = LÜMA for Mac, 14‑day free trial
-es = LÜMA para Mac, 14 días de prueba
+fr = LÜMA pour Mac, un mois d'essai
+en = LÜMA for Mac, one‑month free trial
+es = LÜMA para Mac, un mes de prueba
 
 fr = LÜMA Premium, au mois ou à l'an
 en = LÜMA Premium, monthly or yearly
@@ -72,9 +72,9 @@ es = Menú
 
 # ----- Accueil ------------------------------------------------------------------------
 
-fr = Télécharger · 14 jours d'essai
-en = Download · 14‑day free trial
-es = Descargar · 14 días de prueba
+fr = Télécharger · un mois d'essai
+en = Download · one‑month free trial
+es = Descargar · un mes de prueba
 
 fr = 275 films
 en = 275 films
@@ -178,9 +178,9 @@ fr = LÜMA — L'éditeur photo qui développe la lumière
 en = LÜMA — The photo editor that develops light
 es = LÜMA — El editor de fotos que revela la luz
 
-fr = LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad et Linux. 14 jours d'essai.
-en = LÜMA, the professional photo editor: your RAW files developed with precision, 275 film looks, your own film stocks, masks, a fast photo library. On Mac, iPhone, iPad and Linux. 14‑day free trial.
-es = LÜMA, el editor de fotos profesional: tus RAW revelados con precisión, 275 películas, tus propios carretes, máscaras y una fototeca rápida. En Mac, iPhone, iPad y Linux. 14 días de prueba.
+fr = LÜMA, l'éditeur photo professionnel : vos RAW développés avec précision, 275 films, vos vraies pellicules, des masques, une photothèque rapide. Sur Mac, iPhone, iPad, Linux et Windows. Un mois d'essai.
+en = LÜMA, the professional photo editor: your RAW files developed with precision, 275 film looks, your own film stocks, masks, a fast photo library. On Mac, iPhone, iPad, Linux and Windows. One‑month free trial.
+es = LÜMA, el editor de fotos profesional: tus RAW revelados con precisión, 275 películas, tus propios carretes, máscaras y una fototeca rápida. En Mac, iPhone, iPad, Linux y Windows. Un mes de prueba.
 
 fr = Éditeur photo · Mac, iPhone, iPad, Linux et Windows
 en = Photo editor · Mac, iPhone, iPad, Linux and Windows
@@ -246,9 +246,9 @@ fr = Pellicules couleur, noir et blanc, cinéma et instantanés, prêtes à pose
 en = Color, black‑and‑white, cinema and instant films, ready to apply.
 es = Películas en color, en blanco y negro, de cine e instantáneas, listas para aplicar.
 
-fr = jours
-en = days
-es = días
+fr = mois
+en = month
+es = mes
 
 fr = D'essai complet, sans carte bancaire.
 en = Of full free trial, no credit card.
@@ -514,9 +514,9 @@ fr = Que se passe‑t‑il après l'essai ?
 en = What happens after the trial?
 es = ¿Qué pasa después de la prueba?
 
-fr = Tout est ouvert pendant l'essai : 14 jours sur Mac, Linux et Windows, un mois sur iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.
-en = Everything is unlocked during the trial: 14 days on Mac, Linux and Windows, one month on iPhone and iPad. After that, LÜMA Premium lets you keep developing (a subscription on Mac and Linux, a one-time purchase on iPhone and iPad); your files and your adjustments remain yours either way.
-es = Todo está disponible durante la prueba: 14 días en Mac, Linux y Windows, un mes en iPhone y iPad. Después, LÜMA Premium te permite seguir revelando (una suscripción en Mac y Linux, una compra única en iPhone y iPad); tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
+fr = Tout est ouvert pendant l'essai : un mois, sur Mac, Linux, Windows, iPhone et iPad. Ensuite, LÜMA Premium permet de continuer à développer (un abonnement sur Mac et Linux, un achat unique sur iPhone et iPad) ; vos fichiers et vos réglages restent à vous dans tous les cas.
+en = Everything is unlocked during the trial: one month, on Mac, Linux, Windows, iPhone and iPad. After that, LÜMA Premium lets you keep developing (a subscription on Mac and Linux, a one-time purchase on iPhone and iPad); your files and your adjustments remain yours either way.
+es = Todo está disponible durante la prueba: un mes, en Mac, Linux, Windows, iPhone y iPad. Después, LÜMA Premium te permite seguir revelando (una suscripción en Mac y Linux, una compra única en iPhone y iPad); tus archivos y tus ajustes siguen siendo tuyos en cualquier caso.
 
 fr = Où acheter LÜMA ?
 en = Where can I buy LÜMA?
@@ -542,9 +542,9 @@ fr = Linux est déjà là : une archive qui s'installe sans mot de passe, ou un 
 en = Linux is already here: an archive that installs without a password, or a .deb package for Debian and Ubuntu (x86_64, with a Vulkan driver). Windows is on its way: an installer and a .zip archive for Windows 10 and 11, with DirectX 12 or Vulkan. Both with the same subscription as on Mac. Android will come next, with the same engine: a photo will look the same everywhere.
 es = Linux ya está aquí: un archivo que se instala sin contraseña, o un paquete .deb para Debian y Ubuntu (x86_64, con un controlador Vulkan). Windows está en camino: un instalador y un archivo .zip para Windows 10 y 11, con DirectX 12 o Vulkan. Los dos con la misma suscripción que en Mac. Android llegará después, con el mismo motor: una foto se verá igual en todas partes.
 
-fr = Quatorze jours pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.
-en = Fourteen days to try everything, no credit card required. Your photos are waiting.
-es = Catorce días para probarlo todo, sin tarjeta bancaria. Tus fotos te esperan.
+fr = Un mois pour essayer, tout compris, sans carte bancaire. Vos photos n'attendent que vous.
+en = A month to try everything, no credit card required. Your photos are waiting.
+es = Un mes para probarlo todo, sin tarjeta bancaria. Tus fotos te esperan.
 
 fr = Questions fréquentes
 en = Frequently asked questions
@@ -564,9 +564,9 @@ es = Probar
 
 # ----- Tarifs -------------------------------------------------------------------------
 
-fr = Quatorze jours pour *essayer*, puis à vous de choisir.
-en = Fourteen days to *try it*, then the choice is yours.
-es = Catorce días para *probarlo*, y luego tú eliges.
+fr = Un mois pour *essayer*, puis à vous de choisir.
+en = A month to *try it*, then the choice is yours.
+es = Un mes para *probarlo*, y luego tú eliges.
 
 fr = Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, Linux et Windows, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.
 en = Download LÜMA: everything is unlocked during the trial. After that, a monthly or yearly subscription. On Mac, Linux and Windows, it is sold only here, paid through Stripe; your license key appears right away, and you enter it in the app. On iPhone and iPad (iOS and iPadOS), LÜMA Premium is a one-time purchase, sold only on the App Store.
@@ -1023,17 +1023,17 @@ fr = Conditions d'abonnement
 en = Subscription terms
 es = Condiciones de suscripción
 
-fr = Quatorze jours pour essayer, puis au mois ou à l'an. Sans surprise.
-en = Fourteen days to try it, then monthly or yearly. No surprises.
-es = Catorce días para probarlo y, después, al mes o al año. Sin sorpresas.
+fr = Un mois pour essayer, puis au mois ou à l'an. Sans surprise.
+en = A month to try it, then monthly or yearly. No surprises.
+es = Un mes para probarlo y, después, al mes o al año. Sin sorpresas.
 
 fr = Essai gratuit
 en = Free trial
 es = Prueba gratuita
 
-fr = LÜMA se télécharge librement. Au premier lancement commence un essai de 14 jours, complet, sans carte bancaire. À la fin de l'essai, l'app demande un abonnement pour continuer à développer vos photos ; vos fichiers et vos réglages restent à vous.
-en = LÜMA is free to download. A full 14‑day trial starts on first launch, with no credit card required. When the trial ends, the app asks for a subscription to keep developing your photos; your files and your adjustments remain yours.
-es = LÜMA se descarga libremente. En el primer arranque empieza una prueba completa de 14 días, sin tarjeta bancaria. Al final de la prueba, la app pide una suscripción para seguir revelando tus fotos; tus archivos y tus ajustes siguen siendo tuyos.
+fr = LÜMA se télécharge librement. Au premier lancement commence un essai d'un mois, complet, sans carte bancaire. À la fin de l'essai, l'app demande un abonnement pour continuer à développer vos photos ; vos fichiers et vos réglages restent à vous.
+en = LÜMA is free to download. A full one‑month trial starts on first launch, with no credit card required. When the trial ends, the app asks for a subscription to keep developing your photos; your files and your adjustments remain yours.
+es = LÜMA se descarga libremente. En el primer arranque empieza una prueba completa de un mes, sin tarjeta bancaria. Al final de la prueba, la app pide una suscripción para seguir revelando tus fotos; tus archivos y tus ajustes siguen siendo tuyos.
 
 fr = Abonnement et clé de licence
 en = Subscription and license key
