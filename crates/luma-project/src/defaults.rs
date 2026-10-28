@@ -31,10 +31,25 @@ pub struct Defaults {
 impl Defaults {
     /// Lit le fichier ; vide s'il n'existe pas ou ne se lit pas.
     pub fn load(path: &Path) -> Defaults {
-        std::fs::read(path)
+        let Some(value) = std::fs::read(path)
             .ok()
-            .and_then(|b| serde_json::from_slice(&b).ok())
-            .unwrap_or_default()
+            .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+        else {
+            return Defaults::default();
+        };
+        // Règle par règle : une seule abîmée (un réglage d'une version plus récente, une
+        // valeur retouchée à la main) ne fait pas perdre les autres.
+        Defaults {
+            rules: value
+                .get("rules")
+                .cloned()
+                .and_then(crate::xmp::each_value)
+                .unwrap_or_default(),
+            import_preset: value
+                .get("import_preset")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned),
+        }
     }
 
     /// Écrit le fichier (à côté puis renommé : jamais à moitié écrit).
@@ -93,6 +108,35 @@ impl Defaults {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_damaged_rule_does_not_lose_the_others() {
+        let dir = std::env::temp_dir().join(format!("luma-regles-abimees-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("defaults.json");
+        let mut d = Defaults {
+            import_preset: Some("Portra".into()),
+            ..Defaults::default()
+        };
+        for iso in [100, 3200] {
+            d.rules.push(Rule {
+                camera: "Sony ILCE-7M3".into(),
+                from_iso: Some(iso),
+                settings: Settings::default(),
+            });
+        }
+        d.save(&path).unwrap();
+        // La seconde règle retouchée à la main : un ISO qui n'est pas un nombre.
+        let text = std::fs::read_to_string(&path)
+            .unwrap()
+            .replacen("3200", "\"beaucoup\"", 1);
+        std::fs::write(&path, text).unwrap();
+        let back = Defaults::load(&path);
+        assert_eq!(back.rules.len(), 1);
+        assert_eq!(back.rules[0].from_iso, Some(100));
+        assert_eq!(back.import_preset.as_deref(), Some("Portra"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     fn with(exposure: f32) -> Settings {
         Settings {

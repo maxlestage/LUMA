@@ -77,7 +77,8 @@ The professional photo library, step by step.
   retouch or liquify stroke in an XMP (a shape from a newer version, a damaged value)
   no longer erases the others; a damaged export preset no longer loses the others, and
   an unreadable presets file is kept aside (`Exports.json.illisible`) before being
-  replaced.
+  replaced. The same goes for a photo's snapshots, the per-camera defaults and the
+  metadata templates: a single damaged item no longer takes the others with it.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).

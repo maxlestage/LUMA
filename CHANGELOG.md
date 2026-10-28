@@ -86,7 +86,9 @@ La photothèque professionnelle, étape par étape.
   de fluidité illisible dans un XMP (une forme d'une version plus récente, une valeur
   abîmée) n'efface plus les autres ; un préréglage d'export abîmé ne fait plus perdre
   les autres, et un fichier de préréglages illisible est gardé de côté
-  (`Exports.json.illisible`) avant d'être remplacé.
+  (`Exports.json.illisible`) avant d'être remplacé. De même pour les instantanés d'une
+  photo, les réglages par défaut par boîtier et les modèles de métadonnées : un seul
+  élément abîmé n'emporte plus les autres.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
