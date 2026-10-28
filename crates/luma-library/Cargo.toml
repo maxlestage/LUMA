@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 luma-raw.workspace = true
 luma-project.workspace = true
+quick-xml.workspace = true
 rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true

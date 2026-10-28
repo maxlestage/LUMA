@@ -321,6 +321,10 @@ La fototeca profesional, paso a paso.
   reveladas (JPEG, HEIC, AVIF, PNG, WebP, TIFF) se lee como el de un RAW: fecha de la
   toma, cámara, objetivo, ajustes, posición GPS. Las fotos que ya están en la fototeca
   se vuelven a leer una vez.
+- **Un track GPX para situar las fotos** (`luma geotag --gpx track.gpx`): cada foto
+  toma la posición del track en el instante de la toma, escrita en su XMP; el desfase
+  del reloj de la cámara se indica con `--offset`. La fototeca y el mapa la muestran
+  enseguida.
 - **Instrumentos de medida** (encima del histograma, o Mayús+J): **forma de onda**
   (la luminancia, columna por columna), **desfile RGB** (cada canal por separado) y
   **vectorscopio** (tono y saturación, con los objetivos de los primarios al 75 % y la

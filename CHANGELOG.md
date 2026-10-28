@@ -352,6 +352,10 @@ La photothèque professionnelle, étape par étape.
   développées (JPEG, HEIC, AVIF, PNG, WebP, TIFF) est lu comme celui d'un RAW — date de
   prise de vue, boîtier, objectif, réglages, position GPS. Les photos déjà dans la
   photothèque sont relues une fois.
+- **Une trace GPX pour placer les photos** (`luma geotag --gpx trace.gpx`) : chaque
+  photo prend la position de la trace à l'instant de sa prise de vue, écrite dans son
+  XMP ; l'écart de l'horloge du boîtier se donne avec `--offset`. La photothèque et la
+  carte la montrent aussitôt.
 - **Impression** (« Imprimer… » sur les photos choisies, `luma print`) : un PDF à la
   taille exacte du papier (A4, A3, A3+, 10 × 15 cm…), portrait ou paysage, marges, une
   photo par page ou une **planche contact** (grille, nom sous chaque photo), photos
