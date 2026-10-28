@@ -220,21 +220,56 @@ fn random_source(level: &Level, ok: &[bool], seed: u64) -> Option<(isize, isize)
 /// Remplit le disque de centre (`cx`, `cy`) et de rayon `r` (en pixels de `img`) ; le
 /// bord se fond sur `feather` (0 à 1 du rayon), à l'opacité `opacity` (0 à 1).
 pub fn fill(img: &mut RgbImage, cx: f32, cy: f32, r: f32, feather: f32, opacity: f32) {
+    fill_path(img, &[(cx, cy)], r, feather, opacity);
+}
+
+/// La distance du point (`x`, `y`) au tracé `path` (un point : sa distance au point).
+fn distance_to(path: &[(f32, f32)], x: f32, y: f32) -> f32 {
+    if path.len() == 1 {
+        return ((x - path[0].0).powi(2) + (y - path[0].1).powi(2)).sqrt();
+    }
+    path.windows(2)
+        .map(|s| {
+            let ((ax, ay), (bx, by)) = (s[0], s[1]);
+            let (dx, dy) = (bx - ax, by - ay);
+            let len2 = dx * dx + dy * dy;
+            let t = if len2 > 0.0 {
+                (((x - ax) * dx + (y - ay) * dy) / len2).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            ((x - ax - t * dx).powi(2) + (y - ay - t * dy).powi(2)).sqrt()
+        })
+        .fold(f32::INFINITY, f32::min)
+}
+
+/// Remplit le tracé `path` (des points en pixels de `img`, reliés), épais de `r` de
+/// chaque côté : un fil, une rayure, un câble d'un seul geste. Un seul point : un disque.
+pub fn fill_path(img: &mut RgbImage, path: &[(f32, f32)], r: f32, feather: f32, opacity: f32) {
     let (w, h) = (img.width, img.height);
-    if w < 8 || h < 8 || r < 0.5 || opacity <= 0.0 {
+    if w < 8 || h < 8 || r < 0.5 || opacity <= 0.0 || path.is_empty() {
         return;
     }
-    // La fenêtre : trois rayons autour du disque, de quoi trouver de la matière.
+    // La fenêtre : trois rayons autour du tracé, de quoi trouver de la matière.
     let reach = 3.0 * r + 12.0;
-    let x0 = (cx - reach).floor().max(0.0) as usize;
-    let y0 = (cy - reach).floor().max(0.0) as usize;
-    let x1 = ((cx + reach).ceil() as usize).min(w);
-    let y1 = ((cy + reach).ceil() as usize).min(h);
+    let (lo_x, hi_x) = path
+        .iter()
+        .fold((f32::INFINITY, f32::NEG_INFINITY), |(a, b), p| (a.min(p.0), b.max(p.0)));
+    let (lo_y, hi_y) = path
+        .iter()
+        .fold((f32::INFINITY, f32::NEG_INFINITY), |(a, b), p| (a.min(p.1), b.max(p.1)));
+    let x0 = (lo_x - reach).floor().max(0.0) as usize;
+    let y0 = (lo_y - reach).floor().max(0.0) as usize;
+    let x1 = ((hi_x + reach).ceil().max(0.0) as usize).min(w);
+    let y1 = ((hi_y + reach).ceil().max(0.0) as usize).min(h);
+    if x0 >= x1 || y0 >= y1 {
+        return;
+    }
     let (ww, wh) = (x1 - x0, y1 - y0);
     if ww < 16 || wh < 16 {
         return;
     }
-    // Le trou couvre le disque et un pixel de plus (le bord de l'objet).
+    // Le trou couvre la zone et un pixel de plus (le bord de l'objet).
     let mut base = Level {
         w: ww,
         h: wh,
@@ -244,7 +279,7 @@ pub fn fill(img: &mut RgbImage, cx: f32, cy: f32, r: f32, feather: f32, opacity:
     for y in y0..y1 {
         for x in x0..x1 {
             base.px.push(img.data[y * w + x]);
-            let d = ((x as f32 + 0.5 - cx).powi(2) + (y as f32 + 0.5 - cy).powi(2)).sqrt();
+            let d = distance_to(path, x as f32 + 0.5, y as f32 + 0.5);
             base.hole.push(d < r + 1.0);
         }
     }
@@ -330,13 +365,13 @@ pub fn fill(img: &mut RgbImage, cx: f32, cy: f32, r: f32, feather: f32, opacity:
         prev_w = levels[li].w;
         prev_holes = holes;
     }
-    // Le résultat, fondu sur le bord du disque.
+    // Le résultat, fondu sur le bord de la zone.
     let filled = &levels[0];
     let inner = r * (1.0 - feather.clamp(0.0, 1.0));
     for y in y0..y1 {
         for x in x0..x1 {
             let k = (y - y0) * ww + (x - x0);
-            let d = ((x as f32 + 0.5 - cx).powi(2) + (y as f32 + 0.5 - cy).powi(2)).sqrt();
+            let d = distance_to(path, x as f32 + 0.5, y as f32 + 0.5);
             if d >= r {
                 continue;
             }
