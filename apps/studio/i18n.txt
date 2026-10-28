@@ -5618,3 +5618,7 @@ es = Curva de puntos
 fr = Un clic sur la courbe ajoute un point, glissez-le pour le régler ; un double-clic le retire
 en = A click on the curve adds a point, drag it to adjust it; a double-click removes it
 es = Un clic en la curva añade un punto, arrástrelo para ajustarlo; un doble clic lo quita
+
+fr = Jours
+en = Days
+es = Días
