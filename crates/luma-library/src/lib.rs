@@ -159,7 +159,13 @@ impl Catalog {
     /// enregistrement ne le fait pas disparaître.
     pub fn load(path: &Path) -> Catalog {
         let loaded = Self::decode_file(path);
-        if loaded.is_none() && path.is_file() {
+        // Une seule fois : relu chaque jour, le même fichier ne chasse pas, copie après
+        // copie, les bonnes sauvegardes d'avant.
+        let kept = || {
+            let newest = backup::list(path).into_iter().next();
+            newest.is_some_and(|b| std::fs::read(b).ok() == std::fs::read(path).ok())
+        };
+        if loaded.is_none() && path.is_file() && !kept() {
             let _ = backup::backup(path);
         }
         loaded.unwrap_or_default()
@@ -742,6 +748,26 @@ mod tests {
         // Absent : vide, sans sauvegarde de plus.
         assert!(Catalog::load(&dir.join("aucun.lumacat")).is_empty());
         assert_eq!(backup::list(&file).len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Relu bien des fois (l'app ouverte chaque jour, la ligne de commande), le même
+    /// catalogue illisible n'est sauvegardé qu'une fois : les bonnes sauvegardes d'avant
+    /// ne sont pas chassées par ses copies.
+    #[test]
+    fn an_unreadable_catalog_does_not_push_out_the_good_backups() {
+        let dir = std::env::temp_dir().join(format!("luma-illisible-relu-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("catalogue.lumacat");
+        std::fs::write(&file, b"un bon catalogue").unwrap();
+        let good = backup::backup_at(&file, 1_000_000_000, backup::KEEP).unwrap();
+        std::fs::write(&file, b"pas un catalogue").unwrap();
+        for _ in 0..backup::KEEP + 2 {
+            assert!(Catalog::load(&file).is_empty());
+        }
+        assert_eq!(backup::list(&file).len(), 2);
+        assert_eq!(std::fs::read(&good).unwrap(), b"un bon catalogue");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
