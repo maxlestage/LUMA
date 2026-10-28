@@ -747,6 +747,8 @@ pub struct Studio {
     pub photos_button: bool,
     /// Combien de fois l'import depuis Photos a été demandé (pour les essais).
     pub import_asks: usize,
+    /// Combien de fois l'import depuis l'app Fichiers a été demandé (pour les essais).
+    pub files_asks: usize,
     /// Les vignettes libérées faute de mémoire : redemandées quand elles réapparaissent.
     evicted: std::collections::HashSet<PathBuf>,
     /// Les vignettes affichées sans image pendant cette image de l'interface.
@@ -1091,6 +1093,7 @@ impl Studio {
             imports_until: 0.0,
             photos_button: luma_apple::photos::AVAILABLE,
             import_asks: 0,
+            files_asks: 0,
             evicted: Default::default(),
             shown_missing: Default::default(),
             // Vide : l'accueil (traduit à l'affichage, voir `status_text`).
@@ -3802,6 +3805,10 @@ impl Studio {
                     self.outputs_open = true;
                     ui.close();
                 }
+                if self.photos_button && ui.button(tr("Importer depuis Fichiers")).clicked() {
+                    action = Some("open_files");
+                    ui.close();
+                }
                 ui.separator();
                 let current = crate::i18n::lang();
                 ui.label(RichText::new(tr("Langue")).small().color(theme::DIM));
@@ -4902,6 +4909,24 @@ impl Studio {
                     && let Some(p) = crate::dialogs::pick_raw()
                 {
                     self.open_path(&p);
+                }
+            }
+            "open_files" => {
+                // Sur iPhone et iPad : l'app Fichiers (carte mémoire branchée, iCloud
+                // Drive) ; les photos arrivent dans le dossier de LÜMA, comme celles de
+                // Photos.
+                if self.photos_button {
+                    self.files_asks += 1;
+                }
+                if luma_apple::photos::AVAILABLE {
+                    let opened = crate::dialogs::documents()
+                        .ok_or("dossier Documents introuvable")
+                        .and_then(luma_apple::photos::pick_files);
+                    crate::journal(&format!("importer depuis Fichiers : {opened:?}"));
+                    self.imports_until = f64::INFINITY;
+                    if let Err(why) = opened {
+                        self.status = trf("Fichiers ne s'ouvre pas ({why}).", &[("why", &why)]);
+                    }
                 }
             }
             "before" => self.before = !self.before,
@@ -9081,6 +9106,22 @@ impl Studio {
                 _ => false,
             })
         });
+        // L'autre source : l'app Fichiers (un lecteur de carte branché, iCloud Drive).
+        let files = ui.put(
+            Rect::from_center_size(
+                pos2(rect.center().x, rect.max.y + 30.0),
+                vec2(size.x + 120.0, 28.0),
+            ),
+            egui::Button::new(
+                RichText::new(tr("Depuis Fichiers (carte mémoire, iCloud Drive)"))
+                    .size(14.0)
+                    .color(theme::ACCENT),
+            )
+            .frame(false),
+        );
+        if files.clicked() {
+            self.act("open_files");
+        }
         if crate::touch() {
             // Diagnostic, le temps de vérifier l'import sur un vrai iPhone.
             let text = match self.last_touch {
@@ -9095,7 +9136,7 @@ impl Studio {
                 None => format!("{text}\nimport pas encore demandé"),
             };
             ui.painter().text(
-                pos2(rect.center().x, rect.max.y + 14.0),
+                pos2(rect.center().x, rect.max.y + 52.0),
                 egui::Align2::CENTER_TOP,
                 text,
                 egui::FontId::proportional(11.0),

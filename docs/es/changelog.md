@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Importar desde la app Archivos en iPhone y iPad**: «Desde Archivos» bajo «Importar
+  fotos» (y en el menú «•••») abre la app Archivos: los RAW de una tarjeta de memoria en
+  un lector, de iCloud Drive o de un disco llegan a LÜMA, varios a la vez.
 - **«Iniciar sesión con Apple» en iPhone y iPad**: quienes han recibido LÜMA Premium
   como regalo lo desbloquean iniciando sesión con su cuenta de Apple desde la pantalla
   Premium; el servidor comprueba el token de Apple y el correo en la lista de accesos
