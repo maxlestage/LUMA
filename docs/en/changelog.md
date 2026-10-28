@@ -77,6 +77,9 @@ The professional photo library, step by step.
 - **Lens corrections always applied**: a working duplicate written by a version from
   before the file's lens corrections were read (Sony, Fujifilm, Olympus, Panasonic, DNG)
   is made again once, instead of showing the photo without them.
+- **Faster DNG distortion**: correcting the distortion recorded in a DNG (phones,
+  cameras that record DNG) is about 35% faster (6 Mpx: 230 → 150 ms), without changing a
+  pixel.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
