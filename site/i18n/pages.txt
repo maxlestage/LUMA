@@ -1535,9 +1535,9 @@ fr = iPhone et iPad
 en = iPhone and iPad
 es = iPhone y iPad
 
-fr = macOS, Linux et Windows ; iPhone et iPad
-en = macOS, Linux and Windows; iPhone and iPad
-es = macOS, Linux y Windows; iPhone y iPad
+fr = macOS, Linux et Windows ; bientôt iPhone et iPad
+en = macOS, Linux and Windows; iPhone and iPad soon
+es = macOS, Linux y Windows; pronto iPhone y iPad
 
 fr = Abonnement sur ordinateur : {month} par mois ou {year} par an ; achat unique sur iPhone et iPad
 en = Subscription on computers: {month} per month or {year} per year; one-time purchase on iPhone and iPad
@@ -1555,9 +1555,9 @@ fr = 275 films intégrés, et vos pellicules mesurées
 en = 275 built-in films, plus your own measured film stocks
 es = 275 películas integradas, y tus carretes medidos
 
-fr = Oui, le même moteur et le même rendu
-en = Yes, the same engine and the same rendering
-es = Sí, el mismo motor y el mismo resultado
+fr = Bientôt sur l'App Store, avec le même moteur et le même rendu
+en = Coming soon to the App Store, with the same engine and the same rendering
+es = Pronto en la App Store, con el mismo motor y el mismo resultado
 
 fr = macOS et Windows
 en = macOS and Windows

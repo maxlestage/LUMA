@@ -649,12 +649,12 @@ pub const COMPARE_ROWS: [&str; 6] = [
 /// LÜMA dans le comparatif, critère par critère. Le prix s'écrit avec ceux de [`PLANS`]
 /// (`{month}`, `{year}`).
 pub const COMPARE_LUMA: [&str; 6] = [
-    "macOS, Linux et Windows ; iPhone et iPad",
+    "macOS, Linux et Windows ; bientôt iPhone et iPad",
     "Abonnement sur ordinateur : {month} par mois ou {year} par an ; achat unique sur iPhone et iPad",
     "Oui, sans compte ni cloud",
     "Moteur propre, sur le GPU : 735 boîtiers et l'iPhone ProRAW",
     "275 films intégrés, et vos pellicules mesurées",
-    "Oui, le même moteur et le même rendu",
+    "Bientôt sur l'App Store, avec le même moteur et le même rendu",
 ];
 
 /// Les autres logiciels du comparatif : (nom, une case par critère). Des informations
