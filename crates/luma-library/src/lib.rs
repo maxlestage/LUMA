@@ -134,11 +134,15 @@ struct Stored {
 /// Le fichier du catalogue, dans le dossier de LÜMA : sur Mac
 /// `~/Library/Application Support/LÜMA/Catalogue.lumacat`, sur iPhone et iPad
 /// `Library/Application Support/Catalogue.lumacat` (hors de l'app Fichiers), ailleurs
-/// `~/.local/share/luma/catalogue.lumacat`. `LUMA_CATALOG` le remplace. Le format est
+/// `~/.local/share/luma/catalogue.lumacat` (Windows : `%APPDATA%\LÜMA\Catalogue.lumacat`).
+/// `LUMA_CATALOG` le remplace. Le format est
 /// décrit dans `store.rs`.
 pub fn default_path() -> Option<PathBuf> {
     if let Some(p) = std::env::var_os("LUMA_CATALOG") {
         return Some(PathBuf::from(p));
+    }
+    if cfg!(windows) {
+        return Some(luma_core::windows_dir(false)?.join("Catalogue.lumacat"));
     }
     let home = PathBuf::from(std::env::var_os("HOME")?);
     Some(if cfg!(target_os = "ios") {

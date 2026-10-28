@@ -487,9 +487,10 @@ pub struct Import {
 impl Default for Import {
     fn default() -> Self {
         // Le dossier Images de l'utilisateur, s'il existe.
-        let dest = std::env::var_os("HOME")
+        let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" });
+        let dest = home
             .map(|h| PathBuf::from(h).join("Pictures"))
-            .filter(|d| d.is_dir() && cfg!(target_os = "macos"));
+            .filter(|d| d.is_dir() && cfg!(any(target_os = "macos", windows)));
         Import {
             source: None,
             dest,

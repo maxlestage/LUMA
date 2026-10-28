@@ -8,7 +8,7 @@
 #    luma-apple, qui parle au décodeur d'images d'Apple (ImageIO : HEIC, AVIF…) et à
 #    l'App Store (StoreKit, sur iPhone et iPad), et la
 #    ligne de commande luma-cli, qui l'utilise.
-# 2. L'application (apps/studio) et luma-gpu, sur macOS, iOS (la cible prioritaire) et sur Linux : seules
+# 2. L'application (apps/studio) et luma-gpu, sur macOS, iOS (la cible prioritaire), Linux et Windows : seules
 #    les liaisons vers des composants du système d'exploitation sont admises, une par
 #    une, chacune justifiée ci‑dessous. Aucune ne compile de C.
 set -euo pipefail
@@ -22,6 +22,7 @@ system_bindings=(
   objc-sys             # macOS : le runtime Objective‑C d'Apple (fenêtres, Metal)
   linux-raw-sys        # Linux : définitions d'appels système, en Rust pur
   renderdoc-sys        # Linux : déclarations de l'API de capture RenderDoc (rien n'est compilé)
+  windows-sys          # Windows : déclarations des API de Windows (fenêtres, DirectX 12), en Rust
 )
 allowed="^($(IFS='|'; echo "${system_bindings[*]}")) v"
 
@@ -38,7 +39,7 @@ else
   echo "Moteur : 100 % Rust, $(tree $engine | grep -c ' v') crates, aucune liaison native."
 fi
 
-for target in aarch64-apple-darwin aarch64-apple-ios x86_64-unknown-linux-gnu; do
+for target in aarch64-apple-darwin aarch64-apple-ios x86_64-unknown-linux-gnu x86_64-pc-windows-msvc; do
   found=$(tree --workspace --target "$target" | grep -E "$banned" | grep -vE "$allowed" || true)
   if [ -n "$found" ]; then
     echo "Application ($target) : dépendances interdites :"; echo "$found"; status=1
