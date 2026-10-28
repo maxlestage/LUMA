@@ -82,7 +82,7 @@ pub fn write_file(
                 crate::jpeg::encode_with(&lines, img.width, img.height, quality, &meta.exif, &profile)?
             };
             if let Some(x) = &meta.xmp {
-                insert_jpeg_xmp(&mut out, x);
+                insert_jpeg_xmp(&mut out, x)?;
             }
             std::fs::write(path, out).map_err(|e| format!("{} : {e}", path.display()))
         }

@@ -403,11 +403,17 @@ fn xmp_packet(m: &Meta) -> String {
 /// L'identifiant du segment XMP des JPEG, fixé par le format.
 const XMP_ID: &[u8] = b"http://ns.adobe.com/xap/1.0/\0";
 
-/// Ajoute le paquet XMP à un JPEG, après ses premiers segments d'application.
-pub fn insert_jpeg_xmp(jpeg: &mut Vec<u8>, xmp: &str) {
+/// Ajoute le paquet XMP à un JPEG, après ses premiers segments d'application (ce qui
+/// n'est pas un JPEG ne bouge pas). Un paquet de plus de 64 Ko (des milliers de
+/// mots‑clés) ne tient pas dans un segment : une erreur, plutôt que des métadonnées
+/// perdues sans rien dire.
+pub fn insert_jpeg_xmp(jpeg: &mut Vec<u8>, xmp: &str) -> Result<(), String> {
     let len = 2 + XMP_ID.len() + xmp.len();
-    if len > 0xFFFF || jpeg.len() < 4 || jpeg[..2] != [0xFF, 0xD8] {
-        return;
+    if len > 0xFFFF {
+        return Err("JPEG : métadonnées XMP trop grandes (64 Ko au plus)".into());
+    }
+    if jpeg.len() < 4 || jpeg[..2] != [0xFF, 0xD8] {
+        return Ok(());
     }
     let mut at = 2;
     while at + 4 <= jpeg.len() && jpeg[at] == 0xFF && (0xE0..=0xEF).contains(&jpeg[at + 1]) {
@@ -418,6 +424,7 @@ pub fn insert_jpeg_xmp(jpeg: &mut Vec<u8>, xmp: &str) {
     seg.extend_from_slice(XMP_ID);
     seg.extend_from_slice(xmp.as_bytes());
     jpeg.splice(at..at, seg);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -595,7 +602,7 @@ pub(crate) mod tests {
     fn xmp_goes_after_the_first_segments() {
         // SOI, APP0 (4 octets), puis l'image.
         let mut jpeg = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x04, 0xAA, 0xBB, 0xFF, 0xDB, 0x00];
-        insert_jpeg_xmp(&mut jpeg, "<x/>");
+        insert_jpeg_xmp(&mut jpeg, "<x/>").unwrap();
         assert_eq!(&jpeg[..8], &[0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x04, 0xAA, 0xBB]);
         assert_eq!(&jpeg[8..10], &[0xFF, 0xE1]);
         let len = u16::from_be_bytes([jpeg[10], jpeg[11]]) as usize;
@@ -604,8 +611,12 @@ pub(crate) mod tests {
         assert_eq!(&jpeg[jpeg.len() - 3..], &[0xFF, 0xDB, 0x00]);
         // Ce qui n'est pas un JPEG ne bouge pas.
         let mut other = vec![1, 2, 3, 4];
-        insert_jpeg_xmp(&mut other, "<x/>");
+        insert_jpeg_xmp(&mut other, "<x/>").unwrap();
         assert_eq!(other, [1, 2, 3, 4]);
+        // Trop grand pour un segment : une erreur, le JPEG intact.
+        let before = jpeg.clone();
+        assert!(insert_jpeg_xmp(&mut jpeg, &"x".repeat(70_000)).is_err());
+        assert_eq!(jpeg, before);
     }
 
     #[test]
