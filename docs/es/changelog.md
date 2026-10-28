@@ -282,6 +282,9 @@ La fototeca profesional, paso a paso.
   exportada a otro tamaño o recomprimida, encontrada por su huella y mostrada grupo
   por grupo. **En lote**: con varias fotos elegidas, la valoración, la bandera y la
   etiqueta van a todas.
+- **Las copias virtuales en la fototeca**: aparecen también en «todas las fotos», las
+  búsquedas y las colecciones, con la fecha y la cámara de su original y su propia
+  valoración; una copia eliminada sale de ella.
 - **Apertura dos veces más rápida**: los niveles del sensor (negro, blanco) se
   normalizan directamente desde sus enteros, en todos los núcleos, sin copia previa
   a flotantes; NEF 145 → 67 ms, ARW 143 → 65, RW2 131 → 65, RAF 169 → 73, DNG

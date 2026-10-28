@@ -288,6 +288,9 @@ La photothèque professionnelle, étape par étape.
   copiée, exportée à une autre taille ou recompressée, retrouvée par son empreinte et
   montrée groupe par groupe. **En lot** : avec plusieurs photos choisies, la note, le
   drapeau et le libellé vont à toutes.
+- **Les copies virtuelles dans la photothèque** : elles apparaissent aussi dans « toutes
+  les photos », les recherches et les collections, avec la date et le boîtier de leur
+  original et leur note à elles ; une copie supprimée en sort.
 - **Ouverture deux fois plus rapide** : les niveaux du capteur (noir, blanc) ramenés
   directement depuis ses entiers, sur tous les cœurs, sans copie préalable en
   flottants ; NEF 145 → 67 ms, ARW 143 → 65, RW2 131 → 65, RAF 169 → 73, DNG
