@@ -260,6 +260,23 @@ pub fn weights_for(mask: &Mask, w: usize, h: usize, img: &RgbImage) -> Plane {
     plane
 }
 
+/// Le rayon du flou fin de la Netteté d'un masque, pour une image de diagonale `diag`
+/// (un pixel et demi en pleine définition, jamais sous 0,8 pixel).
+fn sharpness_sigma(diag: f32) -> f32 {
+    (0.0002 * diag).max(0.8)
+}
+
+/// Le rayon de la réduction du bruit d'un masque (six pixels en pleine définition).
+fn noise_sigma(diag: f32) -> f32 {
+    (0.0008 * diag).max(1.0)
+}
+
+/// Le rayon du flou d'une Netteté négative (une vingtaine de pixels en pleine
+/// définition).
+fn softness_sigma(diag: f32) -> f32 {
+    (0.003 * diag).max(1.0)
+}
+
 /// La zone d'un masque sur `img`, plage comprise (sans plage : [`weights`]).
 pub fn weights_on(mask: &Mask, img: &RgbImage) -> Plane {
     weights_for(mask, img.width, img.height, img)
@@ -285,6 +302,33 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
         .iter()
         .any(|m| m.local.clarity != 0.0)
         .then(|| stops.guided(0.008 * diag, 0.5));
+    // De même pour la Texture (le flou fin de la luminance) et le voile (canal sombre
+    // et lumière du voile, lus sur l'image d'avant les masques).
+    let texture_base = active
+        .iter()
+        .any(|m| m.local.texture != 0.0)
+        .then(|| stops.blur(crate::tone::texture_sigma(diag)));
+    // La Netteté : le détail le plus fin (un flou d'un pixel et demi en pleine
+    // définition) pour la relever, un flou plus large pour adoucir.
+    let fine_base = active
+        .iter()
+        .any(|m| m.local.sharpness > 0.0)
+        .then(|| stops.blur(sharpness_sigma(diag)));
+    let soft_base = active
+        .iter()
+        .any(|m| m.local.sharpness < 0.0)
+        .then(|| stops.blur(softness_sigma(diag)));
+    // La réduction du bruit : la luminance lissée en suivant les contours (un écart
+    // de plus d'un sixième d'IL reste un contour).
+    let quiet_base = active
+        .iter()
+        .any(|m| m.local.noise > 0.0)
+        .then(|| stops.guided(noise_sigma(diag), 0.02));
+    let haze = if active.iter().any(|m| m.local.dehaze != 0.0) {
+        crate::tone::haze(img)
+    } else {
+        None
+    };
     for mask in active {
         let weights = match &before {
             Some(b) => weights_for(mask, w, h, b),
@@ -294,6 +338,7 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
         let k = |v: f32| v / 100.0;
         let (contrast, hl, sh, wh, bl) = (k(l.contrast), k(l.highlights), k(l.shadows), k(l.whites), k(l.blacks));
         let (temp, tint, sat, clarity) = (k(l.temperature), k(l.tint), k(l.saturation), k(l.clarity));
+        let (texture, dehaze, sharpness, noise) = (k(l.texture), k(l.dehaze), k(l.sharpness), k(l.noise));
         img.data
             .par_iter_mut()
             .enumerate()
@@ -301,6 +346,17 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
             .for_each(|((i, p), (&m, &s))| {
                 if m <= 0.0 {
                     return;
+                }
+                // Le voile d'abord, comme sur toute la photo : la zone mêlée à sa version
+                // corrigée selon le masque.
+                if dehaze != 0.0
+                    && let Some((dark, air)) = &haze
+                {
+                    let mut c = *p;
+                    crate::tone::clear_haze(&mut c, dark.data[i], *air, dehaze);
+                    for k in 0..3 {
+                        p[k] += (c[k] - p[k]) * m;
+                    }
                 }
                 // Les tons, en IL : la même famille de courbes que le panneau Base.
                 let mut d = l.exposure;
@@ -312,6 +368,27 @@ pub fn apply(img: &mut RgbImage, masks: &[Mask]) {
                 if let Some(base) = &clarity_base {
                     let mid = (-(s / 2.5).powi(2)).exp();
                     d += clarity * 0.7 * (s - base.data[i]) * mid;
+                }
+                // La Texture : le détail fin, hors des ombres profondes où vit le bruit.
+                if let Some(base) = &texture_base {
+                    d += texture * 0.9 * (s - base.data[i]) * smoothstep(-6.0, -3.0, s);
+                }
+                // La Netteté : relevée hors des ombres profondes (le bruit), ou adoucie
+                // jusqu'au flou large à −100.
+                if sharpness > 0.0
+                    && let Some(base) = &fine_base
+                {
+                    d += sharpness * 1.5 * (s - base.data[i]) * smoothstep(-6.0, -3.0, s);
+                } else if sharpness < 0.0
+                    && let Some(base) = &soft_base
+                {
+                    d += -sharpness * (base.data[i] - s);
+                }
+                // Le bruit : la luminance rapprochée de sa version lissée.
+                if noise > 0.0
+                    && let Some(base) = &quiet_base
+                {
+                    d += noise * (base.data[i] - s);
                 }
                 let g = (d * m).clamp(-6.0, 6.0).exp2();
                 // Température (bleu ↔ jaune) et teinte (vert ↔ magenta).
@@ -721,5 +798,166 @@ mod tests {
         apply(&mut img, &[m]);
         let p = img.data[0];
         assert!((p[0] - p[2]).abs() < 1e-5 && (luminance(p) - y0).abs() < 1e-5, "{p:?}");
+    }
+
+    /// Un disque net au centre (rayon 0,2), qui ne déborde pas.
+    fn disk(local: Local) -> Mask {
+        let mut m = Mask::radial();
+        m.shape = Shape::Radial {
+            center: (0.5, 0.5),
+            radius: (0.2, 0.2),
+            angle: 0.0,
+            feather: 0.0,
+        };
+        m.local = local;
+        m
+    }
+
+    /// L'écart type de la luminance sur un carré de côté `r` autour de `(cx, cy)`.
+    fn local_spread(img: &RgbImage, cx: usize, cy: usize, r: usize) -> f32 {
+        let v: Vec<f32> = (cy - r..cy + r)
+            .flat_map(|y| (cx - r..cx + r).map(move |x| (x, y)))
+            .map(|(x, y)| luminance(img.data[y * img.width + x]))
+            .collect();
+        let mean = v.iter().sum::<f32>() / v.len() as f32;
+        (v.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / v.len() as f32).sqrt()
+    }
+
+    #[test]
+    fn local_texture_softens_fine_detail_inside_only() {
+        // Un gris moyen et un grain fin, partout.
+        let (w, h) = (200, 200);
+        let mut img = RgbImage::from_fn(w, h, |x, y| {
+            let n = ((x * 73_856_093) ^ (y * 19_349_663)).wrapping_mul(2_654_435_761) as u32;
+            let v = 0.18 * (1.0 + 0.3 * ((n >> 8) as f32 / 16_777_216.0 - 0.5));
+            [v, v, v]
+        });
+        let before = img.clone();
+        apply(
+            &mut img,
+            &[disk(Local {
+                texture: -100.0,
+                ..Local::default()
+            })],
+        );
+        let (inside, was) = (local_spread(&img, 100, 100, 15), local_spread(&before, 100, 100, 15));
+        assert!(inside < 0.75 * was, "grain {was} → {inside}");
+        // Hors du disque, rien ne bouge.
+        assert_eq!(img.data[5 * w + 5], before.data[5 * w + 5]);
+        // Relevée, la Texture accentue le grain.
+        let mut sharper = before.clone();
+        apply(
+            &mut sharper,
+            &[disk(Local {
+                texture: 100.0,
+                ..Local::default()
+            })],
+        );
+        assert!(local_spread(&sharper, 100, 100, 15) > 1.2 * was);
+    }
+
+    #[test]
+    fn local_sharpness_raises_or_softens_detail_inside_only() {
+        // Un grain fin et un bord net (gauche sombre, droite claire), partout.
+        let (w, h) = (240, 240);
+        let img = RgbImage::from_fn(w, h, |x, y| {
+            let n = ((x * 73_856_093) ^ (y * 19_349_663)).wrapping_mul(2_654_435_761) as u32;
+            let base = if x < 120 { 0.12 } else { 0.4 };
+            let v = base * (1.0 + 0.2 * ((n >> 8) as f32 / 16_777_216.0 - 0.5));
+            [v, v, v]
+        });
+        let with = |sharpness: f32| {
+            let mut out = img.clone();
+            apply(
+                &mut out,
+                &[disk(Local {
+                    sharpness,
+                    ..Local::default()
+                })],
+            );
+            out
+        };
+        let was = local_spread(&img, 100, 120, 12);
+        // Relevée : le grain ressort ; hors du disque, rien ne bouge.
+        let sharp = with(100.0);
+        assert!(local_spread(&sharp, 100, 120, 12) > 1.3 * was);
+        assert_eq!(sharp.data[5 * w + 5], img.data[5 * w + 5]);
+        // Adoucie : le grain s'efface et le bord s'étale.
+        let soft = with(-100.0);
+        assert!(local_spread(&soft, 100, 120, 12) < 0.6 * was);
+        let step = |img: &RgbImage| luminance(img.data[120 * w + 121]) - luminance(img.data[120 * w + 118]);
+        assert!(step(&soft) < 0.8 * step(&img), "bord {} → {}", step(&img), step(&soft));
+        assert_eq!(soft.data[5 * w + 5], img.data[5 * w + 5]);
+    }
+
+    #[test]
+    fn local_noise_reduction_smooths_grain_and_keeps_edges() {
+        // Un grain marqué et un bord franc (gauche sombre, droite claire), partout.
+        let (w, h) = (240, 240);
+        let img = RgbImage::from_fn(w, h, |x, y| {
+            let n = ((x * 73_856_093) ^ (y * 19_349_663)).wrapping_mul(2_654_435_761) as u32;
+            let base = if x < 120 { 0.1 } else { 0.4 };
+            let v = base * (1.0 + 0.3 * ((n >> 8) as f32 / 16_777_216.0 - 0.5));
+            [v, v, v]
+        });
+        let mut quiet = img.clone();
+        apply(
+            &mut quiet,
+            &[disk(Local {
+                noise: 100.0,
+                ..Local::default()
+            })],
+        );
+        let was = local_spread(&img, 100, 120, 12);
+        let now = local_spread(&quiet, 100, 120, 12);
+        assert!(now < 0.5 * was, "grain {was} → {now}");
+        // Le bord reste franc : moyennes de part et d'autre, à quatre pixels.
+        let side = |img: &RgbImage, x0: usize| (110..130).map(|y| luminance(img.data[y * w + x0])).sum::<f32>() / 20.0;
+        let (before, after) = (side(&img, 124) - side(&img, 115), side(&quiet, 124) - side(&quiet, 115));
+        assert!(after > 0.9 * before, "bord {before} → {after}");
+        assert_eq!(quiet.data[5 * w + 5], img.data[5 * w + 5]);
+    }
+
+    #[test]
+    fn local_dehaze_clears_haze_inside_only_like_the_global_slider() {
+        // Une scène voilée : des tons resserrés au‑dessus d'un gris clair.
+        let (w, h) = (160, 160);
+        let hazy = RgbImage::from_fn(w, h, |x, y| {
+            let v = 0.35 + 0.25 * ((x as f32 * 0.21).sin() * (y as f32 * 0.13).cos()).abs();
+            [v, v * 0.97, v * 1.05]
+        });
+        let mut img = hazy.clone();
+        apply(
+            &mut img,
+            &[disk(Local {
+                dehaze: 80.0,
+                ..Local::default()
+            })],
+        );
+        let darkest = |img: &RgbImage| {
+            (60..100)
+                .flat_map(|y| (60..100).map(move |x| (x, y)))
+                .map(|(x, y)| luminance(img.data[y * w + x]))
+                .fold(f32::INFINITY, f32::min)
+        };
+        assert!(
+            darkest(&img) < darkest(&hazy) - 0.05,
+            "{} → {}",
+            darkest(&hazy),
+            darkest(&img)
+        );
+        assert_eq!(img.data[3 * w + 3], hazy.data[3 * w + 3]);
+        // Sur toute la photo, le masque fait ce que fait le curseur global.
+        let mut global = hazy.clone();
+        crate::tone::dehaze(&mut global, 60.0);
+        let mut full = hazy.clone();
+        let mut m = Mask::full();
+        m.local.dehaze = 60.0;
+        apply(&mut full, &[m]);
+        for (a, b) in full.data.iter().zip(&global.data) {
+            for c in 0..3 {
+                assert!((a[c] - b[c]).abs() < 1e-5, "{a:?} / {b:?}");
+            }
+        }
     }
 }

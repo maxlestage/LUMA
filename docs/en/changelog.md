@@ -4,6 +4,11 @@
 
 The professional photo library, step by step.
 
+- **LÜMA for Linux**: the same engine and the same rendering as on Mac, with the same
+  subscription. An archive that installs without a password (`./install.sh`, with its
+  launcher in the applications menu and RAW files opening through “Open With”), or a
+  `.deb` package for Debian and Ubuntu; x86_64, Ubuntu 22.04, Debian 12, Fedora 36 or
+  later, with a Vulkan graphics driver. The `luma` command line is included.
 - **Faster**: colour noise reduction (on by default) is three times faster without
   changing a single pixel; full-resolution export takes 25 to 30% less time, and the
   preview with heavy adjustments is about 25% more responsive. Then the blurs: two
@@ -20,10 +25,22 @@ The professional photo library, step by step.
   is set (NEF 372 → 136 ms), same bytes.
   Then 16-bit TIFF and PNG exports: the image written straight to
   bytes, on every core, without a second copy: 20 to 28% shorter (24 MP: 372 → 299 ms)
-  and 144 MB less memory, same bytes.
+  and 144 MB less memory, same bytes. Then batch export with a logo: the logo is read
+  once for the whole batch (40 ms less per photo for a 1200 × 600 logo). Then the
+  conversion to the output space (JPEG), eight pixels at a time: 24 MP in sRGB 230 →
+  150 ms, same bytes; and for 16-bit TIFF and PNG: sRGB about 35% shorter (24 MP:
+  295–366 → 190–204 ms), same bytes.
   Then wavelet noise reduction, without a new image at each scale: 1.8 times faster
   (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
-  shorter (0.83 → 0.60 s), same pixels.
+  shorter (0.83 → 0.60 s), same pixels. Then the edge-following filter (Shadows,
+  Highlights, Clarity, mask and sky edges), without intermediate planes: almost twice
+  as fast (24 MP: 87 → 47 ms), same values. Then JPEG export, converted to 8 bits strip
+  by strip: 72 MB less memory for 24 MP, same files byte for byte. Then Highlights,
+  Shadows, Clarity and Texture, applied in a single pass: 15 to 20% faster at full
+  resolution (26 MP RAF: 0.84–0.92 → 0.72 s), same pixels. Then luminance noise
+  reduction: 104 MB less memory for 26 MP, same pixels. Then the vignette: 37% shorter
+  (24 MP: 108 → 68 ms), almost twice as fast with a roundness (400 → 210 ms), same
+  pixels.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
@@ -36,6 +53,9 @@ The professional photo library, step by step.
   kept in the backups. In the app, the previous photo's preview no longer covers the one
   being opened, feathered masks look as they export, and a GPU that stops responding
   lets the processor finish the preview.
+- **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
+  full) or is interrupted (app closed) no longer leaves a half-written file behind; the
+  clean-up removes earlier ones (5.3 GB recovered on the test machine).
 - **Local catalogue**: `luma catalog` adds folders (subfolders included) to the LÜMA
   library; capture date, camera, lens, ISO, aperture, shutter speed and focal length
   are read from the RAW header without decoding the image (5 RAW files in 94 ms), and
@@ -134,6 +154,22 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Duplicate a mask** (Masks): a copy, or an inverted copy with settings at zero, to
+  adjust the ground after the sky without redrawing the area.
+- **Traced removal** (Retouch, Remove): dragging along a wire, a scratch or a cable
+  erases it in one gesture, replaced by the surrounding photo. No AI.
+- **Auto tone** (Light, Tone, or `--auto-tone`): one click sets exposure, contrast,
+  highlights and shadows from the photo's histogram, a starting point to refine. No
+  AI.
+- **Noise reduction in masks**: smooth lifted shadows or a noisy sky with the brush,
+  keeping edges sharp, without softening the rest of the photo.
+- **Sharpness in masks**: bring out the detail of eyes or a material with the brush,
+  or soften a background, without touching the rest of the photo.
+- **Directional X‑Trans demosaicing** (Fujifilm): green follows edges instead of
+  averaging across them, even in noisy shadows (3 dB better in our tests). Working
+  copies are rebuilt once.
+- **Texture and Dehaze in masks**: soften skin or a background with the brush, clear a
+  hazy sky in a gradient, without touching the rest of the photo.
 - **Enlarge if needed** (Export, Dimensions, or `--enlarge`): a size larger than the
   photo enlarges it, up to four times each side, sharp and without halos around edges;
   for large prints. No AI.
@@ -261,6 +297,9 @@ The professional photo library, step by step.
   exported at another size or recompressed, found by its fingerprint and shown group
   by group. **In batch**: with several photos selected, the rating, flag and label go
   to all of them.
+- **Virtual copies in the library**: they now also appear in “all photos”, searches and
+  collections, with their original's date and camera and their own rating; a deleted
+  copy leaves it.
 - **Opening twice as fast**: sensor levels (black, white) normalized straight from
   its integers, on all cores, with no prior copy to floats; NEF 145 → 67 ms, ARW
   143 → 65, RW2 131 → 65, RAF 169 → 73, DNG 285 → 158, CR3 547 → 399, bit-identical
@@ -286,6 +325,12 @@ The professional photo library, step by step.
 - **Phone photos at their date and on the map**: the EXIF of developed images (JPEG,
   HEIC, AVIF, PNG, WebP, TIFF) is read like a RAW's — capture date, camera, lens,
   settings, GPS position. Photos already in the library are read again once.
+- **A GPX track to place photos** (`luma geotag --gpx track.gpx`): each photo takes the
+  track's position at the moment it was taken, written to its XMP; the camera clock's
+  offset is given with `--offset`. The library and the map show it at once.
+- **Place a photo on the map by hand**: on the map, the displayed photo that has no
+  position shows a crosshair in the centre; drag the map under it, then “Place here”
+  writes it to its XMP and to the library.
 - **Scopes** (above the histogram, or Shift+J): **waveform** (luminance, column by
   column), **RGB parade** (each channel on its own) and **vectorscope** (hue and
   saturation, with the 75% primary targets and the skin‑tone line), computed on the
@@ -306,6 +351,9 @@ The professional photo library, step by step.
   (the last ten kept); `luma catalog --backup`, `--backups`, `--restore` (the replaced
   catalogue is backed up first). **Missing photos**: `--missing` lists them,
   `--relocate old new` finds a folder moved outside LÜMA, collections included.
+- **Duplicates** (`luma catalog --duplicates`): the photos in the catalogue twice (same
+  camera, same moment, files of the same size and type, like a card imported twice),
+  listed with the space they take, without deleting anything.
 - **Printing** (“Print…” on the selected photos, `luma print`): a PDF at the paper's
   exact size (A4, A3, A3+, 10 × 15 cm…), portrait or landscape, margins, one photo per
   page or a **contact sheet** (grid, name under each photo), photos whole or filling

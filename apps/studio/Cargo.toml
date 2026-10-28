@@ -28,9 +28,11 @@ egui.workspace = true
 # Les tuiles de la carte (PNG).
 image.workspace = true
 wgpu.workspace = true
+# Le travail de fond (doublons) sur ses propres fils.
+rayon.workspace = true
 
 # Sur Mac : l'accessibilité (VoiceOver). Ailleurs : X11 seulement (Wayland compilerait
-# du C, et Linux n'arrive qu'en phase 6).
+# du C ; sous Wayland, l'app passe par XWayland).
 [target.'cfg(target_os = "macos")'.dependencies]
 eframe = { workspace = true, features = ["accesskit"] }
 rfd.workspace = true

@@ -187,13 +187,19 @@ impl Plane {
     /// d'un flou réutilisent deux tampons au lieu d'allouer chacune une image neuve (une
     /// mémoire neuve coûte une faute de page par page à la première écriture).
     fn box_rows_into(&self, r: usize, out: &mut Plane) {
+        self.box_rows_map_into(r, out, |v| v);
+    }
+
+    /// `box_rows_into` de `f(v)` : chaque valeur transformée à la lecture (le carré du
+    /// filtre guidé, sans plan intermédiaire).
+    fn box_rows_map_into(&self, r: usize, out: &mut Plane, f: impl Fn(f32) -> f32 + Sync) {
         let w = self.width;
         let norm = 1.0 / (2 * r + 1) as f32;
         out.data
             .par_chunks_mut(w)
             .zip(self.data.par_chunks(w))
             .for_each(|(dst, src)| {
-                let at = |i: isize| src[i.clamp(0, w as isize - 1) as usize];
+                let at = |i: isize| f(src[i.clamp(0, w as isize - 1) as usize]);
                 let ri = r as isize;
                 let mut sum: f32 = (-ri..=ri).map(at).sum();
                 let lo = (r + 1).min(w);
@@ -204,7 +210,7 @@ impl Plane {
                 }
                 for (x, d) in dst.iter_mut().enumerate().take(hi).skip(lo) {
                     *d = sum * norm;
-                    sum += src[x + r + 1] - src[x - r];
+                    sum += f(src[x + r + 1]) - f(src[x - r]);
                 }
                 for (x, d) in dst.iter_mut().enumerate().skip(hi) {
                     *d = sum * norm;
@@ -278,10 +284,27 @@ impl Plane {
             let small = self.downscale(factor).blur(sigma / factor as f32);
             return small.upsample(self.width, self.height);
         }
-        let r = Self::box_radius(sigma);
-        // Six passes, deux tampons qui alternent.
+        self.box_blur(Self::box_radius(sigma), |v| v)
+    }
+
+    /// Le flou de `f(v)` : les mêmes valeurs que `self.map(f).blur(sigma)` ; au petit
+    /// rayon (pleine taille), `f` s'applique à la lecture de la première passe, sans plan
+    /// intermédiaire.
+    pub fn blur_map(&self, sigma: f32, f: impl Fn(f32) -> f32 + Sync) -> Plane {
+        let factor = ((sigma / 3.0).floor() as usize)
+            .min(self.width / 8)
+            .min(self.height / 8);
+        if sigma < 0.3 || self.width < 2 || self.height < 2 || factor >= 2 {
+            return self.map(f).blur(sigma);
+        }
+        self.box_blur(Self::box_radius(sigma), f)
+    }
+
+    /// Trois flous boîte en ligne puis trois en colonne, de rayon `r`, sur `f(v)`. Six
+    /// passes, deux tampons qui alternent.
+    fn box_blur(&self, r: usize, f: impl Fn(f32) -> f32 + Sync) -> Plane {
         let (mut a, mut b) = (Plane::new(self.width, self.height), Plane::new(self.width, self.height));
-        self.box_rows_into(r, &mut a);
+        self.box_rows_map_into(r, &mut a, f);
         a.box_rows_into(r, &mut b);
         b.box_rows_into(r, &mut a);
         a.box_cols_into(r, &mut b);
@@ -394,15 +417,13 @@ impl Plane {
         let factor = ((sigma / 4.0).floor() as usize)
             .min(self.width / 8)
             .min(self.height / 8);
-        let (a, b) = if factor >= 2 {
+        if factor >= 2 {
             let (a, b) = self.downscale(factor).guided_coefficients(sigma / factor as f32, eps);
-            (a.upsample(self.width, self.height), b.upsample(self.width, self.height))
+            self.apply_upsampled(&a, &b, self)
         } else {
-            self.guided_coefficients(sigma, eps)
-        };
-        let mut out = a.zip(self, |a, i| a * i);
-        out.data.par_iter_mut().zip(&b.data).for_each(|(o, b)| *o += b);
-        out
+            let (a, b) = self.guided_coefficients(sigma, eps);
+            self.apply_coefficients(&a, &b, self)
+        }
     }
 
     /// Filtre guidé croisé : ce plan lissé en suivant les contours de `guide` (de même
@@ -412,16 +433,46 @@ impl Plane {
         let factor = ((sigma / 4.0).floor() as usize)
             .min(self.width / 8)
             .min(self.height / 8);
-        let (a, b) = if factor >= 2 {
+        if factor >= 2 {
             let (a, b) =
                 self.downscale(factor)
                     .cross_coefficients(&guide.downscale(factor), sigma / factor as f32, eps);
-            (a.upsample(self.width, self.height), b.upsample(self.width, self.height))
+            self.apply_upsampled(&a, &b, guide)
         } else {
-            self.cross_coefficients(guide, sigma, eps)
-        };
-        let mut out = a.zip(guide, |a, i| a * i);
-        out.data.par_iter_mut().zip(&b.data).for_each(|(o, b)| *o += b);
+            let (a, b) = self.cross_coefficients(guide, sigma, eps);
+            self.apply_coefficients(&a, &b, guide)
+        }
+    }
+
+    /// `a · guide + b`, pixel par pixel, en une passe.
+    fn apply_coefficients(&self, a: &Plane, b: &Plane, guide: &Plane) -> Plane {
+        let mut out = Plane::new(self.width, self.height);
+        out.data
+            .par_iter_mut()
+            .zip(&a.data)
+            .zip(&b.data)
+            .zip(&guide.data)
+            .for_each(|(((o, a), b), i)| *o = a * i + b);
+        out
+    }
+
+    /// `a · guide + b`, les coefficients réduits `a` et `b` agrandis ligne par ligne (le
+    /// calcul d'[`Plane::upsample`], sans garder les deux plans agrandis).
+    fn apply_upsampled(&self, a: &Plane, b: &Plane, guide: &Plane) -> Plane {
+        let (w, h) = (self.width, self.height);
+        let mut out = Plane::new(w, h);
+        let columns = a.upsample_columns(w);
+        out.data.par_chunks_mut(w).enumerate().for_each_init(
+            || (vec![0.0; w], vec![0.0; w]),
+            |(ra, rb), (y, row)| {
+                a.upsample_row(y, h, &columns, ra);
+                b.upsample_row(y, h, &columns, rb);
+                let g = &guide.data[y * w..(y + 1) * w];
+                for (((o, a), b), i) in row.iter_mut().zip(ra.iter()).zip(rb.iter()).zip(g) {
+                    *o = a * i + b;
+                }
+            },
+        );
         out
     }
 
@@ -429,25 +480,38 @@ impl Plane {
         let mean_i = guide.blur(sigma);
         let mean_p = self.blur(sigma);
         let corr_ip = guide.zip(self, |i, p| i * p).blur(sigma);
-        let corr_ii = guide.map(|v| v * v).blur(sigma);
+        let corr_ii = guide.blur_map(sigma, |v| v * v);
+        // a et b ensemble, en une passe.
         let mut a = Plane::new(self.width, self.height);
-        a.data.par_iter_mut().enumerate().for_each(|(k, a)| {
-            let (mi, mp) = (mean_i.data[k], mean_p.data[k]);
-            let var = (corr_ii.data[k] - mi * mi).max(0.0);
-            *a = (corr_ip.data[k] - mi * mp) / (var + eps);
-        });
-        let b = mean_p.zip(&a.zip(&mean_i, |a, mi| a * mi), |mp, ami| mp - ami);
+        let mut b = Plane::new(self.width, self.height);
+        a.data
+            .par_iter_mut()
+            .zip(b.data.par_iter_mut())
+            .enumerate()
+            .for_each(|(k, (a, b))| {
+                let (mi, mp) = (mean_i.data[k], mean_p.data[k]);
+                let var = (corr_ii.data[k] - mi * mi).max(0.0);
+                *a = (corr_ip.data[k] - mi * mp) / (var + eps);
+                *b = mp - *a * mi;
+            });
         (a.blur(sigma), b.blur(sigma))
     }
 
     fn guided_coefficients(&self, sigma: f32, eps: f32) -> (Plane, Plane) {
         let mean = self.blur(sigma);
-        let sq = self.map(|v| v * v).blur(sigma);
-        let a = mean.zip(&sq, |m, s| {
-            let var = (s - m * m).max(0.0);
-            var / (var + eps)
-        });
-        let b = a.zip(&mean, |a, m| m - a * m);
+        let sq = self.blur_map(sigma, |v| v * v);
+        let mut a = Plane::new(self.width, self.height);
+        let mut b = Plane::new(self.width, self.height);
+        a.data
+            .par_iter_mut()
+            .zip(b.data.par_iter_mut())
+            .zip(&mean.data)
+            .zip(&sq.data)
+            .for_each(|(((a, b), m), s)| {
+                let var = (s - m * m).max(0.0);
+                *a = var / (var + eps);
+                *b = m - *a * m;
+            });
         (a.blur(sigma), b.blur(sigma))
     }
 }
@@ -455,6 +519,100 @@ impl Plane {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // L'ancien filtre guidé (un plan neuf par étape), pour vérifier que la version
+    // fusionnée donne exactement les mêmes valeurs.
+    impl Plane {
+        fn guided_reference(&self, sigma: f32, eps: f32) -> Plane {
+            let factor = ((sigma / 4.0).floor() as usize)
+                .min(self.width / 8)
+                .min(self.height / 8);
+            let (a, b) = if factor >= 2 {
+                let (a, b) = self
+                    .downscale(factor)
+                    .guided_coefficients_reference(sigma / factor as f32, eps);
+                (a.upsample(self.width, self.height), b.upsample(self.width, self.height))
+            } else {
+                self.guided_coefficients_reference(sigma, eps)
+            };
+            let mut out = a.zip(self, |a, i| a * i);
+            out.data.par_iter_mut().zip(&b.data).for_each(|(o, b)| *o += b);
+            out
+        }
+
+        fn guided_by_reference(&self, guide: &Plane, sigma: f32, eps: f32) -> Plane {
+            let factor = ((sigma / 4.0).floor() as usize)
+                .min(self.width / 8)
+                .min(self.height / 8);
+            let (a, b) = if factor >= 2 {
+                let (a, b) = self.downscale(factor).cross_coefficients_reference(
+                    &guide.downscale(factor),
+                    sigma / factor as f32,
+                    eps,
+                );
+                (a.upsample(self.width, self.height), b.upsample(self.width, self.height))
+            } else {
+                self.cross_coefficients_reference(guide, sigma, eps)
+            };
+            let mut out = a.zip(guide, |a, i| a * i);
+            out.data.par_iter_mut().zip(&b.data).for_each(|(o, b)| *o += b);
+            out
+        }
+
+        fn cross_coefficients_reference(&self, guide: &Plane, sigma: f32, eps: f32) -> (Plane, Plane) {
+            let mean_i = guide.blur(sigma);
+            let mean_p = self.blur(sigma);
+            let corr_ip = guide.zip(self, |i, p| i * p).blur(sigma);
+            let corr_ii = guide.map(|v| v * v).blur(sigma);
+            let mut a = Plane::new(self.width, self.height);
+            a.data.par_iter_mut().enumerate().for_each(|(k, a)| {
+                let (mi, mp) = (mean_i.data[k], mean_p.data[k]);
+                let var = (corr_ii.data[k] - mi * mi).max(0.0);
+                *a = (corr_ip.data[k] - mi * mp) / (var + eps);
+            });
+            let b = mean_p.zip(&a.zip(&mean_i, |a, mi| a * mi), |mp, ami| mp - ami);
+            (a.blur(sigma), b.blur(sigma))
+        }
+
+        fn guided_coefficients_reference(&self, sigma: f32, eps: f32) -> (Plane, Plane) {
+            let mean = self.blur(sigma);
+            let sq = self.map(|v| v * v).blur(sigma);
+            let a = mean.zip(&sq, |m, s| {
+                let var = (s - m * m).max(0.0);
+                var / (var + eps)
+            });
+            let b = a.zip(&mean, |a, m| m - a * m);
+            (a.blur(sigma), b.blur(sigma))
+        }
+    }
+
+    #[test]
+    fn fused_guided_filters_give_the_same_values() {
+        for (w, h) in [(203, 151), (64, 64), (40, 23)] {
+            let p = Plane {
+                width: w,
+                height: h,
+                data: (0..w * h).map(|i| ((i * 7919) % 1000) as f32 / 1000.0).collect(),
+            };
+            let g = Plane {
+                width: w,
+                height: h,
+                data: (0..w * h).map(|i| ((i % w) as f32 / w as f32).powi(2)).collect(),
+            };
+            let same = |a: &Plane, b: &Plane| a.data.iter().zip(&b.data).all(|(x, y)| x.to_bits() == y.to_bits());
+            // Les petits rayons (pleine taille) et les grands (coefficients réduits).
+            for sigma in [0.5, 2.0, 9.0, 24.0] {
+                assert!(
+                    same(&p.guided(sigma, 0.01), &p.guided_reference(sigma, 0.01)),
+                    "{w}×{h} {sigma}"
+                );
+                assert!(
+                    same(&p.guided_by(&g, sigma, 1e-4), &p.guided_by_reference(&g, sigma, 1e-4)),
+                    "{w}×{h} {sigma}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn blur_keeps_flat_images_flat() {
@@ -479,6 +637,23 @@ mod tests {
         assert!((sum - 1.0).abs() < 1e-3, "{sum}");
         assert!(b.data[50 * 101 + 50] < 0.05);
         assert!(b.data[50 * 101 + 53] > 0.0);
+    }
+
+    #[test]
+    fn blur_of_a_mapped_plane_needs_no_intermediate_plane() {
+        let p = Plane {
+            width: 61,
+            height: 43,
+            data: (0..61 * 43).map(|i| ((i as f32) * 0.618).fract() - 0.3).collect(),
+        };
+        for sigma in [0.2, 0.8, 1.5, 2.9, 7.0] {
+            let a = p.blur_map(sigma, |v| v * v);
+            let b = p.map(|v| v * v).blur(sigma);
+            assert!(
+                a.data.iter().zip(&b.data).all(|(x, y)| x.to_bits() == y.to_bits()),
+                "sigma {sigma}"
+            );
+        }
     }
 
     #[test]

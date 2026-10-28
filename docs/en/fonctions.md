@@ -27,6 +27,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Manufacturer profiles | ⏳ |
 | Basic | As Shot white balance, temperature and tint (DNG scale) | ✅ |
 | | Auto white balance, presets (Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash), eyedropper (W) | ✅ |
+| | Auto tone (“Auto tone”, `--auto-tone`): exposure, contrast, highlights and shadows read from the photo's histogram, no AI | ✅ |
 | | Exposure, Contrast | ✅ |
 | | Highlights, Shadows (image-adaptive) | ✅ |
 | | Whites, Blacks (adaptive: bring the photo's real extremes to white and black) | ✅ |
@@ -63,11 +64,12 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Crop overlays: thirds, golden ratio, diagonals, golden triangles, golden spiral, grid (O to switch, Shift+O to rotate) | ✅ |
 | | Auto straighten (Shift+R): horizon and verticals read with a Hough transform; nothing when in doubt (close-up, vanishing lines) | ✅ |
 | | Auto verticals (Shift+V): the vanishing point of the verticals measured, the Transform's Vertical set to make them parallel | ✅ |
-| | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity | ✅ |
+| | Masks: linear gradient (M), radial gradient (Shift+M), brush with eraser (K); invert, amount, show overlay (O); exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, clarity, texture, sharpness (raised or softened), noise reduction, dehaze | ✅ |
 | | Masks restricted to a luminance range (minimum, maximum, smoothness) or a colour range (hue, width, smoothness; greys left out), read on the photo; area shown (O) | ✅ |
 | | “Sky” mask (“Select sky”): sky and clouds found on the photo, edges followed, reflections in water left out; no AI | ✅ |
 | | Edge-aware brush: each dab paints only tones close to its centre, the area stops at edges in the photo | ✅ |
 | | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
+| | Duplicate a mask, or duplicate it inverted (settings at zero): the ground after the sky, without redrawing the area | ✅ |
 | | Mask area shown (O) in red, green, blue, white or white on black, opacity from 10 to 100% | ✅ |
 | | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
 | | Healing and clone (Q): one click, the source found on its own, area and source movable; size, feather, opacity | ✅ |
@@ -75,6 +77,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Red eye: a circle on the eye, the red pupil turns black again, the skin stays | ✅ |
 | | Moiré and defringe (local chromatic aberration) with the brush, in every mask | ✅ |
 | | Remove: a circle over what is in the way (wire, passer-by, litter), filled with pieces of the surrounding photo, texture included, without AI | ✅ |
+| | Traced removal: a stroke along a wire, a scratch or a cable, erased in one gesture; no AI | ✅ |
 | | Liquify (Retouch): push, bloat, pucker with a brush (size, strength), strokes kept in the XMP, undoable; no AI | ✅ |
 | | History, undo and redo, copy‑paste settings | ✅ in LÜMA Studio |
 | | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
@@ -103,6 +106,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Bayer RAW: Sony ARW, Canon CR3, Nikon NEF (and the other common RAW formats) | ✅ 3 camera bodies checked continuously |
 | X‑Trans RAW (Fujifilm) | ✅ dedicated demosaicing |
 | Directional Bayer demosaicing: green follows edges (no zipper or beading on fine detail) | ✅ |
+| Directional X‑Trans demosaicing: green follows edges, noisy shadows included | ✅ |
 | Linear DNG, Apple ProRAW (with `BaselineExposure`) | ✅ |
 | Rendered images: JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG; HEIC, HEIF, AVIF (Apple ImageIO); unknown extensions read by content | ✅ “Original” profile: identical on opening |
 | DNG colour: two matrices interpolated by temperature | ✅ |
@@ -151,11 +155,13 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Local catalogue (`luma catalog`): folders and subfolders, capture date, camera, lens, ISO read from the header without decoding the image, incremental updates, sorted by date | ✅ |
 | Batch rename (“Rename…”, `luma rename`): the export tokens (`{date}_{séquence}`…), the RAW and JPEG of a shot together, XMP and virtual copies follow, `-2` when a name is taken, rolled back on any failure; the library and its collections follow | ✅ |
 | Catalogue backups (one a week in the app, the last ten kept; `luma catalog --backup`, `--restore`), missing photos listed, a moved folder found again with its collections (`--missing`, `--relocate`) | ✅ |
+| Duplicates in the catalogue (`luma catalog --duplicates`): same camera, same moment, files of the same size and type (a card imported twice, a copy in another folder), listed with the space they take; the RAW and JPEG of one shot are not duplicates; nothing is deleted | ✅ |
 | Instant thumbnails (the preview embedded in the raw file, in 15 ms), then rendered with the adjustments and saved losslessly for later visits | ✅ |
 | Full-resolution working copy: identical to the original, faster to open, two and a half times less memory; “Clear cache” in one click | ✅ |
 | Keywords in the XMP (`dc:subject`), read and written | ✅ |
 | IPTC information in the XMP: title, caption, creator, copyright, location (sublocation, city, state, country); hierarchical keywords (“Places > France > Paris”, each level also in `dc:subject`); metadata templates given to the selected photos; in exported JPEGs | ✅ |
-| Map of geotagged photos (GPS position from the EXIF): groups of nearby photos, drag, zoom, tap a group to see its photos; open tile base map kept on the device, usable offline | ✅ |
+| Map of geotagged photos (GPS position from the EXIF): groups of nearby photos, drag, zoom, tap a group to see its photos; open tile base map kept on the device, usable offline; a photo without a position is placed by hand (the crosshair in the centre, “Place here”, written to its XMP) | ✅ |
+| Photos placed from a GPX track (`luma geotag --gpx`): the track's position at the moment of each shot (between the two points around it), camera clock offset (`--offset +02:00`), gaps in the track not bridged, written to the XMP (`exif:GPSLatitude`); the library and the map read it, ahead of the file's own | ✅ |
 | EXIF of developed images (JPEG, HEIC, AVIF, PNG, WebP, TIFF): capture date, camera, lens, settings and GPS position read as for a RAW; a phone's photos are sorted by their date and appear on the map | ✅ |
 | Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates, ISO, focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
 | Manual and smart collections (rule: rating, date, camera, lens, ISO, keywords…), saved in the catalogue | ✅ |
@@ -164,7 +170,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Watched folder (tethered shooting, copied card): each complete photo enters the catalog and the filmstrip, and opens; `luma watch` | ✅ |
 | Import from a memory card (“Import a card…”, `luma import`): the mounted card found on its own (DCIM folder), sorted by capture date, renamed from a template, copied to a second disk, each copy read back and compared with the original, the RAW, its JPEG and its XMP keeping the same name, photos already imported skipped, the card never modified | ✅ |
 | On Mac, tethered camera (USB, or network if it allows) through the system framework: each photo taken arrives in the watched folder, shutter release from LÜMA for cameras that allow it | ✅ |
-| Virtual copies: several developments of a photo without duplicating the file (one XMP per copy), each with its own rating, keywords and thumbnail, next to its original; exported as `IMG_0001-2`; deleted without touching the original | ✅ |
+| Virtual copies: several developments of a photo without duplicating the file (one XMP per copy), each with its own rating, keywords and thumbnail, next to its original; exported as `IMG_0001-2`; deleted without touching the original; in the catalogue too (all photos, searches, collections), with their original's date and camera | ✅ |
 | Importing existing catalogues | ⏳ |
 | Customizable keyboard shortcuts (“Keyboard shortcuts…”: every command, its keys, a key already taken moves to the new command, back to the default keys; “Raccourcis.txt”); Tab hides the panels; workspaces (Culling, Develop, Retouching, Presentation and your own: tool and panels), Cmd+1 to Cmd+9 | ✅ |
 

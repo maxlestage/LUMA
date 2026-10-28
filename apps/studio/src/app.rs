@@ -1430,8 +1430,12 @@ impl Studio {
         };
         match found {
             Ok(photos) => {
-                // Les photos d'un disque débranché ne s'affichent pas.
-                let photos = photos.into_iter().filter(|p| p.is_file()).collect();
+                // Les photos d'un disque débranché ne s'affichent pas ; les copies
+                // virtuelles, tant que leur original et leur XMP sont là.
+                let photos = photos
+                    .into_iter()
+                    .filter(|p| luma_library::exists(p))
+                    .collect();
                 self.view = view;
                 self.show_photos(
                     photos,
@@ -1653,6 +1657,42 @@ impl Studio {
             .into_iter()
             .filter_map(|i| Some((i, self.catalog.get(&self.folder[i])?.gps?)))
             .collect()
+    }
+
+    /// La photo affichée, si elle n'a pas encore de position : la carte propose de la
+    /// placer.
+    fn unplaced(&self) -> Option<PathBuf> {
+        let path = self.current_path()?;
+        self.catalog
+            .get(path)
+            .is_none_or(|e| e.gps.is_none())
+            .then(|| path.to_path_buf())
+    }
+
+    /// Place la photo affichée à cette position (latitude, longitude) : écrite dans son
+    /// XMP, la photothèque et la carte la montrent aussitôt.
+    pub fn place_current_at(&mut self, at: [f64; 2]) -> bool {
+        let Some(path) = self.current_path().map(Path::to_path_buf) else {
+            return false;
+        };
+        let position = luma_project::xmp::Position {
+            latitude: at[0],
+            longitude: at[1],
+        };
+        self.edit_meta(std::slice::from_ref(&path), |m| m.position = Some(position));
+        self.flush_xmp();
+        let mut e = self
+            .catalog
+            .get(&path)
+            .cloned()
+            .unwrap_or_else(|| luma_library::entry_of(&path));
+        e.gps = Some(at);
+        self.catalog.insert(e);
+        if let Some(file) = &self.catalog_path {
+            let _ = self.catalog.save(file);
+        }
+        self.status = trf("{name} placée sur la carte", &[("name", &file_name(&path))]);
+        true
     }
 
     /// Montre la carte (cadrée sur les photos) ou revient à la grille.
@@ -4611,6 +4651,34 @@ impl Studio {
                     self.settings.masks.remove(i);
                     self.selected_part = None;
                     self.commit(tr("Masque supprimé").into());
+                    self.touch();
+                }
+            }
+            // Une copie du masque choisi, juste après lui ; inversée, elle prend tout le
+            // reste de la photo (le sol après le ciel), ses réglages remis à zéro.
+            "mask_duplicate" | "mask_duplicate_inverted" => {
+                if let Some(i) = self
+                    .selected_mask
+                    .filter(|&i| i < self.settings.masks.len())
+                {
+                    let mut copy = self.settings.masks[i].clone();
+                    let inverted = action == "mask_duplicate_inverted";
+                    if inverted {
+                        copy.invert = !copy.invert;
+                        copy.local = luma_project::Local::default();
+                        copy.look = None;
+                    }
+                    self.settings.masks.insert(i + 1, copy);
+                    self.selected_mask = Some(i + 1);
+                    self.selected_part = None;
+                    self.commit(
+                        if inverted {
+                            tr("Masque dupliqué et inversé")
+                        } else {
+                            tr("Masque dupliqué")
+                        }
+                        .into(),
+                    );
                     self.touch();
                 }
             }
@@ -8239,9 +8307,10 @@ impl Studio {
         let rect = ui.max_rect();
         let size = [f64::from(rect.width()), f64::from(rect.height())];
         let placed = self.placed();
+        let unplaced = self.unplaced();
         let painter = ui.painter().clone();
         painter.rect_filled(rect, 0.0, Color32::from_gray(0x1a));
-        if placed.is_empty() {
+        if placed.is_empty() && unplaced.is_none() {
             self.map_groups.clear();
             centered_text(
                 &painter,
@@ -8370,7 +8439,42 @@ impl Studio {
             .expand2(vec2(5.0, 2.0));
         painter.rect_filled(chip, 4.0, Color32::from_black_alpha(150));
         painter.galley(chip.min + vec2(5.0, 2.0), credit, Color32::from_gray(0xe0));
+        // La photo affichée n'a pas de position : un viseur au centre, la carte glisse
+        // dessous, un bouton la place là.
+        let mut place_at = None;
+        if let Some(path) = &unplaced {
+            let c = rect.center();
+            let stroke = egui::Stroke::new(2.0, theme::ACCENT);
+            painter.circle_stroke(
+                c,
+                14.0,
+                egui::Stroke::new(4.0, Color32::from_black_alpha(120)),
+            );
+            painter.circle_stroke(c, 14.0, stroke);
+            for d in [vec2(1.0, 0.0), vec2(0.0, 1.0)] {
+                painter.line_segment([c - d * 24.0, c - d * 8.0], stroke);
+                painter.line_segment([c + d * 8.0, c + d * 24.0], stroke);
+            }
+            let text = trf("Placer « {name} » ici", &[("name", &file_name(path))]);
+            let button = egui::Button::new(RichText::new(text).size(14.0).color(theme::BACKGROUND))
+                .fill(theme::ACCENT)
+                .corner_radius(18.0);
+            let w = (rect.width() - 40.0).min(420.0);
+            let place = Rect::from_center_size(pos2(c.x, rect.max.y - 56.0), vec2(w, 36.0));
+            if ui
+                .put(place, button)
+                .on_hover_text(tr(
+                    "Glisser la carte pour mettre le viseur à l'endroit de la prise de vue",
+                ))
+                .clicked()
+            {
+                place_at = Some(map::unproject(view.center));
+            }
+        }
         self.map = Some(Some(view));
+        if let Some(at) = place_at {
+            self.place_current_at(at);
+        }
         if let Some(members) = chosen {
             let photos = members
                 .into_iter()
@@ -9273,7 +9377,7 @@ impl Studio {
                         (
                             SpotKind::Remove,
                             tr("Supprimer|retouche"),
-                            tr("Un cercle sur ce qui gêne (fil, passant, déchet) : la photo autour le remplace, texture comprise"),
+                            tr("Un clic sur ce qui gêne (passant, déchet), ou un trait le long d'un fil : la photo autour le remplace, texture comprise"),
                             "retouch_remove",
                         ),
                     ] {
@@ -9666,6 +9770,24 @@ impl Studio {
                         self.act("mask_delete");
                     }
                 });
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(tr("Dupliquer|masque"))
+                        .on_hover_text(tr("Une copie du masque, ses réglages compris"))
+                        .clicked()
+                    {
+                        self.act("mask_duplicate");
+                    }
+                    if ui
+                        .button(tr("Dupliquer inversé"))
+                        .on_hover_text(tr(
+                            "Une copie inversée, réglages à zéro : tout le reste de la photo (le sol après le ciel)",
+                        ))
+                        .clicked()
+                    {
+                        self.act("mask_duplicate_inverted");
+                    }
+                });
                 if self.show_mask {
                     self.mask_style_row(ui);
                 }
@@ -9765,7 +9887,7 @@ impl Studio {
                 }
                 sub_title(ui, tr("Réglages du masque"));
                 let l = &mut m.local;
-                let rows: [(SliderSpec, &mut f32); 13] = [
+                let rows: [(SliderSpec, &mut f32); 17] = [
                     (spec("Intensité", 0.0, 100.0, 0), &mut m.amount),
                     (spec("Température", -100.0, 100.0, 0), &mut l.temperature),
                     (spec("Teinte", -100.0, 100.0, 0), &mut l.tint),
@@ -9777,6 +9899,10 @@ impl Studio {
                     (spec("Noirs", -100.0, 100.0, 0), &mut l.blacks),
                     (spec("Saturation", -100.0, 100.0, 0), &mut l.saturation),
                     (spec("Clarté", -100.0, 100.0, 0), &mut l.clarity),
+                    (spec("Texture", -100.0, 100.0, 0), &mut l.texture),
+                    (spec("Netteté", -100.0, 100.0, 0), &mut l.sharpness),
+                    (spec("Réduction du bruit", 0.0, 100.0, 0), &mut l.noise),
+                    (spec("Correction du voile", -100.0, 100.0, 0), &mut l.dehaze),
                     // Au pinceau sur un tissu, une grille, un contour à liserés.
                     (spec("Moiré", 0.0, 100.0, 0), &mut l.moire),
                     (spec("Frange", 0.0, 100.0, 0), &mut l.defringe),
@@ -10246,6 +10372,25 @@ impl Studio {
                         ));
                     }
                     sub_title(ui, tr("Tonalité"));
+                    // Les tons lus sur la photo : un point de départ, réglable ensuite.
+                    if ui
+                        .button(tr("Tons auto"))
+                        .on_hover_text(tr(
+                            "Exposition, contraste, hautes lumières et ombres lus sur l'histogramme de la photo",
+                        ))
+                        .clicked()
+                        && let Some(photo) = &self.photo
+                    {
+                        let t = photo.auto_tones(&self.settings);
+                        let s = &mut self.settings;
+                        s.exposure = t.exposure;
+                        s.contrast = t.contrast;
+                        s.highlights = t.highlights;
+                        s.shadows = t.shadows;
+                        s.whites = 0.0;
+                        s.blacks = 0.0;
+                        commits.push(tr("Tons automatiques").into());
+                    }
                     let l = self.fields(ui, &TONE);
                     keep(l, &mut commits);
                     if ui

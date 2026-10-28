@@ -474,9 +474,40 @@ pub fn encode(
     exif: &[u8],
     icc: &[u8],
 ) -> Result<Vec<u8>, String> {
-    if width == 0 || height == 0 || width > 65_535 || height > 65_535 || rgb.len() < width * height * 3 {
+    if rgb.len() < width * height * 3 {
         return Err(format!("JPEG : taille impossible ({width} × {height})"));
     }
+    let lines = |y: usize, x0: usize, dst: &mut [u8]| {
+        let start = (y * width + x0) * 3;
+        dst.copy_from_slice(&rgb[start..start + dst.len()]);
+    };
+    encode_with(&lines, width, height, quality, exif, icc)
+}
+
+/// Comme [`encode`], les pixels donnés par `lines(y, x0, dst)` : les octets RGB de la
+/// ligne `y` à partir de la colonne `x0`, autant que `dst` en contient. L'image se lit
+/// par bandes de huit lignes, converties au moment de les coder : le fichier est le
+/// même, sans image entière en octets.
+pub fn encode_with(
+    lines: &(dyn Fn(usize, usize, &mut [u8]) + Sync),
+    width: usize,
+    height: usize,
+    quality: u8,
+    exif: &[u8],
+    icc: &[u8],
+) -> Result<Vec<u8>, String> {
+    if width == 0 || height == 0 || width > 65_535 || height > 65_535 {
+        return Err(format!("JPEG : taille impossible ({width} × {height})"));
+    }
+    // Une bande de huit lignes (la dernière répétée au‑delà du bas), de `wide` pixels à
+    // partir de `x0`.
+    let strip = |by: usize, x0: usize, wide: usize| {
+        let mut buf = vec![0u8; 8 * wide * 3];
+        for (j, line) in buf.chunks_exact_mut(wide * 3).enumerate() {
+            lines((by * 8 + j).min(height - 1), x0, line);
+        }
+        buf
+    };
     let q = qtables(quality);
     let tables = [
         huffman(&LUMA_DC_BITS, &LUMA_DC_VALUES),
@@ -489,7 +520,10 @@ pub fn encode(
     // la ligne d'avant.
     let last: Vec<[i32; 3]> = (0..bh)
         .into_par_iter()
-        .map(|by| blocks(rgb, width, height, bw - 1, by, &q).map(|b| b[0]))
+        .map(|by| {
+            let x0 = (bw - 1) * 8;
+            blocks(&strip(by, x0, width - x0), width - x0, 8, 0, 0, &q).map(|b| b[0])
+        })
         .collect();
     let rows: Vec<Bits> = (0..bh)
         .into_par_iter()
@@ -499,8 +533,9 @@ pub fn encode(
                 ..Bits::default()
             };
             let mut prev = if by == 0 { [0; 3] } else { last[by - 1] };
+            let rgb = strip(by, 0, width);
             for bx in 0..bw {
-                let b = blocks(rgb, width, height, bx, by, &q);
+                let b = blocks(&rgb, width, 8, bx, 0, &q);
                 prev[0] = write_block(&mut w, &b[0], prev[0], &tables[0], &tables[1]);
                 prev[1] = write_block(&mut w, &b[1], prev[1], &tables[2], &tables[3]);
                 prev[2] = write_block(&mut w, &b[2], prev[2], &tables[2], &tables[3]);

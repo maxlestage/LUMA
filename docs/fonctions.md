@@ -28,6 +28,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Profils fabricant | ⏳ |
 | Base | Balance des blancs telle quelle, température et teinte (échelle DNG) | ✅ |
 | | Balance automatique, préréglages (lumière du jour, nuageux, ombre, tungstène, fluorescent, flash), pipette (W) | ✅ |
+| | Tons automatiques (« Tons auto », `--auto-tone`) : exposition, contraste, hautes lumières et ombres lus sur l'histogramme de la photo, sans IA | ✅ |
 | | Exposition, Contraste | ✅ |
 | | Hautes lumières, Ombres (adaptatifs à l'image) | ✅ |
 | | Blancs, Noirs (adaptatifs : amènent les vrais extrêmes de la photo au blanc et au noir) | ✅ |
@@ -64,11 +65,12 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Guides de recadrage : tiers, nombre d'or, diagonales, triangles d'or, spirale d'or, grille (O pour changer, Maj+O pour tourner) | ✅ |
 | | Redressement automatique (Maj+R) : l'horizon et les verticales lus par une transformée de Hough ; rien dans le doute (photo de près, lignes de fuite) | ✅ |
 | | Verticales automatiques (Maj+V) : le point de fuite des verticales mesuré, la Verticale de la Transformation réglée pour les rendre parallèles | ✅ |
-| | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté | ✅ |
+| | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté, texture, netteté (relevée ou adoucie), réduction du bruit, correction du voile | ✅ |
 | | Masques restreints à une plage de luminance (minimum, maximum, fondu) ou de couleur (teinte, largeur, fondu ; gris laissés), lue sur la photo ; zone affichée (O) | ✅ |
 | | Masque « Ciel » (« Sélectionner le ciel ») : ciel et nuages trouvés sur la photo, bords suivis, reflets dans l'eau laissés ; sans IA | ✅ |
 | | Pinceau qui suit les bords : chaque touche ne peint que les tons proches de son centre, la zone s'arrête aux contours de la photo | ✅ |
 | | Combinaisons de masques : ajouter, soustraire, intersection d'autres formes (chacune inversable) | ✅ |
+| | Dupliquer un masque, ou le dupliquer inversé (réglages à zéro) : le sol après le ciel, sans retracer la zone | ✅ |
 | | Zone du masque affichée (O) en rouge, vert, bleu, blanc ou blanc sur noir, opacité de 10 à 100 % | ✅ |
 | | Lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
 | | Correcteur et tampon (Q) : un clic, la source trouvée d'elle-même, zone et source déplaçables ; taille, contour progressif, opacité | ✅ |
@@ -76,6 +78,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Yeux rouges : un cercle sur l'œil, la pupille rouge redevient noire, la peau reste | ✅ |
 | | Moiré et frange (aberration chromatique locale) au pinceau, dans chaque masque | ✅ |
 | | Suppression : un cercle sur ce qui gêne (fil, passant, déchet), rempli par des morceaux de la photo qui l'entourent, texture comprise, sans IA | ✅ |
+| | Suppression tracée : un trait le long d'un fil, d'une rayure ou d'un câble, effacé d'un seul geste ; sans IA | ✅ |
 | | Fluidité (Retouche) : pousser, gonfler, dégonfler au pinceau (taille, force), coups gardés dans le XMP, annulables ; sans IA | ✅ |
 | | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |
@@ -104,6 +107,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | RAW Bayer : Sony ARW, Canon CR3, Nikon NEF (et les autres formats RAW courants) | ✅ 3 boîtiers vérifiés en continu |
 | RAW X‑Trans (Fujifilm) | ✅ dématriçage dédié |
 | Dématriçage Bayer directionnel : le vert suit les contours (sans « fermeture éclair » ni pointillés sur les détails fins) | ✅ |
+| Dématriçage X‑Trans directionnel : le vert suit les contours, y compris dans les ombres bruitées | ✅ |
 | DNG linéaire, Apple ProRAW (avec `BaselineExposure`) | ✅ |
 | Images développées : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, HDR, PNM, ICO, DDS, JPEG XL, PSD, JPEG 2000, SVG ; HEIC, HEIF, AVIF (ImageIO d'Apple) ; extension inconnue lue d'après le contenu | ✅ profil « Original » : identique à l'ouverture |
 | Couleur DNG : deux matrices interpolées selon la température | ✅ |
@@ -152,11 +156,13 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Catalogue local (`luma catalog`) : dossiers et sous‑dossiers, date de prise de vue, boîtier, objectif, ISO lus dans l'en‑tête sans décoder l'image, mise à jour incrémentale, tri par date | ✅ |
 | Renommage par lot (« Renommer… », `luma rename`) : les repères de l'export (`{date}_{séquence}`…), le RAW et le JPEG d'une même prise ensemble, XMP et copies virtuelles qui suivent, `-2` quand un nom est pris, retour en arrière au moindre échec ; la photothèque et ses collections suivent | ✅ |
 | Sauvegardes du catalogue (une par semaine dans l'app, les dix dernières gardées ; `luma catalog --backup`, `--restore`), photos manquantes listées, dossier déplacé retrouvé avec ses collections (`--missing`, `--relocate`) | ✅ |
+| Doublons du catalogue (`luma catalog --duplicates`) : même boîtier, même instant, fichiers de même taille et de même type (une carte importée deux fois, une copie dans un autre dossier), listés avec la place qu'ils prennent ; le RAW et le JPEG d'une même prise ne sont pas des doublons ; rien n'est effacé | ✅ |
 | Vignettes instantanées (l'aperçu intégré au RAW, en 15 ms), puis rendues avec les réglages et enregistrées sans perte pour les visites suivantes | ✅ |
 | Doublon de travail en pleine définition : identique à l'original, ouverture plus rapide, mémoire divisée par deux et demi ; « Vider le cache » en un clic | ✅ |
 | Mots‑clés dans le XMP (`dc:subject`), lus et écrits | ✅ |
 | Informations IPTC dans le XMP : titre, légende, auteur, droits, lieu (lieu, ville, région, pays) ; mots‑clés hiérarchiques (« Lieux > France > Paris », chaque niveau aussi dans `dc:subject`) ; modèles de métadonnées donnés aux photos choisies ; dans les JPEG exportés | ✅ |
-| Carte des photos géolocalisées (position GPS de l'EXIF) : groupes de photos proches, glisser, zoomer, toucher un groupe pour voir ses photos ; fond de tuiles libres gardées sur l'appareil, utilisable hors ligne | ✅ |
+| Carte des photos géolocalisées (position GPS de l'EXIF) : groupes de photos proches, glisser, zoomer, toucher un groupe pour voir ses photos ; fond de tuiles libres gardées sur l'appareil, utilisable hors ligne ; une photo sans position se place à la main (le viseur au centre, « Placer ici », écrit dans son XMP) | ✅ |
+| Photos placées d'après une trace GPX (`luma geotag --gpx`) : la position de la trace à l'instant de chaque prise de vue (entre les deux points qui l'encadrent), écart de l'horloge du boîtier (`--offset +02:00`), trous de la trace non franchis, écrite dans le XMP (`exif:GPSLatitude`) ; la photothèque et la carte la lisent, avant celle du fichier | ✅ |
 | EXIF des images développées (JPEG, HEIC, AVIF, PNG, WebP, TIFF) : date de prise de vue, boîtier, objectif, réglages et position GPS lus comme pour un RAW ; les photos d'un téléphone se rangent à leur date et vont sur la carte | ✅ |
 | Recherche et filtres (`luma catalog --search`) : mots sans tenir compte des accents ; note, drapeau, libellé, dates, ISO, focale, boîtier, objectif, mot‑clé ; décompte des mots‑clés, boîtiers et objectifs | ✅ |
 | Collections manuelles et dynamiques (règle : note, date, boîtier, objectif, ISO, mots‑clés…), enregistrées dans le catalogue | ✅ |
@@ -165,7 +171,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Dossier surveillé (prise de vue en connexion, carte copiée) : chaque photo complète entre dans la photothèque et le film, et s'ouvre ; `luma watch` | ✅ |
 | Import depuis une carte mémoire (« Importer une carte… », `luma import`) : la carte montée trouvée seule (dossier DCIM), rangement par date de prise de vue, renommage par modèle, copie sur un second disque, chaque copie relue et comparée à l'original, le RAW, son JPEG et son XMP gardant un même nom, photos déjà importées sautées, la carte jamais modifiée | ✅ |
 | Sur Mac, boîtier relié (USB, ou réseau s'il le permet) par le cadre du système : chaque photo prise arrive dans le dossier surveillé, déclenchement depuis LÜMA pour les boîtiers qui le permettent | ✅ |
-| Copies virtuelles : plusieurs développements d'une photo sans dupliquer le fichier (un XMP par copie), chacune avec sa note, ses mots‑clés et sa vignette, à côté de son original ; export nommé `IMG_0001-2` ; suppression sans toucher l'original | ✅ |
+| Copies virtuelles : plusieurs développements d'une photo sans dupliquer le fichier (un XMP par copie), chacune avec sa note, ses mots‑clés et sa vignette, à côté de son original ; export nommé `IMG_0001-2` ; suppression sans toucher l'original ; dans le catalogue aussi (toutes les photos, recherches, collections), avec la date et le boîtier de leur original | ✅ |
 | Import de catalogues existants | ⏳ |
 | Raccourcis clavier personnalisables (« Raccourcis clavier… » : chaque commande, ses touches, une touche déjà prise passe à la nouvelle commande, retour aux touches par défaut ; « Raccourcis.txt ») ; Tab masque les panneaux ; espaces de travail (Tri, Développement, Retouche, Présentation et les vôtres : outil et panneaux), Cmd+1 à Cmd+9 | ✅ |
 

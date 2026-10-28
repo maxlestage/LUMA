@@ -159,9 +159,22 @@ fn old_duplicates_leave_when_the_budget_is_exceeded() {
             .set_modified(t)
             .unwrap();
     }
+    // Deux fichiers à moitié écrits : l'un abandonné il y a une heure, l'autre en cours.
+    let (old, fresh) = (dir.join("3.tmp"), dir.join("4.tmp"));
+    for p in [&old, &fresh] {
+        std::fs::write(p, vec![0u8; 100]).unwrap();
+    }
+    std::fs::File::options()
+        .append(true)
+        .open(&old)
+        .unwrap()
+        .set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(3600))
+        .unwrap();
     duplicate::trim(&dir, 5000);
     assert!(!dir.join("0.lumadup").exists(), "le plus ancien part");
     assert!(dir.join("1.lumadup").exists() && dir.join("2.lumadup").exists());
+    assert!(!old.exists(), "le fichier abandonné part");
+    assert!(fresh.exists(), "celui qu'on écrit encore reste");
     let _ = std::fs::remove_dir_all(&dir);
 }
 

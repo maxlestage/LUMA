@@ -2,7 +2,8 @@
 
 **La lumière, développée en Rust.** Un éditeur photo professionnel écrit en Rust : RAW,
 couleur 32 bits flottants, masques, photothèque, sans IA. **macOS et iOS/iPadOS d'abord**,
-puis Windows, Linux et Android sur le même moteur.
+Linux aussi (`scripts/bundle-linux.sh` : archive et paquet `.deb`), puis Windows et
+Android sur le même moteur.
 
 - [Architecture](docs/architecture.md) : couches, workspace Cargo, pipeline non destructif, règles « 100 % Rust »
 - [Feuille de route](docs/roadmap.md) : phases M0 → M36, Apple d'abord, jalons et risques
@@ -150,7 +151,9 @@ dans des îlots de verre fumé, et l'anneau spectral de LÜMA marque l'outil act
   239,88 € par an ; la puce de la barre du haut ouvre l'écran Premium (formules, clé de
   licence). Paiement par Stripe, clé signée vérifiée hors ligne : [docs/premium.md](docs/premium.md).
 - **Télécharger** : sur le site (section Tarifs) et dans les Releases GitHub (app Mac
-  universelle, app iPhone et iPad non signée, ligne de commande Mac et Linux).
+  universelle, app Linux en archive et en paquet `.deb`, app iPhone et iPad non signée,
+  ligne de commande Mac et Linux). L'app Linux est aussi fabriquée et lancée à chaque
+  push (`linux.yml`, artefact `LUMA-linux`).
 - **Une app qui ne ressemble à aucune autre** : le logo de LÜMA (l'anneau de lumière)
   dans la barre, à l'accueil et comme icône ; le fond « éclipse », un noir profond
   éclairé par les lueurs du logo (or en bas à gauche, bleu en haut à droite) et un
