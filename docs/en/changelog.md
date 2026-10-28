@@ -31,7 +31,8 @@ The professional photo library, step by step.
   (24 MP: 1.17 → 0.65 s), and deconvolution sharpening, eight pixels at a time: 28%
   shorter (0.83 → 0.60 s), same pixels. Then the edge-following filter (Shadows,
   Highlights, Clarity, mask and sky edges), without intermediate planes: almost twice
-  as fast (24 MP: 87 → 47 ms), same values.
+  as fast (24 MP: 87 → 47 ms), same values. Then JPEG export, converted to 8 bits strip
+  by strip: 72 MB less memory for 24 MP, same files byte for byte.
 - **No more empty boxes on screen**: two film descriptions and the “Film measured”
   message contained characters missing from the app's font; a test now checks every
   text of the interface, in all three languages.
