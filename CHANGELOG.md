@@ -36,7 +36,9 @@ La photothèque professionnelle, étape par étape.
   les contours (Ombres, Hautes lumières, Clarté, bords des masques et du ciel), sans
   plans intermédiaires : presque deux fois plus rapide (24 Mpx : 87 → 47 ms), mêmes
   valeurs. Puis l'export JPEG, converti en 8 bits bande par bande : 72 Mo de mémoire en
-  moins pour 24 Mpx, mêmes fichiers octet pour octet.
+  moins pour 24 Mpx, mêmes fichiers octet pour octet. Puis Hautes lumières, Ombres,
+  Clarté et Texture, appliquées en une seule passe : 15 à 20 % plus rapides en pleine
+  définition (RAF 26 Mpx : 0,84–0,92 → 0,72 s), mêmes pixels.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
