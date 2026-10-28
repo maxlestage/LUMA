@@ -59,7 +59,9 @@ La fototeca profesional, paso a paso.
   de rápida con redondez (400 → 210 ms), mismos píxeles. Después Eliminar (en círculo
   o en trazo): un 28 % más corto, y otro 22 % después (casi el doble de rápido en
   total), mismos píxeles. Después la ampliación al exportar: un 18 % más corta
-  (6 → 24 Mpx: 440 → 360 ms), mismos píxeles.
+  (6 → 24 Mpx: 440 → 360 ms), mismos píxeles. Después el peso máximo de un JPEG,
+  hallado casi siempre en tres codificaciones en lugar de ocho: exportar un RAW de
+  24 Mpx por debajo de 2000 KB, un 17 % más corto (3,95 → 3,3 s), mismos archivos.
 - **Se acabaron los cuadrados vacíos en pantalla**: dos descripciones de películas y
   el mensaje «Película medida» contenían caracteres ausentes de la fuente de la app;
   una prueba comprueba ahora cada texto de la interfaz, en los tres idiomas.
@@ -72,7 +74,10 @@ La fototeca profesional, paso a paso.
   restaurar la copia de seguridad más antigua del catálogo funciona, y un catálogo
   ilegible se guarda en las copias. En la app, la vista previa de la foto anterior ya no
   tapa la que se abre, las máscaras de borde suavizado se ven como se exportan, y una GPU
-  que deja de responder deja al procesador terminar la vista previa.
+  que deja de responder deja al procesador terminar la vista previa. Dos pruebas hacen
+  guardia: los RAW dañados (copia cortada, bytes revueltos, archivo vacío) se abren como
+  imagen o como error, nunca como cierre, y los ajustes con valores absurdos (infinitos,
+  enormes) dan píxeles sanos, también en máscaras, retoques y licuado.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).

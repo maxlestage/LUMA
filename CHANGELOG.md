@@ -59,7 +59,9 @@ La photothèque professionnelle, étape par étape.
   avec une rondeur (400 → 210 ms), mêmes pixels. Puis Supprimer (en cercle ou en
   trait) : 28 % plus court, puis encore 22 % (presque deux fois plus rapide en tout),
   mêmes pixels. Puis l'agrandissement à l'export : 18 % plus court (6 → 24 Mpx :
-  440 → 360 ms), mêmes pixels.
+  440 → 360 ms), mêmes pixels. Puis le poids maximal d'un JPEG, trouvé en trois
+  codages le plus souvent au lieu de huit : l'export sous 2 000 Ko d'un RAW de 24 Mpx
+  17 % plus court (3,95 → 3,3 s), mêmes fichiers.
 - **Plus de carré vide à l'écran** : deux descriptions de films et le message
   « Pellicule mesurée » contenaient des caractères absents de la police de l'app ; un
   essai vérifie désormais chaque texte de l'interface, dans les trois langues.
@@ -72,7 +74,10 @@ La photothèque professionnelle, étape par étape.
   plus ancienne sauvegarde du catalogue fonctionne, et un catalogue illisible est gardé
   dans les sauvegardes. Dans l'app, l'aperçu de la photo d'avant ne recouvre plus celle
   qu'on ouvre, les masques à bord adouci s'affichent comme ils s'exportent, et un GPU qui
-  ne répond plus laisse le processeur finir l'aperçu.
+  ne répond plus laisse le processeur finir l'aperçu. Deux essais montent la garde :
+  des RAW abîmés (copie coupée, octets brouillés, fichier vide) s'ouvrent en image ou en
+  erreur, jamais en plantage, et des réglages aux valeurs aberrantes (infinies, énormes)
+  se rendent en pixels sains, dans les masques, les retouches et la fluidité aussi.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
