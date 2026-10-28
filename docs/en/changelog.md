@@ -154,6 +154,9 @@ The professional photo library, step by step.
 - **Directional demosaicing**: each pixel's green follows edges instead of crossing
   them; branches, hair and fine textures no longer show beading or zipper artefacts
   (4 dB better in our tests). Working copies are rebuilt once.
+- **Print size** (Export, Dimensions, “Print (cm)”, or `--resize 30x40cm@300`): the
+  frame in centimetres and the resolution in dots per inch, written into the JPEG and
+  the TIFF for the printer.
 - **Duplicate a mask** (Masks): a copy, or an inverted copy with settings at zero, to
   adjust the ground after the sky without redrawing the area.
 - **Traced removal** (Retouch, Remove): dragging along a wire, a scratch or a cable
