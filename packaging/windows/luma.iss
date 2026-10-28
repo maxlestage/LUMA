@@ -10,7 +10,7 @@
   #define Version "0.0.0"
 #endif
 #ifndef Source
-  #define Source "..\..\target\windows\LUMA-windows-x64"
+  #define Source "..\..\target\windows\LUMA-windows-x86_64"
 #endif
 
 [Setup]
@@ -28,8 +28,8 @@ PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
-OutputBaseFilename=LUMA-windows-x64-setup
-SetupIconFile={#Source}\luma.ico
+OutputBaseFilename=LUMA-windows-x86_64-setup
+SetupIconFile={#Source}\bin\luma.ico
 UninstallDisplayIcon={app}\luma.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -45,9 +45,9 @@ Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#Source}\luma-studio.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#Source}\luma.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#Source}\luma.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Source}\bin\luma-studio.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Source}\bin\luma.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Source}\bin\luma.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Source}\LISEZMOI.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

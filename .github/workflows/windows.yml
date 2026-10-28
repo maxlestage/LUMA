@@ -1,11 +1,13 @@
 # LÜMA pour Windows, à chaque push sur master et à chaque pull request :
 #
 # - clippy sans avertissement et tests du moteur, sur Windows ;
-# - fabrication de l'app (x64) : archive .zip et installateur (Inno Setup), publiés en
+# - fabrication de l'app et de la ligne de commande (x86_64) : archive .zip (avec
+#   install.ps1, sans droits administrateur) et installateur (Inno Setup), publiés en
 #   artefact ;
-# - essai : l'app lancée avec un vrai RAW (rendu par le GPU logiciel de Windows, WARP,
+# - essais : l'app lancée avec un vrai RAW (rendu par le GPU logiciel de Windows, WARP,
 #   à défaut de carte graphique sur la machine de GitHub), qui doit créer son interface
-#   et rester ouverte.
+#   et rester ouverte ; « luma --help » ; l'installateur et install.ps1, installés puis
+#   désinstallés sans fenêtre.
 
 name: Windows
 
@@ -51,19 +53,20 @@ jobs:
           cargo test -p luma-studio --lib
 
       - name: Paquets
+        shell: pwsh
         env:
           LUMA_CHECKOUT_MONTHLY: ${{ vars.LUMA_CHECKOUT_MONTHLY }}
           LUMA_CHECKOUT_ANNUAL: ${{ vars.LUMA_CHECKOUT_ANNUAL }}
           LUMA_LICENCE_PUBLIC: ${{ vars.LUMA_LICENCE_PUBLIC }}
           LUMA_LICENCE_SERVER: ${{ vars.LUMA_LICENCE_SERVER }}
           LUMA_BILLING_PORTAL: ${{ vars.LUMA_BILLING_PORTAL }}
-        shell: pwsh
-        run: scripts/bundle-windows.ps1
+        run: pwsh -ExecutionPolicy Bypass -File scripts/bundle-windows.ps1
 
-      - name: Lancer l'app (GPU logiciel)
+      - name: Lancer l'app (GPU logiciel) et la ligne de commande
         shell: pwsh
         run: |
-          $exe = Resolve-Path target\windows\LUMA-windows-x64\luma-studio.exe
+          $bin = 'target\windows\LUMA-windows-x86_64\bin'
+          $exe = Resolve-Path "$bin\luma-studio.exe"
           $raw = Resolve-Path tests\raw-corpus\_DSC0009.ARW
           $app = Start-Process -FilePath $exe -ArgumentList "`"$raw`"" -PassThru `
             -RedirectStandardError app.log -RedirectStandardOutput app.out
@@ -78,24 +81,30 @@ jobs:
           if (-not $ok) { throw "l'interface n'a pas été créée" }
           if ($app.HasExited) { throw "l'app s'est arrêtée (code $($app.ExitCode))" }
           Stop-Process -Id $app.Id
-          & target\windows\LUMA-windows-x64\luma.exe --help | Out-Null
+          & "$bin\luma.exe" --help | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'luma --help' }
 
-      - name: Installer sans fenêtre, puis désinstaller
+      - name: Installer puis désinstaller (installateur et install.ps1)
         shell: pwsh
         run: |
-          $setup = Resolve-Path target\windows\LUMA-windows-x64-setup.exe
+          $setup = Resolve-Path target\windows\LUMA-windows-x86_64-setup.exe
           Start-Process -Wait -FilePath $setup -ArgumentList '/VERYSILENT', '/CURRENTUSER', '/SUPPRESSMSGBOXES', '/NORESTART'
           $dir = Join-Path $env:LOCALAPPDATA 'Programs\LÜMA'
           if (-not (Test-Path (Join-Path $dir 'luma-studio.exe'))) { throw "pas installée dans $dir" }
           Start-Process -Wait -FilePath (Join-Path $dir 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
           Start-Sleep -Seconds 3
-          if (Test-Path (Join-Path $dir 'luma-studio.exe')) { throw 'pas désinstallée' }
+          if (Test-Path (Join-Path $dir 'luma-studio.exe')) { throw "l'installateur n'a pas désinstallé" }
+          $script = 'target\windows\LUMA-windows-x86_64\install.ps1'
+          powershell -ExecutionPolicy Bypass -File $script
+          $dir = Join-Path $env:LOCALAPPDATA 'Programs\LUMA'
+          if (-not (Test-Path (Join-Path $dir 'luma-studio.exe'))) { throw "install.ps1 : pas installée dans $dir" }
+          powershell -ExecutionPolicy Bypass -File $script -Remove
+          if (Test-Path $dir) { throw "install.ps1 -Remove : pas désinstallée" }
 
       - name: Publier les paquets
         uses: actions/upload-artifact@v4
         with:
           name: LUMA-windows
           path: |
-            target/windows/LUMA-windows-x64.zip
-            target/windows/LUMA-windows-x64-setup.exe
+            target/windows/LUMA-windows-x86_64.zip
+            target/windows/LUMA-windows-x86_64-setup.exe
