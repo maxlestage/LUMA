@@ -593,9 +593,9 @@ fr = Tampon
 en = Clone
 es = Tampón
 
-fr = Q : la texture d'ailleurs, la lumière du bord de la zone
-en = Q: texture from elsewhere, light from the edge of the area
-es = Q: la textura de otro lugar, la luz del borde de la zona
+fr = Q : la texture d'ailleurs, la lumière du bord de la zone ; un clic, ou un trait le long d'une ride ou d'une rayure
+en = Q: texture from elsewhere, light from the edge of the area; a click, or a stroke along a wrinkle or a scratch
+es = Q: la textura de otro lugar, la luz del borde de la zona; un clic, o un trazo a lo largo de una arruga o una raya
 
 fr = Une copie exacte d'une autre partie de la photo
 en = An exact copy of another part of the photo

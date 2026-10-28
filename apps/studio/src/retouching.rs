@@ -1,7 +1,7 @@
 //! Le tampon et le correcteur à l'écran (touche Q) : un clic pose une retouche, sa
-//! source choisie d'elle‑même ; on tire la zone ou sa source pour les déplacer. Avec
-//! « Supprimer », un glissement sur la photo trace la zone à effacer (un fil, une
-//! rayure).
+//! source choisie d'elle‑même ; on tire la zone ou sa source pour les déplacer. Un
+//! glissement sur la photo trace la retouche : un fil ou une rayure à effacer, une ride
+//! à reprendre au correcteur ou au tampon.
 
 use egui::{Color32, CursorIcon, Pos2, Rect, Sense, Stroke, Ui, pos2};
 use luma_project::{Spot, SpotKind};
@@ -95,9 +95,10 @@ pub fn edit(
             let (Grip::Center(i) | Grip::Source(i)) = g;
             *selected = Some(i);
             ui.data_mut(|d| d.insert_temp(grip_id, g));
-        } else if placing == Some(SpotKind::Remove) {
-            // Un glissement hors des retouches : une suppression tracée.
-            spots.push(Spot::new(SpotKind::Remove, to_norm(p), radius));
+        } else if let Some(kind) = placing.filter(|k| *k != SpotKind::RedEye) {
+            // Un glissement hors des retouches : une retouche tracée (sa source cherchée
+            // au départ du trait, au même décalage tout du long).
+            spots.push(place(kind, to_norm(p), radius, scene));
             *selected = Some(spots.len() - 1);
             ui.data_mut(|d| d.insert_temp(tracing_id, spots.len() - 1));
         }
@@ -191,6 +192,17 @@ pub fn edit(
                 line.clone(),
                 Stroke::new(2.0 * r, Color32::from_white_alpha(alpha)),
             ));
+            // Tampon ou correcteur : la source, au même décalage, en pointillés.
+            if s.kind.has_source() {
+                let shift = src - c;
+                let source: Vec<Pos2> = line.iter().map(|p| *p + shift).collect();
+                painter.add(egui::Shape::dashed_line(
+                    &source,
+                    Stroke::new(1.0, dim),
+                    5.0,
+                    4.0,
+                ));
+            }
             painter.add(egui::Shape::line(line, Stroke::new(1.0, dim)));
             continue;
         }

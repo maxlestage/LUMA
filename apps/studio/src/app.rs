@@ -9459,7 +9459,7 @@ impl Studio {
                         (
                             SpotKind::Heal,
                             tr("Correcteur"),
-                            tr("Q : la texture d'ailleurs, la lumière du bord de la zone"),
+                            tr("Q : la texture d'ailleurs, la lumière du bord de la zone ; un clic, ou un trait le long d'une ride ou d'une rayure"),
                             "retouch_heal",
                         ),
                         (
