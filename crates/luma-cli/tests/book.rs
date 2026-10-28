@@ -70,6 +70,10 @@ fn a_book_and_a_slideshow() {
         "Corpus",
         "--dpi",
         "72",
+        "--opening",
+        "Pour Lou,\\nqui était là.",
+        "--closing",
+        "Islande, été 2026",
     ];
     args.extend(photos.iter().map(String::as_str));
     let (ok, out) = luma(&args);
@@ -87,7 +91,8 @@ fn a_book_and_a_slideshow() {
         .unwrap()
         .parse()
         .unwrap();
-    assert!((2..=4).contains(&pages), "{pages}");
+    // Avec la page d'ouverture et la dernière page de texte.
+    assert!((4..=6).contains(&pages), "{pages}");
 
     let show = dir.join("diaporama");
     let mut args = vec![

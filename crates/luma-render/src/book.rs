@@ -53,6 +53,10 @@ pub struct Book {
     pub subtitle: String,
     /// Le nom de chaque photo dessous.
     pub captions: bool,
+    /// Une page de texte après la couverture (une dédicace, un mot d'introduction) et
+    /// une à la fin ; vides : pas de page. Une ligne par ligne du texte.
+    pub opening: String,
+    pub closing: String,
 }
 
 impl Default for Book {
@@ -66,6 +70,8 @@ impl Default for Book {
             title: String::new(),
             subtitle: String::new(),
             captions: false,
+            opening: String::new(),
+            closing: String::new(),
         }
     }
 }
@@ -79,6 +85,9 @@ pub enum Kind {
     /// Deux photos de même orientation.
     Pair,
     Four,
+    /// Les pages de texte : après la couverture, et à la fin.
+    Opening,
+    Closing,
 }
 
 /// Une page et les rangs de ses photos.
@@ -138,10 +147,35 @@ impl Book {
         }
     }
 
+    /// Les pages du livre : celles des photos ([`plan`]), avec ses pages de texte.
+    pub fn sheets(&self, landscape: &[bool]) -> Vec<Sheet> {
+        let mut sheets = plan(landscape);
+        if sheets.is_empty() {
+            return sheets;
+        }
+        if !self.opening.trim().is_empty() {
+            sheets.insert(
+                1,
+                Sheet {
+                    kind: Kind::Opening,
+                    photos: Vec::new(),
+                },
+            );
+        }
+        if !self.closing.trim().is_empty() {
+            sheets.push(Sheet {
+                kind: Kind::Closing,
+                photos: Vec::new(),
+            });
+        }
+        sheets
+    }
+
     /// Les cases d'une page ; `landscape` : l'orientation de ses photos.
     pub fn cells(&self, kind: Kind, landscape: bool) -> Vec<Cell> {
         let mut l = self.layout();
         (l.columns, l.rows) = match kind {
+            Kind::Opening | Kind::Closing => return Vec::new(),
             Kind::Cover | Kind::Single => (1, 1),
             Kind::Four => (2, 2),
             // Deux paysages l'un sous l'autre, deux portraits côte à côte.
@@ -187,10 +221,40 @@ impl Book {
                 110,
             );
         }
+        if matches!(kind, Kind::Opening | Kind::Closing) {
+            let text = if kind == Kind::Opening {
+                &self.opening
+            } else {
+                &self.closing
+            };
+            self.text_page(&mut page, text);
+        }
         if let Some(c) = printer {
             c.apply_rgb(&mut page.rgb);
         }
         page
+    }
+}
+
+impl Book {
+    /// Le texte d'une page de texte : ses lignes centrées, au milieu de la page.
+    fn text_page(&self, page: &mut Page, text: &str) {
+        let (_, ph) = self.layout().page_mm();
+        let size = (ph / 25.4 * self.dpi as f32 * 0.024).max(8.0);
+        let lines: Vec<&str> = text.trim().lines().map(str::trim).collect();
+        let step = (size * 1.7).round() as usize;
+        let top = (page.height / 2).saturating_sub(step * lines.len() / 2);
+        let margin = (self.margin / 25.4 * self.dpi as f32) as usize;
+        for (k, line) in lines.iter().enumerate() {
+            let band = Cell {
+                x: margin,
+                y: top + k * step,
+                width: page.width.saturating_sub(2 * margin),
+                height: step,
+                caption: 0,
+            };
+            print::write(page, line, &band, size, 50);
+        }
     }
 }
 
@@ -207,6 +271,38 @@ mod tests {
 
     fn kinds(sheets: &[Sheet]) -> Vec<(Kind, usize)> {
         sheets.iter().map(|s| (s.kind, s.photos.len())).collect()
+    }
+
+    #[test]
+    fn pages_of_text() {
+        let b = Book {
+            opening: "Pour Lou,\nqui était là.".into(),
+            closing: "Islande, été 2026".into(),
+            dpi: 72,
+            ..Book::default()
+        };
+        let sheets = b.sheets(&[true; 3]);
+        assert_eq!(sheets[1].kind, Kind::Opening);
+        assert_eq!(sheets.last().unwrap().kind, Kind::Closing);
+        assert_eq!(sheets.len(), plan(&[true; 3]).len() + 2);
+        assert!(b.cells(Kind::Opening, true).is_empty());
+        // Une page blanche, ses deux lignes au milieu.
+        let page = b.page(Kind::Opening, &[], &[], None);
+        let rows: Vec<usize> = (0..page.height)
+            .filter(|&y| (0..page.width).any(|x| page.rgb[(y * page.width + x) * 3] < 128))
+            .collect();
+        assert!(!rows.is_empty());
+        let (first, last) = (rows[0], *rows.last().unwrap());
+        assert!(
+            first > page.height / 3 && last < page.height * 2 / 3,
+            "{first}..{last} sur {}",
+            page.height
+        );
+        // Deux lignes : un blanc entre elles.
+        assert!(rows.windows(2).any(|w| w[1] > w[0] + 1));
+        // Sans texte : pas de page de texte.
+        assert_eq!(Book::default().sheets(&[true; 3]), plan(&[true; 3]));
+        assert!(Book::default().sheets(&[]).is_empty());
     }
 
     #[test]
