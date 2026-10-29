@@ -415,7 +415,7 @@ impl Worker {
                     }
                     let m = film::measure(&[pair], 33, &name).map_err(|e| e.to_string())?;
                     let path = dir.join(format!("{name}.cube"));
-                    std::fs::write(&path, m.cube.to_text())
+                    luma_core::save(&path, m.cube.to_text())
                         .map_err(|e| format!("{} : {e}", path.display()))?;
                     luma_image::cube::register(&name, m.cube);
                     Ok((name, m.before, m.after))

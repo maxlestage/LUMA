@@ -1538,7 +1538,7 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
             .unwrap_or_default()
     });
     let m = film::measure(&pairs, size, &title).map_err(|e| e.to_string())?;
-    std::fs::write(&out, m.cube.to_text()).map_err(|e| format!("{} : {e}", out.display()))?;
+    luma_core::save(&out, m.cube.to_text()).map_err(|e| format!("{} : {e}", out.display()))?;
     println!(
         "{} : LUT {n}×{n}×{n} mesurée sur {} pixels en {:.1} s",
         out.display(),

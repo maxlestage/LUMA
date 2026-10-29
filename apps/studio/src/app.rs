@@ -7739,7 +7739,8 @@ impl Studio {
             && let Some(cube) = luma_image::cube::get(n)
         {
             let lut = path.with_file_name(format!("{}.cube", safe_name(n)));
-            std::fs::write(&lut, cube.to_text()).map_err(|e| format!("{} : {e}", lut.display()))?;
+            luma_core::save(&lut, cube.to_text())
+                .map_err(|e| format!("{} : {e}", lut.display()))?;
         }
         Ok(())
     }
