@@ -548,12 +548,11 @@ impl Worker {
                     }) else {
                         continue;
                     };
-                    let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
                     let _ = sender.send(Event::Compared {
                         tag,
                         index,
                         size: [r.image.width, r.image.height],
-                        rgba: to_rgba(&rgb, false),
+                        rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
                     });
                     repaint();
                 }
@@ -572,12 +571,11 @@ impl Worker {
                 }) else {
                     continue;
                 };
-                let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
                 let _ = sender.send(Event::Preview {
                     tag,
                     index,
                     size: [r.image.width, r.image.height],
-                    rgba: to_rgba(&rgb, false),
+                    rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
                 });
                 repaint();
             }
@@ -647,8 +645,10 @@ fn render_loop(
     } else {
         luma_gpu::Gpu::new()
     };
+    // L'image du dernier aperçu rendu sur le processeur, reprise par le suivant.
+    let mut spare = Vec::new();
     serve(jobs, |job| {
-        render_job(job, &mut gpu, &sender, &running, &repaint)
+        render_job(job, &mut gpu, &mut spare, &sender, &running, &repaint)
     });
 }
 
@@ -676,9 +676,13 @@ fn serve<J>(jobs: Receiver<J>, mut each: impl FnMut(J)) {
 
 /// Un aperçu : la base, puis la fin sur le GPU ou le processeur, l'épreuvage, les
 /// histogrammes et les surimpressions.
+/// La plus grande image gardée d'un rendu au suivant : 5,6 Mpx (64 Mo).
+const SPARE_PIXELS: usize = (64 << 20) / 12;
+
 fn render_job(
     job: RenderJob,
     gpu: &mut Option<luma_gpu::Gpu>,
+    spare: &mut Vec<[f32; 3]>,
     sender: &Sender<Event>,
     running: &Mutex<Cancel>,
     repaint: &Arc<dyn Fn() + Send + Sync>,
@@ -723,8 +727,9 @@ fn render_job(
             Some(rgba) => (rgba, true),
             None => {
                 let photo = &job.photo;
-                let Ok(image) = luma_image::finish_layers(
+                let Ok(image) = luma_image::finish_layers_in(
                     &base.image,
+                    std::mem::take(spare),
                     base.scale,
                     &job.settings,
                     &mut |look, t| photo.base(look, job.size, &cancel, t).map(|b| b.image),
@@ -733,10 +738,13 @@ fn render_job(
                 ) else {
                     return;
                 };
-                (
-                    to_rgba(&luma_image::encode8(&image, OutputSpace::Srgb), false),
-                    false,
-                )
+                let rgba = luma_image::encode8_rgba(&image, OutputSpace::Srgb);
+                // Gardée seulement à la taille d'un aperçu : la pleine définition (le
+                // zoom 1:1, 288 Mo pour 24 Mpx) ne reste pas en mémoire entre deux rendus.
+                if image.data.len() <= SPARE_PIXELS {
+                    *spare = image.data;
+                }
+                (rgba, false)
             }
         };
         // L'épreuvage : l'aperçu tel qu'il sera imprimé (l'histogramme le suit), et les

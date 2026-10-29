@@ -201,6 +201,12 @@ La fototeca profesional, paso a paso.
   quita de la fototeca, colecciones incluidas. Las copias del catálogo se ven por
   fecha: una más a petición, o una anterior repuesta tras confirmar (la fototeca
   actual se guarda antes).
+- **Vistas previas más rápidas en el procesador**: la imagen de la vista anterior
+  sirve de memoria a la siguiente (sin memoria nueva en cada retoque, 64 MB como
+  mucho), y la conversión para la pantalla se hace de una vez, en todos los núcleos:
+  una vista de 4,4 Mpx entre un 10 y un 15 % más rápida, la conversión de una imagen de
+  24 Mpx un 38 % más rápida (zoom 1:1, comparación, vistas de los looks); los mismos
+  píxeles, byte a byte.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

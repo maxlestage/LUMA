@@ -184,6 +184,11 @@ The professional photo library, step by step.
   or removed from the library, collections included. Catalog backups are listed by
   date: one more on demand, or an older one put back after confirmation (the current
   library is backed up first).
+- **Faster previews on the CPU**: the previous preview's image is reused as memory
+  for the next one (no fresh memory at each edit, 64 MB kept at most), and the
+  conversion for the screen is done in one pass, on all cores: a 4.4 MP preview 10 to
+  15% faster, the conversion of a 24 MP image 38% faster (1:1 zoom, compare, look
+  previews); the same pixels, byte for byte.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

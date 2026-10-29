@@ -183,16 +183,39 @@ pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: 
 /// plus souvent en fautes de pages). Les mêmes calculs dans le même ordre : les mêmes
 /// pixels que `finish` sur `base.clone()`.
 pub fn finish_from(base: &RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
+    finish_from_in(base, Vec::new(), scale, s, cancel, t)
+}
+
+/// [`finish_from`] dans la mémoire d'une image qui ne sert plus (`spare`, l'aperçu
+/// d'avant), quand elle est assez grande : une image neuve de 24 Mpx coûte 56 ms de
+/// fautes de pages, la reprise rien. Chaque pixel est écrit avant d'être lu : les
+/// mêmes pixels.
+pub fn finish_from_in(
+    base: &RgbImage,
+    spare: Vec<[f32; 3]>,
+    scale: f32,
+    s: &Settings,
+    cancel: &Cancel,
+    t: &mut Timings,
+) -> Result<RgbImage> {
     let adapted = t.time("blancs et noirs", || adaptive_ends(base, s));
     let s = &adapted;
     let mut img = t.time("rendu", || {
         let render = RenderStage::new(s);
-        // Une image neuve à zéro : ses pages arrivent à la première écriture, sur le
-        // cœur qui l'écrit.
+        let n = base.data.len();
+        let data = if spare.len() >= n {
+            let mut d = spare;
+            d.truncate(n);
+            d
+        } else {
+            // Une image neuve à zéro : ses pages arrivent à la première écriture, sur
+            // le cœur qui l'écrit.
+            vec![[0.0; 3]; n]
+        };
         let mut img = RgbImage {
             width: base.width,
             height: base.height,
-            data: vec![[0.0; 3]; base.data.len()],
+            data,
         };
         img.data
             .par_chunks_mut(LANES)
@@ -261,10 +284,24 @@ pub fn finish_layers(
     cancel: &Cancel,
     t: &mut Timings,
 ) -> Result<RgbImage> {
+    finish_layers_in(base, Vec::new(), scale, s, base_for, cancel, t)
+}
+
+/// [`finish_layers`], la sortie écrite dans la mémoire de `spare` (voir
+/// [`finish_from_in`]).
+pub fn finish_layers_in(
+    base: &RgbImage,
+    spare: Vec<[f32; 3]>,
+    scale: f32,
+    s: &Settings,
+    base_for: &mut dyn FnMut(&Settings, &mut Timings) -> Result<Arc<RgbImage>>,
+    cancel: &Cancel,
+    t: &mut Timings,
+) -> Result<RgbImage> {
     if base.data.is_empty() {
         return Ok(base.clone());
     }
-    let mut out = finish_from(base, scale, s, cancel, t)?;
+    let mut out = finish_from_in(base, spare, scale, s, cancel, t)?;
     for (mask, look, k) in look_layers(s) {
         let own = if needs_own_base(s, &look) {
             Some(base_for(&look, t)?)
@@ -626,6 +663,18 @@ pub fn encode8(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
     out
 }
 
+/// [`encode8`] en RGBA (opaque), l'aperçu de l'écran : les mêmes octets que l'image
+/// 8 bits complétée d'un quatrième octet à 255, sans l'image intermédiaire et sur tous
+/// les cœurs.
+pub fn encode8_rgba(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
+    let enc = Encoder8::new(space);
+    let mut out = vec![0u8; img.data.len() * 4];
+    out.par_chunks_mut(4 * img.width.max(1))
+        .zip(img.data.par_chunks(img.width.max(1)))
+        .for_each(|(dst, src)| enc.write(src, dst.as_chunks_mut::<4>().0, |d| d[3] = 255));
+    out
+}
+
 /// La conversion de [`encode8`], pixel par pixel : un morceau d'image se convertit
 /// quand on en a besoin (l'encodeur JPEG, bande par bande), aux mêmes octets.
 pub struct Encoder8 {
@@ -644,24 +693,32 @@ impl Encoder8 {
     /// `src` (linéaire, espace de travail) en octets RGB dans `dst` (trois par pixel).
     #[inline]
     pub fn pixels(&self, src: &[[f32; 3]], dst: &mut [u8]) {
-        let dst = dst.as_chunks_mut::<3>().0;
+        self.write(src, dst.as_chunks_mut::<3>().0, |_| {});
+    }
+
+    /// Les trois premiers octets de chaque pixel de `dst` (`C` octets par pixel) ;
+    /// `rest` remplit les autres.
+    #[inline]
+    fn write<const C: usize>(&self, src: &[[f32; 3]], dst: &mut [[u8; C]], rest: impl Fn(&mut [u8; C])) {
         let n = src.len().min(dst.len());
         let (src, dst) = (&src[..n], &mut dst[..n]);
         // Huit pixels à la fois, puis le reste un par un.
-        let (blocks, rest) = src.as_chunks::<LANES>();
+        let (blocks, left) = src.as_chunks::<LANES>();
         let (head, tail) = dst.split_at_mut(blocks.len() * LANES);
         for (d, p) in head.as_chunks_mut::<LANES>().0.iter_mut().zip(blocks) {
             for (d, c) in d.iter_mut().zip(to_output_lanes(&self.m, p)) {
                 for i in 0..3 {
                     d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
                 }
+                rest(d);
             }
         }
-        for (d, &p) in tail.iter_mut().zip(rest) {
+        for (d, &p) in tail.iter_mut().zip(left) {
             let c = to_output(&self.m, p);
             for i in 0..3 {
                 d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
             }
+            rest(d);
         }
     }
 }
@@ -747,6 +804,15 @@ mod tests {
             finish(&mut copy, 0.5, &s, &Cancel::new(), &mut Timings::default()).unwrap();
             let fused = finish_from(&base, 0.5, &s, &Cancel::new(), &mut Timings::default()).unwrap();
             assert!(fused.data == copy.data && (fused.width, fused.height) == (203, 77));
+            // Dans la mémoire d'une image d'avant, pleine d'autres valeurs (même taille,
+            // plus grande, trop petite, vide) : les mêmes bits.
+            let bits = |d: &[[f32; 3]]| d.iter().flatten().map(|v| v.to_bits()).collect::<Vec<_>>();
+            for n in [base.data.len(), base.data.len() + 999, 50, 0] {
+                let spare = vec![[f32::NAN, -7.0, 1e30]; n];
+                let again = finish_from_in(&base, spare, 0.5, &s, &Cancel::new(), &mut Timings::default()).unwrap();
+                assert_eq!(bits(&again.data), bits(&copy.data), "{n}");
+                assert_eq!((again.width, again.height), (203, 77));
+            }
         }
     }
 
@@ -1049,6 +1115,9 @@ mod tests {
                 .map(|c| (lut.get(c) * 255.0 + 0.5) as u8)
                 .collect();
             assert_eq!(encode8(&img, space), before, "{space:?}");
+            // En RGBA : les mêmes octets, un quatrième à 255.
+            let rgba: Vec<u8> = before.chunks(3).flat_map(|p| [p[0], p[1], p[2], 255]).collect();
+            assert_eq!(encode8_rgba(&img, space), rgba, "{space:?}");
             // Par morceaux de toutes tailles, comme l'encodeur JPEG.
             let enc = Encoder8::new(space);
             for len in [1, 7, 8, 9, 23] {
