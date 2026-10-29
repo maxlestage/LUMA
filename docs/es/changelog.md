@@ -127,6 +127,9 @@ La fototeca profesional, paso a paso.
   tarjetas se buscan en segundo plano, cada dos segundos mientras la ventana está
   abierta: una tarjeta insertada después aparece, y una unidad de red ausente ya no
   bloquea la ventana.
+- **Páginas del libro**: «Páginas del libro…» muestra cada página del libro de fotos
+  en pequeño, con sus fotos en su sitio; arrastrar una foto sobre otra las intercambia,
+  y el PDF sigue el nuevo orden (portada incluida).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

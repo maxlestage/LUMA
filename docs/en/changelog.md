@@ -113,6 +113,9 @@ The professional photo library, step by step.
   with a DCIM folder), and ejected after importing as on Mac and Linux. Cards are looked
   for in the background, every two seconds while the window is open: a card inserted
   later shows up, and a missing network drive no longer freezes the window.
+- **Book pages**: “Book pages…” shows each page of the photo book small, with its
+  photos in place; dragging a photo onto another swaps them, and the PDF follows the new
+  order (cover included).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

@@ -124,6 +124,9 @@ La photothèque professionnelle, étape par étape.
   sont cherchées en arrière‑plan, toutes les deux secondes tant que la fenêtre est
   ouverte : une carte branchée après coup apparaît, et un lecteur réseau absent ne
   fige plus la fenêtre.
+- **Pages du livre** : « Pages du livre… » montre chaque page du livre photo en petit,
+  ses photos à leur place ; glisser une photo sur une autre les échange, et le PDF suit
+  ce nouvel ordre (la couverture comprise).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

@@ -2784,6 +2784,20 @@ fn slideshow_and_photo_book() {
     s.keys(&[(NONE, Key::Escape)]);
     assert!(!s.studio().is_playing());
 
+    // Les pages du livre : chacune en petit ; deux photos échangées, le livre suit.
+    s.studio().book_pages_open = true;
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    s.capture("pages-du-livre");
+    assert!(s.harness.query_by_label("Couverture").is_some());
+    let before = s.studio().book_photos();
+    s.studio().swap_book_photos(0, 2);
+    let after = s.studio().book_photos();
+    assert_eq!(after.len(), before.len());
+    assert_eq!((&after[0], &after[2]), (&before[2], &before[0]));
+    assert_eq!(after[1], before[1]);
+    s.studio().book_pages_open = false;
     // Le livre photo de tout le film, et le diaporama exporté.
     s.studio().book.dpi = 50;
     s.studio().book.title = "Corpus".into();
