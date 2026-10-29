@@ -2750,6 +2750,13 @@ fn print_layout_and_pdf() {
     {
         assert!(!s.studio().open_last_output());
     }
+    // Les mêmes pages en JPEG : une image par page, la première à ouvrir.
+    let jpeg = dir.join("Planche.jpg");
+    s.studio().print_pdf(jpeg.clone());
+    s.wait();
+    let first = dir.join("Planche-1.jpg");
+    assert!(first.is_file() && dir.join("Planche-2.jpg").is_file());
+    assert_eq!(s.studio().last_output.as_deref(), Some(first.as_path()));
 }
 
 #[test]
