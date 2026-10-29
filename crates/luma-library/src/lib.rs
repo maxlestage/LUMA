@@ -21,7 +21,7 @@ pub mod stacks;
 mod store;
 pub mod watch;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -469,14 +469,50 @@ fn read_entry(path: PathBuf, size: u64, modified: u64, sidecar: u64) -> Entry {
     e
 }
 
-/// Où chercher le XMP qu'un fichier porte en lui : ses 256 premiers Ko (le paquet y est
-/// presque toujours, dans un JPEG, un TIFF, un DNG, un PNG ou un RAW qui en a un : à
-/// moins de 64 Ko dans tous ceux du corpus d'essai).
-const EMBEDDED_XMP_SPAN: u64 = 256 << 10;
+/// Où chercher le XMP qu'un fichier porte en lui : ses 64 premiers Ko (le paquet y est
+/// presque toujours, dans un JPEG, un TIFF, un DNG, un PNG ou un RAW qui en a un : dans
+/// tous ceux du corpus d'essai).
+const EMBEDDED_XMP_SPAN: u64 = 64 << 10;
+
+/// Les paquets XMP intégrés déjà cherchés, par fichier (sa taille et sa date) : l'app
+/// en demande plusieurs fois par photo (note, réglages, vignette) ; lu une seule fois.
+type XmpCache = std::sync::Mutex<HashMap<PathBuf, ((u64, u64), Option<String>)>>;
+static EMBEDDED: std::sync::LazyLock<XmpCache> = std::sync::LazyLock::new(Default::default);
 
 /// Le paquet XMP rangé dans le fichier lui‑même (`<x:xmpmeta …>…</x:xmpmeta>`), s'il y
 /// en a un dans ses premiers octets.
 pub fn embedded_xmp(path: &Path) -> Option<String> {
+    let modified = stamp(path);
+    {
+        let cache = EMBEDDED.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((m, xmp)) = cache.get(path)
+            && *m == modified
+        {
+            return xmp.clone();
+        }
+    }
+    let xmp = read_embedded_xmp(path);
+    let mut cache = EMBEDDED.lock().unwrap_or_else(|e| e.into_inner());
+    // Un plafond : une longue séance sur des milliers de photos ne garde pas tout.
+    if cache.len() >= 8192 {
+        cache.clear();
+    }
+    cache.insert(path.to_path_buf(), (modified, xmp.clone()));
+    xmp
+}
+
+/// Les réglages de développement qu'un RAW ou un DNG porte en lui (développé par un
+/// autre logiciel, qui les a rangés dans le fichier) : à prendre quand il n'a pas de XMP
+/// à côté. Jamais ceux d'un JPEG ou d'une autre image déjà développée : ils sont déjà
+/// dans ses pixels, les reprendre les doublerait.
+pub fn embedded_settings(path: &Path) -> Option<luma_project::Settings> {
+    if !luma_raw::is_raw(path) {
+        return None;
+    }
+    xmp::read(&embedded_xmp(path)?).ok()
+}
+
+fn read_embedded_xmp(path: &Path) -> Option<String> {
     use std::io::Read;
     let mut head = Vec::new();
     std::fs::File::open(path)
@@ -581,6 +617,29 @@ mod tests {
         let plain = dir.join("b.jpg");
         std::fs::write(&plain, [0xFF, 0xD8, 0xFF, 0xD9]).unwrap();
         assert!(embedded_xmp(&plain).is_none());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Les réglages qu'un DNG porte en lui sont repris ; ceux d'un JPEG, déjà dans ses
+    /// pixels, jamais. Un fichier changé est relu (le cache suit sa taille et sa date).
+    #[test]
+    fn settings_inside_a_raw_but_not_inside_a_jpeg() {
+        let dir = temp("reglages-integres");
+        let packet = |ev: &str| {
+            format!(
+                r#"<x:xmpmeta xmlns:x="x"><rdf:RDF xmlns:rdf="r"><rdf:Description xmlns:crs="c" crs:Exposure2012="{ev}" crs:Contrast2012="+20"/></rdf:RDF></x:xmpmeta>"#
+            )
+        };
+        let dng = dir.join("IMG_0001.dng");
+        let jpg = dir.join("IMG_0001.jpg");
+        std::fs::write(&dng, packet("+1.50")).unwrap();
+        std::fs::write(&jpg, packet("+1.50")).unwrap();
+        let s = embedded_settings(&dng).expect("les réglages du DNG");
+        assert!((s.exposure - 1.5).abs() < 1e-6 && (s.contrast - 20.0).abs() < 1e-6);
+        assert!(embedded_settings(&jpg).is_none(), "déjà dans les pixels du JPEG");
+        // Le fichier réécrit (une autre taille) : relu, pas pris dans le cache.
+        std::fs::write(&dng, packet("-0.750")).unwrap();
+        assert!((embedded_settings(&dng).unwrap().exposure + 0.75).abs() < 1e-6);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

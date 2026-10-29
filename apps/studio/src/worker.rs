@@ -187,8 +187,11 @@ pub fn sidecar_path(raw: &Path) -> PathBuf {
 
 /// Les réglages enregistrés à côté d'un RAW, s'il y en a.
 pub fn read_sidecar(raw: &Path) -> Option<Settings> {
-    let text = std::fs::read_to_string(sidecar_path(raw)).ok()?;
-    xmp::read(&text).ok()
+    match std::fs::read_to_string(sidecar_path(raw)) {
+        Ok(text) => xmp::read(&text).ok(),
+        // Sans XMP à côté : les réglages qu'un RAW ou un DNG porte en lui.
+        Err(_) => luma_library::embedded_settings(&luma_project::copies::source(raw)),
+    }
 }
 
 /// La note, le drapeau et le libellé enregistrés à côté d'un RAW ; sans XMP à côté,
