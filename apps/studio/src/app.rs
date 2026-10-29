@@ -770,6 +770,11 @@ pub struct Studio {
     /// des nouveaux noms pour ce modèle.
     rename_open: bool,
     print_open: bool,
+    /// Les imprimantes du système (lues à la première ouverture de « Imprimer »), celle
+    /// choisie et le nombre d'exemplaires.
+    printers: Option<Vec<String>>,
+    printer: usize,
+    print_copies: u32,
     /// La mise en page de l'impression (gardée d'une fois sur l'autre).
     pub print_layout: luma_render::print::Layout,
     /// Convertir les pages vers le profil de l'imprimante (celui de l'épreuvage).
@@ -1166,6 +1171,9 @@ impl Studio {
             paste_open: false,
             rename_open: false,
             print_open: false,
+            printers: None,
+            printer: 0,
+            print_copies: 1,
             print_layout: Default::default(),
             print_convert: true,
             printing: None,
@@ -3276,6 +3284,98 @@ impl Studio {
         }
     }
 
+    /// Le message de la barre d'état.
+    pub fn status(&self) -> &str {
+        &self.status
+    }
+
+    /// Les imprimantes proposées par « Imprimer » (les essais en donnent à eux).
+    pub fn use_printers(&mut self, printers: Vec<String>) {
+        self.printer = 0;
+        self.printers = Some(printers);
+    }
+
+    /// « Envoyer à l'imprimante » : sous le bouton qui crée le PDF, l'imprimante, le
+    /// nombre d'exemplaires et l'envoi du dernier PDF fait, sans passer par le lecteur
+    /// de PDF. Sur Mac et Linux (le service d'impression du système).
+    fn send_to_printer_row(&mut self, ui: &mut Ui) {
+        if !crate::printers::AVAILABLE
+            || !self
+                .last_output
+                .as_ref()
+                .is_some_and(|p| p.extension().is_some_and(|x| x == "pdf"))
+        {
+            return;
+        }
+        let printers = self.printers.get_or_insert_with(crate::printers::list);
+        if printers.is_empty() {
+            ui.label(
+                RichText::new(tr(
+                    "Aucune imprimante trouvée : ouvrez le PDF pour l'imprimer.",
+                ))
+                .size(11.0)
+                .color(theme::DIM),
+            );
+            return;
+        }
+        let mut send = false;
+        ui.horizontal_wrapped(|ui| {
+            self.printer = self.printer.min(printers.len() - 1);
+            egui::ComboBox::from_id_salt("imprimante")
+                .selected_text(printers[self.printer].replace('_', " "))
+                .show_ui(ui, |ui| {
+                    for (i, name) in printers.iter().enumerate() {
+                        ui.selectable_value(&mut self.printer, i, name.replace('_', " "));
+                    }
+                });
+            ui.add(
+                egui::DragValue::new(&mut self.print_copies)
+                    .range(1..=99)
+                    .suffix(format!(" {}", tr("ex.|exemplaires"))),
+            )
+            .on_hover_text(tr("Le nombre d'exemplaires"));
+            send = ui
+                .button(tr("Envoyer à l'imprimante"))
+                .on_hover_text(tr(
+                    "Le dernier PDF, tel quel, sans passer par le lecteur de PDF",
+                ))
+                .clicked();
+        });
+        if send {
+            self.send_to_printer();
+        }
+    }
+
+    /// Envoie le dernier PDF à l'imprimante choisie ; `false` (et le message du
+    /// système) si l'envoi n'a pas pu se faire.
+    pub fn send_to_printer(&mut self) -> bool {
+        let Some(path) = self.last_output.clone() else {
+            return false;
+        };
+        let printer = self
+            .printers
+            .as_ref()
+            .and_then(|p| p.get(self.printer))
+            .cloned();
+        match crate::printers::send(&path, printer.as_deref(), self.print_copies) {
+            Ok(id) => {
+                self.status = trf(
+                    "Envoyé à l'imprimante {printer} : {file} ({id})",
+                    &[
+                        ("printer", &printer.unwrap_or_default().replace('_', " ")),
+                        ("file", &file_name(&path)),
+                        ("id", &id),
+                    ],
+                );
+                true
+            }
+            Err(e) => {
+                self.status = trf("Impression impossible : {error}", &[("error", &e)]);
+                false
+            }
+        }
+    }
+
     /// Ouvre le dernier PDF, livre, diaporama ou galerie fait avec l'app du système ;
     /// `false` (et un message) si rien n'a pu être lancé.
     pub fn open_last_output(&mut self) -> bool {
@@ -3933,6 +4033,7 @@ impl Studio {
                                 .clicked();
                             self.open_output_button(ui);
                         });
+                        self.send_to_printer_row(ui);
                     }
                 }
             });

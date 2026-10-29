@@ -5842,3 +5842,29 @@ es = Mantenimiento…
 fr = Photos manquantes ou déplacées, sauvegardes du catalogue
 en = Missing or moved photos, catalog backups
 es = Fotos que faltan o movidas, copias del catálogo
+
+# ----- L'envoi à l'imprimante -----
+
+fr = Aucune imprimante trouvée : ouvrez le PDF pour l'imprimer.
+en = No printer found: open the PDF to print it.
+es = No se encontró ninguna impresora: abra el PDF para imprimirlo.
+
+fr = ex.|exemplaires
+en = cop.
+es = copias
+
+fr = Le nombre d'exemplaires
+en = Number of copies
+es = Número de copias
+
+fr = Envoyer à l'imprimante
+en = Send to printer
+es = Enviar a la impresora
+
+fr = Le dernier PDF, tel quel, sans passer par le lecteur de PDF
+en = The last PDF, as it is, without going through the PDF viewer
+es = El último PDF, tal cual, sin pasar por el lector de PDF
+
+fr = Envoyé à l'imprimante {printer} : {file} ({id})
+en = Sent to printer {printer}: {file} ({id})
+es = Enviado a la impresora {printer}: {file} ({id})
