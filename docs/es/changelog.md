@@ -145,6 +145,10 @@ La fototeca profesional, paso a paso.
   buscan dos veces más rápido; un render es de un 3 a un 15 % más corto cuando se mueven
   estos ajustes (sombras de un RW2: 78 → 66 ms; gradación de un ARW: 68 → 60 ms), sin
   cambiar un píxel.
+- **DNG de iPhone dos veces más rápidos al abrir**: un DNG ya en RGB (ProRAW) se reduce
+  directamente desde sus píxeles, sin copiar antes toda la imagen (145 MB); y un cuarto
+  de vuelta se hace por bloques. Primera vista previa 220 → 109 ms, sin cambiar un
+  píxel; toda foto en vertical gana también en la orientación (15 → 9 ms).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

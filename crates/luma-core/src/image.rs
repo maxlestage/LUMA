@@ -49,18 +49,28 @@ impl RgbImage {
     /// Réduction par moyenne des surfaces : chaque pixel de sortie est la moyenne
     /// exacte, pondérée, des pixels d'entrée qu'il recouvre. Sans crénelage ni moiré.
     pub fn resize_area(&self, width: usize, height: usize) -> RgbImage {
-        if width == self.width && height == self.height {
-            return self.clone();
+        Self::resize_area_of(&self.data, self.width, self.height, width, height)
+    }
+
+    /// [`Self::resize_area`] sur des pixels empruntés (`src_w × src_h`), sans en faire
+    /// d'abord une image : les données RGB d'un capteur se réduisent sans être copiées.
+    pub fn resize_area_of(data: &[[f32; 3]], src_w: usize, src_h: usize, width: usize, height: usize) -> RgbImage {
+        if width == src_w && height == src_h {
+            return RgbImage {
+                width,
+                height,
+                data: data.to_vec(),
+            };
         }
-        let xs = spans(self.width, width);
-        let ys = spans(self.height, height);
+        let xs = spans(src_w, width);
+        let ys = spans(src_h, height);
         let mut out = RgbImage::new(width, height);
         out.data.par_chunks_mut(width).enumerate().for_each(|(oy, row)| {
             let mut acc = vec![[0.0f32; 3]; width];
             let mut total_wy = 0.0;
             for &(iy, wy) in &ys[oy] {
                 total_wy += wy;
-                let src = &self.data[iy * self.width..(iy + 1) * self.width];
+                let src = &data[iy * src_w..(iy + 1) * src_w];
                 for (ox, a) in acc.iter_mut().enumerate() {
                     for &(ix, wx) in &xs[ox] {
                         let p = src[ix];

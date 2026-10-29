@@ -874,6 +874,12 @@ impl RawPhoto {
         img
     }
 
+    /// Les pixels d'un capteur déjà RGB (DNG linéaire), tels quels ; `None` pour une
+    /// mosaïque.
+    pub fn linear_pixels(&self) -> Option<&[[f32; 3]]> {
+        matches!(self.mosaic, Mosaic::Linear).then(|| self.data.as_chunks::<3>().0)
+    }
+
     /// Le dématriçage seul, sans les corrections d'objectif du fichier (case « Corrections
     /// du boîtier » décochée).
     pub fn demosaic_uncorrected(&self) -> RgbImage {
@@ -915,7 +921,14 @@ impl RawPhoto {
         match &self.mosaic {
             Mosaic::Bayer(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 2, 2),
             Mosaic::XTrans(cfa) => demosaic::bin(&self.data, self.width, self.height, cfa, 3, 6),
-            Mosaic::Linear => self.demosaic_uncorrected().resize_area(self.width / 2, self.height / 2),
+            // Les pixels déjà RGB, réduits sans être copiés d'abord.
+            Mosaic::Linear => RgbImage::resize_area_of(
+                self.data.as_chunks::<3>().0,
+                self.width,
+                self.height,
+                self.width / 2,
+                self.height / 2,
+            ),
         }
     }
 
