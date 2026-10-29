@@ -7474,7 +7474,7 @@ impl Studio {
             Film::Mine(_, look) => (format!("LÜMA — {}", tr("Mes préréglages")), look.clone()),
         };
         let name = self.film_name(k);
-        std::fs::write(path, luma_project::xmp::write_preset(name, &group, &look))
+        luma_project::xmp::save(path, &luma_project::xmp::write_preset(name, &group, &look))
             .map_err(|e| format!("{} : {e}", path.display()))?;
         if let Film::Lut(n) = self.film(k)
             && let Some(cube) = luma_image::cube::get(n)

@@ -296,6 +296,21 @@ pub fn label_color(name: &str) -> Option<usize> {
 
 /// Le fichier XMP d'une photo : `IMG_0001.CR3.xmp` s'il existe, sinon `IMG_0001.xmp` ;
 /// celui d'une copie virtuelle, `IMG_0001.CR3.copie-2.xmp`.
+/// Écrit `text` dans `path` d'un coup : dans un fichier temporaire à côté, renommé
+/// ensuite. Une écriture interrompue (app arrêtée, disque plein) laisse l'ancien XMP
+/// entier, jamais un XMP coupé qui perdrait la fin des réglages ; le temporaire d'une
+/// écriture ratée est retiré.
+pub fn save(path: &std::path::Path, text: &str) -> std::io::Result<()> {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(".tmp");
+    let tmp = path.with_file_name(name);
+    let written = std::fs::write(&tmp, text).and_then(|()| std::fs::rename(&tmp, path));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    written
+}
+
 pub fn sidecar_path(photo: &std::path::Path) -> std::path::PathBuf {
     if crate::copies::number(photo).is_some() {
         return crate::copies::sidecar(photo);
@@ -1195,6 +1210,30 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn a_sidecar_is_written_in_one_go() {
+        let dir = std::env::temp_dir().join(format!("luma-xmp-d-un-coup-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("IMG_0001.CR3.xmp");
+        save(&path, "premier").unwrap();
+        save(&path, "second").unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "second");
+        // Pas de temporaire laissé derrière.
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert_eq!(names, [std::ffi::OsString::from("IMG_0001.CR3.xmp")]);
+        // Une écriture qui échoue (ici, le temporaire ne peut pas être créé) laisse
+        // l'ancien XMP entier, et rien d'autre.
+        std::fs::create_dir_all(dir.join("IMG_0001.CR3.xmp.tmp/occupé")).unwrap();
+        assert!(save(&path, "troisième").is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "second");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn a_damaged_snapshot_or_template_does_not_lose_the_others() {

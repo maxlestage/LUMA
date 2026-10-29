@@ -78,7 +78,10 @@ The professional photo library, step by step.
   no longer erases the others; a damaged export preset no longer loses the others, and
   an unreadable presets file is kept aside (`Exports.json.illisible`) before being
   replaced. The same goes for a photo's snapshots, the per-camera defaults and the
-  metadata templates: a single damaged item no longer takes the others with it.
+  metadata templates: a single damaged item no longer takes the others with it. A
+  photo's XMP is written in one go (a temporary file renamed): an app stopped or a disk
+  full during the write leaves the previous XMP whole, never a truncated one; likewise
+  for a saved preset and a merge's XMP.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).

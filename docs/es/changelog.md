@@ -88,7 +88,10 @@ La fototeca profesional, paso a paso.
   no hace perder los demás, y un archivo de ajustes ilegible se guarda aparte
   (`Exports.json.illisible`) antes de reemplazarse. Lo mismo para las instantáneas de
   una foto, los ajustes por defecto por cámara y las plantillas de metadatos: un solo
-  elemento dañado ya no se lleva los demás.
+  elemento dañado ya no se lleva los demás. El XMP de una foto se escribe de una vez (un
+  archivo temporal renombrado): una app cerrada o un disco lleno durante la escritura
+  deja el XMP anterior entero, nunca uno cortado; lo mismo para un ajuste guardado y el
+  XMP de una fusión.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
