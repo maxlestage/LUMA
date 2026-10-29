@@ -7,6 +7,10 @@
 //! mer note:3 drapeau:retenue date:2024-06..2024-08 iso:..800 boîtier:sony
 //! ```
 //!
+//! Une date se donne aussi par rapport à aujourd'hui : `date:30j` (les trente derniers
+//! jours, aujourd'hui compris), `date:aujourd'hui`, `date:hier` ; une collection
+//! dynamique ainsi faite suit les jours.
+//!
 //! Les mots libres doivent tous se trouver dans le nom du fichier, le boîtier,
 //! l'objectif, le libellé ou un mot‑clé ; majuscules et accents ne comptent pas
 //! (« ete » trouve « Été »).
@@ -107,6 +111,15 @@ impl Query {
     /// `objectif`/`lens`, `mot`/`keyword`. Un filtre inconnu ou mal écrit est une
     /// erreur, qui le nomme.
     pub fn parse(text: &str) -> Result<Query, String> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        Query::parse_at(text, now)
+    }
+
+    /// [`Query::parse`], aujourd'hui étant le jour de `now` (secondes depuis 1970) pour
+    /// les dates relatives.
+    pub fn parse_at(text: &str, now: u64) -> Result<Query, String> {
         let mut q = Query::default();
         for token in text.split_whitespace() {
             let Some((key, value)) = token.split_once(':').filter(|(k, _)| !k.is_empty()) else {
@@ -127,6 +140,16 @@ impl Query {
                     })
                 }
                 "libelle" | "label" => q.label = Some(fold(value)),
+                "date" if let Some(from) = relative_day(value, now) => {
+                    // Un seul jour (aujourd'hui, hier), ou du premier des n jours à
+                    // aujourd'hui.
+                    let to = if matches!(fold(value).as_str(), "hier" | "yesterday") {
+                        from.clone()
+                    } else {
+                        day(now, 0)
+                    };
+                    (q.date_from, q.date_to) = (Some(from), Some(to));
+                }
                 "date" => {
                     let (a, b) = value.split_once("..").unwrap_or((value, value));
                     let ok = |d: &str| d.chars().all(|c| c.is_ascii_digit() || c == '-');
@@ -199,6 +222,25 @@ impl Query {
                 || e.keywords.iter().any(|k| contains(k, w))
         })
     }
+}
+
+/// Le jour `back` jours avant celui de `now` (secondes depuis 1970), `AAAA-MM-JJ`.
+fn day(now: u64, back: u64) -> String {
+    crate::unix_date(now.saturating_sub(back * 86_400))[..10].to_owned()
+}
+
+/// Le premier jour d'une date relative : `aujourd'hui`/`today`, `hier`/`yesterday`,
+/// `30j`/`30d` (les 30 derniers jours, aujourd'hui compris) ; `None` pour une autre
+/// valeur.
+fn relative_day(value: &str, now: u64) -> Option<String> {
+    let v = fold(value).replace(['\'', '’'], "");
+    match v.as_str() {
+        "aujourdhui" | "today" => return Some(day(now, 0)),
+        "hier" | "yesterday" => return Some(day(now, 1)),
+        _ => {}
+    }
+    let n: u64 = v.strip_suffix('j').or_else(|| v.strip_suffix('d'))?.parse().ok()?;
+    (1..=36_500).contains(&n).then(|| day(now, n - 1))
 }
 
 /// `text` contient‑il `folded` (déjà replié), majuscules et accents mis à part ? Sans
@@ -336,11 +378,45 @@ mod tests {
             ("note:beaucoup", "filtre « note:beaucoup » mal écrit"),
             ("drapeau:vert", "filtre « drapeau:vert » mal écrit"),
             ("iso:cent", "filtre « iso:cent » mal écrit"),
-            ("date:hier", "filtre « date:hier » mal écrit"),
+            ("date:demain", "filtre « date:demain » mal écrit"),
         ] {
             assert_eq!(Query::parse(q).unwrap_err(), err);
         }
         // Un deux‑points en tête n'est pas un filtre.
         assert_eq!(Query::parse(":)").unwrap().words, [":)"]);
+    }
+
+    /// Les dates par rapport à aujourd'hui : les n derniers jours (aujourd'hui
+    /// compris, à cheval sur un mois), aujourd'hui, hier ; une valeur hors d'usage est
+    /// une erreur.
+    #[test]
+    fn dates_relative_to_today() {
+        // Le 3 mars 2026 à 10 h (UTC).
+        let now = 1_772_532_000;
+        assert_eq!(crate::unix_date(now), "2026-03-03T10:00:00");
+        let photo = |d: &str| Entry {
+            path: "/p/a.jpg".into(),
+            date: d.into(),
+            ..Entry::default()
+        };
+        let found = |q: &str, d: &str| Query::parse_at(q, now).unwrap().matches(&photo(d));
+        assert!(found("date:7j", "2026-02-25T00:00:00"));
+        assert!(found("date:7j", "2026-03-03T23:59:59"));
+        assert!(!found("date:7j", "2026-02-24T23:59:59"));
+        assert!(found("date:7d", "2026-02-25T08:00:00"));
+        assert!(found("date:aujourd'hui", "2026-03-03T06:00:00"));
+        assert!(found("date:Aujourd’hui", "2026-03-03T06:00:00"));
+        assert!(!found("date:today", "2026-03-02T23:00:00"));
+        assert!(found("date:hier", "2026-03-02T23:00:00"));
+        assert!(!found("date:yesterday", "2026-03-03T00:00:00"));
+        assert!(found("date:1j", "2026-03-03T00:00:00"));
+        for bad in ["date:0j", "date:demain", "date:7jours"] {
+            assert!(Query::parse_at(bad, now).is_err(), "{bad}");
+        }
+        // Les dates écrites restent ce qu'elles étaient.
+        assert_eq!(
+            Query::parse_at("date:2024-06", now).unwrap().date_from.as_deref(),
+            Some("2024-06")
+        );
     }
 }

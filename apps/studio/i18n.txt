@@ -1757,9 +1757,9 @@ fr = Photothèque
 en = Catalog
 es = Fototeca
 
-fr = Rechercher : mer note:3 date:2024 iso:..800
-en = Search: sea rating:3 date:2024 iso:..800
-es = Buscar: mar rating:3 date:2024 iso:..800
+fr = Rechercher : mer note:3 date:30j iso:..800
+en = Search: sea rating:3 date:30d iso:..800
+es = Buscar: mar rating:3 date:30d iso:..800
 
 fr = Toutes les photos ({n})
 en = All photos ({n})
