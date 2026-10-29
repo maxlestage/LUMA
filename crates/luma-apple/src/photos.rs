@@ -93,6 +93,29 @@ pub fn pick_files(dest: PathBuf) -> Result<(), &'static str> {
     }
 }
 
+/// Ouvre l'app Fichiers pour un document (une trace GPX…) des types UTI `types` : le
+/// fichier choisi arrive dans `dest`, et son chemin dans [`picked_documents`]. À appeler
+/// sur le fil principal. En cas d'échec, ce qui a manqué.
+pub fn pick_document(dest: PathBuf, types: &[&str]) -> Result<(), &'static str> {
+    #[cfg(target_os = "ios")]
+    {
+        ios::pick_document(dest, types)
+    }
+    #[cfg(not(target_os = "ios"))]
+    {
+        let _ = (dest, types);
+        Err("pas d'app Fichiers ici")
+    }
+}
+
+/// Les documents arrivés depuis [`pick_document`], une seule fois chacun.
+pub fn picked_documents() -> Vec<PathBuf> {
+    std::mem::take(&mut *DOCUMENTS.lock().unwrap_or_else(|e| e.into_inner()))
+}
+
+/// Les documents choisis dans l'app Fichiers et pas encore repris.
+static DOCUMENTS: std::sync::Mutex<Vec<PathBuf>> = std::sync::Mutex::new(Vec::new());
+
 /// Le sélecteur de Photos existe‑t‑il (iPhone et iPad) ?
 pub const AVAILABLE: bool = cfg!(target_os = "ios");
 
@@ -159,10 +182,12 @@ mod ios {
     };
     use std::sync::atomic::AtomicBool;
 
-    use super::{CHOSEN, FAILED, IMPORTED, SAVE_FAILED, SAVED, VIEW, free_name};
+    use super::{CHOSEN, DOCUMENTS, FAILED, IMPORTED, SAVE_FAILED, SAVED, VIEW, free_name};
 
     struct Ivars {
         dest: PathBuf,
+        /// Des photos (comptées) ; sinon un document, rendu par `picked_documents`.
+        photos: bool,
     }
 
     define_class!(
@@ -216,14 +241,23 @@ mod ios {
         unsafe impl UIDocumentPickerDelegate for FilesDelegate {
             #[unsafe(method(documentPicker:didPickDocumentsAtURLs:))]
             fn picked(&self, _picker: &UIDocumentPickerViewController, urls: &NSArray<NSURL>) {
-                CHOSEN.fetch_add(urls.count(), Ordering::Release);
+                let photos = self.ivars().photos;
+                if photos {
+                    CHOSEN.fetch_add(urls.count(), Ordering::Release);
+                }
                 for url in urls {
                     let dest = &self.ivars().dest;
                     let taken = url
                         .path()
                         .zip(url.lastPathComponent())
-                        .is_some_and(|(path, name)| take(path.to_string().as_ref(), dest, &name.to_string()));
-                    let counter = if taken { &IMPORTED } else { &FAILED };
+                        .and_then(|(path, name)| take(path.to_string().as_ref(), dest, &name.to_string()));
+                    if !photos {
+                        if let Some(t) = taken {
+                            DOCUMENTS.lock().unwrap_or_else(|e| e.into_inner()).push(t);
+                        }
+                        continue;
+                    }
+                    let counter = if taken.is_some() { &IMPORTED } else { &FAILED };
                     counter.fetch_add(1, Ordering::Release);
                 }
             }
@@ -231,11 +265,12 @@ mod ios {
     );
 
     /// Range dans `dest` une copie que l'app Fichiers vient de faire (dans le dossier
-    /// temporaire de LÜMA) : déplacée, sinon copiée.
-    fn take(path: &std::path::Path, dest: &std::path::Path, name: &str) -> bool {
+    /// temporaire de LÜMA) : déplacée, sinon copiée. Le fichier rangé.
+    fn take(path: &std::path::Path, dest: &std::path::Path, name: &str) -> Option<PathBuf> {
         let target = free_name(dest, name);
-        std::fs::create_dir_all(dest).is_ok()
-            && (std::fs::rename(path, &target).is_ok() || std::fs::copy(path, &target).is_ok())
+        (std::fs::create_dir_all(dest).is_ok()
+            && (std::fs::rename(path, &target).is_ok() || std::fs::copy(path, &target).is_ok()))
+        .then_some(target)
     }
 
     thread_local! {
@@ -399,7 +434,7 @@ mod ios {
                 objc2::ffi::class_addProtocol(Delegate::class() as *const AnyClass as *mut AnyClass, protocol);
             }
         }
-        let delegate = Delegate::alloc(mtm).set_ivars(Ivars { dest });
+        let delegate = Delegate::alloc(mtm).set_ivars(Ivars { dest, photos: true });
         // SAFETY: `init` de NSObject sur une instance neuve.
         let delegate: Retained<Delegate> = unsafe { msg_send![super(delegate), init] };
         // SAFETY: PHPickerViewController est un UIViewController de PhotosUI, créé par
@@ -433,23 +468,33 @@ mod ios {
 
     /// L'app Fichiers en mode import : le système copie chaque fichier choisi dans le
     /// dossier temporaire de LÜMA, puis `FilesDelegate` le range dans `dest`.
-    #[allow(deprecated)] // L'initialiseur par types UTI, sans la crate des UTType.
     pub fn pick_files(dest: PathBuf) -> Result<(), &'static str> {
+        open_files(dest, &["public.camera-raw-image", "public.image"], true)
+    }
+
+    /// L'app Fichiers pour un document : rangé dans `dest`, rendu par
+    /// `picked_documents`.
+    pub fn pick_document(dest: PathBuf, types: &[&str]) -> Result<(), &'static str> {
+        open_files(dest, types, false)
+    }
+
+    /// L'app Fichiers en mode import, pour des fichiers des types UTI `types` : des
+    /// photos (plusieurs, comptées) ou un document.
+    #[allow(deprecated)] // L'initialiseur par types UTI, sans la crate des UTType.
+    fn open_files(dest: PathBuf, types: &[&str], photos: bool) -> Result<(), &'static str> {
         let mtm = MainThreadMarker::new().ok_or("hors du fil principal")?;
         let top = top_controller(mtm).ok_or("fenêtre introuvable")?;
-        let types = NSArray::from_retained_slice(&[
-            NSString::from_str("public.camera-raw-image"),
-            NSString::from_str("public.image"),
-        ]);
+        let types: Vec<Retained<NSString>> = types.iter().map(|t| NSString::from_str(t)).collect();
+        let types = NSArray::from_retained_slice(&types);
         let picker = UIDocumentPickerViewController::initWithDocumentTypes_inMode(
             UIDocumentPickerViewController::alloc(mtm),
             &types,
             objc2_ui_kit::UIDocumentPickerMode::Import,
         );
-        let delegate = FilesDelegate::alloc(mtm).set_ivars(Ivars { dest });
+        let delegate = FilesDelegate::alloc(mtm).set_ivars(Ivars { dest, photos });
         // SAFETY: `init` de NSObject sur une instance neuve.
         let delegate: Retained<FilesDelegate> = unsafe { msg_send![super(delegate), init] };
-        picker.setAllowsMultipleSelection(true);
+        picker.setAllowsMultipleSelection(photos);
         // SAFETY: le délégué est retenu (FILES_DELEGATE) tant que l'app Fichiers peut
         // lui répondre ; `top` est un contrôleur de l'app, sur le fil principal.
         unsafe {

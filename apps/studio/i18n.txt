@@ -5675,6 +5675,10 @@ fr = Choisir photo par photo
 en = Choose photo by photo
 es = Elegir foto a foto
 
+fr = {file} n'est pas une trace GPX.
+en = {file} is not a GPX track.
+es = {file} no es una traza GPX.
+
 fr = Pages du livre…
 en = Book pages…
 es = Páginas del libro…
