@@ -166,6 +166,9 @@ pub fn base_key(s: &Settings) -> Settings {
 /// Les étapes par pixel de la fin (rendu, couleur, effets) et l'accentuation. Les
 /// étapes par pixel ont un double sur le GPU (`luma-gpu`).
 pub fn finish(img: &mut RgbImage, scale: f32, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<()> {
+    if img.data.is_empty() {
+        return Ok(());
+    }
     let adapted = t.time("blancs et noirs", || adaptive_ends(img, s));
     let s = &adapted;
     t.time("rendu", || {
@@ -1192,6 +1195,13 @@ mod tests {
             .unwrap_or_else(|_| panic!("{w} × {h} : panique"));
             assert_eq!((out.width, out.height), (w, h));
             assert!(out.data.iter().all(|p| p.iter().all(|c| c.is_finite())), "{w} × {h}");
+            // La fin seule, comme l'export la fait sur sa base pleine définition.
+            let mut own = cam.clone();
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                finish(&mut own, 1.0, &s, &Cancel::new(), &mut Timings::default()).unwrap()
+            }))
+            .unwrap_or_else(|_| panic!("{w} × {h} : panique dans finish"));
+            assert_eq!((own.width, own.height), (w, h));
         }
     }
 }
