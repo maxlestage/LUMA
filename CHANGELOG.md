@@ -94,7 +94,8 @@ La photothèque professionnelle, étape par étape.
   enregistré, le XMP d'une fusion et l'état de la licence (une clé ou un achat ne se
   perd plus sur un fichier coupé). Les exports aussi (JPEG, PNG, TIFF) : un export
   coupé ne laisse plus un fichier abîmé sous le nom voulu, ni n'abîme l'export d'avant
-  du même nom.
+  du même nom. Et les pellicules mesurées (`.cube`) : une pellicule ne disparaît plus
+  de « Mes pellicules » sur un enregistrement coupé.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).

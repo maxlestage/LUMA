@@ -84,7 +84,8 @@ The professional photo library, step by step.
   for a saved preset, a merge's XMP and the licence state (a key or a purchase is no
   longer lost on a truncated file). Exports too (JPEG, PNG, TIFF): a cut-off export no
   longer leaves a damaged file under the chosen name, nor damages the previous export of
-  the same name.
+  the same name. And measured films (`.cube`): a film no longer disappears from “My
+  films” on a cut-off save.
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).

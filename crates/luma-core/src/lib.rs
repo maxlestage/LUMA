@@ -104,6 +104,20 @@ impl Timings {
     }
 }
 
+/// Écrit `bytes` dans `path` d'un coup : dans un temporaire à côté (`nom.tmp`), renommé
+/// ensuite. Une écriture interrompue (app arrêtée, disque plein) laisse l'ancien fichier
+/// entier, jamais un fichier coupé ; le temporaire d'une écriture ratée est retiré.
+pub fn save(path: &std::path::Path, bytes: impl AsRef<[u8]>) -> std::io::Result<()> {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(".tmp");
+    let tmp = path.with_file_name(name);
+    let written = std::fs::write(&tmp, bytes).and_then(|()| std::fs::rename(&tmp, path));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    written
+}
+
 impl std::fmt::Display for Timings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (name, d) in &self.steps {
@@ -116,6 +130,28 @@ impl std::fmt::Display for Timings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_file_is_written_in_one_go() {
+        let dir = std::env::temp_dir().join(format!("luma-ecrit-d-un-coup-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("Portra.cube");
+        save(&path, "premier").unwrap();
+        save(&path, b"second").unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "second");
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert_eq!(names, [std::ffi::OsString::from("Portra.cube")]);
+        // Une écriture qui échoue laisse l'ancien fichier entier, et rien d'autre.
+        std::fs::create_dir_all(dir.join("Portra.cube.tmp/occupé")).unwrap();
+        assert!(save(&path, "troisième").is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "second");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn cancel_is_shared_between_clones() {
