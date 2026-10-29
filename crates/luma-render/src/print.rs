@@ -287,6 +287,9 @@ pub struct Page {
     pub width: usize,
     pub height: usize,
     pub rgb: Vec<u8>,
+    /// Les encres de la page pour une imprimante CMJN (quatre octets par pixel, 0 sans
+    /// encre) ; `rgb` reste alors la page en sRGB, pour l'aperçu.
+    pub cmyk: Option<Vec<u8>>,
 }
 
 /// Pose les photos sur leurs pages (dans l'ordre, case par case), puis convertit chaque
@@ -395,6 +398,7 @@ pub fn page(width: usize, height: usize, cells: &[Cell], pictures: &[Picture], p
         width,
         height,
         rgb: vec![255; width * height * 3],
+        cmyk: None,
     };
     for (pic, cell) in pictures.iter().zip(cells) {
         place(&mut page, pic, cell);
@@ -403,9 +407,18 @@ pub fn page(width: usize, height: usize, cells: &[Cell], pictures: &[Picture], p
         }
     }
     if let Some(c) = printer {
-        c.apply_rgb(&mut page.rgb);
+        convert(&mut page, c);
     }
     page
+}
+
+/// Convertit une page vers l'imprimante : ses valeurs RVB, ou ses encres CMJN.
+pub fn convert(page: &mut Page, c: &Conversion) {
+    if c.is_cmyk() {
+        page.cmyk = Some(c.to_cmyk(&page.rgb));
+    } else {
+        c.apply_rgb(&mut page.rgb);
+    }
 }
 
 /// Pose une photo au centre de sa case (au bas de sa case quand son nom est dessous,
@@ -463,16 +476,27 @@ pub fn write(page: &mut Page, text: &str, cell: &Cell, px: f32, ink: u8) {
     }
 }
 
-/// Une page en JPEG (qualité 95), pour le PDF : la page compressée tout de suite, la
-/// mémoire ne garde pas toutes les pages en pleine résolution.
-pub type Encoded = (Vec<u8>, usize, usize);
+/// Une page compressée pour le PDF, tout de suite : la mémoire ne garde pas toutes les
+/// pages en pleine résolution.
+pub type Encoded = crate::pdf::Image;
 
+/// La page en JPEG (qualité 95) ; ses encres CMJN, sans perte (un JPEG CMJN n'est pas
+/// lu de la même façon par tous les lecteurs de PDF).
 pub fn encode(page: &Page) -> Result<Encoded, String> {
-    Ok((
-        crate::jpeg::encode(&page.rgb, page.width, page.height, 95, &[], &[])?,
-        page.width,
-        page.height,
-    ))
+    Ok(match &page.cmyk {
+        Some(ink) => crate::pdf::Image {
+            data: miniz_oxide::deflate::compress_to_vec_zlib(ink, 6),
+            width: page.width,
+            height: page.height,
+            cmyk: true,
+        },
+        None => crate::pdf::Image {
+            data: crate::jpeg::encode(&page.rgb, page.width, page.height, 95, &[], &[])?,
+            width: page.width,
+            height: page.height,
+            cmyk: false,
+        },
+    })
 }
 
 /// Le PDF de pages déjà compressées, à la taille du papier.
@@ -647,6 +671,41 @@ mod tests {
         };
         assert!(band(0, 500) > 50, "{}", band(0, 500));
         assert_eq!(band(500, 1000), 0);
+    }
+
+    /// Vers une imprimante CMJN : la page garde ses encres, le PDF les porte en CMJN,
+    /// sans perte ; le papier reste sans encre.
+    #[test]
+    fn a_cmyk_printer_gets_a_cmyk_pdf() {
+        let bytes = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../luma-color/tests/profils/encre-noire.icc"
+        ))
+        .unwrap();
+        let profile = luma_color::profile::Profile::parse(&bytes).unwrap();
+        let c = Conversion::new(&profile, luma_color::profile::Intent::Relative).unwrap();
+        let l = Layout {
+            dpi: 20,
+            ..Layout::default()
+        };
+        let cells = l.cells();
+        let pages = compose(&l, &[solid(40, 40, 0, "")], Some(&c));
+        let ink = pages[0].cmyk.as_ref().expect("les encres de la page");
+        assert_eq!(ink.len(), pages[0].width * pages[0].height * 4);
+        // Le coin : du papier, sans encre ; la photo noire : de l'encre noire.
+        assert_eq!(ink[..4], [0, 0, 0, 0]);
+        let (x, y) = (cells[0].x + cells[0].width / 2, cells[0].y + cells[0].height / 2);
+        let k = ink[(y * pages[0].width + x) * 4 + 3];
+        assert!(k > 240, "{k}");
+        let encoded = encode(&pages[0]).unwrap();
+        assert!(encoded.cmyk);
+        assert_eq!(
+            miniz_oxide::inflate::decompress_to_vec_zlib(&encoded.data).unwrap(),
+            *ink
+        );
+        let pdf = pdf_of(&l, &[encoded]);
+        let text = String::from_utf8_lossy(&pdf);
+        assert!(text.contains("/ColorSpace /DeviceCMYK") && text.contains("/Filter /FlateDecode"));
     }
 
     #[test]

@@ -160,6 +160,10 @@ La photothèque professionnelle, étape par étape.
   à part pour les capteurs Bayer) : 30 % plus courte (X‑Trans 90 → 58 ms) ; le premier
   aperçu 4 à 19 % plus court (RAF 216 → 175 ms, NEF 127 → 110 ms), sans changer un
   pixel.
+- **Impression en CMJN** : un profil d'imprimante CMJN (une presse, un imprimeur) est
+  accepté pour l'impression et le livre photo ; les pages sont converties vers ses
+  quatre encres (noir compensé) et le PDF est en CMJN, ses encres gardées sans perte
+  (« Imprimer… », `luma print --profile`, `luma book --profile`).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

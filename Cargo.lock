@@ -2332,6 +2332,7 @@ dependencies = [
  "luma-project",
  "luma-raw",
  "lz4_flex",
+ "miniz_oxide 0.8.9",
  "rayon",
  "serde",
  "serde_json",
