@@ -5675,6 +5675,10 @@ fr = Choisir photo par photo
 en = Choose photo by photo
 es = Elegir foto a foto
 
+fr = JPEG (une image par page)
+en = JPEG (one image per page)
+es = JPEG (una imagen por página)
+
 fr = Ordre aléatoire
 en = Shuffle
 es = Orden aleatorio

@@ -162,6 +162,10 @@ The professional photo library, step by step.
 - **First photo opens faster**: the decoder's camera and lens databases (≈ 75 ms, once
   per session) load at app startup, while its window opens, rather than at the first
   photo: 60 to 95 ms less for it (NEF 173 → 80 ms, RAF 176 → 90 ms, ARW 160 → 98 ms).
+- **Pages as JPEG**: printing and the photo book can also be saved as JPEG, one image
+  per page (“JPEG” in the save window, `-o sheet.jpg`: `sheet-1.jpg`, `sheet-2.jpg`…),
+  at the chosen resolution and in sRGB, for a book printing service or to share a
+  contact sheet.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

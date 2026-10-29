@@ -175,6 +175,10 @@ La photothèque professionnelle, étape par étape.
   décodeur (≈ 75 ms, une fois par séance) se chargent au démarrage de l'app, pendant
   que sa fenêtre s'ouvre, et non plus à la première photo : 60 à 95 ms de moins pour
   elle (NEF 173 → 80 ms, RAF 176 → 90 ms, ARW 160 → 98 ms).
+- **Pages en JPEG** : l'impression et le livre photo s'enregistrent aussi en JPEG, une
+  image par page (« JPEG » dans la fenêtre d'enregistrement, `-o planche.jpg` :
+  `planche-1.jpg`, `planche-2.jpg`…), à la résolution choisie et en sRGB, pour un
+  service d'impression de livres ou pour partager une planche contact.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

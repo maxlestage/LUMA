@@ -2147,7 +2147,7 @@ impl Studio {
         let counter = placed.clone();
         let total = photos.len();
         let job = move || -> Result<(PathBuf, usize), String> {
-            let mut pages = Vec::new();
+            let mut pages = print::Pages::for_path(&out, printer.is_none());
             for chunk in photos.chunks(cells.len()) {
                 let mut pictures = Vec::with_capacity(chunk.len());
                 for (path, cell) in chunk.iter().zip(&cells) {
@@ -2164,11 +2164,12 @@ impl Studio {
                     counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 }
                 for page in print::compose(&layout, &pictures, printer.as_ref()) {
-                    pages.push(print::encode(&page)?);
+                    pages.push(&page, &layout)?;
                 }
             }
-            std::fs::write(&out, print::pdf_of(&layout, &pages)).map_err(|e| e.to_string())?;
-            Ok((out, pages.len()))
+            let n = pages.len();
+            let written = pages.write(&out, &layout)?;
+            Ok((written.into_iter().next().unwrap_or(out), n))
         };
         std::thread::spawn(move || {
             let _ = send.send(job());
@@ -2433,7 +2434,7 @@ impl Studio {
                 landscape.push(book::is_landscape(&photo, &settings));
             }
             let layout = b.layout();
-            let mut pages = Vec::new();
+            let mut pages = print::Pages::for_path(&out, printer.is_none());
             for sheet in b.sheets(&landscape) {
                 let orientation = sheet.photos.first().is_none_or(|&k| landscape[k]);
                 let cells = b.cells(sheet.kind, orientation);
@@ -2449,15 +2450,14 @@ impl Studio {
                     )?);
                     counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 }
-                pages.push(print::encode(&b.page(
-                    sheet.kind,
-                    &cells,
-                    &pictures,
-                    printer.as_ref(),
-                ))?);
+                pages.push(
+                    &b.page(sheet.kind, &cells, &pictures, printer.as_ref()),
+                    &layout,
+                )?;
             }
-            std::fs::write(&out, print::pdf_of(&layout, &pages)).map_err(|e| e.to_string())?;
-            Ok((out, pages.len()))
+            let n = pages.len();
+            let written = pages.write(&out, &layout)?;
+            Ok((written.into_iter().next().unwrap_or(out), n))
         };
         std::thread::spawn(move || {
             let _ = send.send(job());

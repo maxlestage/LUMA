@@ -11,6 +11,7 @@ use luma_color::OutputSpace;
 use luma_color::proof::Conversion;
 use luma_core::{Cancel, RgbImage};
 use luma_project::Settings;
+use std::path::{Path, PathBuf};
 
 use crate::export::OutputSharpen;
 use crate::{Photo, Size};
@@ -499,6 +500,109 @@ pub fn encode(page: &Page) -> Result<Encoded, String> {
     })
 }
 
+/// Les pages d'une impression ou d'un livre, compressées à mesure : pour un PDF, ou une
+/// image JPEG par page (selon l'extension du fichier demandé : `.jpg`, `.jpeg`), à
+/// envoyer à un service d'impression ou à partager.
+pub enum Pages {
+    Pdf(Vec<Encoded>),
+    /// Les JPEG des pages ; `srgb` : le profil sRGB y est inscrit (sans conversion vers
+    /// une imprimante, les pages sont en sRGB).
+    Jpeg {
+        pages: Vec<Vec<u8>>,
+        srgb: bool,
+    },
+}
+
+/// Le fichier demandé est‑il un JPEG ?
+pub fn is_jpeg(out: &Path) -> bool {
+    out.extension()
+        .and_then(|x| x.to_str())
+        .is_some_and(|x| matches!(x.to_ascii_lowercase().as_str(), "jpg" | "jpeg"))
+}
+
+/// Les fichiers des pages en JPEG : `out` pour une seule, sinon `nom-1.jpg`,
+/// `nom-2.jpg`… à côté.
+pub fn page_paths(out: &Path, n: usize) -> Vec<PathBuf> {
+    if n <= 1 {
+        return vec![out.to_path_buf()];
+    }
+    let stem = out
+        .file_stem()
+        .map_or_else(String::new, |s| s.to_string_lossy().into_owned());
+    let ext = out
+        .extension()
+        .map_or_else(|| "jpg".into(), |x| x.to_string_lossy().into_owned());
+    let width = n.to_string().len();
+    (1..=n)
+        .map(|k| out.with_file_name(format!("{stem}-{k:0width$}.{ext}")))
+        .collect()
+}
+
+impl Pages {
+    /// Pour ce fichier ; `srgb` : les pages restent en sRGB (pas d'imprimante).
+    pub fn for_path(out: &Path, srgb: bool) -> Pages {
+        if is_jpeg(out) {
+            Pages::Jpeg {
+                pages: Vec::new(),
+                srgb,
+            }
+        } else {
+            Pages::Pdf(Vec::new())
+        }
+    }
+
+    /// Ajoute une page, compressée tout de suite. Une page CMJN ne va que dans un PDF : un
+    /// JPEG CMJN n'est pas lu de la même façon par tous.
+    pub fn push(&mut self, page: &Page, layout: &Layout) -> Result<(), String> {
+        match self {
+            Pages::Pdf(pages) => pages.push(encode(page)?),
+            Pages::Jpeg { pages, srgb } => {
+                if page.cmyk.is_some() {
+                    return Err("en CMJN, les pages vont dans un PDF (choisissez un fichier .pdf)".into());
+                }
+                let icc = if *srgb {
+                    luma_color::icc::profile(OutputSpace::Srgb)
+                } else {
+                    Vec::new()
+                };
+                let mut jpeg = crate::jpeg::encode(&page.rgb, page.width, page.height, 95, &[], &icc)?;
+                crate::jpeg::set_density(&mut jpeg, layout.dpi);
+                pages.push(jpeg);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Pages::Pdf(p) => p.len(),
+            Pages::Jpeg { pages, .. } => pages.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Écrit le PDF, ou les JPEG ; rend les fichiers écrits.
+    pub fn write(self, out: &Path, layout: &Layout) -> Result<Vec<PathBuf>, String> {
+        let err = |p: &Path, e: std::io::Error| format!("{} : {e}", p.display());
+        match self {
+            Pages::Pdf(pages) => {
+                std::fs::write(out, pdf_of(layout, &pages)).map_err(|e| err(out, e))?;
+                Ok(vec![out.to_path_buf()])
+            }
+            Pages::Jpeg { pages, .. } => {
+                let paths = page_paths(out, pages.len());
+                for (path, jpeg) in paths.iter().zip(&pages) {
+                    std::fs::write(path, jpeg).map_err(|e| err(path, e))?;
+                }
+                Ok(paths)
+            }
+        }
+    }
+}
+
 /// Le PDF de pages déjà compressées, à la taille du papier.
 pub fn pdf_of(layout: &Layout, pages: &[Encoded]) -> Vec<u8> {
     let (w, h) = layout.page_mm();
@@ -671,6 +775,55 @@ mod tests {
         };
         assert!(band(0, 500) > 50, "{}", band(0, 500));
         assert_eq!(band(500, 1000), 0);
+    }
+
+    /// Les pages en JPEG : une image par page, nommée d'après le fichier demandé, sa
+    /// résolution inscrite et le profil sRGB ; une page CMJN refusée.
+    #[test]
+    fn pages_as_jpeg_files() {
+        let dir = std::env::temp_dir().join(format!("luma-pages-jpeg-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let l = Layout {
+            dpi: 30,
+            columns: 1,
+            rows: 1,
+            ..Layout::default()
+        };
+        let out = dir.join("Planche.JPG");
+        assert!(is_jpeg(&out) && !is_jpeg(&dir.join("a.pdf")));
+        let mut pages = Pages::for_path(&out, true);
+        for page in compose(&l, &[solid(40, 40, 0, ""), solid(40, 40, 200, "")], None) {
+            pages.push(&page, &l).unwrap();
+        }
+        let written = pages.write(&out, &l).unwrap();
+        assert_eq!(written, [dir.join("Planche-1.JPG"), dir.join("Planche-2.JPG")]);
+        let jpeg = std::fs::read(&written[0]).unwrap();
+        // JFIF à 30 ppp, et le profil sRGB (segment ICC_PROFILE).
+        assert_eq!((jpeg[13], u16::from_be_bytes([jpeg[14], jpeg[15]])), (1, 30));
+        assert!(jpeg.windows(11).any(|w| w == b"ICC_PROFILE"));
+        // Une seule page : le fichier demandé lui‑même.
+        assert_eq!(page_paths(&out, 1), std::slice::from_ref(&out));
+        assert_eq!(page_paths(&dir.join("l.jpg"), 12)[0], dir.join("l-01.jpg"));
+        // En CMJN : pas de JPEG.
+        let bytes = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../luma-color/tests/profils/encre-noire.icc"
+        ))
+        .unwrap();
+        let c = Conversion::new(
+            &luma_color::profile::Profile::parse(&bytes).unwrap(),
+            luma_color::profile::Intent::Relative,
+        )
+        .unwrap();
+        let page = &compose(&l, &[solid(40, 40, 0, "")], Some(&c))[0];
+        assert!(
+            Pages::for_path(&out, false)
+                .push(page, &l)
+                .unwrap_err()
+                .contains("CMJN")
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// Vers une imprimante CMJN : la page garde ses encres, le PDF les porte en CMJN,
