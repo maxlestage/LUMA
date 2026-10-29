@@ -356,7 +356,11 @@ pub fn bin(raw: &[f32], w: usize, h: usize, cfa: &Cfa, step: usize, window: usiz
                 &raw[2 * oy * w..2 * oy * w + w],
                 &raw[(2 * oy + 1) * w..(2 * oy + 2) * w],
             );
-            for ((px, t), b) in row.iter_mut().zip(top.chunks_exact(2)).zip(bottom.chunks_exact(2)) {
+            for ((px, t), b) in row
+                .iter_mut()
+                .zip(top.as_chunks::<2>().0)
+                .zip(bottom.as_chunks::<2>().0)
+            {
                 let mut sum = [0.0f32; 3];
                 let mut n = [0u32; 3];
                 for (v, &k) in [t[0], t[1], b[0], b[1]].into_iter().zip(&c) {
