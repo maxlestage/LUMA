@@ -269,6 +269,20 @@ impl Photo {
                 let (bw, bh) = self.raw.binned_size();
                 // La réduction sans dématriçage suffit tant qu'elle reste plus grande que
                 // la cible ; au‑delà, on dématrice.
+                let o = self.raw.orientation;
+                let (sw, sh) = if swaps_axes(o) { (th, tw) } else { (tw, th) };
+                // Un capteur déjà RGB sans corrections à appliquer : réduit directement
+                // depuis ses pixels (le même calcul que sur leur copie, sans la copie de
+                // toute l'image : 145 Mo pour 12 Mpx).
+                let direct = self
+                    .raw
+                    .linear_pixels()
+                    .filter(|_| bw.max(bh) < tw.max(th) && (!camera || self.raw.opcodes.is_none()));
+                if let Some(px) = direct {
+                    let (w, h) = (self.raw.width, self.raw.height);
+                    let small = t.time("mise à l'échelle", || RgbImage::resize_area_of(px, w, h, sw, sh));
+                    return t.time("orientation", || geometry::orient(small, o));
+                }
                 let base = if bw.max(bh) >= tw.max(th) {
                     t.time("réduction capteur", || {
                         if camera {
@@ -282,8 +296,6 @@ impl Photo {
                 };
                 // On réduit avant de tourner : la rotation porte alors sur l'image finale,
                 // quatre à six fois plus petite (la taille cible, dans le sens du capteur).
-                let o = self.raw.orientation;
-                let (sw, sh) = if swaps_axes(o) { (th, tw) } else { (tw, th) };
                 let small = t.time("mise à l'échelle", || base.resize_area(sw, sh));
                 t.time("orientation", || geometry::orient(small, o))
             }

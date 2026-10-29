@@ -65,3 +65,31 @@ fn a_duplicate_carrying_the_corrections_asks_for_the_original() {
     assert!(!photo.needs_original(false), "depuis le RAW, rien à relire");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Un DNG déjà RGB (iPhone) réduit directement depuis ses pixels : exactement l'aperçu
+/// d'avant (la copie complète, réduite, puis tournée).
+#[test]
+fn a_linear_dng_is_reduced_without_a_copy_to_the_same_pixels() {
+    let Some(iphone) = corpus("IMG_1361.DNG") else { return };
+    let raw = iphone.raw();
+    assert!(raw.linear_pixels().is_some());
+    for max in [600, 2048] {
+        let got = iphone.source(Size::Fit(max), &mut luma_core::Timings::default());
+        let (fw, fh) = iphone.full_size();
+        let (tw, th) = luma_core::RgbImage::fit(fw, fh, max);
+        let full = raw.demosaic();
+        // Le chemin d'avant : la réduction capteur tant qu'elle suffit, sinon l'image
+        // entière.
+        let (bw, bh) = raw.binned_size();
+        let base = if bw.max(bh) >= tw.max(th) { raw.binned() } else { full };
+        use luma_raw::Orientation as O;
+        let swap = matches!(
+            raw.orientation,
+            O::Rotate90 | O::Rotate270 | O::Transpose | O::Transverse
+        );
+        let (sw, sh) = if swap { (th, tw) } else { (tw, th) };
+        let expected = luma_image::geometry::orient(base.resize_area(sw, sh), raw.orientation);
+        assert_eq!((got.width, got.height), (expected.width, expected.height), "{max}");
+        assert!(got.data == expected.data, "{max}");
+    }
+}

@@ -141,6 +141,10 @@ La photothèque professionnelle, étape par étape.
   huit pixels à la fois, et les repères de la photo (centiles) cherchés deux fois plus
   vite ; un rendu 3 à 15 % plus court quand ces réglages bougent (ombres d'un RW2 :
   78 → 66 ms ; étalonnage d'un ARW : 68 → 60 ms), sans changer un pixel.
+- **DNG d'iPhone deux fois plus vite à l'ouverture** : un DNG déjà en RGB (ProRAW) se
+  réduit directement depuis ses pixels, sans copier d'abord toute l'image (145 Mo) ; et
+  un quart de tour se fait par carreaux. Premier aperçu 220 → 109 ms, sans changer un
+  pixel ; toute photo en portrait gagne aussi sur l'orientation (15 → 9 ms).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
