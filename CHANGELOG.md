@@ -129,7 +129,9 @@ La photothèque professionnelle, étape par étape.
   fige plus la fenêtre.
 - **Pages du livre** : « Pages du livre… » montre chaque page du livre photo en petit,
   ses photos à leur place ; glisser une photo sur une autre les échange, et le PDF suit
-  ce nouvel ordre (la couverture comprise).
+  ce nouvel ordre (la couverture comprise). Sous chaque page, 1, 2 ou 4 : ses photos ;
+  les pages d'avant gardent les leurs, celles d'après suivent (« Disposition
+  automatique » pour revenir ; `luma book --layout 4,1,2`).
 - **Hautes lumières, ombres, clarté et étalonnage plus vifs** : leurs derniers calculs
   huit pixels à la fois, et les repères de la photo (centiles) cherchés deux fois plus
   vite ; un rendu 3 à 15 % plus court quand ces réglages bougent (ombres d'un RW2 :

@@ -5687,9 +5687,13 @@ fr = Chaque page et ses photos ; glisser une photo sur une autre les échange
 en = Each page and its photos; drag a photo onto another to swap them
 es = Cada página y sus fotos; arrastrar una foto sobre otra las intercambia
 
-fr = Glissez une photo sur une autre pour les échanger.
-en = Drag a photo onto another to swap them.
-es = Arrastre una foto sobre otra para intercambiarlas.
+fr = Glissez une photo sur une autre pour les échanger ; 1, 2, 4 : les photos de la page.
+en = Drag a photo onto another to swap them; 1, 2, 4: the photos on the page.
+es = Arrastre una foto sobre otra para intercambiarlas; 1, 2, 4: las fotos de la página.
+
+fr = Disposition automatique
+en = Automatic layout
+es = Disposición automática
 
 fr = Couverture
 en = Cover

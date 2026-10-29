@@ -118,7 +118,9 @@ The professional photo library, step by step.
   later shows up, and a missing network drive no longer freezes the window.
 - **Book pages**: “Book pages…” shows each page of the photo book small, with its
   photos in place; dragging a photo onto another swaps them, and the PDF follows the new
-  order (cover included).
+  order (cover included). Under each page, 1, 2 or 4: its photos; the pages before keep
+  theirs, those after follow (“Automatic layout” to go back; `luma book --layout
+  4,1,2`).
 - **Snappier highlights, shadows, clarity and colour grading**: their last
   computations run eight pixels at a time, and the photo's reference points
   (percentiles) are found twice as fast; a render is 3 to 15% shorter when these

@@ -2962,17 +2962,30 @@ impl Studio {
         let page_size = vec2(pw as f32 * scale, height);
         let mut open = self.book_pages_open;
         let mut swap = None;
+        // Le nombre de photos des pages de photos, dans l'ordre (sans la couverture ni
+        // les pages de texte) : de quoi en choisir un pour une page.
+        let counts: Vec<usize> = sheets
+            .iter()
+            .filter(|s| matches!(s.kind, Kind::Single | Kind::Pair | Kind::Four))
+            .map(|s| s.photos.len())
+            .collect();
+        let mut layout: Option<Vec<usize>> = None;
         egui::Window::new(trf("Pages du livre : {pages}", &[("pages", &sheets.len())]))
             .id(egui::Id::unique("fenetre-pages-livre"))
             .open(&mut open)
             .collapsible(false)
             .default_width(640.0)
             .show(ctx, |ui| {
-                ui.label(
-                    RichText::new(tr("Glissez une photo sur une autre pour les échanger."))
-                        .size(11.0)
-                        .color(theme::DIM),
-                );
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new(tr("Glissez une photo sur une autre pour les échanger ; 1, 2, 4 : les photos de la page."))
+                            .size(11.0)
+                            .color(theme::DIM),
+                    );
+                    if !b.pages.is_empty() && ui.small_button(tr("Disposition automatique")).clicked() {
+                        layout = Some(Vec::new());
+                    }
+                });
                 egui::ScrollArea::vertical()
                     .max_height(460.0)
                     .show(ui, |ui| {
@@ -3071,7 +3084,25 @@ impl Studio {
                                         Kind::Cover => tr("Couverture").to_owned(),
                                         _ => trf("Page {n}", &[("n", &page)]),
                                     };
-                                    ui.label(RichText::new(label).size(10.0).color(theme::DIM));
+                                    ui.horizontal(|ui| {
+                                        ui.label(RichText::new(label).size(10.0).color(theme::DIM));
+                                        // Une page de photos : 1, 2 ou 4 photos ; les pages d'avant gardent les
+                                        // leurs, celles d'après suivent.
+                                        if matches!(sheet.kind, Kind::Single | Kind::Pair | Kind::Four) {
+                                            let rank = sheets[..page]
+                                                .iter()
+                                                .filter(|s| matches!(s.kind, Kind::Single | Kind::Pair | Kind::Four))
+                                                .count();
+                                            for n in [1, 2, 4] {
+                                                let on = sheet.photos.len() == n;
+                                                if ui.selectable_label(on, RichText::new(n.to_string()).size(10.0)).clicked() && !on {
+                                                    let mut chosen = counts[..rank].to_vec();
+                                                    chosen.push(n);
+                                                    layout = Some(chosen);
+                                                }
+                                            }
+                                        }
+                                    });
                                 });
                             }
                         });
@@ -3079,6 +3110,9 @@ impl Studio {
             });
         if let Some((a, b)) = swap {
             self.swap_book_photos(a, b);
+        }
+        if let Some(pages) = layout {
+            self.book.pages = pages;
         }
         self.book_pages_open = open;
     }
