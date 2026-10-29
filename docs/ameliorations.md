@@ -227,6 +227,10 @@ et blanc, vignetage après recadrage et grain existent).
 - XMP intégré : lu seulement en attributs (`xmp:Rating="4"`, la forme la plus courante) ;
   la forme en éléments (`<xmp:Rating>4</xmp:Rating>`), et les réglages de
   développement qu'un DNG porterait en lui, restent à lire.
+- Export en pleine définition (24 Mpx, mesuré) : l'accentuation 450 à 740 ms (deux
+  puissances `powf` par pixel, qu'on ne remplace pas sans changer les bits), le codage
+  JPEG ≈ 400 ms, la conversion 8 bits ≈ 160 ms ; la source dématricée reste en cache
+  (288 Mo) pendant le rendu, utile au zoom 1:1.
 - Le test GPU `same_as_cpu` a planté une fois (SIGSEGV) sur le Vulkan logiciel de la CI,
   sans changement de `luma-gpu` : à surveiller.
 - La suppression d'une branche distante par `git push --delete` est refusée par le
@@ -418,3 +422,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-29 | Stabilité (essais, fichiers temporaires) : deux essais laissaient leur dossier temporaire à chaque passage — `a_book_with_pages_chosen_one_by_one` (un PDF de 264 Ko, `luma-cli-livre-pages-…`) et `an_idle_screen_does_not_redraw` (`luma-repos-…`, plus de 50 dossiers en trois jours sur la machine de vérification). Ils l'effacent maintenant, aussi l'essai d'écran avant de vérifier son résultat | Les deux essais lancés seuls : aucun dossier `luma-…` de plus dans le dossier temporaire (avant : un chacun, à chaque passage) |
 | 2026-10-29 | Pages en JPEG : `print::Pages` reçoit les pages à mesure, pour un PDF ou une image JPEG par page selon l'extension demandée (`.jpg`, `.jpeg`) ; les JPEG à la résolution de la mise en page (JFIF) et avec le profil sRGB quand aucune imprimante ne les convertit ; une page CMJN refusée en JPEG ; `luma print` et `luma book`, l'app (filtre « JPEG (une image par page) » de la fenêtre d'enregistrement) | Essai `pages_as_jpeg_files` (noms numérotés, 30 ppp, profil sRGB, CMJN refusé) ; `contact_sheet_and_print_with_a_profile` (trois photos sur deux pages : `planche-1.jpg`, `planche-2.jpg`) ; essai d'écran `print_layout_and_pdf` (les pages en JPEG depuis l'app, la première à ouvrir) |
 | 2026-10-29 | XMP intégré : `luma_library::embedded_xmp` cherche le paquet `x:xmpmeta` dans les 256 premiers Ko du fichier (à moins de 64 Ko dans tout le corpus) ; sans XMP à côté, la photothèque (`entry_of`) et l'app (`read_meta`) en prennent la note, le libellé et les mots‑clés ; un XMP à côté l'emporte | Essai `the_xmp_inside_a_file_is_read` (un JPEG noté 4, « Rouge », deux mots‑clés ; le XMP à côté l'emporte ; un fichier sans paquet) ; les RAW du corpus portent tous une note 0 : rien ne change pour eux |
+| 2026-10-29 | Légèreté : `Photo::render`, quand la base n'est gardée nulle part (pleine définition) et qu'aucun film de masque ne la relit, rend dans son image même (`Arc::try_unwrap`, `luma_image::finish`) au lieu de `finish_from` sur une copie | Pic de mémoire de `luma develop` (le plus bas de 3) : ARW 1244 → 969 Mo, NEF 1238 → 959, RAF 1312 → 1015, DNG 729 → 589 (−19 à −23 %) ; JPEG et TIFF exportés identiques octet pour octet (ARW, NEF, DNG) ; essai `rendering_in_the_base_itself_gives_the_same_pixels` |

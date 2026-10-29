@@ -170,6 +170,9 @@ The professional photo library, step by step.
   carries inside (a JPEG, TIFF, DNG or PNG rated in another application; a RAW rated on
   the camera): its rating, label and keywords enter the library and the app. A sidecar
   always wins.
+- **Lighter export in memory**: at full resolution (an export, 1:1 zoom), rendering
+  happens in the base image itself instead of a copy: an export's peak memory drops by 19
+  to 23% (24 Mpx: 1.24 → 0.96 GB), the files stay identical byte for byte.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
