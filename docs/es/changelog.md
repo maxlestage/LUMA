@@ -182,6 +182,10 @@ La fototeca profesional, paso a paso.
   imagen por página («JPEG» en la ventana de guardado, `-o hoja.jpg`: `hoja-1.jpg`,
   `hoja-2.jpg`…), a la resolución elegida y en sRGB, para un servicio de impresión de
   libros o para compartir una hoja de contactos.
+- **Las valoraciones ya puestas en otra parte**: sin XMP al lado, LÜMA lee el que el
+  archivo lleva dentro (un JPEG, TIFF, DNG o PNG valorado en otra aplicación; un RAW
+  valorado en la cámara): su valoración, su etiqueta y sus palabras clave entran en la
+  fototeca y en la app. Un XMP al lado siempre manda.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

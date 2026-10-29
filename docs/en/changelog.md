@@ -166,6 +166,10 @@ The professional photo library, step by step.
   per page (“JPEG” in the save window, `-o sheet.jpg`: `sheet-1.jpg`, `sheet-2.jpg`…),
   at the chosen resolution and in sRGB, for a book printing service or to share a
   contact sheet.
+- **Ratings already set elsewhere**: without a sidecar, LÜMA reads the XMP the file
+  carries inside (a JPEG, TIFF, DNG or PNG rated in another application; a RAW rated on
+  the camera): its rating, label and keywords enter the library and the app. A sidecar
+  always wins.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

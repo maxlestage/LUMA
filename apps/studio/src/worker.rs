@@ -191,11 +191,15 @@ pub fn read_sidecar(raw: &Path) -> Option<Settings> {
     xmp::read(&text).ok()
 }
 
-/// La note, le drapeau et le libellé enregistrés à côté d'un RAW.
+/// La note, le drapeau et le libellé enregistrés à côté d'un RAW ; sans XMP à côté,
+/// ceux que le fichier porte en lui (posés par un autre logiciel ou par le boîtier).
 pub fn read_meta(raw: &Path) -> xmp::Meta {
-    std::fs::read_to_string(sidecar_path(raw))
-        .map(|t| xmp::read_meta(&t))
-        .unwrap_or_default()
+    match std::fs::read_to_string(sidecar_path(raw)) {
+        Ok(t) => xmp::read_meta(&t),
+        Err(_) => luma_library::embedded_xmp(&luma_project::copies::source(raw))
+            .map(|t| xmp::read_meta(&t))
+            .unwrap_or_default(),
+    }
 }
 
 /// Écrit le sidecar d'un RAW : réglages, note et drapeau.
