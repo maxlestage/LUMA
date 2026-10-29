@@ -200,7 +200,9 @@ USAGE
       qui répondent à la recherche : des mots (nom, boîtier, objectif, libellé,
       mots‑clés ; sans tenir compte des accents) et des filtres, par exemple
         \"mer note:3 drapeau:retenue date:2024-06..2024-08 iso:..800 focale:24..70
-         boîtier:sony objectif:gm libellé:rouge mot:été\"
+         boîtier:sony objectif:gm libellé:rouge mot:été\" ; une date se donne aussi
+      par rapport à aujourd'hui : date:30j (les trente derniers jours), date:aujourd'hui,
+      date:hier (une collection dynamique ainsi faite suit les jours).
       --keywords compte les mots‑clés, les boîtiers et les objectifs du catalogue.
       Collections : --smart crée une collection dynamique (sa règle s'écrit comme une
       recherche : \"note:4 date:2024\"), --add range une photo dans une collection

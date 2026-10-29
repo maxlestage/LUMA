@@ -215,6 +215,10 @@ La photothèque professionnelle, étape par étape.
   dans une table d'octets au lieu d'être interpolé puis arrondi (19 % de moins pour
   24 Mpx, à l'export comme à l'écran) ; les mêmes octets, vérifiés pour chacun du
   milliard de nombres possibles entre 0 et 1.
+- **Dates par rapport à aujourd'hui** : la recherche et les collections dynamiques
+  comprennent `date:30j` (les trente derniers jours, aujourd'hui compris),
+  `date:aujourd'hui` et `date:hier` (`30d`, `today`, `yesterday` en anglais) ; une
+  collection « date:7j » suit les jours.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

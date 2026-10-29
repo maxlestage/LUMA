@@ -9341,7 +9341,7 @@ impl Studio {
         }
         let edit = ui.add(
             egui::TextEdit::singleline(&mut self.catalog_search)
-                .hint_text(tr("Rechercher : mer note:3 date:2024 iso:..800"))
+                .hint_text(tr("Rechercher : mer note:3 date:30j iso:..800"))
                 .desired_width(f32::INFINITY),
         );
         if edit.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {

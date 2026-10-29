@@ -200,6 +200,9 @@ The professional photo library, step by step.
   byte table instead of being interpolated then rounded (19% less for 24 MP, on export
   and on screen); the same bytes, checked for each of the billion possible numbers
   between 0 and 1.
+- **Dates relative to today**: search and smart collections understand `date:30d`
+  (the last thirty days, today included), `date:today` and `date:yesterday` (`30j`,
+  `aujourd'hui`, `hier` in French); a “date:7d” collection follows the days.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
