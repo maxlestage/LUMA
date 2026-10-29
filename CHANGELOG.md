@@ -171,6 +171,10 @@ La photothèque professionnelle, étape par étape.
 - **Diaporama dans un ordre aléatoire** : « Ordre aléatoire », dans l'app (chaque
   photo une fois avant un nouveau tirage) et dans le diaporama exporté (un nouveau
   tirage à chaque ouverture de la page ; `luma slideshow --shuffle`).
+- **Première photo ouverte plus vite** : les bases de boîtiers et d'objectifs du
+  décodeur (≈ 75 ms, une fois par séance) se chargent au démarrage de l'app, pendant
+  que sa fenêtre s'ouvre, et non plus à la première photo : 60 à 95 ms de moins pour
+  elle (NEF 173 → 80 ms, RAF 176 → 90 ms, ARW 160 → 98 ms).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
