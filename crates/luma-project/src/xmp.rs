@@ -301,14 +301,7 @@ pub fn label_color(name: &str) -> Option<usize> {
 /// entier, jamais un XMP coupé qui perdrait la fin des réglages ; le temporaire d'une
 /// écriture ratée est retiré.
 pub fn save(path: &std::path::Path, text: &str) -> std::io::Result<()> {
-    let mut name = path.file_name().unwrap_or_default().to_os_string();
-    name.push(".tmp");
-    let tmp = path.with_file_name(name);
-    let written = std::fs::write(&tmp, text).and_then(|()| std::fs::rename(&tmp, path));
-    if written.is_err() {
-        let _ = std::fs::remove_file(&tmp);
-    }
-    written
+    luma_core::save(path, text)
 }
 
 pub fn sidecar_path(photo: &std::path::Path) -> std::path::PathBuf {

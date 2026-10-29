@@ -94,7 +94,8 @@ La fototeca profesional, paso a paso.
   XMP de una fusión y el estado de la licencia (una clave o una compra ya no se pierde
   por un archivo cortado). Las exportaciones también (JPEG, PNG, TIFF): una exportación
   cortada ya no deja un archivo dañado con el nombre elegido, ni daña la exportación
-  anterior del mismo nombre.
+  anterior del mismo nombre. Y las películas medidas (`.cube`): una película ya no
+  desaparece de «Mis películas» por un guardado cortado.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).
