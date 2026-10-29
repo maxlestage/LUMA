@@ -135,6 +135,10 @@ La fototeca profesional, paso a paso.
   y el PDF sigue el nuevo orden (portada incluida). Bajo cada página, 1, 2 o 4: sus
   fotos; las páginas anteriores conservan las suyas, las siguientes se adaptan
   («Disposición automática» para volver; `luma book --layout 4,1,2`).
+- **Mover una foto del libro**: soltada sobre el fondo de una página (fuera de sus
+  fotos), una foto pasa a ser la primera, las demás se desplazan un lugar; soltada sobre
+  una foto, se siguen intercambiando. Cada foto de «Páginas del libro» tiene también
+  nombre para los lectores de pantalla («archivo · Página 2»).
 - **Altas luces, sombras, claridad y gradación más ágiles**: sus últimos cálculos se
   hacen de ocho en ocho píxeles, y los puntos de referencia de la foto (percentiles) se
   buscan dos veces más rápido; un render es de un 3 a un 15 % más corto cuando se mueven
