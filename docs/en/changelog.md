@@ -193,6 +193,9 @@ The professional photo library, step by step.
   printer (the default one first), with the number of copies, without going through
   the PDF viewer; on Mac and Linux, through the system's printing service. With no
   printer, the app says so and “Open” stays available.
+- **Photos by date**: the Library panel lists all photos by year (the most recent
+  first, with their number); a triangle unfolds the months; a click on a year or a
+  month shows its photos.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
