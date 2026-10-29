@@ -121,10 +121,12 @@ USAGE
       une photo par page (entière, ou remplissant la page avec --fill), ou une planche
       contact avec --grid (colonnes × lignes, le nom de chaque photo dessous avec
       --captions). Marges de 10 mm et 300 points par pouce par défaut. --profile
-      convertit chaque page vers le profil RVB de l'imprimante (colorimétrique relative
-      par défaut, noir compensé) : imprimez alors sans gestion des couleurs du pilote.
-      --crop-marks : des repères de coupe aux coins de chaque photo ; --text : une ligne
-      de texte au bas de chaque page (un titre, un nom, des droits).
+      convertit chaque page vers le profil RVB ou CMJN de l'imprimante (colorimétrique
+      relative par défaut, noir compensé) : imprimez alors sans gestion des couleurs du
+      pilote. --crop-marks : des repères de coupe aux coins de chaque photo ; --text : une
+      ligne de texte au bas de chaque page (un titre, un nom, des droits). Avec
+      -o sortie.jpg : une image JPEG par page (sortie-1.jpg, sortie-2.jpg…), pour un
+      service d'impression ou pour partager ; de même pour luma book.
   luma book <photo>… -o livre.pdf [--title titre] [--subtitle texte]
                     [--format 20x20|30x30|A4|21x28|A3|LxH] [--landscape] [--margin mm]
                     [--gap mm] [--dpi 300] [--captions] [--profile imprimante.icc]
@@ -1929,7 +1931,7 @@ fn book(args: Vec<String>) -> Result<(), String> {
         landscape.push(book::is_landscape(&photo, &settings));
     }
     let layout = b.layout();
-    let mut pages = Vec::new();
+    let mut pages = print::Pages::for_path(&out, printer.is_none());
     for sheet in b.sheets(&landscape) {
         let orientation = sheet.photos.first().is_none_or(|&k| landscape[k]);
         let cells = b.cells(sheet.kind, orientation);
@@ -1944,14 +1946,16 @@ fn book(args: Vec<String>) -> Result<(), String> {
                 file_label(&photos[k]),
             )?);
         }
-        pages.push(print::encode(&b.page(sheet.kind, &cells, &pictures, printer.as_ref()))?);
+        pages.push(&b.page(sheet.kind, &cells, &pictures, printer.as_ref()), &layout)?;
     }
-    std::fs::write(&out, print::pdf_of(&layout, &pages)).map_err(|e| format!("{} : {e}", out.display()))?;
+    let n = pages.len();
+    let written = pages.write(&out, &layout)?;
+    let out = written_name(&written);
     let (w, h) = layout.page_mm();
     println!(
         "{} : livre de {} page(s) de {w:.0} × {h:.0} mm, {} photo(s), en {:.1} s",
-        out.display(),
-        pages.len(),
+        out,
+        n,
         photos.len(),
         start.elapsed().as_secs_f64()
     );
@@ -2143,7 +2147,7 @@ fn print(args: Vec<String>) -> Result<(), String> {
     };
     let start = Instant::now();
     // Page par page : développées, posées, compressées.
-    let mut pages = Vec::new();
+    let mut pages = print::Pages::for_path(&out, printer.is_none());
     for chunk in photos.chunks(cells.len()) {
         let mut pictures = Vec::with_capacity(chunk.len());
         for (path, cell) in chunk.iter().zip(&cells) {
@@ -2160,20 +2164,30 @@ fn print(args: Vec<String>) -> Result<(), String> {
             pictures.push(print::develop(&photo, &settings, &layout, cell, name)?);
         }
         for page in print::compose(&layout, &pictures, printer.as_ref()) {
-            pages.push(print::encode(&page)?);
+            pages.push(&page, &layout)?;
         }
     }
-    let pdf = print::pdf_of(&layout, &pages);
-    std::fs::write(&out, pdf).map_err(|e| format!("{} : {e}", out.display()))?;
+    let n = pages.len();
+    let written = pages.write(&out, &layout)?;
+    let out = written_name(&written);
     let (w, h) = layout.page_mm();
     println!(
         "{} : {} page(s) de {w:.0} × {h:.0} mm, {} photo(s), en {:.1} s",
-        out.display(),
-        pages.len(),
+        out,
+        n,
         photos.len(),
         start.elapsed().as_secs_f64()
     );
     Ok(())
+}
+
+/// Le nom à donner des fichiers écrits : le PDF, ou le premier et le dernier JPEG.
+fn written_name(written: &[PathBuf]) -> String {
+    match written {
+        [one] => one.display().to_string(),
+        [first, .., last] => format!("{} … {}", first.display(), last.display()),
+        [] => String::new(),
+    }
 }
 
 /// L'import d'une carte mémoire ou d'un dossier.
