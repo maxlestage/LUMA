@@ -91,7 +91,8 @@ La photothèque professionnelle, étape par étape.
   élément abîmé n'emporte plus les autres. Le XMP d'une photo s'écrit d'un coup (un
   fichier temporaire renommé) : une app arrêtée ou un disque plein pendant l'écriture
   laisse l'ancien XMP entier, jamais un XMP coupé ; de même pour un préréglage
-  enregistré et le XMP d'une fusion.
+  enregistré, le XMP d'une fusion et l'état de la licence (une clé ou un achat ne se
+  perd plus sur un fichier coupé).
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).

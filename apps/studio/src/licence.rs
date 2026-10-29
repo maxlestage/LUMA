@@ -175,7 +175,7 @@ impl Licence {
 
     fn save(&self) {
         if let Some(p) = &self.path {
-            let _ = std::fs::write(p, self.state.to_json());
+            let _ = write_state(p, &self.state.to_json());
         }
     }
 
@@ -423,5 +423,53 @@ pub fn plans() -> &'static [Plan] {
         &Plan::STORE
     } else {
         &Plan::ALL
+    }
+}
+
+/// Écrit `licence.json` d'un coup : dans un temporaire à côté, renommé ensuite. Un
+/// fichier coupé (app arrêtée, disque plein) ne se relirait pas : l'app repartirait d'un
+/// état neuf, sans la clé ni l'achat qu'elle avait. Le temporaire d'une écriture ratée
+/// est retiré, l'ancien fichier reste entier.
+fn write_state(path: &std::path::Path, json: &str) -> std::io::Result<()> {
+    let tmp = path.with_extension("json.tmp");
+    let written = std::fs::write(&tmp, json).and_then(|()| std::fs::rename(&tmp, path));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    written
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_licence_is_written_in_one_go() {
+        let dir =
+            std::env::temp_dir().join(format!("luma-licence-d-un-coup-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("licence.json");
+        let state = State::new(1_000);
+        write_state(&path, &state.to_json()).unwrap();
+        write_state(&path, &state.to_json()).unwrap();
+        assert_eq!(
+            State::from_json(&std::fs::read_to_string(&path).unwrap()),
+            Some(state.clone())
+        );
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert_eq!(names, [std::ffi::OsString::from("licence.json")]);
+        // Une écriture qui échoue laisse l'ancien état, entier et lisible.
+        std::fs::create_dir_all(dir.join("licence.json.tmp/occupé")).unwrap();
+        assert!(write_state(&path, "{").is_err());
+        assert_eq!(
+            State::from_json(&std::fs::read_to_string(&path).unwrap()),
+            Some(state)
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
