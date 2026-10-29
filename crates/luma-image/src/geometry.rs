@@ -45,8 +45,8 @@ pub fn orient(img: RgbImage, o: Orientation) -> RgbImage {
         for x0 in (0..ow).step_by(TILE) {
             let x1 = (x0 + TILE).min(ow);
             for (dy, row) in rows.chunks_mut(ow).enumerate() {
-                for x in x0..x1 {
-                    row[x] = source(x, y0 + dy);
+                for (x, px) in row[x0..x1].iter_mut().enumerate() {
+                    *px = source(x0 + x, y0 + dy);
                 }
             }
         }
