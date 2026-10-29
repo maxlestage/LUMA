@@ -393,6 +393,9 @@ fn load_settings(a: &Args, raw: Option<&Path>) -> Result<Settings, String> {
     } else if let Some(p) = raw.filter(|_| a.sidecar).and_then(sidecar) {
         eprintln!("réglages lus dans {}", p.display());
         xmp::read(&read(&p)?).map_err(|e| e.to_string())?
+    } else if let Some(s) = raw.filter(|_| a.sidecar).and_then(luma_library::embedded_settings) {
+        eprintln!("réglages lus dans le fichier lui‑même");
+        s
     } else {
         Settings::default()
     };
@@ -1674,7 +1677,7 @@ fn open_with_settings(path: &Path) -> Result<(Photo, Settings), String> {
     let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
     let settings = match sidecar(path) {
         Some(x) => xmp::read(&std::fs::read_to_string(&x).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?,
-        None => photo.default_settings(),
+        None => luma_library::embedded_settings(path).unwrap_or_else(|| photo.default_settings()),
     };
     Ok((photo, settings))
 }

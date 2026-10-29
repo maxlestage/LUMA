@@ -173,6 +173,11 @@ The professional photo library, step by step.
 - **Lighter export in memory**: at full resolution (an export, 1:1 zoom), rendering
   happens in the base image itself instead of a copy: an export's peak memory drops by 19
   to 23% (24 Mpx: 1.24 → 0.96 GB), the files stay identical byte for byte.
+- **Settings a RAW carries inside**: a RAW or DNG developed in another application,
+  which stored its settings in the file, opens with them when it has no sidecar (in the
+  app and `luma develop`, `print`, `book`); never a JPEG's, already in its pixels.
+  Ratings and labels written as elements are read too, and the embedded XMP is read
+  only once per file (64 KB at most, kept in memory).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

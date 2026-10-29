@@ -190,6 +190,11 @@ La fototeca profesional, paso a paso.
   zoom 1:1), el render se hace en la propia imagen base en lugar de en una copia: el
   pico de memoria de una exportación baja de un 19 a un 23 % (24 Mpx: 1,24 → 0,96 GB),
   los archivos siguen idénticos byte a byte.
+- **Los ajustes que un RAW lleva dentro**: un RAW o un DNG revelado en otra aplicación,
+  que guardó sus ajustes en el archivo, se abre con ellos cuando no tiene XMP al lado
+  (en la app y `luma develop`, `print`, `book`); nunca los de un JPEG, ya en sus
+  píxeles. La valoración y la etiqueta escritas en elementos se leen también, y el XMP
+  integrado se lee una sola vez por archivo (64 KB como mucho, guardados en memoria).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

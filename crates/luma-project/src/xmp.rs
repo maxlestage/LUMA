@@ -394,12 +394,18 @@ fn place(values: &Values, i: usize) -> String {
 /// La liste des mots‑clés, rangée avec les listes `crs:`.
 const SUBJECT: &str = "dc:subject";
 
+/// La note et le libellé, lus aussi quand ils sont écrits en éléments.
+const ELEMENT_META: [&str; 2] = ["xmp:Rating", "xmp:Label"];
+
 fn parse_values(text: &str) -> luma_core::Result<Values> {
     let mut reader = quick_xml::Reader::from_str(text);
     let mut values = Values::default();
     // L'élément `crs:…` ouvert (valeur en texte ou liste `rdf:li`).
     let mut open: Option<String> = None;
     let mut in_li = false;
+    // La note ou le libellé écrits en éléments (`<xmp:Rating>4</xmp:Rating>`) plutôt
+    // qu'en attributs, comme le font certains logiciels.
+    let mut open_meta: Option<String> = None;
     loop {
         let event = reader
             .read_event()
@@ -423,6 +429,9 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                 }
                 let qname = e.name();
                 let tag: &str = qname.as_ref();
+                if !empty && ELEMENT_META.contains(&tag) {
+                    open_meta = Some(tag.to_owned());
+                }
                 let listed = TEXT_LISTS.iter().chain(&PLACE).find(|t| **t == tag).copied();
                 if let Some(name) = tag
                     .strip_prefix("crs:")
@@ -441,6 +450,12 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                 }
             }
             // Un texte arrive en morceaux, coupé à chaque entité (`&amp;`, `&#233;`…).
+            Event::Text(ref t) if open_meta.is_some() => {
+                if let Some(name) = &open_meta {
+                    let piece = t.xml_content(XmlVersion::Implicit1_0).into_owned();
+                    values.meta.entry(name.clone()).or_default().push_str(piece.trim());
+                }
+            }
             Event::Text(_) | Event::GeneralRef(_) => {
                 let Some(name) = &open else { continue };
                 let piece = match &event {
@@ -467,6 +482,10 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
             Event::End(ref e) => {
                 let qname = e.name();
                 let tag: &str = qname.as_ref();
+                if open_meta.as_deref() == Some(tag) {
+                    open_meta = None;
+                    continue;
+                }
                 if tag == "rdf:li" {
                     in_li = false;
                     if let Some(item) = open
@@ -1418,6 +1437,17 @@ mod tests {
         assert!(text.contains("crs:Exposure2012=\"+0.65\""));
         assert!(text.contains("crs:HueAdjustmentMagenta=\"+12\""));
         assert_eq!(read(&text).unwrap(), s);
+    }
+
+    /// La note et le libellé écrits en éléments, et non en attributs, sont lus de même.
+    #[test]
+    fn rating_and_label_as_elements() {
+        let text = r#"<x:xmpmeta xmlns:x="x"><rdf:RDF xmlns:rdf="r"><rdf:Description xmlns:xmp="m">
+            <xmp:Rating>3</xmp:Rating>
+            <xmp:Label>Vert</xmp:Label>
+            </rdf:Description></rdf:RDF></x:xmpmeta>"#;
+        let m = read_meta(text);
+        assert_eq!((m.rating, m.label.as_str()), (3, "Vert"));
     }
 
     #[test]
