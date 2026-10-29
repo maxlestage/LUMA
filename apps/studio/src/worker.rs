@@ -201,7 +201,7 @@ pub fn read_meta(raw: &Path) -> xmp::Meta {
 /// Écrit le sidecar d'un RAW : réglages, note et drapeau.
 pub fn write_sidecar(raw: &Path, settings: &Settings, meta: &xmp::Meta) -> Result<(), String> {
     let target = sidecar_path(raw);
-    std::fs::write(&target, xmp::write_with_meta(settings, meta))
+    xmp::save(&target, &xmp::write_with_meta(settings, meta))
         .map_err(|e| format!("{} : {e}", target.display()))
 }
 
@@ -213,7 +213,7 @@ pub fn write_meta(raw: &Path, meta: &xmp::Meta) -> Result<(), String> {
         Some(settings) => write_sidecar(raw, &settings, meta),
         None => {
             let target = sidecar_path(raw);
-            std::fs::write(&target, xmp::write_meta(meta))
+            xmp::save(&target, &xmp::write_meta(meta))
                 .map_err(|e| format!("{} : {e}", target.display()))
         }
     }

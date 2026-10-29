@@ -118,7 +118,7 @@ impl Merged {
             },
             ..Settings::default()
         };
-        std::fs::write(&xmp, luma_project::xmp::write(&settings))
+        luma_project::xmp::save(&xmp, &luma_project::xmp::write(&settings))
             .map_err(|e| luma_core::Error::Decode(format!("{} : {e}", xmp.display())))?;
         Ok(path.to_path_buf())
     }
