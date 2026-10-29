@@ -2807,6 +2807,42 @@ fn slideshow_and_photo_book() {
     s.harness.get_by_label("Disposition automatique").click();
     s.harness.step();
     assert!(s.studio().book.pages.is_empty());
+    // Un vrai glisser‑déposer : la dernière photo lâchée sur le fond de la première page
+    // après la couverture (sa marge) en devient la première photo.
+    for _ in 0..2 {
+        s.harness.step();
+    }
+    let photos = s.studio().book_photos();
+    let name = |p: &std::path::Path| p.file_name().unwrap().to_string_lossy().into_owned();
+    let (last, target) = (name(photos.last().unwrap()), name(&photos[1]));
+    // Les photos du livre se nomment « fichier · page ».
+    let find = |s: &Session, label: &str| {
+        s.harness
+            .get_all_by_label_contains(&format!("{label} · "))
+            .next()
+            .unwrap()
+            .rect()
+    };
+    let from = find(&s, &last).center();
+    // Dans la marge de la page, hors de la zone de la photo (élargie de quelques points
+    // pour le toucher).
+    let margin = find(&s, &target).min - egui::vec2(7.0, 7.0);
+    s.harness.hover_at(from);
+    s.harness.step();
+    s.harness.drag_at(from);
+    s.harness.step();
+    for k in 1..=6 {
+        s.harness
+            .hover_at(from + (margin - from) * (k as f32 / 6.0));
+        s.harness.step();
+    }
+    s.harness.drop_at(margin);
+    s.harness.step();
+    s.harness.step();
+    let moved = s.studio().book_photos();
+    assert_eq!(moved[1], *photos.last().unwrap(), "{moved:?}");
+    assert_eq!(moved[2], photos[1], "{photos:?} → {moved:?}");
+    assert_eq!(moved.len(), photos.len());
     s.studio().book_pages_open = false;
     // Le livre photo de tout le film, et le diaporama exporté.
     s.studio().book.dpi = 50;

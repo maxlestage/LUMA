@@ -121,6 +121,10 @@ The professional photo library, step by step.
   order (cover included). Under each page, 1, 2 or 4: its photos; the pages before keep
   theirs, those after follow (“Automatic layout” to go back; `luma book --layout
   4,1,2`).
+- **Move a book photo**: dropped onto the background of a page (outside its photos), a
+  photo becomes its first one, the others shift by one place; dropped onto a photo, they
+  still swap. Each photo in “Book pages” is also named for screen readers (“file · Page
+  2”).
 - **Snappier highlights, shadows, clarity and colour grading**: their last
   computations run eight pixels at a time, and the photo's reference points
   (percentiles) are found twice as fast; a render is 3 to 15% shorter when these

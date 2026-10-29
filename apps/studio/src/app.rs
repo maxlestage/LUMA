@@ -2321,6 +2321,17 @@ impl Studio {
         }
     }
 
+    /// Déplace une photo du livre au rang `to` (le début d'une page) : les photos d'entre
+    /// les deux se décalent d'une place.
+    pub fn move_book_photo(&mut self, from: usize, to: usize) {
+        let mut photos = self.book_photos();
+        if from < photos.len() && from != to {
+            let p = photos.remove(from);
+            photos.insert(to.min(photos.len()), p);
+            self.book_order = photos;
+        }
+    }
+
     /// Fait le livre photo des photos (en arrière‑plan) et l'écrit dans `out`.
     pub fn make_book(&mut self, out: PathBuf) {
         use luma_render::{book, print};
@@ -2970,6 +2981,7 @@ impl Studio {
             .map(|s| s.photos.len())
             .collect();
         let mut layout: Option<Vec<usize>> = None;
+        let mut moved: Option<(usize, usize)> = None;
         egui::Window::new(trf("Pages du livre : {pages}", &[("pages", &sheets.len())]))
             .id(egui::Id::unique("fenetre-pages-livre"))
             .open(&mut open)
@@ -2978,7 +2990,7 @@ impl Studio {
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new(tr("Glissez une photo sur une autre pour les échanger ; 1, 2, 4 : les photos de la page."))
+                        RichText::new(tr("Glissez une photo sur une autre pour les échanger, ou sur le fond d'une page pour l'y mettre en premier ; 1, 2, 4 : les photos de la page."))
                             .size(11.0)
                             .color(theme::DIM),
                     );
@@ -2993,10 +3005,11 @@ impl Studio {
                             ui.spacing_mut().item_spacing = vec2(10.0, 14.0);
                             for (page, sheet) in sheets.iter().enumerate() {
                                 ui.vertical(|ui| {
-                                    let (rect, _) =
+                                    let (rect, page_response) =
                                         ui.allocate_exact_size(page_size, egui::Sense::hover());
                                     let painter = ui.painter_at(rect);
                                     painter.rect_filled(rect, 2.0, Color32::from_gray(0xf2));
+                                    let mut areas = Vec::with_capacity(sheet.photos.len());
                                     let orientation =
                                         sheet.photos.first().is_none_or(|&k| landscape[k]);
                                     let cells = b.cells(sheet.kind, orientation);
@@ -3008,10 +3021,18 @@ impl Studio {
                                                 (cell.height - cell.caption) as f32,
                                             ) * scale,
                                         );
+                                        areas.push(area);
                                         let id = egui::Id::unique(("photo-livre", k));
                                         let r =
                                             ui.interact(area, id, egui::Sense::click_and_drag());
                                         r.dnd_set_drag_payload(k);
+                                        // Son nom et sa page pour les lecteurs d'écran (et les essais).
+                                        let where_ = match sheet.kind {
+                                            Kind::Cover => tr("Couverture").to_owned(),
+                                            _ => trf("Page {n}", &[("n", &page)]),
+                                        };
+                                        let name = format!("{} · {where_}", file_name(&photos[k]));
+                                        r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &name));
                                         if let Some(from) = r.dnd_release_payload::<usize>()
                                             && *from != k
                                         {
@@ -3050,6 +3071,22 @@ impl Studio {
                                             );
                                         }
                                         r.on_hover_text(file_name(&photos[k]));
+                                    }
+                                    // Une photo lâchée sur le fond d'une page de photos (pas
+                                    // sur une de ses photos) en devient la première.
+                                    let on_photo = ui
+                                        .ctx()
+                                        .pointer_latest_pos()
+                                        .is_some_and(|p| areas.iter().any(|a| a.contains(p)));
+                                    if let Some(&first) = sheet.photos.first()
+                                        && !on_photo
+                                    {
+                                        if let Some(from) = page_response.dnd_release_payload::<usize>() {
+                                            moved = Some((*from, first));
+                                        }
+                                        if page_response.dnd_hover_payload::<usize>().is_some() {
+                                            painter.rect_stroke(rect, 2.0, egui::Stroke::new(2.0, theme::ACCENT), egui::StrokeKind::Inside);
+                                        }
                                     }
                                     // La couverture : son titre sous la photo ; les pages de
                                     // texte : leurs premières lignes.
@@ -3113,6 +3150,9 @@ impl Studio {
         }
         if let Some(pages) = layout {
             self.book.pages = pages;
+        }
+        if let Some((from, to)) = moved {
+            self.move_book_photo(from, to);
         }
         self.book_pages_open = open;
     }
