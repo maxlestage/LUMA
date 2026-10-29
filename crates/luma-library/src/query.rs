@@ -7,6 +7,11 @@
 //! mer note:3 drapeau:retenue date:2024-06..2024-08 iso:..800 boîtier:sony
 //! ```
 //!
+//! La note se donne en minimum (`note:3`), en plage (`note:..2`, `note:2..4`) ou
+//! exactement (`note:=0`, les photos pas encore notées) ; `sans:` trouve ce qui
+//! manque encore : `sans:note`, `sans:mot` (aucun mot‑clé), `sans:lieu` (pas de
+//! position), `sans:libellé`.
+//!
 //! Une date se donne aussi par rapport à aujourd'hui : `date:30j` (les trente derniers
 //! jours, aujourd'hui compris), `date:aujourd'hui`, `date:hier` ; une collection
 //! dynamique ainsi faite suit les jours.
@@ -40,13 +45,25 @@ impl<T: PartialOrd + Copy> Range<T> {
     }
 }
 
+/// Ce qu'une photo n'a pas encore, pour `sans:`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Missing {
+    Rating,
+    Keywords,
+    Location,
+    Label,
+}
+
 /// Une recherche. `Query::default()` trouve tout.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Query {
     /// Les mots libres, déjà repliés (minuscules, sans accents).
     pub words: Vec<String>,
-    /// Note minimale.
+    /// Note minimale et maximale.
     pub min_rating: u8,
+    pub max_rating: Option<u8>,
+    /// Ce qui doit manquer (`sans:`).
+    pub missing: Vec<Missing>,
     pub flag: Option<Flag>,
     pub label: Option<String>,
     /// Dates `AAAA`, `AAAA-MM`, `AAAA-MM-JJ`… : depuis le début de la première,
@@ -107,6 +124,7 @@ fn range<T: std::str::FromStr + PartialOrd + Copy>(s: &str) -> Option<Range<T>> 
 impl Query {
     /// Lit une recherche écrite en une ligne. Les filtres ont un nom français ou
     /// anglais : `note`/`rating`, `drapeau`/`flag` (`retenue`, `rejetée`, `aucun`),
+    /// `sans`/`without` (`note`, `mot`, `lieu`, `libellé`),
     /// `libellé`/`label`, `date`, `iso`, `focale`/`focal`, `boîtier`/`camera`,
     /// `objectif`/`lens`, `mot`/`keyword`. Un filtre inconnu ou mal écrit est une
     /// erreur, qui le nomme.
@@ -129,8 +147,29 @@ impl Query {
             let bad = || format!("filtre « {token} » mal écrit");
             match fold(key).as_str() {
                 "note" | "rating" => {
-                    q.min_rating = value.trim_end_matches('+').parse::<u8>().map_err(|_| bad())?.min(5)
+                    let n = |v: &str| v.parse::<u8>().map(|n| n.min(5)).map_err(|_| bad());
+                    if let Some(exact) = value.strip_prefix('=') {
+                        let n = n(exact)?;
+                        (q.min_rating, q.max_rating) = (n, Some(n));
+                    } else if let Some((a, b)) = value.split_once("..") {
+                        if a.is_empty() && b.is_empty() {
+                            return Err(bad());
+                        }
+                        q.min_rating = if a.is_empty() { 0 } else { n(a)? };
+                        q.max_rating = if b.is_empty() { None } else { Some(n(b)?) };
+                    } else {
+                        q.min_rating = n(value.trim_end_matches('+'))?;
+                    }
                 }
+                "sans" | "without" => q
+                    .missing
+                    .push(match fold(value).replace(['-', '‑'], "").trim_end_matches('s') {
+                        "note" | "rating" => Missing::Rating,
+                        "mot" | "motcle" | "motscle" | "keyword" => Missing::Keywords,
+                        "lieu" | "gps" | "position" | "location" => Missing::Location,
+                        "libelle" | "label" => Missing::Label,
+                        _ => return Err(bad()),
+                    }),
                 "drapeau" | "flag" => {
                     q.flag = Some(match fold(value).as_str() {
                         "retenue" | "retenues" | "pick" | "picked" => Flag::Pick,
@@ -172,7 +211,19 @@ impl Query {
 
     /// Cette photo répond‑elle à la recherche ?
     pub fn matches(&self, e: &Entry) -> bool {
-        if e.rating < self.min_rating || self.flag.is_some_and(|f| f != e.flag()) {
+        if e.rating < self.min_rating
+            || self.max_rating.is_some_and(|m| e.rating > m)
+            || self.flag.is_some_and(|f| f != e.flag())
+        {
+            return false;
+        }
+        let lacks = |m: &Missing| match m {
+            Missing::Rating => e.rating == 0,
+            Missing::Keywords => e.keywords.is_empty(),
+            Missing::Location => e.gps.is_none(),
+            Missing::Label => e.label.trim().is_empty(),
+        };
+        if !self.missing.iter().all(lacks) {
             return false;
         }
         // Un libellé de couleur se retrouve dans toutes les langues (« libellé:rouge »
@@ -418,5 +469,43 @@ mod tests {
             Query::parse_at("date:2024-06", now).unwrap().date_from.as_deref(),
             Some("2024-06")
         );
+    }
+
+    /// La note en plage ou exacte, et `sans:` : ce que les photos n'ont pas encore.
+    #[test]
+    fn ratings_in_a_range_and_what_is_missing() {
+        let photo = |rating: u8, keywords: &[&str], gps: bool, label: &str| Entry {
+            path: "/p/a.jpg".into(),
+            rating,
+            keywords: keywords.iter().map(|k| (*k).to_owned()).collect(),
+            gps: gps.then_some([48.85, 2.35]),
+            label: label.into(),
+            ..Entry::default()
+        };
+        let found = |q: &str, e: &Entry| Query::parse(q).unwrap().matches(e);
+        let bare = photo(0, &[], false, "");
+        let done = photo(4, &["mer"], true, "Rouge");
+        assert!(found("note:=0", &bare) && !found("note:=0", &done));
+        assert!(found("note:..2", &bare) && !found("note:..2", &done));
+        assert!(found("note:3..4", &done) && !found("note:3..4", &bare));
+        assert!(found("note:4+", &done) && found("note:4", &done));
+        for q in [
+            "sans:note",
+            "sans:mot",
+            "sans:mots-clés",
+            "sans:lieu",
+            "without:location",
+            "sans:libellé",
+        ] {
+            assert!(found(q, &bare), "{q}");
+            assert!(!found(q, &done), "{q}");
+        }
+        // Plusieurs manques à la fois : tous.
+        let half = photo(3, &[], true, "");
+        assert!(found("sans:mot sans:libellé", &half));
+        assert!(!found("sans:mot sans:lieu", &half));
+        for bad in ["sans:objectif", "note:..", "note:=beaucoup", "note:a..3"] {
+            assert!(Query::parse(bad).is_err(), "{bad}");
+        }
     }
 }

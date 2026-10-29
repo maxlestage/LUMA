@@ -203,6 +203,10 @@ The professional photo library, step by step.
 - **Dates relative to today**: search and smart collections understand `date:30d`
   (the last thirty days, today included), `date:today` and `date:yesterday` (`30j`,
   `aujourd'hui`, `hier` in French); a “date:7d” collection follows the days.
+- **Finding what is left to do**: search and smart collections take the rating as a
+  range or exact (`rating:..2`, `rating:2..4`, `rating:=0` for photos not yet rated)
+  and `without:`: `without:rating`, `without:keyword`, `without:location`,
+  `without:label`, which can be combined.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
