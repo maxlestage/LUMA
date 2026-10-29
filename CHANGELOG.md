@@ -199,6 +199,11 @@ La photothèque professionnelle, étape par étape.
   Les sauvegardes du catalogue s'y voient par date : une de plus à la demande, ou une
   ancienne remise en place après confirmation (la photothèque du moment est
   sauvegardée d'abord).
+- **Aperçus plus rapides sur le processeur** : l'image de l'aperçu d'avant sert de
+  mémoire au suivant (plus de mémoire neuve à chaque retouche, 64 Mo gardés au plus),
+  et la conversion vers l'écran se fait d'un coup, sur tous les cœurs : un aperçu de
+  4,4 Mpx 10 à 15 % plus vite, la conversion d'une image de 24 Mpx 38 % plus vite
+  (zoom 1:1, comparaison, aperçus des films) ; les mêmes pixels, octet pour octet.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
