@@ -140,13 +140,14 @@ USAGE
       répétition ; les pages suivantes selon --pages.
   luma slideshow <photo>… -o dossier [--title titre] [--seconds 5] [--fade 1]
                          [--size 2048] [--quality 85] [--captions]
-                         [--transition fade|slide|drift] [--music fichier]
+                         [--transition fade|slide|drift] [--music fichier] [--shuffle]
       Un diaporama qui se suffit à lui‑même : le dossier reçoit index.html et les photos
       (JPEG sRGB, grand côté de 2048 px par défaut), à ouvrir dans un navigateur ou à
       mettre en ligne. Flèches ou glissement du doigt, espace pour la pause, F pour le
       plein écran. --transition : fondu (fade, par défaut), glissement (slide), ou fondu
       avec un lent zoom (drift). --music : une musique (mp3, m4a, aac, ogg, wav, flac)
-      copiée dans le dossier, jouée en boucle ; M la coupe.
+      copiée dans le dossier, jouée en boucle ; M la coupe. --shuffle : les photos dans un
+      ordre tiré au hasard à chaque ouverture.
   luma gallery <photo>… -o dossier [--title titre] [--description texte] [--size 2048]
                        [--thumb 480] [--quality 85] [--no-captions]
       Une galerie web statique : index.html (la grille des vignettes, chaque photo en
@@ -2020,6 +2021,7 @@ fn slideshow(args: Vec<String>) -> Result<(), String> {
             "--size" => show.size = bounded("--size", it.next(), 320, 8192)?,
             "--quality" => show.quality = bounded("--quality", it.next(), 1, 100)?,
             "--captions" => show.captions = true,
+            "--shuffle" => show.shuffle = true,
             "--transition" => {
                 let t = it.next().unwrap_or_default();
                 show.transition = slideshow::Transition::from_key(&t)
