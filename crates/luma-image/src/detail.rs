@@ -299,6 +299,9 @@ pub fn sharpen(img: &mut RgbImage, d: &Detail, scale: f32) {
     let Some(Sharpening { amount, radius, limit }) = sharpening(d, scale) else {
         return;
     };
+    if img.data.is_empty() {
+        return;
+    }
     let perceived = Plane::from_rgb(img, |p| luminance(p).max(0.0).powf(1.0 / 2.2));
     let blurred = perceived.blur(radius);
     // La déconvolution : l'image nette estimée tient lieu de « v + écart », le Gain en

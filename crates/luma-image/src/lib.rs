@@ -81,6 +81,11 @@ pub fn develop(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: 
 /// ne dépend que des réglages gardés par [`base_key`], et peut être gardé en cache
 /// pendant qu'on règle le contraste, les couleurs ou les effets.
 pub fn develop_base(cam: &RgbImage, input: &Input, s: &Settings, cancel: &Cancel, t: &mut Timings) -> Result<RgbImage> {
+    // Une image sans pixel (un recadrage ou un fichier dégénéré) : rien à développer,
+    // et les étapes par lignes n'ont pas à en traiter.
+    if cam.data.is_empty() {
+        return Ok(cam.clone());
+    }
     // Les hautes lumières reconstruites, sur une copie de la source (qui reste en cache
     // telle quelle) ; rien à faire pour une image déjà développée.
     let rebuilt = (s.highlight_reconstruction && !input.rendered)
@@ -253,6 +258,9 @@ pub fn finish_layers(
     cancel: &Cancel,
     t: &mut Timings,
 ) -> Result<RgbImage> {
+    if base.data.is_empty() {
+        return Ok(base.clone());
+    }
     let mut out = finish_from(base, scale, s, cancel, t)?;
     for (mask, look, k) in look_layers(s) {
         let own = if needs_own_base(s, &look) {
@@ -1170,10 +1178,10 @@ mod tests {
 
     #[test]
     fn tiny_images_render_with_every_setting() {
-        // Une image d'un pixel, d'une ligne, d'une colonne, de quelques pixels : chaque
+        // Une image vide, d'un pixel, d'une ligne, d'une colonne, de quelques pixels : chaque
         // étape (flous, ciel, retouches, fluidité, masques) tient, en pixels finis.
         let s = everything();
-        for (w, h) in [(1, 1), (1, 7), (7, 1), (2, 2), (3, 2), (5, 9), (16, 1), (1, 16)] {
+        for (w, h) in [(0, 0), (1, 1), (1, 7), (7, 1), (2, 2), (3, 2), (5, 9), (16, 1), (1, 16)] {
             let cam = RgbImage::from_fn(w, h, |x, y| {
                 let v = 0.05 + 0.1 * (x + 2 * y) as f32;
                 [v, v * 0.8, v * 0.6]

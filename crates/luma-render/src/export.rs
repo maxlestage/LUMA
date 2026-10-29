@@ -1583,6 +1583,24 @@ mod tests {
     }
 
     #[test]
+    fn output_sharpening_of_tiny_images() {
+        // Une image vide ou d'un pixel : l'accentuation la laisse telle quelle, sans
+        // paniquer.
+        for (w, h) in [(0, 0), (1, 1), (1, 5), (4, 1)] {
+            for medium in [Medium::Screen, Medium::Matte, Medium::Glossy] {
+                let mut img = RgbImage::from_fn(w, h, |x, _| [0.2 + 0.1 * x as f32; 3]);
+                OutputSharpen {
+                    medium,
+                    strength: Strength::High,
+                }
+                .apply(&mut img);
+                assert_eq!((img.width, img.height, img.data.len()), (w, h, w * h));
+                assert!(img.data.iter().flatten().all(|v| v.is_finite()));
+            }
+        }
+    }
+
+    #[test]
     fn resize_modes() {
         let (w, h) = (6000, 4000);
         assert_eq!(Resize::LongEdge(2048).apply(w, h), (2048, 1365));
