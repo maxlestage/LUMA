@@ -92,7 +92,9 @@ La fototeca profesional, paso a paso.
   archivo temporal renombrado): una app cerrada o un disco lleno durante la escritura
   deja el XMP anterior entero, nunca uno cortado; lo mismo para un ajuste guardado y el
   XMP de una fusión y el estado de la licencia (una clave o una compra ya no se pierde
-  por un archivo cortado).
+  por un archivo cortado). Las exportaciones también (JPEG, PNG, TIFF): una exportación
+  cortada ya no deja un archivo dañado con el nombre elegido, ni daña la exportación
+  anterior del mismo nombre.
 - **Sin espacio perdido**: un duplicado de trabajo o una miniatura cuya escritura falla
   (disco lleno) o se interrumpe (app cerrada) ya no deja un archivo a medio escribir; la
   limpieza retira los anteriores (5,3 GB recuperados en la máquina de pruebas).

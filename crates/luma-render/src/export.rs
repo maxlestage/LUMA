@@ -38,7 +38,32 @@ pub fn write_with(
 }
 
 /// `write_with` ; `web` : un JPEG allégé pour le web ([`crate::jpeg::encode_web`]).
+/// Le fichier s'écrit d'un coup : dans un temporaire caché à côté, renommé une fois
+/// complet. Un export coupé (disque plein, app arrêtée) ne laisse jamais un fichier
+/// abîmé sous le nom voulu, ni n'abîme l'export d'avant du même nom.
 pub fn write_file(
+    path: &Path,
+    img: &RgbImage,
+    space: OutputSpace,
+    quality: u8,
+    bits: u8,
+    meta: &Embedded,
+    web: bool,
+) -> Result<(), String> {
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("jpg");
+    let name = path.file_name().map_or_else(Default::default, |n| n.to_string_lossy());
+    let tmp = path.with_file_name(format!(".{name}.partiel.{ext}"));
+    let written = write_at(&tmp, img, space, quality, bits, meta, web)
+        .and_then(|()| std::fs::rename(&tmp, path).map_err(|e| format!("{} : {e}", path.display())));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    // Les messages nomment le fichier voulu, pas le temporaire.
+    written.map_err(|e| e.replace(&tmp.display().to_string(), &path.display().to_string()))
+}
+
+/// L'écriture elle‑même, dans `path` (JPEG, PNG ou TIFF selon son extension).
+fn write_at(
     path: &Path,
     img: &RgbImage,
     space: OutputSpace,
@@ -2032,6 +2057,47 @@ mod tests {
         let _ = std::fs::remove_file(&aside);
         assert!(Presets::load(&dir.join("absent.json")).user.is_empty());
         assert!(!dir.join("absent.json.illisible").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_export_is_written_in_one_go() {
+        let dir = std::env::temp_dir().join(format!("luma-export-d-un-coup-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let img = busy(64, 48);
+        for ext in ["jpg", "png", "tif"] {
+            let path = dir.join(format!("photo.{ext}"));
+            write_file(&path, &img, OutputSpace::Srgb, 90, 8, &Embedded::default(), false).unwrap();
+            let before = std::fs::read(&path).unwrap();
+            // Rien d'autre que le fichier voulu à côté.
+            let names: Vec<_> = std::fs::read_dir(&dir)
+                .unwrap()
+                .flatten()
+                .map(|e| e.file_name())
+                .collect();
+            assert!(
+                names.iter().all(|n| !n.to_string_lossy().contains("partiel")),
+                "{names:?}"
+            );
+            // Un nouvel export qui échoue (ici, le temporaire ne peut pas être créé)
+            // laisse l'export d'avant entier, et le message nomme le fichier voulu.
+            let blocked = dir.join(format!(".photo.{ext}.partiel.{ext}"));
+            std::fs::create_dir_all(blocked.join("occupé")).unwrap();
+            let e = write_file(
+                &path,
+                &busy(32, 32),
+                OutputSpace::Srgb,
+                90,
+                8,
+                &Embedded::default(),
+                false,
+            )
+            .unwrap_err();
+            assert!(e.contains(&path.display().to_string()) && !e.contains("partiel"), "{e}");
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            std::fs::remove_dir_all(&blocked).unwrap();
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 
