@@ -2730,6 +2730,26 @@ fn print_layout_and_pdf() {
     assert!(text.contains("/MediaBox [0 0 360.00 504.00]"));
     // 13 × 18 cm (127 × 177,8 mm) à 100 ppp : 500 × 700 pixels par page.
     assert!(text.contains("/Width 500 /Height 700"));
+    // Le PDF fait, « Ouvrir » le propose à l'app du système ; ici, sans elle
+    // (`xdg-open` absent du conteneur d'essai), un message le dit.
+    assert_eq!(s.studio().last_output.as_deref(), Some(pdf.as_path()));
+    let name = pdf.file_name().unwrap().to_string_lossy().into_owned();
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    assert!(
+        s.harness
+            .query_by_label(&format!("Ouvrir « {name} »"))
+            .is_some(),
+        "le bouton Ouvrir"
+    );
+    if std::process::Command::new("xdg-open")
+        .arg("--version")
+        .output()
+        .is_err()
+    {
+        assert!(!s.studio().open_last_output());
+    }
 }
 
 #[test]
