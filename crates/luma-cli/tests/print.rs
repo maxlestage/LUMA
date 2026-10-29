@@ -113,6 +113,27 @@ fn contact_sheet_and_print_with_a_profile() {
         "{}",
         &text[..600.min(text.len())]
     );
+    // Les pages en JPEG : une image par page, nommée d'après le fichier demandé.
+    let jpeg = dir.join("planche.jpg");
+    let (ok, out) = luma(&[
+        "print",
+        &sony,
+        &nikon,
+        &fuji,
+        "-o",
+        &jpeg.display().to_string(),
+        "--grid",
+        "2x1",
+        "--dpi",
+        "72",
+    ]);
+    assert!(ok, "{out}");
+    assert!(
+        dir.join("planche-1.jpg").is_file() && dir.join("planche-2.jpg").is_file(),
+        "{out}"
+    );
+    assert!(!jpeg.exists(), "deux pages : deux fichiers numérotés");
+    assert!(out.contains("planche-1.jpg") && out.contains("planche-2.jpg"), "{out}");
     // Vers une imprimante CMJN : un PDF en CMJN.
     let ink = Path::new(env!("CARGO_MANIFEST_DIR")).join("../luma-color/tests/profils/encre-noire.icc");
     let press = dir.join("presse.pdf");
