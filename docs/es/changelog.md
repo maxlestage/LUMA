@@ -149,6 +149,12 @@ La fototeca profesional, paso a paso.
   directamente desde sus píxeles, sin copiar antes toda la imagen (145 MB); y un cuarto
   de vuelta se hace por bloques. Primera vista previa 220 → 109 ms, sin cambiar un
   píxel; toda foto en vertical gana también en la orientación (15 → 9 ms).
+- **Las máscaras de un XMP de otra aplicación**: un XMP escrito por otro revelador
+  aporta sus degradados lineales y radiales (`crs:MaskGroupBasedCorrections`, y las
+  listas de degradados antiguas), con su intensidad, su inversión y sus ajustes locales
+  (exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz,
+  saturación, claridad, textura, nitidez, ruido, neblina), llevados al recorte. Los
+  pinceles y las máscaras de sujeto, hechas de píxeles, no se recuperan.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

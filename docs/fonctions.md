@@ -73,7 +73,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Combinaisons de masques : ajouter, soustraire, intersection d'autres formes (chacune inversable) | ✅ |
 | | Dupliquer un masque, ou le dupliquer inversé (réglages à zéro) : le sol après le ciel, sans retracer la zone | ✅ |
 | | Zone du masque affichée (O) en rouge, vert, bleu, blanc ou blanc sur noir, opacité de 10 à 100 % | ✅ |
-| | Lecture des masques `crs:MaskGroupBasedCorrections` | ⏳ |
+| | Lecture des masques d'un XMP venu d'un autre logiciel (`crs:MaskGroupBasedCorrections`, et les anciennes listes de dégradés) : dégradés linéaires et radiaux, intensité, inversion, réglages locaux, ramenés dans le recadrage | ✅ |
+| | Masques de pinceau, de sujet et de plage d'un XMP venu d'un autre logiciel | ⏳ |
 | | Correcteur et tampon (Q) : un clic, la source trouvée d'elle-même, zone et source déplaçables ; taille, contour progressif, opacité | ✅ |
 | | Taches de capteur : vue des taches (les poussières en points sombres), « Retirer les poussières » d'un clic | ✅ |
 | | Yeux rouges : un cercle sur l'œil, la pupille rouge redevient noire, la peau reste | ✅ |

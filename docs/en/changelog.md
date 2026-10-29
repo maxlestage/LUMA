@@ -135,6 +135,12 @@ The professional photo library, step by step.
   from its pixels, without first copying the whole image (145 MB); and a quarter turn is
   done in tiles. First preview 220 → 109 ms, without changing a pixel; every portrait
   photo also gains on orientation (15 → 9 ms).
+- **Masks from an XMP made elsewhere**: an XMP written by another raw developer brings
+  its linear and radial gradients (`crs:MaskGroupBasedCorrections`, and the older
+  gradient lists), with their amount, inversion and local settings (exposure, contrast,
+  highlights, shadows, whites, blacks, temperature, tint, saturation, clarity, texture,
+  sharpness, noise, dehaze), brought into the crop. Brushes and subject masks, made of
+  pixels, are not taken over.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

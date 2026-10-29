@@ -726,10 +726,12 @@ pub fn read(text: &str) -> luma_core::Result<Settings> {
             *slot = points;
         }
     }
-    // Les masques de LÜMA (ceux rangés dans crs:MaskGroupBasedCorrections ne
-    // sont pas encore lus).
+    // Les masques de LÜMA ; sinon, ceux qu'un autre logiciel a rangés dans
+    // crs:MaskGroupBasedCorrections (dégradés linéaires et radiaux).
     if let Some(masks) = values.meta.get("luma:Masks").and_then(|j| each(j)) {
         s.masks = masks;
+    } else {
+        s.masks = crate::xmp_masks::read(text, &s.crop);
     }
     // Les retouches (tampon et correcteur).
     if let Some(spots) = values.meta.get("luma:Spots").and_then(|j| each(j)) {

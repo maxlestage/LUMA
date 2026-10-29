@@ -72,7 +72,8 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Mask combinations: add, subtract, intersect other shapes (each one invertible) | ✅ |
 | | Duplicate a mask, or duplicate it inverted (settings at zero): the ground after the sky, without redrawing the area | ✅ |
 | | Mask area shown (O) in red, green, blue, white or white on black, opacity from 10 to 100% | ✅ |
-| | Reading `crs:MaskGroupBasedCorrections` masks | ⏳ |
+| | Reading the masks of an XMP from another application (`crs:MaskGroupBasedCorrections`, and the older gradient lists): linear and radial gradients, amount, inversion, local settings, brought into the crop | ✅ |
+| | Brush, subject and range masks of an XMP from another application | ⏳ |
 | | Healing and clone (Q): one click, the source found on its own, area and source movable; size, feather, opacity | ✅ |
 | | Sensor spots: spot view (dust as dark dots), “Remove dust” in one click | ✅ |
 | | Red eye: a circle on the eye, the red pupil turns black again, the skin stays | ✅ |
