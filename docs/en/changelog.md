@@ -178,6 +178,12 @@ The professional photo library, step by step.
   app and `luma develop`, `print`, `book`); never a JPEG's, already in its pixels.
   Ratings and labels written as elements are read too, and the embedded XMP is read
   only once per file (64 KB at most, kept in memory).
+- **Library maintenance in the app**: “Maintenance…”, below the folders, lists the
+  missing photos folder by folder; a folder is located by choosing its new place
+  (when the whole parent folder moved, the neighbouring folders follow on their own)
+  or removed from the library, collections included. Catalog backups are listed by
+  date: one more on demand, or an older one put back after confirmation (the current
+  library is backed up first).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

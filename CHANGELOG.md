@@ -192,6 +192,13 @@ La photothèque professionnelle, étape par étape.
   de XMP à côté (dans l'app et `luma develop`, `print`, `book`) ; jamais ceux d'un JPEG,
   déjà dans ses pixels. La note et le libellé écrits en éléments sont lus aussi, et le
   XMP intégré n'est lu qu'une fois par fichier (64 Ko au plus, gardés en mémoire).
+- **Entretien de la photothèque dans l'app** : « Entretien… », sous les dossiers,
+  liste les photos manquantes dossier par dossier ; un dossier se retrouve en
+  choisissant sa nouvelle place (quand tout le dossier parent a bougé, les dossiers
+  voisins suivent d'eux‑mêmes) ou se retire de la photothèque, collections comprises.
+  Les sauvegardes du catalogue s'y voient par date : une de plus à la demande, ou une
+  ancienne remise en place après confirmation (la photothèque du moment est
+  sauvegardée d'abord).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
