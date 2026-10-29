@@ -291,8 +291,13 @@ impl ColorStage {
             }
         } else {
             for (g, v) in k.iter_mut().zip(&mut lab) {
-                *v = self.adjust(*v);
+                *v = self.adjust_hue(*v);
                 *g = 1.0;
+            }
+            // L'étalonnage en colonnes : ses paliers, sa cloche et ses roues, huit
+            // pixels à la fois, dans l'ordre de `grade`.
+            if let Some(g) = &self.grading {
+                grade_lanes(g, &mut lab);
             }
         }
         // Et retour (les calculs de `OkLab::to_rgb`).
@@ -320,10 +325,21 @@ impl ColorStage {
         self.ok.to_rgb(self.adjust(self.ok.from_rgb(rgb)))
     }
 
-    /// Les réglages de couleur d'un pixel dans OKLab : Vibrance, Saturation, mélangeur,
-    /// noir et blanc, étalonnage.
+    /// Les réglages de couleur d'un pixel dans OKLab ([`Self::adjust_hue`], puis
+    /// l'étalonnage).
     #[inline]
-    fn adjust(&self, [mut l, a, b]: Vec3) -> Vec3 {
+    fn adjust(&self, lab: Vec3) -> Vec3 {
+        let lab = self.adjust_hue(lab);
+        match &self.grading {
+            Some(g) => grade(g, lab),
+            None => lab,
+        }
+    }
+
+    /// Les réglages de couleur d'un pixel dans OKLab avant l'étalonnage : Vibrance,
+    /// Saturation, mélangeur, noir et blanc.
+    #[inline]
+    fn adjust_hue(&self, [mut l, a, b]: Vec3) -> Vec3 {
         let c0 = (a * a + b * b).sqrt();
         let mut c = c0;
         let h = color::fast_atan2(b, a);
@@ -372,23 +388,56 @@ impl ColorStage {
             let (s, co) = dh.sin_cos();
             (a, b) = (a * co - b * s, a * s + b * co);
         }
-
-        // Étalonnage : ombres, tons moyens, hautes lumières, global.
-        if let Some(g) = &self.grading {
-            let width = 0.2 + 0.5 * g.blend;
-            let sh = 1.0 - smoothstep(0.0, g.mid + width * 0.5, l);
-            let hi = smoothstep(g.mid - width * 0.5, 1.0, l);
-            let mid = (-((l - g.mid) / (0.12 + 0.25 * g.blend)).powi(2)).exp();
-            let weights = [sh, mid, hi, 1.0];
-            let floor = smoothstep(0.0, 0.08, l);
-            for (w, (da, db, dl)) in weights.iter().zip(g.wheels) {
-                a += w * da * floor;
-                b += w * db * floor;
-                l += w * dl * 0.12;
-            }
-            l = l.max(0.0);
-        }
         [l, a, b]
+    }
+}
+
+/// L'étalonnage d'un pixel dans OKLab : ombres, tons moyens, hautes lumières, global.
+#[inline]
+fn grade(g: &Grading, [mut l, mut a, mut b]: Vec3) -> Vec3 {
+    let width = 0.2 + 0.5 * g.blend;
+    let sh = 1.0 - smoothstep(0.0, g.mid + width * 0.5, l);
+    let hi = smoothstep(g.mid - width * 0.5, 1.0, l);
+    let mid = (-((l - g.mid) / (0.12 + 0.25 * g.blend)).powi(2)).exp();
+    let weights = [sh, mid, hi, 1.0];
+    let floor = smoothstep(0.0, 0.08, l);
+    for (w, (da, db, dl)) in weights.iter().zip(g.wheels) {
+        a += w * da * floor;
+        b += w * db * floor;
+        l += w * dl * 0.12;
+    }
+    l = l.max(0.0);
+    [l, a, b]
+}
+
+/// [`grade`] sur huit pixels, chaque calcul en colonne (que le processeur fait d'un
+/// coup) : les mêmes opérations dans le même ordre, les mêmes bits.
+fn grade_lanes(g: &Grading, lab: &mut [Vec3; crate::LANES]) {
+    const N: usize = crate::LANES;
+    let width = 0.2 + 0.5 * g.blend;
+    let (low, high, spread) = (g.mid + width * 0.5, g.mid - width * 0.5, 0.12 + 0.25 * g.blend);
+    let mut weights = [[0.0f32; N]; 4];
+    let mut floor = [0.0f32; N];
+    for i in 0..N {
+        let l = lab[i][0];
+        weights[0][i] = 1.0 - smoothstep(0.0, low, l);
+        weights[2][i] = smoothstep(high, 1.0, l);
+        floor[i] = smoothstep(0.0, 0.08, l);
+        weights[3][i] = 1.0;
+    }
+    for i in 0..N {
+        weights[1][i] = (-((lab[i][0] - g.mid) / spread).powi(2)).exp();
+    }
+    for (w, (da, db, dl)) in weights.iter().zip(g.wheels) {
+        for i in 0..N {
+            let [l, a, b] = &mut lab[i];
+            *a += w[i] * da * floor[i];
+            *b += w[i] * db * floor[i];
+            *l += w[i] * dl * 0.12;
+        }
+    }
+    for v in lab.iter_mut() {
+        v[0] = v[0].max(0.0);
     }
 }
 
