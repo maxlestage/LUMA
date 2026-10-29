@@ -57,10 +57,8 @@ impl Defaults {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
         }
-        let tmp = path.with_extension("tmp");
         let json = serde_json::to_vec_pretty(self).map_err(std::io::Error::other)?;
-        std::fs::write(&tmp, json)?;
-        std::fs::rename(&tmp, path)
+        luma_core::save(path, json)
     }
 
     /// Les réglages de départ d'une photo de ce boîtier à cet ISO, s'il y a une règle.

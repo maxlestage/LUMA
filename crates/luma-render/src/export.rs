@@ -1354,9 +1354,7 @@ impl Presets {
             presets: self.user.iter().map(StoredPreset::new).collect(),
         };
         let json = serde_json::to_vec_pretty(&stored).map_err(|e| e.to_string())?;
-        let tmp = path.with_extension("json.tmp");
-        std::fs::write(&tmp, json).map_err(|e| format!("{} : {e}", tmp.display()))?;
-        std::fs::rename(&tmp, path).map_err(|e| format!("{} : {e}", path.display()))
+        luma_core::save(path, json).map_err(|e| format!("{} : {e}", path.display()))
     }
 
     /// Tous les préréglages : ceux de base (sauf remplacés), puis ceux de l'utilisateur.
@@ -2098,6 +2096,37 @@ mod tests {
             assert_eq!(std::fs::read(&path).unwrap(), before);
             std::fs::remove_dir_all(&blocked).unwrap();
         }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_failed_preset_save_keeps_the_file_and_leaves_nothing_behind() {
+        let dir = std::env::temp_dir().join(format!("luma-prereglages-temporaire-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("Exports.json");
+        let mut p = Presets::default();
+        p.set(Preset {
+            name: "Mine".into(),
+            options: Options::default(),
+        });
+        p.save(&path).unwrap();
+        let before = std::fs::read(&path).unwrap();
+        // Le renommage échoue (un dossier a pris la place du fichier) : rien n'est
+        // laissé derrière, et un fichier qui n'a pas été remplacé reste entier.
+        let blocked = dir.join("Bloqué.json");
+        std::fs::create_dir_all(blocked.join("occupé")).unwrap();
+        assert!(p.save(&blocked).is_err());
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert!(
+            names.iter().all(|n| !n.to_string_lossy().ends_with(".tmp")),
+            "{names:?}"
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), before);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

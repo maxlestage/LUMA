@@ -248,12 +248,10 @@ pub fn load_templates(path: &std::path::Path) -> Vec<Template> {
 
 /// Écrit les modèles de métadonnées (à côté puis renommé).
 pub fn save_templates(path: &std::path::Path, templates: &[Template]) -> std::io::Result<()> {
-    let tmp = path.with_extension("tmp");
-    std::fs::write(
-        &tmp,
+    luma_core::save(
+        path,
         serde_json::to_vec_pretty(templates).map_err(std::io::Error::other)?,
-    )?;
-    std::fs::rename(&tmp, path)
+    )
 }
 
 /// Les listes d'informations de l'IPTC (en `rdf:Alt` ou `rdf:Seq`), et les mots‑clés
