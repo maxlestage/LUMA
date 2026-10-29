@@ -81,7 +81,8 @@ The professional photo library, step by step.
   metadata templates: a single damaged item no longer takes the others with it. A
   photo's XMP is written in one go (a temporary file renamed): an app stopped or a disk
   full during the write leaves the previous XMP whole, never a truncated one; likewise
-  for a saved preset and a merge's XMP.
+  for a saved preset, a merge's XMP and the licence state (a key or a purchase is no
+  longer lost on a truncated file).
 - **No more wasted space**: a working duplicate or thumbnail whose writing fails (disk
   full) or is interrupted (app closed) no longer leaves a half-written file behind; the
   clean-up removes earlier ones (5.3 GB recovered on the test machine).
