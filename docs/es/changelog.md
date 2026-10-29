@@ -119,6 +119,11 @@ La fototeca profesional, paso a paso.
   después de importar», una vez copiada y verificada cada foto (`luma import --eject`);
   si el sistema se niega (una app aún lee la tarjeta), la importación lo indica, sin
   fallar.
+- **Importación en Windows**: la tarjeta insertada se encuentra sola (una unidad de D:
+  a Z: con una carpeta DCIM), y se expulsa tras la importación como en Mac y Linux. Las
+  tarjetas se buscan en segundo plano, cada dos segundos mientras la ventana está
+  abierta: una tarjeta insertada después aparece, y una unidad de red ausente ya no
+  bloquea la ventana.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

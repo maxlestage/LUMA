@@ -180,7 +180,7 @@ USAGE
       jamais modifiée. Les photos importées entrent dans la photothèque. Les jours de
       prise de vue de la carte s'affichent ; --days n'importe que ceux‑là. --skip laisse
       une photo sur la carte (avec les autres fichiers de sa prise : son JPEG, son RAW).
-      --eject éjecte la carte une fois tout copié et vérifié (Mac, Linux).
+      --eject éjecte la carte une fois tout copié et vérifié (Mac, Linux, Windows).
   luma icc <profil.icc>…
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,

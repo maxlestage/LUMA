@@ -116,6 +116,11 @@ La photothèque professionnelle, étape par étape.
 - **La carte éjectée après l'import** (Mac, Linux) : « Éjecter la carte après
   l'import », une fois chaque photo copiée et vérifiée (`luma import --eject`) ; si le
   système refuse (une app lit encore la carte), l'import le dit, sans échouer.
+- **Import sous Windows** : la carte branchée est trouvée seule (un lecteur de D: à Z:
+  avec un dossier DCIM), et éjectée après l'import comme sur Mac et Linux. Les cartes
+  sont cherchées en arrière‑plan, toutes les deux secondes tant que la fenêtre est
+  ouverte : une carte branchée après coup apparaît, et un lecteur réseau absent ne
+  fige plus la fenêtre.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

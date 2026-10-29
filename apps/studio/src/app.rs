@@ -497,6 +497,12 @@ pub struct Import {
     ejected: Arc<std::sync::Mutex<Option<Result<(), String>>>>,
     /// Le compte rendu du dernier import (photos, dossier, éjection).
     pub report: String,
+    /// Les cartes montées, cherchées en arrière‑plan toutes les deux secondes tant que
+    /// la fenêtre est ouverte (sous Windows, un lecteur réseau absent peut faire
+    /// attendre plusieurs secondes).
+    cards: Vec<PathBuf>,
+    cards_at: Option<std::time::Instant>,
+    cards_job: Option<std::sync::mpsc::Receiver<Vec<PathBuf>>>,
     /// Les aperçus des prises, lus en arrière‑plan à l'ouverture du choix.
     previews: HashMap<PathBuf, TextureHandle>,
     previews_job: Option<std::sync::mpsc::Receiver<Preview>>,
@@ -627,6 +633,9 @@ impl Default for Import {
             eject: false,
             ejected: Arc::default(),
             report: String::new(),
+            cards: Vec::new(),
+            cards_at: None,
+            cards_job: None,
             previews: HashMap::new(),
             previews_job: None,
         }
@@ -2455,14 +2464,50 @@ impl Studio {
         });
     }
 
-    /// Ouvre la fenêtre d'import, sur la carte montée s'il y en a une.
+    /// Ouvre la fenêtre d'import, sur la carte montée s'il y en a une (cherchée en
+    /// arrière‑plan : la première trouvée devient la source).
     pub fn open_import(&mut self) {
-        if self.import.source.is_none()
-            && let Some(card) = luma_library::import::cards().into_iter().next()
-        {
-            self.set_import_source(card);
-        }
+        self.import.cards_at = None;
+        self.refresh_cards();
         self.import_open = true;
+    }
+
+    /// Cherche les cartes montées en arrière‑plan, au plus toutes les deux secondes, et
+    /// prend celles trouvées.
+    fn refresh_cards(&mut self) {
+        if let Some(rx) = &self.import.cards_job
+            && let Ok(cards) = rx.try_recv()
+        {
+            self.import.cards_job = None;
+            if self.import.source.is_none()
+                && let Some(first) = cards.first()
+            {
+                self.set_import_source(first.clone());
+            }
+            self.import.cards = cards;
+        }
+        let due = self
+            .import
+            .cards_at
+            .is_none_or(|t| t.elapsed() > std::time::Duration::from_secs(2));
+        if due && self.import.cards_job.is_none() {
+            self.import.cards_at = Some(std::time::Instant::now());
+            let (send, receive) = std::sync::mpsc::channel();
+            self.import.cards_job = Some(receive);
+            std::thread::spawn(move || {
+                let _ = send.send(luma_library::import::cards());
+                crate::wake();
+            });
+        }
+    }
+
+    /// Attend la recherche des cartes en cours (pour les essais).
+    pub fn wait_cards(&mut self) {
+        if let Some(rx) = self.import.cards_job.take()
+            && let Ok(cards) = rx.recv()
+        {
+            self.import.cards = cards;
+        }
     }
 
     /// Choisit la carte (ou le dossier) à importer, et y compte les photos.
@@ -2656,13 +2701,19 @@ impl Studio {
             .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
             .show(ctx, |ui| {
                 ui.set_width(440.0);
-                let cards = luma_library::import::cards();
+                self.refresh_cards();
+                ui.ctx().request_repaint_after(std::time::Duration::from_secs(2));
+                let cards = self.import.cards.clone();
                 egui::Grid::new("importer").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
                     ui.label(RichText::new(tr("Depuis")).color(theme::DIM));
                     ui.vertical(|ui| {
                         for c in &cards {
                             let on = self.import.source.as_ref() == Some(c);
-                            let name = c.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+                            // Sous Windows, le lecteur (E:) ; ailleurs, le nom du volume.
+                            let name = c.file_name().map_or_else(
+                                || c.display().to_string().trim_end_matches('\\').to_owned(),
+                                |n| n.to_string_lossy().into_owned(),
+                            );
                             if ui.selectable_label(on, trf("Carte {name}", &[("name", &name)])).clicked() {
                                 self.set_import_source(c.clone());
                             }
@@ -2737,7 +2788,7 @@ impl Studio {
                             .desired_width(f32::INFINITY),
                     );
                     ui.end_row();
-                    if self.import.source.as_ref().is_some_and(|s| s.join("DCIM").is_dir()) && !cfg!(any(target_os = "ios", windows)) {
+                    if self.import.source.as_ref().is_some_and(|s| s.join("DCIM").is_dir()) && !cfg!(target_os = "ios") {
                         ui.label("");
                         ui.checkbox(&mut self.import.eject, tr("Éjecter la carte après l'import"));
                         ui.end_row();
