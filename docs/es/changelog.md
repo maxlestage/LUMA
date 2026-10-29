@@ -132,7 +132,9 @@ La fototeca profesional, paso a paso.
   bloquea la ventana.
 - **Páginas del libro**: «Páginas del libro…» muestra cada página del libro de fotos
   en pequeño, con sus fotos en su sitio; arrastrar una foto sobre otra las intercambia,
-  y el PDF sigue el nuevo orden (portada incluida).
+  y el PDF sigue el nuevo orden (portada incluida). Bajo cada página, 1, 2 o 4: sus
+  fotos; las páginas anteriores conservan las suyas, las siguientes se adaptan
+  («Disposición automática» para volver; `luma book --layout 4,1,2`).
 - **Altas luces, sombras, claridad y gradación más ágiles**: sus últimos cálculos se
   hacen de ocho en ocho píxeles, y los puntos de referencia de la foto (percentiles) se
   buscan dos veces más rápido; un render es de un 3 a un 15 % más corto cuando se mueven

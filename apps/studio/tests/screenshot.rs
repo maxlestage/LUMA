@@ -2797,6 +2797,16 @@ fn slideshow_and_photo_book() {
     assert_eq!(after.len(), before.len());
     assert_eq!((&after[0], &after[2]), (&before[2], &before[0]));
     assert_eq!(after[1], before[1]);
+    // Quatre photos sur la première page après la couverture, puis la disposition
+    // automatique.
+    s.harness.get_all_by_label("4").next().unwrap().click();
+    s.harness.step();
+    s.harness.step();
+    assert_eq!(s.studio().book.pages, [4]);
+    s.capture("pages-du-livre-quatre");
+    s.harness.get_by_label("Disposition automatique").click();
+    s.harness.step();
+    assert!(s.studio().book.pages.is_empty());
     s.studio().book_pages_open = false;
     // Le livre photo de tout le film, et le diaporama exporté.
     s.studio().book.dpi = 50;

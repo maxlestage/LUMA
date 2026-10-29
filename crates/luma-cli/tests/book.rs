@@ -44,6 +44,10 @@ fn wrong_options_are_explained() {
             vec!["book", "a.ARW", "-o", "l.pdf", "--pages", "1,3"],
             "--pages : « 3 »",
         ),
+        (
+            vec!["book", "a.ARW", "-o", "l.pdf", "--layout", "5"],
+            "--layout : « 5 »",
+        ),
         (vec!["slideshow", "a.ARW"], "-o diaporama"),
         (vec!["slideshow", "-o", "d"], "aucune photo"),
         (vec!["slideshow", "a.ARW", "-o", "d", "--seconds", "0"], "--seconds"),
@@ -54,6 +58,33 @@ fn wrong_options_are_explained() {
         let (ok, out) = luma(&args);
         assert!(!ok && out.contains(says), "{args:?} : {out}");
     }
+}
+
+/// Les premières pages choisies une à une : deux photos, puis une par page.
+#[test]
+fn a_book_with_pages_chosen_one_by_one() {
+    let Some(photos) = corpus(&["_DSC0009.ARW", "DSC_0750.NEF", "AFXT2720.RAF", "P1000951.RW2"]) else {
+        eprintln!("corpus absent : essai ignoré");
+        return;
+    };
+    let dir = scratch("livre-pages");
+    let pdf = dir.join("livre.pdf").display().to_string();
+    let mut args = vec!["book", "-o", &pdf, "--dpi", "72", "--layout", "2", "--pages", "1"];
+    args.extend(photos.iter().map(String::as_str));
+    let (ok, out) = luma(&args);
+    assert!(ok, "{out}");
+    let text = String::from_utf8_lossy(&std::fs::read(&pdf).unwrap()).into_owned();
+    let pages: usize = text
+        .split("/Count ")
+        .nth(1)
+        .unwrap()
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .parse()
+        .unwrap();
+    // La couverture, une page de deux photos, une page d'une.
+    assert_eq!(pages, 3, "{pages}");
 }
 
 #[test]
