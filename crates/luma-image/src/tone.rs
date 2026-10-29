@@ -131,6 +131,28 @@ pub fn auto_tones(img: &RgbImage) -> AutoTones {
 }
 
 /// Hautes lumières, Ombres, Clarté et Texture, en un gain de luminance.
+/// Les centiles 1, 50 et 99 de `sample` (ses valeurs de rang 1 %, 50 % et 99 %). La
+/// médiane d'abord ; puis chacun des deux autres dans la moitié où il se trouve déjà,
+/// au lieu de tout l'échantillon : les mêmes valeurs (une valeur de rang donné ne
+/// dépend pas de l'ordre de la recherche), environ deux fois moins de travail.
+fn centiles(sample: &mut [f32]) -> (f32, f32, f32) {
+    let n = sample.len() - 1;
+    let rank = |p: f32| (n as f32 * p) as usize;
+    let (k_lo, k_mid, k_hi) = (rank(0.01), rank(0.5), rank(0.99));
+    let (below, &mut mid, above) = sample.select_nth_unstable_by(k_mid, f32::total_cmp);
+    let lo = if k_lo < k_mid {
+        *below.select_nth_unstable_by(k_lo, f32::total_cmp).1
+    } else {
+        mid
+    };
+    let hi = if k_hi > k_mid {
+        *above.select_nth_unstable_by(k_hi - k_mid - 1, f32::total_cmp).1
+    } else {
+        mid
+    };
+    (lo, mid, hi)
+}
+
 pub fn local_tone(img: &mut RgbImage, s: &Settings) {
     let (hl, sh, clarity, texture) = (
         s.highlights / 100.0,
@@ -157,9 +179,7 @@ pub fn local_tone(img: &mut RgbImage, s: &Settings) {
             // Ces curseurs s'adaptent à l'image : ils visent ses
             // parties claires et sombres à elle (centiles 1, 50 et 99 de la base).
             let mut sample: Vec<f32> = base.data.iter().step_by(5).copied().collect();
-            let n = sample.len() - 1;
-            let mut q = |p: f32| *sample.select_nth_unstable_by((n as f32 * p) as usize, f32::total_cmp).1;
-            let (lo, mid, hi) = (q(0.01), q(0.5), q(0.99));
+            let (lo, mid, hi) = centiles(&mut sample);
             let (span_hi, span_lo) = ((hi - mid).max(0.5), (mid - lo).max(0.5));
             // Transitions sur 1,5 fois l'écart ; l'amplitude est plafonnée pour que la
             // courbe reste croissante (un ton ne passe jamais devant un autre).
@@ -174,38 +194,73 @@ pub fn local_tone(img: &mut RgbImage, s: &Settings) {
     // Les hautes lumières démarrent à la médiane (les tons moyens restent en place),
     // les ombres un peu avant (elles remontent aussi les tons sombres moyens).
     let (ramp_hi, ramp_sh) = (|u: f32| smoothstep(0.0, 1.2, u), |u: f32| smoothstep(-0.3, 1.2, u));
+    // Huit pixels à la fois : chaque terme en colonne (que le processeur fait d'un
+    // coup), dans l'ordre d'avant ; les mêmes bits.
+    const N: usize = crate::LANES;
     img.data
-        .par_iter_mut()
-        .zip(&stops.data)
+        .par_chunks_mut(N)
+        .zip(stops.data.par_chunks(N))
         .enumerate()
-        .for_each(|(i, (p, &l))| {
-            let mut v = l;
+        .for_each(|(chunk, (px, ls))| {
+            let start = chunk * N;
+            let n = px.len();
+            let mut v = [0.0f32; N];
+            v[..n].copy_from_slice(ls);
             if let Some((base, mid, span_hi, span_lo, k_hi, k_sh)) = &tones {
-                let b = base.data[i];
-                let w_hi = ramp_hi((b - mid) / span_hi);
-                let w_sh = ramp_sh((mid - b) / span_lo);
-                v += k_hi * w_hi + k_sh * w_sh;
+                let bs = &base.data[start..start + n];
+                for j in 0..n {
+                    let b = bs[j];
+                    let w_hi = ramp_hi((b - mid) / span_hi);
+                    let w_sh = ramp_sh((mid - b) / span_lo);
+                    v[j] += k_hi * w_hi + k_sh * w_sh;
+                }
             }
             if let Some(base) = &clarity_base {
                 // Les tons moyens surtout : ni les noirs ni les blancs ne s'emballent.
-                let mid = (-(l / 2.5).powi(2)).exp();
-                v += clarity * 0.7 * (l - base.data[i]) * mid;
+                let bs = &base.data[start..start + n];
+                for j in 0..n {
+                    let l = ls[j];
+                    let mid = (-(l / 2.5).powi(2)).exp();
+                    v[j] += clarity * 0.7 * (l - bs[j]) * mid;
+                }
             }
             if let Some(base) = &texture_base {
                 // Les ombres profondes, où vit le bruit, sont épargnées.
-                let w = smoothstep(-6.0, -3.0, l);
-                v += texture * 0.9 * (l - base.data[i]) * w;
+                let bs = &base.data[start..start + n];
+                for j in 0..n {
+                    let l = ls[j];
+                    let w = smoothstep(-6.0, -3.0, l);
+                    v[j] += texture * 0.9 * (l - bs[j]) * w;
+                }
             }
-            let g = (v - l).clamp(-6.0, 6.0).exp2();
-            p[0] *= g;
-            p[1] *= g;
-            p[2] *= g;
+            for j in 0..n {
+                let g = (v[j] - ls[j]).clamp(-6.0, 6.0).exp2();
+                let p = &mut px[j];
+                p[0] *= g;
+                p[1] *= g;
+                p[2] *= g;
+            }
         });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Les centiles cherchés dans les moitiés donnent les valeurs d'une recherche dans
+    /// tout l'échantillon : petits et grands échantillons, valeurs répétées.
+    #[test]
+    fn centiles_by_halves_are_the_same() {
+        for len in [1usize, 2, 3, 7, 100, 101, 5003] {
+            let sample: Vec<f32> = (0..len).map(|i| ((i * 7919) % 97) as f32 / 9.0 - 3.0).collect();
+            let mut full = sample.clone();
+            let n = full.len() - 1;
+            let mut q = |p: f32| *full.select_nth_unstable_by((n as f32 * p) as usize, f32::total_cmp).1;
+            let expected = (q(0.01), q(0.5), q(0.99));
+            let mut halves = sample.clone();
+            assert_eq!(centiles(&mut halves), expected, "{len}");
+        }
+    }
 
     /// Moitié gauche sombre, moitié droite claire, avec un léger motif.
     fn split() -> RgbImage {

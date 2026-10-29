@@ -117,6 +117,11 @@ The professional photo library, step by step.
 - **Book pages**: “Book pages…” shows each page of the photo book small, with its
   photos in place; dragging a photo onto another swaps them, and the PDF follows the new
   order (cover included).
+- **Snappier highlights, shadows, clarity and colour grading**: their last
+  computations run eight pixels at a time, and the photo's reference points
+  (percentiles) are found twice as fast; a render is 3 to 15% shorter when these
+  settings move (shadows on an RW2: 78 → 66 ms; grading on an ARW: 68 → 60 ms), without
+  changing a pixel.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
