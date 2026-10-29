@@ -104,12 +104,16 @@ impl Timings {
     }
 }
 
-/// Écrit `bytes` dans `path` d'un coup : dans un temporaire à côté (`nom.tmp`), renommé
-/// ensuite. Une écriture interrompue (app arrêtée, disque plein) laisse l'ancien fichier
-/// entier, jamais un fichier coupé ; le temporaire d'une écriture ratée est retiré.
+/// Écrit `bytes` dans `path` d'un coup : dans un temporaire à côté, renommé ensuite. Une
+/// écriture interrompue (app arrêtée, disque plein) laisse l'ancien fichier entier,
+/// jamais un fichier coupé ; le temporaire d'une écriture ratée est retiré. Chaque
+/// écriture a son temporaire (`nom.<processus>.<n>.tmp`) : deux écritures du même
+/// fichier en même temps ne se mélangent pas, la dernière renommée l'emporte.
 pub fn save(path: &std::path::Path, bytes: impl AsRef<[u8]>) -> std::io::Result<()> {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let mut name = path.file_name().unwrap_or_default().to_os_string();
-    name.push(".tmp");
+    name.push(format!(".{}.{n}.tmp", std::process::id()));
     let tmp = path.with_file_name(name);
     let written = std::fs::write(&tmp, bytes).and_then(|()| std::fs::rename(&tmp, path));
     if written.is_err() {
@@ -132,6 +136,36 @@ mod tests {
     use super::*;
 
     #[test]
+    fn simultaneous_writes_of_one_file_never_mix() {
+        // Deux écritures du même XMP en même temps (la synchronisation et la photo
+        // ouverte) : chacune réussit, et le fichier final est l'une d'elles, entière.
+        let dir = std::env::temp_dir().join(format!("luma-ecritures-simultanees-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("IMG_0001.CR3.xmp");
+        let payloads: Vec<Vec<u8>> = (0..8u8).map(|k| vec![b'a' + k; 200_000]).collect();
+        std::thread::scope(|s| {
+            for p in &payloads {
+                let path = &path;
+                s.spawn(move || {
+                    for _ in 0..25 {
+                        save(path, p).expect("chaque écriture réussit");
+                    }
+                });
+            }
+        });
+        let last = std::fs::read(&path).unwrap();
+        assert!(payloads.contains(&last), "contenu mélangé");
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert_eq!(names, [std::ffi::OsString::from("IMG_0001.CR3.xmp")]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn a_file_is_written_in_one_go() {
         let dir = std::env::temp_dir().join(format!("luma-ecrit-d-un-coup-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -146,10 +180,21 @@ mod tests {
             .map(|e| e.file_name())
             .collect();
         assert_eq!(names, [std::ffi::OsString::from("Portra.cube")]);
-        // Une écriture qui échoue laisse l'ancien fichier entier, et rien d'autre.
-        std::fs::create_dir_all(dir.join("Portra.cube.tmp/occupé")).unwrap();
-        assert!(save(&path, "troisième").is_err());
+        // Une écriture qui échoue (ici, le renommage : un dossier a pris la place du
+        // fichier) laisse ce qui était là, et aucun temporaire.
+        let blocked = dir.join("Bloqué.cube");
+        std::fs::create_dir_all(blocked.join("occupé")).unwrap();
+        assert!(save(&blocked, "troisième").is_err());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "second");
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert!(
+            names.iter().all(|n| !n.to_string_lossy().ends_with(".tmp")),
+            "{names:?}"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
