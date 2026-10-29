@@ -187,6 +187,11 @@ La photothèque professionnelle, étape par étape.
   rendu se fait dans l'image de base elle‑même au lieu d'une copie : le pic de mémoire
   d'un export baisse de 19 à 23 % (24 Mpx : 1,24 → 0,96 Go), les fichiers restent
   identiques octet pour octet.
+- **Les réglages qu'un RAW porte en lui** : un RAW ou un DNG développé par un autre
+  logiciel, qui a rangé ses réglages dans le fichier, s'ouvre avec eux quand il n'a pas
+  de XMP à côté (dans l'app et `luma develop`, `print`, `book`) ; jamais ceux d'un JPEG,
+  déjà dans ses pixels. La note et le libellé écrits en éléments sont lus aussi, et le
+  XMP intégré n'est lu qu'une fois par fichier (64 Ko au plus, gardés en mémoire).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
