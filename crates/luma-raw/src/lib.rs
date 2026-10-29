@@ -460,6 +460,20 @@ pub struct Info {
     pub exif: Exif,
 }
 
+/// Charge à l'avance, sur un fil à part, les bases du décodeur : les boîtiers (≈ 45 ms)
+/// et les objectifs (≈ 30 ms), lues une fois par programme, à la première photo ouverte
+/// sinon. Rien de plus les fois suivantes. L'app l'appelle au démarrage (pas une
+/// ouverture : chargées pendant le décodage, elles lui prennent des cœurs).
+pub fn warm_up() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let _ = std::thread::Builder::new().name("luma-bases".into()).spawn(|| {
+            rawler::force_initialization();
+            let _ = rawler::lens::get_lenses();
+        });
+    });
+}
+
 fn metadata(source: &rawler::rawsource::RawSource, params: &rawler::decoders::RawDecodeParams) -> Option<Info> {
     let m = rawler::get_decoder(source)
         .and_then(|d| d.raw_metadata(source, params))

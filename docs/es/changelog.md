@@ -174,6 +174,10 @@ La fototeca profesional, paso a paso.
 - **Presentación en orden aleatorio**: «Orden aleatorio», en la app (cada foto una vez
   antes de un nuevo sorteo) y en la presentación exportada (un nuevo sorteo cada vez que
   se abre la página; `luma slideshow --shuffle`).
+- **La primera foto se abre más rápido**: las bases de cámaras y objetivos del
+  decodificador (≈ 75 ms, una vez por sesión) se cargan al arrancar la app, mientras se
+  abre su ventana, y no con la primera foto: de 60 a 95 ms menos para ella (NEF 173 → 80
+  ms, RAF 176 → 90 ms, ARW 160 → 98 ms).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

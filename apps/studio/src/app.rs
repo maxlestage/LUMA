@@ -1134,6 +1134,9 @@ impl Studio {
     }
 
     pub fn new(ctx: &egui::Context) -> Self {
+        // Les bases du décodeur (boîtiers, objectifs : ≈ 75 ms), chargées pendant que la
+        // fenêtre s'ouvre, et non à la première photo.
+        luma_raw::warm_up();
         crate::style::apply(ctx);
         crate::set_screen(ctx);
         let repaint_ctx = ctx.clone();
