@@ -529,6 +529,10 @@ impl Settings {
             }
         }
         for m in &mut s.masks {
+            m.shape.clamp();
+            for part in &mut m.parts {
+                part.shape.clamp();
+            }
             m.local.clamp();
             if let Some(r) = &mut m.range {
                 r.clamp();
