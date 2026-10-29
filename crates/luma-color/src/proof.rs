@@ -212,21 +212,28 @@ impl Proof {
     }
 }
 
-/// La conversion d'une image sRGB vers les valeurs d'une imprimante RVB (son profil,
-/// une intention de rendu) : ce que l'on envoie au pilote quand c'est LÜMA qui gère la
-/// couleur. Comme l'épreuvage, une table 3D calculée une fois. En colorimétrique
-/// relative, le noir de l'image va au noir le plus profond de l'encre (compensation du
-/// point noir) : les ombres ne se bouchent pas.
+/// La conversion d'une image sRGB vers les valeurs d'une imprimante RVB ou CMJN (son
+/// profil, une intention de rendu) : ce que l'on envoie au pilote ou à l'imprimeur quand
+/// c'est LÜMA qui gère la couleur. Comme l'épreuvage, une table 3D calculée une fois. En
+/// colorimétrique relative, le noir de l'image va au noir le plus profond de l'encre
+/// (compensation du point noir) : les ombres ne se bouchent pas.
 #[derive(Clone, Debug)]
-pub struct Conversion(Proof);
+pub struct Conversion {
+    proof: Proof,
+    /// Quatre encres (cyan, magenta, jaune, noir) au lieu de trois valeurs RVB.
+    cmyk: bool,
+}
 
-const RGB_ONLY: Error = Error("seuls les profils d'imprimante RVB sont pris en charge");
+const RGB_ONLY: Error = Error("seuls les profils d'imprimante RVB ou CMJN sont pris en charge");
 
 impl Conversion {
     pub fn new(profile: &Profile, intent: Intent) -> Result<Self, Error> {
-        if profile.space != crate::profile::Space::Rgb {
-            return Err(RGB_ONLY);
-        }
+        use crate::profile::Space;
+        let cmyk = match profile.space {
+            Space::Rgb => false,
+            Space::Cmyk => true,
+            _ => return Err(RGB_ONLY),
+        };
         if !profile.writes() || !profile.reads() {
             return Err(NOT_BOTH_WAYS);
         }
@@ -246,28 +253,57 @@ impl Conversion {
                         xyz = [0, 1, 2].map(|i| black[i] + xyz[i] * (PCS_WHITE[i] - black[i]) / PCS_WHITE[i]);
                     }
                     let v = device(xyz, intent)?;
-                    table.push([v[0], v[1], v[2], 0.0].map(|c| c.clamp(0.0, 1.0)));
+                    let k = if cmyk { v[3] } else { 0.0 };
+                    table.push([v[0], v[1], v[2], k].map(|c| c.clamp(0.0, 1.0)));
                 }
             }
         }
-        Ok(Conversion(Proof { table }))
+        Ok(Conversion {
+            proof: Proof { table },
+            cmyk,
+        })
     }
 
-    /// Une couleur sRGB (codée, de 0 à 1) en valeurs de l'imprimante.
+    /// Une imprimante à quatre encres (CMJN) ?
+    pub fn is_cmyk(&self) -> bool {
+        self.cmyk
+    }
+
+    /// Une couleur sRGB (codée, de 0 à 1) en valeurs de l'imprimante (les trois
+    /// premières encres d'une imprimante CMJN).
     pub fn apply(&self, rgb: Vec3) -> Vec3 {
-        self.0.apply(rgb)
+        self.proof.apply(rgb)
     }
 
-    /// Convertit sur place une image RVB 8 bits en sRGB.
+    /// Une couleur sRGB en encres d'une imprimante CMJN (0 : pas d'encre, 1 : pleine).
+    pub fn apply_cmyk(&self, rgb: Vec3) -> [f32; 4] {
+        let (base, f) = Proof::cell(rgb);
+        self.proof.trilinear(base, f)
+    }
+
+    /// Convertit sur place une image RVB 8 bits en sRGB (imprimante RVB).
     pub fn apply_rgb(&self, rgb: &mut [u8]) {
         let cell = Proof::cells();
         Proof::each_pixel(rgb, 3, |p| {
             let [(r, fr), (g, fg), (b, fb)] = [0, 1, 2].map(|c| cell[usize::from(p[c])]);
-            let v = self.0.trilinear([r, g, b], [fr, fg, fb]);
+            let v = self.proof.trilinear([r, g, b], [fr, fg, fb]);
             for c in 0..3 {
                 p[c] = (v[c] * 255.0).round().clamp(0.0, 255.0) as u8;
             }
         });
+    }
+
+    /// Une image RVB 8 bits en sRGB en encres 8 bits d'une imprimante CMJN (quatre
+    /// octets par pixel, 0 : pas d'encre).
+    pub fn to_cmyk(&self, rgb: &[u8]) -> Vec<u8> {
+        let cell = Proof::cells();
+        let mut out: Vec<[u8; 4]> = rgb.as_chunks::<3>().0.iter().map(|p| [p[0], p[1], p[2], 0]).collect();
+        Proof::each_pixel(&mut out, 1, |p| {
+            let [(r, fr), (g, fg), (b, fb)] = [0, 1, 2].map(|c| cell[usize::from(p[0][c])]);
+            let v = self.proof.trilinear([r, g, b], [fr, fg, fb]);
+            p[0] = v.map(|c| (c * 255.0).round().clamp(0.0, 255.0) as u8);
+        });
+        out.into_flattened()
     }
 }
 
@@ -344,14 +380,18 @@ mod tests {
     }
 
     #[test]
-    fn a_cmyk_printer_is_refused() {
+    fn a_one_way_cmyk_profile_is_refused() {
+        // Le profil de presse d'essai n'a que sa table CMJN → Lab : rien pour imprimer.
         let bytes = std::fs::read(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/tests/profils/CGATS001Compat-v2-micro.icc"
         ))
         .unwrap();
         let cmyk = Profile::parse(&bytes).unwrap();
-        assert_eq!(Conversion::new(&cmyk, Intent::Perceptual).unwrap_err(), RGB_ONLY);
+        assert_eq!(Conversion::new(&cmyk, Intent::Perceptual).unwrap_err(), NOT_BOTH_WAYS);
+        // Une imprimante RVB n'a que trois valeurs.
+        let srgb = Profile::parse(&icc::profile(OutputSpace::Srgb)).unwrap();
+        assert!(!Conversion::new(&srgb, Intent::Relative).unwrap().is_cmyk());
     }
 
     #[test]

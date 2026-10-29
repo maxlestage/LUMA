@@ -1,10 +1,20 @@
 //! Un PDF d'images : une page par image JPEG, posée sur toute la page. Le strict
 //! nécessaire du format (PDF 1.4) : le catalogue, l'arbre des pages, et pour chaque
-//! page son image (filtre DCTDecode, le JPEG tel quel) et le dessin qui la pose.
+//! page son image (filtre DCTDecode, le JPEG tel quel ; ou les encres CMJN brutes,
+//! filtre FlateDecode) et le dessin qui la pose.
 
-/// Le PDF de ces images (JPEG, largeur, hauteur en pixels), sur des pages de
-/// `width × height` points (1/72 de pouce).
-pub fn write(images: &[(Vec<u8>, usize, usize)], width: f32, height: f32) -> Vec<u8> {
+/// L'image d'une page : un JPEG RVB, ou des encres CMJN (quatre octets par pixel, 0 sans
+/// encre) compressées en zlib.
+#[derive(Clone, Debug)]
+pub struct Image {
+    pub data: Vec<u8>,
+    pub width: usize,
+    pub height: usize,
+    pub cmyk: bool,
+}
+
+/// Le PDF de ces images, sur des pages de `width × height` points (1/72 de pouce).
+pub fn write(images: &[Image], width: f32, height: f32) -> Vec<u8> {
     let mut out = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec();
     let mut offsets = Vec::new();
     let mut object = |out: &mut Vec<u8>, body: &[u8]| {
@@ -21,7 +31,8 @@ pub fn write(images: &[(Vec<u8>, usize, usize)], width: f32, height: f32) -> Vec
         format!("<< /Type /Pages /Kids [{}] /Count {} >>", kids.join(" "), images.len()).as_bytes(),
     );
     let (w, h) = (format!("{width:.2}"), format!("{height:.2}"));
-    for (i, (jpeg, pw, ph)) in images.iter().enumerate() {
+    for (i, img) in images.iter().enumerate() {
+        let (jpeg, pw, ph) = (&img.data, img.width, img.height);
         let (page, content, image) = (3 + 3 * i, 4 + 3 * i, 5 + 3 * i);
         object(
             &mut out,
@@ -35,8 +46,13 @@ pub fn write(images: &[(Vec<u8>, usize, usize)], width: f32, height: f32) -> Vec
             &mut out,
             format!("<< /Length {} >>\nstream\n{draw}\nendstream", draw.len()).as_bytes(),
         );
+        let (space, filter) = if img.cmyk {
+            ("DeviceCMYK", "FlateDecode")
+        } else {
+            ("DeviceRGB", "DCTDecode")
+        };
         let mut body = format!(
-            "<< /Type /XObject /Subtype /Image /Width {pw} /Height {ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {} >>\nstream\n",
+            "<< /Type /XObject /Subtype /Image /Width {pw} /Height {ph} /ColorSpace /{space} /BitsPerComponent 8 /Filter /{filter} /Length {} >>\nstream\n",
             jpeg.len()
         )
         .into_bytes();
@@ -66,7 +82,13 @@ mod tests {
     #[test]
     fn the_cross_reference_points_at_each_object() {
         let jpeg = crate::jpeg::encode(&[200; 16 * 8 * 3], 16, 8, 90, &[], &[]).unwrap();
-        let pdf = write(&[(jpeg.clone(), 16, 8), (jpeg, 16, 8)], 595.28, 841.89);
+        let page = Image {
+            data: jpeg,
+            width: 16,
+            height: 8,
+            cmyk: false,
+        };
+        let pdf = write(&[page.clone(), page], 595.28, 841.89);
         let text = String::from_utf8_lossy(&pdf);
         let start: usize = text
             .rsplit("startxref\n")

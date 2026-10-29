@@ -3717,9 +3717,9 @@ fr = Les marges ne laissent plus de place sur le papier.
 en = The margins leave no room on the paper.
 es = Los márgenes no dejan sitio en el papel.
 
-fr = seuls les profils d'imprimante RVB sont pris en charge
-en = only RGB printer profiles are supported
-es = solo se admiten perfiles de impresora RGB
+fr = seuls les profils d'imprimante RVB ou CMJN sont pris en charge
+en = only RGB or CMYK printer profiles are supported
+es = solo se admiten perfiles de impresora RGB o CMYK
 
 fr = ce profil ne convertit pas dans les deux sens
 en = this profile doesn't convert both ways

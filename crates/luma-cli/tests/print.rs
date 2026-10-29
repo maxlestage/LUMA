@@ -41,10 +41,11 @@ fn wrong_options_are_explained() {
         let (ok, out) = luma(&args);
         assert!(!ok && out.contains(says), "{args:?} : {out}");
     }
-    // Un profil d'imprimante CMJN : refusé (le PDF est en RVB).
+    // Un profil CMJN qui ne sait aller que vers le Lab (pas d'impression possible) :
+    // refusé.
     let cmyk = Path::new(env!("CARGO_MANIFEST_DIR")).join("../luma-color/tests/profils/CGATS001Compat-v2-micro.icc");
     let (ok, out) = luma(&["print", "a.ARW", "-o", &pdf, "--profile", &cmyk.display().to_string()]);
-    assert!(!ok && out.contains("RVB"), "{out}");
+    assert!(!ok && out.contains("dans les deux sens"), "{out}");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -109,6 +110,26 @@ fn contact_sheet_and_print_with_a_profile() {
     // Remplie sans marge : l'image fait toute la page, 1169 × 827 pixels à 100 ppp.
     assert!(
         text.contains("/Width 1169 /Height 827"),
+        "{}",
+        &text[..600.min(text.len())]
+    );
+    // Vers une imprimante CMJN : un PDF en CMJN.
+    let ink = Path::new(env!("CARGO_MANIFEST_DIR")).join("../luma-color/tests/profils/encre-noire.icc");
+    let press = dir.join("presse.pdf");
+    let (ok, out) = luma(&[
+        "print",
+        &sony,
+        "-o",
+        &press.display().to_string(),
+        "--dpi",
+        "72",
+        "--profile",
+        &ink.display().to_string(),
+    ]);
+    assert!(ok, "{out}");
+    let text = String::from_utf8_lossy(&std::fs::read(&press).unwrap()).into_owned();
+    assert!(
+        text.contains("/ColorSpace /DeviceCMYK"),
         "{}",
         &text[..600.min(text.len())]
     );
