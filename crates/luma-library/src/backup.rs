@@ -159,6 +159,59 @@ impl Catalog {
         moves.len()
     }
 
+    /// Un dossier retrouvé, puis ses voisins : quand le dossier choisi porte le même nom
+    /// que le dossier manquant (`…/Été/jour 1` retrouvé en `…/Archives/Été/jour 1`),
+    /// c'est souvent tout le dossier parent qui a bougé ; les photos manquantes des
+    /// dossiers voisins sont cherchées à leur tour, en remontant tant que les noms
+    /// concordent. Rend le nombre de photos retrouvées.
+    pub fn relocate_with_neighbours(&mut self, from: &Path, to: &Path) -> usize {
+        let mut found = self.relocate(from, to);
+        let (mut from, mut to) = (from, to);
+        while from.file_name().is_some()
+            && from.file_name() == to.file_name()
+            && let (Some(a), Some(b)) = (from.parent(), to.parent())
+        {
+            if a.as_os_str().is_empty() || b.as_os_str().is_empty() {
+                break;
+            }
+            found += self.relocate(a, b);
+            (from, to) = (a, b);
+        }
+        found
+    }
+
+    /// Les dossiers des photos manquantes, avec leur nombre, rangés par chemin : ce que
+    /// la fenêtre d'entretien propose de retrouver.
+    pub fn missing_folders(&self) -> Vec<(PathBuf, usize)> {
+        let mut folders: std::collections::BTreeMap<PathBuf, usize> = std::collections::BTreeMap::new();
+        for e in self.missing() {
+            let dir = e.path.parent().unwrap_or(Path::new("")).to_path_buf();
+            *folders.entry(dir).or_default() += 1;
+        }
+        folders.into_iter().collect()
+    }
+
+    /// Retire du catalogue les photos manquantes rangées sous `dir` (un disque perdu,
+    /// des photos effacées pour de bon), et leur place dans les collections manuelles.
+    /// Les photos encore là ne bougent pas. Rend le nombre de photos retirées.
+    pub fn forget_missing(&mut self, dir: &Path) -> usize {
+        let gone: Vec<PathBuf> = self
+            .missing()
+            .into_iter()
+            .filter(|e| e.path.starts_with(dir))
+            .map(|e| e.path.clone())
+            .collect();
+        for p in &gone {
+            self.entries.remove(p);
+        }
+        for c in &mut self.collections {
+            if let crate::Content::Manual(list) = &mut c.content {
+                list.retain(|p| !(p.starts_with(dir) && gone.contains(p)));
+            }
+        }
+        gone.len()
+    }
+
     /// Sur iPhone et iPad, le dossier de l'app (`…/Containers/Data/Application/<id>`)
     /// change de nom quand l'app est mise à jour : les photos d'avant sont suivies
     /// jusqu'au dossier d'aujourd'hui, `home`, avec leurs notes et leurs collections.
@@ -378,6 +431,55 @@ mod tests {
             cat.collections()[0].content,
             Content::Manual(vec![new.join("jour 1/b.png")])
         );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Tout un dossier déplacé : un de ses sous‑dossiers retrouvé, les autres suivent ;
+    /// les dossiers manquants se listent avec leur nombre, et les photos perdues pour
+    /// de bon sortent du catalogue et des collections, sans toucher aux autres.
+    #[test]
+    fn neighbours_follow_and_lost_photos_are_forgotten() {
+        let dir = temp("voisins");
+        let old = dir.join("Voyage");
+        for f in ["jour 1/a.png", "jour 2/b.png", "jour 2/c.png", "d.png"] {
+            let p = old.join(f);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, b"\x89PNG\r\n\x1a\n").unwrap();
+        }
+        let keep = dir.join("Ailleurs/e.png");
+        std::fs::create_dir_all(keep.parent().unwrap()).unwrap();
+        std::fs::write(&keep, b"\x89PNG\r\n\x1a\n").unwrap();
+        let mut cat = Catalog::default();
+        cat.add_folder(&dir, true);
+        let mut c = Collection::manual("Choix");
+        c.content = Content::Manual(vec![old.join("jour 2/c.png"), keep.clone()]);
+        cat.collections.push(c);
+
+        let new = dir.join("Archives/Voyage");
+        std::fs::create_dir_all(new.parent().unwrap()).unwrap();
+        std::fs::rename(&old, &new).unwrap();
+        std::fs::remove_file(new.join("jour 2/c.png")).unwrap();
+        assert_eq!(
+            cat.missing_folders(),
+            vec![(old.clone(), 1), (old.join("jour 1"), 1), (old.join("jour 2"), 2)]
+        );
+        // Le seul « jour 1 » retrouvé : « jour 2 » et la photo du dossier suivent.
+        assert_eq!(
+            cat.relocate_with_neighbours(&old.join("jour 1"), &new.join("jour 1")),
+            3
+        );
+        assert_eq!(cat.missing_folders(), vec![(old.join("jour 2"), 1)]);
+        // Un nom différent : rien d'autre n'est cherché.
+        assert_eq!(
+            cat.relocate_with_neighbours(&old.join("jour 2"), &dir.join("Ailleurs")),
+            0
+        );
+
+        assert_eq!(cat.forget_missing(&old), 1);
+        assert!(cat.missing().is_empty());
+        assert_eq!(cat.len(), 4);
+        assert_eq!(cat.collections()[0].content, Content::Manual(vec![keep.clone()]));
+        assert_eq!(cat.forget_missing(&dir), 0);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

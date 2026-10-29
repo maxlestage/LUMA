@@ -5760,3 +5760,85 @@ es = 1, 2 o 4 fotos por página
 fr = Erreur inattendue pendant le calcul
 en = Unexpected error during the computation
 es = Error inesperado durante el cálculo
+
+# ----- L'entretien de la photothèque -----
+
+fr = Entretien de la photothèque
+en = Library maintenance
+es = Mantenimiento de la fototeca
+
+fr = Photos manquantes
+en = Missing photos
+es = Fotos que faltan
+
+fr = Toutes les photos sont là.
+en = All photos are in place.
+es = Todas las fotos están en su sitio.
+
+fr = Retrouver…
+en = Locate…
+es = Localizar…
+
+fr = Choisir le dossier où ces photos sont maintenant ; les dossiers voisins suivent
+en = Choose the folder where these photos are now; neighbouring folders follow
+es = Elegir la carpeta donde están ahora estas fotos; las carpetas vecinas la siguen
+
+fr = Retirer ces photos de la photothèque (les fichiers ne sont plus là)
+en = Remove these photos from the library (the files are gone)
+es = Quitar estas fotos de la fototeca (los archivos ya no están)
+
+fr = Sauvegardes du catalogue
+en = Catalog backups
+es = Copias de seguridad del catálogo
+
+fr = Une sauvegarde par semaine, les dix dernières gardées ; restaurer sauvegarde d'abord la photothèque actuelle.
+en = One backup a week, the last ten kept; restoring first backs up the current library.
+es = Una copia por semana, se guardan las diez últimas; restaurar guarda antes la fototeca actual.
+
+fr = Sauvegarder maintenant
+en = Back up now
+es = Hacer copia ahora
+
+fr = Confirmer
+en = Confirm
+es = Confirmar
+
+fr = Restaurer…
+en = Restore…
+es = Restaurar…
+
+fr = Où sont ces photos maintenant ?
+en = Where are these photos now?
+es = ¿Dónde están ahora estas fotos?
+
+fr = {n} photos retrouvées
+en = {n} photos located
+es = {n} fotos localizadas
+
+fr = {n} photos retirées de la photothèque
+en = {n} photos removed from the library
+es = {n} fotos quitadas de la fototeca
+
+fr = Photothèque sauvegardée
+en = Library backed up
+es = Fototeca guardada
+
+fr = Sauvegarde impossible : {error}
+en = Backup failed: {error}
+es = No se pudo hacer la copia: {error}
+
+fr = Photothèque restaurée
+en = Library restored
+es = Fototeca restaurada
+
+fr = Restauration impossible : {error}
+en = Restore failed: {error}
+es = No se pudo restaurar: {error}
+
+fr = Entretien…
+en = Maintenance…
+es = Mantenimiento…
+
+fr = Photos manquantes ou déplacées, sauvegardes du catalogue
+en = Missing or moved photos, catalog backups
+es = Fotos que faltan o movidas, copias del catálogo

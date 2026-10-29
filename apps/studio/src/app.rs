@@ -688,6 +688,17 @@ struct Leaving {
 
 /// L'épreuvage à l'écran : le profil d'imprimante choisi, l'intention de rendu et la
 /// table qui en découle. Une vue, pas un réglage : rien n'est écrit dans le XMP.
+/// La fenêtre d'entretien de la photothèque : les dossiers des photos manquantes et
+/// les sauvegardes du catalogue, relus à l'ouverture et après chaque changement (pas à
+/// chaque image : regarder si 100 000 fichiers sont là prend du temps).
+#[derive(Default)]
+struct Upkeep {
+    missing: Vec<(PathBuf, usize)>,
+    backups: Vec<PathBuf>,
+    /// La sauvegarde à remettre, en attente de confirmation.
+    restoring: Option<PathBuf>,
+}
+
 #[derive(Default)]
 struct Proofing {
     on: bool,
@@ -848,6 +859,8 @@ pub struct Studio {
     prints: HashMap<PathBuf, u64>,
     /// La vue des doublons : leurs groupes, à la place du film.
     duplicates: Option<Vec<Vec<PathBuf>>>,
+    /// La fenêtre d'entretien de la photothèque, quand elle est ouverte.
+    upkeep: Option<Upkeep>,
     /// La carte des photos géolocalisées, à la place de la grille : sa vue (cadrée sur
     /// les photos à la première image).
     map: Option<Option<luma_library::map::View>>,
@@ -1219,6 +1232,7 @@ impl Studio {
             stacking: true,
             prints: HashMap::new(),
             duplicates: None,
+            upkeep: None,
             map: None,
             place: None,
             tiles: Default::default(),
@@ -1599,6 +1613,224 @@ impl Studio {
                 (c.name.clone(), n)
             })
             .collect();
+    }
+
+    /// Ouvre la fenêtre d'entretien de la photothèque (ou la relit).
+    pub fn open_upkeep(&mut self) {
+        let restoring = self.upkeep.take().and_then(|u| u.restoring);
+        self.upkeep = Some(Upkeep {
+            missing: self.catalog.missing_folders(),
+            backups: self
+                .catalog_path
+                .as_deref()
+                .map(luma_library::backup::list)
+                .unwrap_or_default(),
+            restoring,
+        });
+    }
+
+    /// Les dossiers des photos manquantes, avec leur nombre, quand la fenêtre
+    /// d'entretien est ouverte.
+    pub fn upkeep_missing(&self) -> Option<&[(PathBuf, usize)]> {
+        self.upkeep.as_ref().map(|u| u.missing.as_slice())
+    }
+
+    /// Le catalogue a changé dans la fenêtre d'entretien : il est enregistré, ses
+    /// listes et la fenêtre relues.
+    fn upkeep_changed(&mut self) {
+        if let Some(file) = &self.catalog_path {
+            let _ = self.catalog.save(file);
+        }
+        self.refresh_catalog_lists();
+        if self.upkeep.is_some() {
+            self.open_upkeep();
+        }
+    }
+
+    /// Un dossier manquant retrouvé à `to` (et ses voisins, quand tout le dossier
+    /// parent a bougé). Rend le nombre de photos retrouvées.
+    pub fn relocate_folder(&mut self, from: &Path, to: &Path) -> usize {
+        let n = self.catalog.relocate_with_neighbours(from, to);
+        self.status = trf("{n} photos retrouvées", &[("n", &n)]);
+        self.upkeep_changed();
+        n
+    }
+
+    /// Les photos manquantes d'un dossier retirées de la photothèque. Rend leur nombre.
+    pub fn forget_folder(&mut self, dir: &Path) -> usize {
+        let n = self.catalog.forget_missing(dir);
+        self.status = trf("{n} photos retirées de la photothèque", &[("n", &n)]);
+        self.upkeep_changed();
+        n
+    }
+
+    /// Une sauvegarde du catalogue, maintenant.
+    pub fn backup_catalog(&mut self) {
+        let Some(file) = self.catalog_path.clone() else {
+            return;
+        };
+        let _ = self.catalog.save(&file);
+        self.status = match luma_library::backup::backup(&file) {
+            Ok(_) => tr("Photothèque sauvegardée").to_owned(),
+            Err(e) => trf("Sauvegarde impossible : {error}", &[("error", &e)]),
+        };
+        self.upkeep_changed();
+    }
+
+    /// Remet une sauvegarde à la place du catalogue (celui d'avant est sauvegardé
+    /// lui aussi), puis la recharge.
+    pub fn restore_catalog(&mut self, backup: &Path) {
+        let Some(file) = self.catalog_path.clone() else {
+            return;
+        };
+        match luma_library::backup::restore(backup, &file) {
+            Ok(()) => {
+                self.use_catalog(file);
+                self.status = tr("Photothèque restaurée").to_owned();
+                if self.upkeep.is_some() {
+                    self.open_upkeep();
+                }
+            }
+            Err(e) => self.status = trf("Restauration impossible : {error}", &[("error", &e)]),
+        }
+    }
+
+    /// La fenêtre d'entretien : les photos manquantes, dossier par dossier (retrouver
+    /// le dossier, ou retirer ses photos), et les sauvegardes du catalogue.
+    fn upkeep_window(&mut self, ctx: &egui::Context) {
+        let Some(upkeep) = &self.upkeep else {
+            return;
+        };
+        let busy = self.is_indexing();
+        let mut open = true;
+        let mut relocate = None;
+        let mut forget = None;
+        let mut backup = false;
+        let mut restore = None;
+        let mut ask = None;
+        let mut cancel = false;
+        egui::Window::new(tr("Entretien de la photothèque"))
+            .id(egui::Id::unique("fenetre-entretien"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_width(440.0_f32.min(ctx.content_rect().width() - 40.0));
+                ui.label(RichText::new(tr("Photos manquantes")).strong());
+                if upkeep.missing.is_empty() {
+                    ui.label(
+                        RichText::new(tr("Toutes les photos sont là."))
+                            .color(theme::DIM),
+                    );
+                }
+                egui::ScrollArea::vertical()
+                    .id_salt("entretien-manquantes")
+                    .max_height(220.0)
+                    .show(ui, |ui| {
+                        for (dir, n) in &upkeep.missing {
+                            ui.horizontal_wrapped(|ui| {
+                                let name = dir.file_name().map_or_else(
+                                    || dir.display().to_string(),
+                                    |n| n.to_string_lossy().into_owned(),
+                                );
+                                ui.label(format!("{name} ({n})"))
+                                    .on_hover_text(dir.display().to_string());
+                                if crate::dialogs::FOLDER_PICKER
+                                    && ui
+                                        .add_enabled(!busy, egui::Button::new(tr("Retrouver…")).small())
+                                        .on_hover_text(tr(
+                                            "Choisir le dossier où ces photos sont maintenant ; les dossiers voisins suivent",
+                                        ))
+                                        .clicked()
+                                {
+                                    relocate = Some(dir.clone());
+                                }
+                                if ui
+                                    .add_enabled(!busy, egui::Button::new(tr("Retirer")).small())
+                                    .on_hover_text(tr(
+                                        "Retirer ces photos de la photothèque (les fichiers ne sont plus là)",
+                                    ))
+                                    .clicked()
+                                {
+                                    forget = Some(dir.clone());
+                                }
+                            });
+                        }
+                    });
+                ui.add_space(8.0);
+                ui.label(RichText::new(tr("Sauvegardes du catalogue")).strong());
+                ui.label(
+                    RichText::new(tr(
+                        "Une sauvegarde par semaine, les dix dernières gardées ; restaurer sauvegarde d'abord la photothèque actuelle.",
+                    ))
+                    .size(11.0)
+                    .color(theme::DIM),
+                );
+                if ui
+                    .add_enabled(!busy, egui::Button::new(tr("Sauvegarder maintenant")))
+                    .clicked()
+                {
+                    backup = true;
+                }
+                egui::ScrollArea::vertical()
+                    .id_salt("entretien-sauvegardes")
+                    .max_height(180.0)
+                    .show(ui, |ui| {
+                        for b in &upkeep.backups {
+                            ui.horizontal(|ui| {
+                                ui.label(backup_date(b));
+                                if upkeep.restoring.as_ref() == Some(b) {
+                                    if ui.small_button(tr("Confirmer")).clicked() {
+                                        restore = Some(b.clone());
+                                    }
+                                    if ui.small_button(tr("Annuler")).clicked() {
+                                        cancel = true;
+                                    }
+                                } else if ui
+                                    .add_enabled(!busy, egui::Button::new(tr("Restaurer…")).small())
+                                    .clicked()
+                                {
+                                    ask = Some(b.clone());
+                                }
+                            });
+                        }
+                    });
+                if busy {
+                    ui.label(
+                        RichText::new(tr("Mise à jour de la photothèque…"))
+                            .color(theme::DIM)
+                            .size(11.0),
+                    );
+                }
+            });
+        if let Some(u) = &mut self.upkeep {
+            if let Some(b) = ask {
+                u.restoring = Some(b);
+            } else if cancel {
+                u.restoring = None;
+            }
+        }
+        if let Some(from) = relocate
+            && let Some(to) = crate::dialogs::pick_folder(tr("Où sont ces photos maintenant ?"))
+        {
+            self.relocate_folder(&from, &to);
+        }
+        if let Some(dir) = forget {
+            self.forget_folder(&dir);
+        }
+        if backup {
+            self.backup_catalog();
+        }
+        if let Some(b) = restore {
+            if let Some(u) = &mut self.upkeep {
+                u.restoring = None;
+            }
+            self.restore_catalog(&b);
+        }
+        if !open {
+            self.upkeep = None;
+        }
     }
 
     /// Montre une vue de la photothèque : toutes les photos, une collection ou une
@@ -6325,6 +6557,9 @@ impl Studio {
         if self.rename_open && allowed {
             self.rename_window(&ctx);
         }
+        if self.upkeep.is_some() && allowed {
+            self.upkeep_window(&ctx);
+        }
         self.poll_printing(&ctx);
         // Une trace choisie dans l'app Fichiers (iPhone, iPad).
         if luma_apple::photos::AVAILABLE {
@@ -9057,6 +9292,16 @@ impl Studio {
                     .color(theme::DIM)
                     .size(11.0),
             );
+        }
+        if self.catalog_path.is_some()
+            && ui
+                .small_button(tr("Entretien…"))
+                .on_hover_text(tr(
+                    "Photos manquantes ou déplacées, sauvegardes du catalogue",
+                ))
+                .clicked()
+        {
+            self.open_upkeep();
         }
         if let Some(v) = chosen {
             self.show_view(v);
@@ -12190,6 +12435,32 @@ fn big_choice_sized(
 
 /// Les étoiles et le drapeau en bas d'une vignette.
 /// Les images de la marque (luma-brand), chargées une fois.
+/// La date d'une sauvegarde, lue dans son nom (`Catalogue 2026-10-27 081502.lumacat`
+/// → « 2026-10-27 08:15:02 ») ; le nom tel quel s'il n'a pas cette forme.
+fn backup_date(path: &Path) -> String {
+    let name = path
+        .file_stem()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let rest = name.strip_prefix("Catalogue ").unwrap_or(&name);
+    match rest.split_once(' ') {
+        Some((day, time))
+            if time.len() >= 6
+                && time.is_char_boundary(6)
+                && time[..6].bytes().all(|b| b.is_ascii_digit()) =>
+        {
+            format!(
+                "{day} {}:{}:{}{}",
+                &time[..2],
+                &time[2..4],
+                &time[4..6],
+                &time[6..]
+            )
+        }
+        _ => rest.to_owned(),
+    }
+}
+
 struct Brand {
     backdrop: TextureHandle,
     ring: TextureHandle,

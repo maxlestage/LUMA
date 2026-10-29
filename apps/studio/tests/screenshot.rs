@@ -3208,3 +3208,75 @@ fn an_idle_screen_does_not_redraw() {
     let _ = std::fs::remove_dir_all(&tmp);
     assert!(!repaint, "redessin demandé : {causes:?}");
 }
+
+/// La fenêtre d'entretien : un dossier déplacé hors de LÜMA s'y montre manquant, est
+/// retrouvé (ses voisins aussi), puis une sauvegarde d'avant, restaurée après
+/// confirmation, remet le catalogue tel qu'il était.
+#[test]
+fn library_upkeep_window() {
+    let _gpu = one_at_a_time();
+    let dir = std::env::temp_dir().join(format!("luma-entretien-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let old = dir.join("Voyage");
+    for f in ["jour 1/a.png", "jour 2/b.png", "jour 2/c.png"] {
+        let p = old.join(f);
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(p, b"\x89PNG\r\n\x1a\n").unwrap();
+    }
+    let tmp = dir.clone();
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 800.0])
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(tmp.join("licence"));
+                        s.use_catalog(tmp.join("cat.lumacat"));
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    harness.step();
+    let s = harness.state_mut().as_mut().unwrap();
+    s.catalog_mut().add_folder(&old, true);
+    s.backup_catalog();
+    let new = dir.join("Archives/Voyage");
+    std::fs::create_dir_all(new.parent().unwrap()).unwrap();
+    std::fs::rename(&old, &new).unwrap();
+    s.open_upkeep();
+    assert_eq!(
+        s.upkeep_missing().unwrap(),
+        [(old.join("jour 1"), 1), (old.join("jour 2"), 2)]
+    );
+    harness.run_steps(3);
+    harness.get_by_label("Entretien de la photothèque");
+    harness.get_by_label("jour 2 (2)");
+    harness.get_all_by_label("Retirer").next().unwrap().click();
+    harness.run_steps(2);
+    // « Retirer » : le premier dossier, « jour 1 », sort de la photothèque.
+    let s = harness.state_mut().as_mut().unwrap();
+    assert_eq!(s.upkeep_missing().unwrap(), [(old.join("jour 2"), 2)]);
+    assert_eq!(s.catalog().len(), 2);
+    assert_eq!(
+        s.relocate_folder(&old.join("jour 2"), &new.join("jour 2")),
+        2
+    );
+    assert!(s.upkeep_missing().unwrap().is_empty());
+    harness.run_steps(2);
+    harness.get_by_label("Toutes les photos sont là.");
+
+    // La sauvegarde d'avant : demandée, confirmée, elle revient (les trois photos, à
+    // leur ancienne place).
+    harness.get_by_label("Restaurer…").click();
+    harness.run_steps(2);
+    harness.get_by_label("Confirmer").click();
+    harness.run_steps(2);
+    let s = harness.state_mut().as_mut().unwrap();
+    assert_eq!(s.catalog().len(), 3);
+    assert_eq!(s.upkeep_missing().unwrap().len(), 2);
+    drop(harness);
+    let _ = std::fs::remove_dir_all(&dir);
+}
