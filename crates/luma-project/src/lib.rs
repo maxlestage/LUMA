@@ -14,6 +14,7 @@ pub mod paste;
 pub mod presets;
 pub mod retouch;
 pub mod xmp;
+pub mod xmp_masks;
 
 pub use liquify::{Warp, WarpKind};
 pub use masks::{Combine, Dab, Local, Look, Mask, Part, Range, Shape};

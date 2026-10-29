@@ -73,7 +73,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Combinaciones de máscaras: añadir, restar, intersecar otras formas (cada una invertible) | ✅ |
 | | Duplicar una máscara, o duplicarla invertida (ajustes a cero): el suelo después del cielo, sin volver a trazar la zona | ✅ |
 | | Zona de la máscara mostrada (O) en rojo, verde, azul, blanco o blanco sobre negro, opacidad del 10 al 100 % | ✅ |
-| | Lectura de las máscaras `crs:MaskGroupBasedCorrections` | ⏳ |
+| | Lectura de las máscaras de un XMP de otra aplicación (`crs:MaskGroupBasedCorrections`, y las listas de degradados antiguas): degradados lineales y radiales, intensidad, inversión, ajustes locales, llevados al recorte | ✅ |
+| | Máscaras de pincel, de sujeto y de rango de un XMP de otra aplicación | ⏳ |
 | | Corrector y tampón (Q): un clic, la fuente encontrada sola, zona y fuente desplazables; tamaño, difuminado, opacidad | ✅ |
 | | Manchas del sensor: vista de manchas (el polvo como puntos oscuros), «Quitar el polvo» con un clic | ✅ |
 | | Ojos rojos: un círculo en el ojo, la pupila roja vuelve a ser negra, la piel se queda | ✅ |

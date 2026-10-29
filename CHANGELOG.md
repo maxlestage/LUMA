@@ -145,6 +145,13 @@ La photothèque professionnelle, étape par étape.
   réduit directement depuis ses pixels, sans copier d'abord toute l'image (145 Mo) ; et
   un quart de tour se fait par carreaux. Premier aperçu 220 → 109 ms, sans changer un
   pixel ; toute photo en portrait gagne aussi sur l'orientation (15 → 9 ms).
+- **Les masques d'un XMP venu d'ailleurs** : un XMP écrit par un autre logiciel de
+  développement apporte ses dégradés linéaires et radiaux
+  (`crs:MaskGroupBasedCorrections`, et les anciennes listes de dégradés), avec leur
+  intensité, leur inversion et leurs réglages locaux (exposition, contraste, hautes
+  lumières, ombres, blancs, noirs, température, teinte, saturation, clarté, texture,
+  netteté, bruit, voile), ramenés dans le recadrage. Les pinceaux et les masques de
+  sujet, faits de pixels, ne sont pas repris.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
