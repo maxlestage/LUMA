@@ -85,6 +85,7 @@ fn a_book_with_pages_chosen_one_by_one() {
         .unwrap();
     // La couverture, une page de deux photos, une page d'une.
     assert_eq!(pages, 3, "{pages}");
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
