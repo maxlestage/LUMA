@@ -13,6 +13,7 @@ pub mod keys;
 pub mod licence;
 pub mod liquifying;
 pub mod masking;
+pub mod printers;
 pub mod retouching;
 pub mod style;
 pub mod tiles;
