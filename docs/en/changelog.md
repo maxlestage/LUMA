@@ -144,6 +144,10 @@ The professional photo library, step by step.
 - **GPX track on iPhone and iPad**: “Follow a GPX track…” opens the Files app (iCloud
   Drive, a watch, a hiking app); the chosen track places the photos that have no
   position, as on Mac.
+- **Faster first preview**: the sensor reduction that prepares it no longer looks up
+  the colour of every photosite (one table per place in the pattern, and a separate path
+  for Bayer sensors): 30% shorter (X‑Trans 90 → 58 ms); the first preview is 4 to 19%
+  shorter (RAF 216 → 175 ms, NEF 127 → 110 ms), without changing a pixel.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

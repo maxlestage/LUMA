@@ -328,18 +328,61 @@ pub fn bin(raw: &[f32], w: usize, h: usize, cfa: &Cfa, step: usize, window: usiz
     let (ow, oh) = (w / step, h / step);
     let mut out = RgbImage::new(ow, oh);
     let margin = (window - step) / 2;
+    // La couleur de chaque photosite d'une fenêtre ne dépend que de la place de son coin
+    // dans le motif : une table par place, calculée une fois (au lieu de deux restes de
+    // division par photosite). Les mêmes sommes dans le même ordre : les mêmes bits.
+    let (cw, ch) = (cfa.width, cfa.height);
+    let tables: Vec<Vec<u8>> = (0..ch)
+        .flat_map(|py| (0..cw).map(move |px| (px, py)))
+        .map(|(px, py)| {
+            (0..window)
+                .flat_map(|dy| (0..window).map(move |dx| (dx, dy)))
+                .map(|(dx, dy)| cfa.color(px + dx, py + dy) as u8)
+                .collect()
+        })
+        .collect();
+    if (step, window, cw, ch) == (2, 2, 2, 2) {
+        // Bayer : chaque pixel, ses quatre photosites (jamais coupés par un bord), dans
+        // l'ordre de la boucle générique.
+        let t = &tables[0];
+        let c = [
+            usize::from(t[0]),
+            usize::from(t[1]),
+            usize::from(t[2]),
+            usize::from(t[3]),
+        ];
+        out.data.par_chunks_mut(ow).enumerate().for_each(|(oy, row)| {
+            let (top, bottom) = (
+                &raw[2 * oy * w..2 * oy * w + w],
+                &raw[(2 * oy + 1) * w..(2 * oy + 2) * w],
+            );
+            for ((px, t), b) in row.iter_mut().zip(top.chunks_exact(2)).zip(bottom.chunks_exact(2)) {
+                let mut sum = [0.0f32; 3];
+                let mut n = [0u32; 3];
+                for (v, &k) in [t[0], t[1], b[0], b[1]].into_iter().zip(&c) {
+                    sum[k] += v;
+                    n[k] += 1;
+                }
+                *px = std::array::from_fn(|k| if n[k] > 0 { sum[k] / n[k] as f32 } else { 0.0 });
+            }
+        });
+        return out;
+    }
     out.data.par_chunks_mut(ow).enumerate().for_each(|(oy, row)| {
         let y0 = (oy * step).saturating_sub(margin);
         let y1 = (y0 + window).min(h);
         for (ox, px) in row.iter_mut().enumerate() {
             let x0 = (ox * step).saturating_sub(margin);
             let x1 = (x0 + window).min(w);
+            let table = &tables[(y0 % ch) * cw + x0 % cw];
             let mut sum = [0.0f32; 3];
             let mut n = [0u32; 3];
             for y in y0..y1 {
-                for x in x0..x1 {
-                    let c = cfa.color(x, y);
-                    sum[c] += raw[y * w + x];
+                let colors = &table[(y - y0) * window..];
+                let line = &raw[y * w + x0..y * w + x1];
+                for (&v, &c) in line.iter().zip(colors) {
+                    let c = usize::from(c);
+                    sum[c] += v;
                     n[c] += 1;
                 }
             }
@@ -352,6 +395,49 @@ pub fn bin(raw: &[f32], w: usize, h: usize, cfa: &Cfa, step: usize, window: usiz
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// La réduction d'avant, couleur par couleur pour chaque photosite : la table par
+    /// place doit donner exactement les mêmes pixels.
+    fn bin_reference(raw: &[f32], w: usize, h: usize, cfa: &Cfa, step: usize, window: usize) -> RgbImage {
+        let (ow, oh) = (w / step, h / step);
+        let margin = (window - step) / 2;
+        RgbImage::from_fn(ow, oh, |ox, oy| {
+            let y0 = (oy * step).saturating_sub(margin);
+            let y1 = (y0 + window).min(h);
+            let x0 = (ox * step).saturating_sub(margin);
+            let x1 = (x0 + window).min(w);
+            let mut sum = [0.0f32; 3];
+            let mut n = [0u32; 3];
+            for y in y0..y1 {
+                for x in x0..x1 {
+                    let c = cfa.color(x, y);
+                    sum[c] += raw[y * w + x];
+                    n[c] += 1;
+                }
+            }
+            std::array::from_fn(|c| if n[c] > 0 { sum[c] / n[c] as f32 } else { 0.0 })
+        })
+    }
+
+    #[test]
+    fn binning_by_tables_gives_the_same_pixels() {
+        let xtrans = Cfa::parse("GGRGGBGGBGGRBRGRBGGGBGGRGGRGGBRBGBRG", 6, 6).unwrap();
+        for (cfa, step, window) in [
+            (Cfa::parse("RGGB", 2, 2).unwrap(), 2, 2),
+            (Cfa::parse("GBRG", 2, 2).unwrap(), 2, 2),
+            (xtrans, 3, 6),
+        ] {
+            for (w, h) in [(37, 23), (64, 48), (7, 6)] {
+                let raw: Vec<f32> = (0..w * h).map(|i| ((i * 7919) % 1000) as f32 / 1000.0).collect();
+                let a = bin(&raw, w, h, &cfa, step, window);
+                let b = bin_reference(&raw, w, h, &cfa, step, window);
+                assert!(
+                    a.data == b.data && (a.width, a.height) == (b.width, b.height),
+                    "{w}×{h} {step}"
+                );
+            }
+        }
+    }
 
     /// Une mosaïque Bayer qui échantillonne une image RGB.
     fn mosaic(img: &RgbImage, cfa: &Cfa) -> Vec<f32> {
