@@ -1220,11 +1220,21 @@ mod tests {
             .map(|e| e.file_name())
             .collect();
         assert_eq!(names, [std::ffi::OsString::from("IMG_0001.CR3.xmp")]);
-        // Une écriture qui échoue (ici, le temporaire ne peut pas être créé) laisse
-        // l'ancien XMP entier, et rien d'autre.
-        std::fs::create_dir_all(dir.join("IMG_0001.CR3.xmp.tmp/occupé")).unwrap();
-        assert!(save(&path, "troisième").is_err());
+        // Une écriture qui échoue (ici, le renommage : un dossier a pris la place du
+        // XMP) laisse les autres XMP entiers, et aucun temporaire.
+        let blocked = dir.join("IMG_0002.CR3.xmp");
+        std::fs::create_dir_all(blocked.join("occupé")).unwrap();
+        assert!(save(&blocked, "troisième").is_err());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "second");
+        let names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert!(
+            names.iter().all(|n| !n.to_string_lossy().ends_with(".tmp")),
+            "{names:?}"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
