@@ -321,15 +321,40 @@ impl Photo {
     pub fn render(&self, settings: &Settings, size: Size, cancel: &Cancel) -> Result<Rendered> {
         let mut timings = Timings::default();
         let base = self.base(settings, size, cancel, &mut timings)?;
-        let image = luma_image::finish_layers(
-            &base.image,
-            base.scale,
+        let scale = base.scale;
+        // Une base gardée nulle part (la pleine définition : un export, le zoom 1:1) et
+        // sans film de masque qui la relise : le rendu se fait dans son image même, au
+        // lieu d'une copie (288 Mo pour 24 Mpx). Les mêmes calculs : les mêmes pixels.
+        let image = match Arc::try_unwrap(base.image) {
+            Ok(mut own) if luma_image::look_layers(settings).is_empty() => {
+                luma_image::finish(&mut own, scale, settings, cancel, &mut timings)?;
+                own
+            }
+            Ok(own) => self.finish_layers(&own, scale, settings, size, cancel, &mut timings)?,
+            Err(shared) => self.finish_layers(&shared, scale, settings, size, cancel, &mut timings)?,
+        };
+        Ok(Rendered { image, timings })
+    }
+
+    /// [`luma_image::finish_layers`] sur cette base, les films des masques avec leur
+    /// propre base si besoin.
+    fn finish_layers(
+        &self,
+        base: &RgbImage,
+        scale: f32,
+        settings: &Settings,
+        size: Size,
+        cancel: &Cancel,
+        timings: &mut Timings,
+    ) -> Result<RgbImage> {
+        luma_image::finish_layers(
+            base,
+            scale,
             settings,
             &mut |look, t| self.base(look, size, cancel, t).map(|b| b.image),
             cancel,
-            &mut timings,
-        )?;
-        Ok(Rendered { image, timings })
+            timings,
+        )
     }
 
     /// La balance qui rend neutre une couleur caméra (pipette, balance automatique).
