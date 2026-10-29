@@ -211,6 +211,9 @@ La fototeca profesional, paso a paso.
   impresora del sistema (la predeterminada primero), con el número de copias, sin
   pasar por el lector de PDF; en Mac y Linux, por el servicio de impresión del
   sistema. Sin impresora, la app lo dice y «Abrir» sigue ahí.
+- **Las fotos por fecha**: el panel Fototeca ordena todas las fotos por año (el más
+  reciente primero, con su número); un triángulo despliega los meses; un clic en un
+  año o un mes muestra sus fotos.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

@@ -3309,3 +3309,76 @@ fn library_upkeep_window() {
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Les photos par date, dans le panneau Photothèque : chaque année avec son nombre ;
+/// le triangle déplie ses mois ; une année ou un mois montre ses photos.
+#[test]
+fn library_by_year_and_month() {
+    let _gpu = one_at_a_time();
+    let dir = std::env::temp_dir().join(format!("luma-dates-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let catalog = dir.join("cat.lumacat");
+    let mut cat = luma_library::Catalog::default();
+    for (name, date) in [
+        ("a", "2024-06-15T10:00:00"),
+        ("b", "2024-06-16T09:00:00"),
+        ("c", "2024-01-02T08:00:00"),
+        ("d", "2026-10-29T20:00:00"),
+    ] {
+        let path = dir.join(format!("{name}.png"));
+        std::fs::write(&path, b"\x89PNG\r\n\x1a\n").unwrap();
+        cat.insert(luma_library::Entry {
+            path,
+            date: date.into(),
+            ..luma_library::Entry::default()
+        });
+    }
+    cat.save(&catalog).unwrap();
+    let tmp = dir.clone();
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 900.0])
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(tmp.join("licence"));
+                        s.use_catalog(tmp.join("cat.lumacat"));
+                        s.tool = luma_studio::app::Tool::Library;
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    harness.run_steps(3);
+    harness.get_by_label("Dates");
+    harness.get_by_label("2026 (1)");
+    assert!(
+        harness.query_by_label("juin (2)").is_none(),
+        "les mois repliés"
+    );
+    harness.get_by_label("2024 (3)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("date:2024".into())
+    );
+    // Le triangle de 2024 (la seconde année de la liste) déplie ses mois.
+    harness
+        .get_all_by_label("Les mois de cette année")
+        .nth(1)
+        .unwrap()
+        .click();
+    harness.run_steps(2);
+    harness.get_by_label("janvier (1)");
+    harness.get_by_label("juin (2)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("date:2024-06".into())
+    );
+    drop(harness);
+    let _ = std::fs::remove_dir_all(&dir);
+}

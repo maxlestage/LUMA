@@ -949,6 +949,9 @@ pub struct Studio {
     /// (recalculés quand le catalogue change, pas à chaque image).
     catalog_folders: Vec<(PathBuf, usize)>,
     catalog_collections: Vec<(String, usize)>,
+    /// Les photos par année et par mois, et les années dépliées dans le panneau.
+    catalog_dates: Vec<luma_library::Year>,
+    open_years: BTreeSet<String>,
     pub view: View,
     catalog_search: String,
     pub export_options: ExportOptions,
@@ -1291,6 +1294,8 @@ impl Studio {
             watch_follow: true,
             catalog_folders: Vec::new(),
             catalog_collections: Vec::new(),
+            catalog_dates: Vec::new(),
+            open_years: BTreeSet::new(),
             view: View::Folder,
             catalog_search: String::new(),
             export_options: ExportOptions::default(),
@@ -1609,6 +1614,7 @@ impl Studio {
             }
         }
         self.catalog_folders = folders.into_iter().collect();
+        self.catalog_dates = self.catalog.dates();
         self.catalog_collections = self
             .catalog
             .collections()
@@ -9364,6 +9370,50 @@ impl Studio {
                 }
             }
         }
+        if !self.catalog_dates.is_empty() {
+            ui.label(RichText::new(tr("Dates")).color(theme::DIM).size(11.5));
+            let mut toggle = None;
+            for y in &self.catalog_dates {
+                let unfolded = self.open_years.contains(&y.year);
+                let query = format!("date:{}", y.year);
+                let on = self.view == View::Search(query.clone());
+                ui.horizontal(|ui| {
+                    // Le triangle déplie les mois ; l'année montre ses photos.
+                    if fold_triangle(ui, unfolded)
+                        .on_hover_text(tr("Les mois de cette année"))
+                        .clicked()
+                    {
+                        toggle = Some(y.year.clone());
+                    }
+                    if ui
+                        .selectable_label(on, format!("{} ({})", y.year, y.count))
+                        .clicked()
+                    {
+                        chosen = Some(View::Search(query));
+                    }
+                });
+                if unfolded {
+                    for (m, n) in &y.months {
+                        let query = format!("date:{}-{m}", y.year);
+                        let on = self.view == View::Search(query.clone());
+                        ui.horizontal(|ui| {
+                            ui.add_space(22.0);
+                            if ui
+                                .selectable_label(on, format!("{} ({n})", month_name(m)))
+                                .clicked()
+                            {
+                                chosen = Some(View::Search(query));
+                            }
+                        });
+                    }
+                }
+            }
+            if let Some(y) = toggle
+                && !self.open_years.remove(&y)
+            {
+                self.open_years.insert(y);
+            }
+        }
         let mut open = None;
         if !self.catalog_folders.is_empty() {
             ui.label(RichText::new(tr("Dossiers")).color(theme::DIM).size(11.5));
@@ -12536,6 +12586,62 @@ fn big_choice_sized(
 
 /// Les étoiles et le drapeau en bas d'une vignette.
 /// Les images de la marque (luma-brand), chargées une fois.
+/// Un petit triangle qui déplie (pointe vers le bas une fois déplié), dessiné : il ne
+/// dépend d'aucun signe de la police.
+fn fold_triangle(ui: &mut Ui, unfolded: bool) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(16.0, 16.0), egui::Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::Role::Button, true, tr("Les mois de cette année"))
+    });
+    let c = rect.center();
+    let color = if response.hovered() {
+        theme::TEXT
+    } else {
+        theme::DIM
+    };
+    let points = if unfolded {
+        vec![
+            c + vec2(-4.0, -2.5),
+            c + vec2(4.0, -2.5),
+            c + vec2(0.0, 3.5),
+        ]
+    } else {
+        vec![
+            c + vec2(-2.5, -4.0),
+            c + vec2(3.5, 0.0),
+            c + vec2(-2.5, 4.0),
+        ]
+    };
+    ui.painter().add(egui::Shape::convex_polygon(
+        points,
+        color,
+        egui::Stroke::NONE,
+    ));
+    response
+}
+
+/// Le nom d'un mois (`"06"` → « juin »), dans la langue de l'app.
+fn month_name(m: &str) -> &'static str {
+    const MONTHS: [&str; 12] = [
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
+    ];
+    m.parse::<usize>()
+        .ok()
+        .and_then(|i| MONTHS.get(i.wrapping_sub(1)))
+        .map_or("?", |name| tr(name))
+}
+
 /// La date d'une sauvegarde, lue dans son nom (`Catalogue 2026-10-27 081502.lumacat`
 /// → « 2026-10-27 08:15:02 ») ; le nom tel quel s'il n'a pas cette forme.
 fn backup_date(path: &Path) -> String {
