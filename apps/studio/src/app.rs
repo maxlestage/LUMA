@@ -743,6 +743,10 @@ pub struct Studio {
     /// Le PDF en cours : son résultat, les photos posées, leur nombre.
     printing: Option<Printing>,
     outputs_open: bool,
+    /// L'ordre des photos du livre, choisi dans « Pages du livre » (vide : celui du film).
+    pub book_order: Vec<PathBuf>,
+    /// La fenêtre « Pages du livre » est ouverte.
+    pub book_pages_open: bool,
     /// Le diaporama : ses réglages (pour l'app comme pour l'export), et la lecture.
     pub show: luma_render::slideshow::Slideshow,
     playing: Option<Playing>,
@@ -1125,6 +1129,8 @@ impl Studio {
             print_convert: true,
             printing: None,
             outputs_open: false,
+            book_order: Vec::new(),
+            book_pages_open: false,
             show: Default::default(),
             playing: None,
             import_open: false,
@@ -2291,11 +2297,35 @@ impl Studio {
         ctx.request_repaint();
     }
 
+    /// Les photos du livre, dans l'ordre choisi dans « Pages du livre » : celles qu'on y
+    /// a placées d'abord, à leur place, puis les nouvelles dans l'ordre du film.
+    pub fn book_photos(&self) -> Vec<PathBuf> {
+        let mut photos = self.output_targets();
+        let rank = |p: &PathBuf| {
+            self.book_order
+                .iter()
+                .position(|o| o == p)
+                .unwrap_or(usize::MAX)
+        };
+        // Un tri stable : les photos hors de l'ordre choisi gardent celui du film.
+        photos.sort_by_key(rank);
+        photos
+    }
+
+    /// Échange deux photos du livre (leurs rangs dans [`Studio::book_photos`]).
+    pub fn swap_book_photos(&mut self, a: usize, b: usize) {
+        let mut photos = self.book_photos();
+        if a < photos.len() && b < photos.len() {
+            photos.swap(a, b);
+            self.book_order = photos;
+        }
+    }
+
     /// Fait le livre photo des photos (en arrière‑plan) et l'écrit dans `out`.
     pub fn make_book(&mut self, out: PathBuf) {
         use luma_render::{book, print};
         self.flush_xmp();
-        let photos = self.output_targets();
+        let photos = self.book_photos();
         let b = self.book.clone();
         if photos.is_empty() || b.cells(book::Kind::Four, true).is_empty() {
             self.status = tr("Les marges ne laissent plus de place sur le papier.").into();
@@ -2910,12 +2940,155 @@ impl Studio {
             });
     }
 
+    /// La fenêtre « Pages du livre » : chaque page en petit, ses photos à leur place
+    /// (leurs vignettes) ; glisser une photo sur une autre les échange, et le livre suit
+    /// ce nouvel ordre.
+    fn book_pages_window(&mut self, ctx: &egui::Context) {
+        use luma_render::book::Kind;
+        let photos = self.book_photos();
+        let landscape: Vec<bool> = photos
+            .iter()
+            .map(|p| {
+                self.thumbs
+                    .get(p)
+                    .is_none_or(|t| t.size()[0] >= t.size()[1])
+            })
+            .collect();
+        let b = &self.book;
+        let sheets = b.sheets(&landscape);
+        let (pw, ph) = b.layout().page_px();
+        let height = 120.0;
+        let scale = height / ph as f32;
+        let page_size = vec2(pw as f32 * scale, height);
+        let mut open = self.book_pages_open;
+        let mut swap = None;
+        egui::Window::new(trf("Pages du livre : {pages}", &[("pages", &sheets.len())]))
+            .id(egui::Id::unique("fenetre-pages-livre"))
+            .open(&mut open)
+            .collapsible(false)
+            .default_width(640.0)
+            .show(ctx, |ui| {
+                ui.label(
+                    RichText::new(tr("Glissez une photo sur une autre pour les échanger."))
+                        .size(11.0)
+                        .color(theme::DIM),
+                );
+                egui::ScrollArea::vertical()
+                    .max_height(460.0)
+                    .show(ui, |ui| {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing = vec2(10.0, 14.0);
+                            for (page, sheet) in sheets.iter().enumerate() {
+                                ui.vertical(|ui| {
+                                    let (rect, _) =
+                                        ui.allocate_exact_size(page_size, egui::Sense::hover());
+                                    let painter = ui.painter_at(rect);
+                                    painter.rect_filled(rect, 2.0, Color32::from_gray(0xf2));
+                                    let orientation =
+                                        sheet.photos.first().is_none_or(|&k| landscape[k]);
+                                    let cells = b.cells(sheet.kind, orientation);
+                                    for (&k, cell) in sheet.photos.iter().zip(&cells) {
+                                        let area = Rect::from_min_size(
+                                            rect.min + vec2(cell.x as f32, cell.y as f32) * scale,
+                                            vec2(
+                                                cell.width as f32,
+                                                (cell.height - cell.caption) as f32,
+                                            ) * scale,
+                                        );
+                                        let id = egui::Id::unique(("photo-livre", k));
+                                        let r =
+                                            ui.interact(area, id, egui::Sense::click_and_drag());
+                                        r.dnd_set_drag_payload(k);
+                                        if let Some(from) = r.dnd_release_payload::<usize>()
+                                            && *from != k
+                                        {
+                                            swap = Some((*from, k));
+                                        }
+                                        let hovered =
+                                            r.dnd_hover_payload::<usize>().is_some_and(|f| *f != k);
+                                        match self.thumbs.get(&photos[k]) {
+                                            Some(t) => {
+                                                let [w, h] = t.size();
+                                                let uv = Rect::from_min_max(
+                                                    pos2(0.0, 0.0),
+                                                    pos2(1.0, 1.0),
+                                                );
+                                                let tint = if r.dragged() {
+                                                    Color32::from_gray(0x90)
+                                                } else {
+                                                    Color32::WHITE
+                                                };
+                                                painter.image(t.id(), fit(area, w, h), uv, tint);
+                                            }
+                                            None => {
+                                                painter.rect_filled(
+                                                    area,
+                                                    0.0,
+                                                    Color32::from_gray(0xc8),
+                                                );
+                                            }
+                                        }
+                                        if hovered {
+                                            painter.rect_stroke(
+                                                area,
+                                                0.0,
+                                                egui::Stroke::new(2.0, theme::ACCENT),
+                                                egui::StrokeKind::Inside,
+                                            );
+                                        }
+                                        r.on_hover_text(file_name(&photos[k]));
+                                    }
+                                    // La couverture : son titre sous la photo ; les pages de
+                                    // texte : leurs premières lignes.
+                                    let text = match sheet.kind {
+                                        Kind::Cover => Some(b.title.clone()),
+                                        Kind::Opening => Some(b.opening.clone()),
+                                        Kind::Closing => Some(b.closing.clone()),
+                                        _ => None,
+                                    };
+                                    if let Some(text) = text.filter(|t| !t.trim().is_empty()) {
+                                        let at = if sheet.kind == Kind::Cover {
+                                            pos2(rect.center().x, rect.min.y + rect.height() * 0.8)
+                                        } else {
+                                            rect.center()
+                                        };
+                                        let line: String = text
+                                            .lines()
+                                            .next()
+                                            .unwrap_or_default()
+                                            .chars()
+                                            .take(24)
+                                            .collect();
+                                        painter.text(
+                                            at,
+                                            egui::Align2::CENTER_CENTER,
+                                            line,
+                                            egui::FontId::proportional(8.0),
+                                            Color32::from_gray(0x40),
+                                        );
+                                    }
+                                    let label = match sheet.kind {
+                                        Kind::Cover => tr("Couverture").to_owned(),
+                                        _ => trf("Page {n}", &[("n", &page)]),
+                                    };
+                                    ui.label(RichText::new(label).size(10.0).color(theme::DIM));
+                                });
+                            }
+                        });
+                    });
+            });
+        if let Some((a, b)) = swap {
+            self.swap_book_photos(a, b);
+        }
+        self.book_pages_open = open;
+    }
+
     /// La fenêtre « Livre, diaporama et galerie » : le diaporama (dans l'app ou exporté),
     /// le livre photo et la galerie web.
     fn outputs_window(&mut self, ctx: &egui::Context) {
         use luma_render::book::FORMATS;
         let mut open = self.outputs_open;
-        let photos = self.output_targets();
+        let photos = self.book_photos();
         let n = photos.len();
         let (mut play, mut export, mut make, mut web) = (false, false, false, false);
         egui::Window::new(trf("Livre, diaporama et galerie : {n} photos", &[("n", &n)]))
@@ -3072,9 +3245,18 @@ impl Studio {
                     .size(11.0)
                     .color(theme::DIM),
                 );
-                make = ui
-                    .add_enabled(self.printing.is_none() && n > 0, egui::Button::new(tr("Créer le livre (PDF)…")))
-                    .clicked();
+                ui.horizontal(|ui| {
+                    make = ui
+                        .add_enabled(self.printing.is_none() && n > 0, egui::Button::new(tr("Créer le livre (PDF)…")))
+                        .clicked();
+                    if ui
+                        .add_enabled(n > 0, egui::Button::new(tr("Pages du livre…")))
+                        .on_hover_text(tr("Chaque page et ses photos ; glisser une photo sur une autre les échange"))
+                        .clicked()
+                    {
+                        self.book_pages_open = true;
+                    }
+                });
                 ui.add_space(12.0);
                 section_title(ui, tr("Galerie web"));
                 let g = &mut self.gallery;
@@ -5959,6 +6141,9 @@ impl Studio {
         }
         if self.outputs_open && allowed {
             self.outputs_window(&ctx);
+        }
+        if self.book_pages_open && allowed {
+            self.book_pages_window(&ctx);
         }
         if self.import_open && allowed {
             self.import_window(&ctx);
