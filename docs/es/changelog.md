@@ -163,6 +163,10 @@ La fototeca profesional, paso a paso.
   aparte para los sensores Bayer): un 30 % más corta (X‑Trans 90 → 58 ms); la primera
   vista previa es de un 4 a un 19 % más corta (RAF 216 → 175 ms, NEF 127 → 110 ms), sin
   cambiar un píxel.
+- **Impresión en CMYK**: se acepta un perfil de impresora CMYK (una prensa, una
+  imprenta) para la impresión y el libro de fotos; las páginas se convierten a sus
+  cuatro tintas (con compensación del punto negro) y el PDF está en CMYK, sus tintas
+  sin pérdida («Imprimir…», `luma print --profile`, `luma book --profile`).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

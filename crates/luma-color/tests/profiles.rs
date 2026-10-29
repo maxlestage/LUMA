@@ -226,6 +226,73 @@ fn printer_tables_in_both_directions() {
     );
 }
 
+/// Une imprimante CMJN d'essai, à l'encre noire seule : B→A, K = 1 − L*/100 ; A→B,
+/// l'encre noire assombrit, les autres sont ignorées.
+fn black_ink_printer() -> Vec<u8> {
+    let mut t = b"mft1\0\0\0\0".to_vec();
+    t.extend([3, 4, 2, 0]);
+    t.extend(identity_matrix());
+    for _ in 0..3 {
+        t.extend((0..=255u8).collect::<Vec<_>>());
+    }
+    for l in 0..2 {
+        for _ in 0..4 {
+            t.extend([0, 0, 0, if l == 0 { 255 } else { 0 }]);
+        }
+    }
+    for _ in 0..4 {
+        t.extend((0..=255u8).collect::<Vec<_>>());
+    }
+    let mut a = b"mft1\0\0\0\0".to_vec();
+    a.extend([4, 3, 2, 0]);
+    a.extend(identity_matrix());
+    for _ in 0..4 {
+        a.extend((0..=255u8).collect::<Vec<_>>());
+    }
+    for i in 0..16 {
+        let k = i & 1;
+        a.extend([if k == 1 { 0 } else { 255 }, 128, 128]);
+    }
+    for _ in 0..3 {
+        a.extend((0..=255u8).collect::<Vec<_>>());
+    }
+    assemble(b"prtr", b"CMYK", b"Lab ", 2, vec![(b"A2B0", a), (b"B2A0", t)])
+}
+
+/// Le profil d'essai rangé dans `profils/encre-noire.icc` (pour les essais des autres
+/// crates) est bien celui-ci.
+#[test]
+fn the_black_ink_profile_file_is_up_to_date() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/profils/encre-noire.icc");
+    if std::env::var_os("LUMA_ECRIRE_PROFILS").is_some() {
+        std::fs::write(path, black_ink_printer()).unwrap();
+    }
+    assert_eq!(std::fs::read(path).unwrap(), black_ink_printer());
+}
+
+/// La conversion vers une imprimante CMJN : quatre encres par pixel, le blanc sans
+/// encre, le noir au plus noir, un gris moyen à mi‑encre.
+#[test]
+fn conversion_to_a_cmyk_printer() {
+    use luma_color::proof::Conversion;
+    let p = Profile::parse(&black_ink_printer()).unwrap();
+    let c = Conversion::new(&p, Intent::Relative).unwrap();
+    assert!(c.is_cmyk());
+    let white = c.apply_cmyk([1.0; 3]);
+    assert!(white.iter().all(|v| v.abs() < 0.01), "{white:?}");
+    let black = c.apply_cmyk([0.0; 3]);
+    assert!(
+        black[3] > 0.97 && black[..3].iter().all(|v| v.abs() < 0.01),
+        "{black:?}"
+    );
+    // Le gris sRGB 0,5 : L* ≈ 53, donc K ≈ 0,47.
+    let gray = c.apply_cmyk([0.5; 3]);
+    assert!((gray[3] - 0.47).abs() < 0.03, "{gray:?}");
+    let ink = c.to_cmyk(&[255, 255, 255, 0, 0, 0, 128, 128, 128]);
+    assert_eq!(ink.len(), 12);
+    assert!(ink[3] < 3 && ink[7] > 247 && (110..130).contains(&ink[11]), "{ink:?}");
+}
+
 #[test]
 fn cmyk_output_with_lut8() {
     // lut8 B→A : du Lab vers une encre noire seule, K = 1 − L*/100.

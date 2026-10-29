@@ -331,7 +331,7 @@ impl Book {
             self.text_page(&mut page, text);
         }
         if let Some(c) = printer {
-            c.apply_rgb(&mut page.rgb);
+            print::convert(&mut page, c);
         }
         page
     }

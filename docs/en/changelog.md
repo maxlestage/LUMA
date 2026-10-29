@@ -148,6 +148,10 @@ The professional photo library, step by step.
   the colour of every photosite (one table per place in the pattern, and a separate path
   for Bayer sensors): 30% shorter (X‑Trans 90 → 58 ms); the first preview is 4 to 19%
   shorter (RAF 216 → 175 ms, NEF 127 → 110 ms), without changing a pixel.
+- **CMYK printing**: a CMYK printer profile (a press, a print shop) is accepted for
+  printing and the photo book; pages are converted to its four inks (black point
+  compensated) and the PDF is in CMYK, its inks kept lossless (“Print…”, `luma print
+  --profile`, `luma book --profile`).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
