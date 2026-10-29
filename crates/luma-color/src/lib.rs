@@ -411,6 +411,62 @@ impl EncodeLut {
     }
 }
 
+/// Les octets d'[`EncodeLut`], `(get(v) × 255 + 0,5) as u8`, sans interpolation ni
+/// conversion de nombre : dans chaque intervalle de la table, la valeur interpolée ne
+/// fait que croître avec la position, et la courbe ne monte jamais de plus d'un octet
+/// par intervalle (au plus raide, le sRGB monte de 0,8 octet). L'octet est donc celui
+/// du début de l'intervalle, ou le suivant au‑delà d'un seuil, cherché une fois pour
+/// toutes parmi les nombres flottants : les mêmes octets pour toute entrée.
+pub struct Encode8Lut {
+    base: Vec<u8>,
+    step: Vec<f32>,
+}
+
+impl Encode8Lut {
+    /// `None` si la courbe monte de plus d'un octet dans un intervalle (alors il faut
+    /// interpoler).
+    pub fn new(lut: &EncodeLut) -> Option<Self> {
+        let byte = |i: usize, t: f32| ((lut.0[i] + (lut.0[i + 1] - lut.0[i]) * t) * 255.0 + 0.5) as u8;
+        let mut base = Vec::with_capacity(EncodeLut::SIZE);
+        let mut step = Vec::with_capacity(EncodeLut::SIZE);
+        let one = 1.0f32.to_bits();
+        for i in 0..EncodeLut::SIZE {
+            let (lo, hi) = (byte(i, 0.0), byte(i, 1.0));
+            if hi < lo || hi - lo > 1 {
+                return None;
+            }
+            // Le plus petit t de [0, 1] qui donne l'octet suivant : les flottants
+            // positifs sont rangés comme leurs bits.
+            let threshold = if hi == lo {
+                f32::INFINITY
+            } else {
+                let (mut a, mut b) = (0u32, one);
+                while a < b {
+                    let mid = a + (b - a) / 2;
+                    if byte(i, f32::from_bits(mid)) > lo {
+                        b = mid;
+                    } else {
+                        a = mid + 1;
+                    }
+                }
+                f32::from_bits(a)
+            };
+            base.push(lo);
+            step.push(threshold);
+        }
+        // Un nombre indéfini donne 0 par l'interpolation, le début de la table ici.
+        (base[0] == 0).then_some(Self { base, step })
+    }
+
+    #[inline]
+    pub fn get(&self, v: f32) -> u8 {
+        let x = v.clamp(0.0, 1.0) * EncodeLut::SIZE as f32;
+        let i = (x as usize).min(EncodeLut::SIZE - 1);
+        let t = x - i as f32;
+        self.base[i] + u8::from(t >= self.step[i])
+    }
+}
+
 /// Les espaces de sortie.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum OutputSpace {
@@ -464,6 +520,52 @@ impl OutputSpace {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// La table des octets rend exactement les octets de l'interpolation, pour chaque
+    /// flottant de 0 à 1 (plus d'un milliard), en dessous, au‑dessus, infinis et
+    /// indéfinis compris, dans les quatre espaces de sortie.
+    #[test]
+    fn byte_table_gives_the_interpolated_bytes() {
+        for space in [
+            OutputSpace::Srgb,
+            OutputSpace::DisplayP3,
+            OutputSpace::Rec2020,
+            OutputSpace::ProPhoto,
+        ] {
+            let lut = EncodeLut::new(|v| space.encode(v));
+            let bytes = Encode8Lut::new(&lut).expect("au plus un octet par intervalle");
+            let old = |v: f32| (lut.get(v) * 255.0 + 0.5) as u8;
+            for v in [
+                f32::NAN,
+                -f32::NAN,
+                f32::INFINITY,
+                f32::NEG_INFINITY,
+                -1.0,
+                -0.0,
+                1.0,
+                1.5,
+                1e30,
+                f32::MIN_POSITIVE,
+            ] {
+                assert_eq!(bytes.get(v), old(v), "{space:?} {v}");
+            }
+            let one = 1.0f32.to_bits();
+            let threads = std::thread::available_parallelism().map_or(4, |n| n.get()) as u32;
+            std::thread::scope(|scope| {
+                for k in 0..threads {
+                    let (bytes, old) = (&bytes, &old);
+                    scope.spawn(move || {
+                        let mut b = k;
+                        while b <= one {
+                            let v = f32::from_bits(b);
+                            assert_eq!(bytes.get(v), old(v), "{space:?} {v}");
+                            b += threads;
+                        }
+                    });
+                }
+            });
+        }
+    }
 
     fn close(a: f32, b: f32, eps: f32) -> bool {
         (a - b).abs() <= eps
