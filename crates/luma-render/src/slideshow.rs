@@ -24,6 +24,8 @@ pub struct Slideshow {
     pub quality: u8,
     /// Le nom de chaque photo sous elle.
     pub captions: bool,
+    /// Les photos dans un ordre tiré au hasard, chaque fois que la page s'ouvre.
+    pub shuffle: bool,
     /// Le passage d'une photo à la suivante.
     pub transition: Transition,
     /// La musique, copiée dans le dossier et jouée en boucle.
@@ -80,6 +82,7 @@ impl Default for Slideshow {
             size: 2048,
             quality: 85,
             captions: false,
+            shuffle: false,
             transition: Transition::Fade,
             music: None,
         }
@@ -163,6 +166,11 @@ img {{ position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cont
 <div id="nom"></div><div id="titre">{title}</div><div id="barre"></div>
 <script>
 const photos = [{list}];
+// Dans le désordre, si on l'a demandé : un nouveau tirage à chaque ouverture.
+if ({shuffle}) for (let k = photos.length - 1; k > 0; k--) {{
+  const j = Math.floor(Math.random() * (k + 1));
+  [photos[k], photos[j]] = [photos[j], photos[k]];
+}}
 const temps = {ms};
 let i = -1, haut = document.getElementById("a"), bas = document.getElementById("b");
 let pause = false, minuterie = null;
@@ -225,6 +233,7 @@ joue();
 </html>
 "#,
         title_ms = if show.title.is_empty() { 0 } else { 2500 },
+        shuffle = show.shuffle,
         style = transition_style(show.transition, ms, fade),
         audio = music_file(show)
             .map(|f| format!(
@@ -367,6 +376,16 @@ mod tests {
         for t in Transition::ALL {
             assert_eq!(Transition::from_key(t.key()), Some(t));
         }
+        // L'ordre au hasard : tiré dans la page, seulement si on le demande.
+        assert!(page(Transition::Fade, None).contains("if (false) for (let k"));
+        let shuffled = html(
+            &Slideshow {
+                shuffle: true,
+                ..Slideshow::default()
+            },
+            &slides,
+        );
+        assert!(shuffled.contains("if (true) for (let k"));
     }
 
     #[test]
