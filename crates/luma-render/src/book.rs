@@ -60,6 +60,9 @@ pub struct Book {
     /// La disposition choisie : le nombre de photos de chaque page après la couverture
     /// (1, 2 ou 4), répété jusqu'à la fin ; vide : choisie d'après les photos ([`plan`]).
     pub rhythm: Vec<usize>,
+    /// Le nombre de photos des premières pages après la couverture, choisi page par page
+    /// (1, 2 ou 4) ; les pages suivantes, selon `rhythm`.
+    pub pages: Vec<usize>,
 }
 
 impl Default for Book {
@@ -76,6 +79,7 @@ impl Default for Book {
             opening: String::new(),
             closing: String::new(),
             rhythm: Vec::new(),
+            pages: Vec::new(),
         }
     }
 }
@@ -170,6 +174,51 @@ pub fn plan_with(landscape: &[bool], rhythm: &[usize]) -> Vec<Sheet> {
     sheets
 }
 
+/// Les pages du livre quand les premières sont choisies une à une : la couverture, puis
+/// `fixed` photos par page (1, 2 ou 4 ; moins s'il n'en reste pas assez), puis les
+/// photos restantes selon [`plan_with`].
+pub fn plan_fixed(landscape: &[bool], fixed: &[usize], rhythm: &[usize]) -> Vec<Sheet> {
+    if fixed.is_empty() || landscape.is_empty() {
+        return plan_with(landscape, rhythm);
+    }
+    let mut sheets = vec![Sheet {
+        kind: Kind::Cover,
+        photos: vec![0],
+    }];
+    let mut i = 1;
+    for &want in fixed {
+        if i >= landscape.len() {
+            return sheets;
+        }
+        let left = landscape.len() - i;
+        let n = [4, 2, 1].into_iter().find(|&n| n <= want && n <= left).unwrap_or(1);
+        let kind = match n {
+            4 => Kind::Four,
+            2 => Kind::Pair,
+            _ => Kind::Single,
+        };
+        sheets.push(Sheet {
+            kind,
+            photos: (i..i + n).collect(),
+        });
+        i += n;
+    }
+    if i < landscape.len() {
+        // Le reste comme un livre à part, dont la photo d'avant tiendrait la couverture.
+        let offset = i - 1;
+        sheets.extend(
+            plan_with(&landscape[offset..], rhythm)
+                .into_iter()
+                .skip(1)
+                .map(|mut s| {
+                    s.photos.iter_mut().for_each(|k| *k += offset);
+                    s
+                }),
+        );
+    }
+    sheets
+}
+
 /// Une disposition écrite « 1,2,4 » (ou « 1 2 4 ») ; vide ou « auto » : aucune.
 pub fn parse_rhythm(text: &str) -> Result<Vec<usize>, String> {
     let t = text.trim();
@@ -201,7 +250,7 @@ impl Book {
 
     /// Les pages du livre : celles des photos ([`plan`]), avec ses pages de texte.
     pub fn sheets(&self, landscape: &[bool]) -> Vec<Sheet> {
-        let mut sheets = plan_with(landscape, &self.rhythm);
+        let mut sheets = plan_fixed(landscape, &self.pages, &self.rhythm);
         if sheets.is_empty() {
             return sheets;
         }
@@ -388,6 +437,33 @@ mod tests {
         // Sans texte : pas de page de texte.
         assert_eq!(Book::default().sheets(&[true; 3]), plan(&[true; 3]));
         assert!(Book::default().sheets(&[]).is_empty());
+    }
+
+    #[test]
+    fn pages_chosen_one_by_one() {
+        let photos = |sheets: &[Sheet]| sheets.iter().map(|s| s.photos.clone()).collect::<Vec<_>>();
+        let landscape = [true; 10];
+        // Une page de quatre, une d'une, puis deux par page.
+        let sheets = plan_fixed(&landscape, &[4, 1], &[2]);
+        assert_eq!(
+            photos(&sheets),
+            [vec![0], vec![1, 2, 3, 4], vec![5], vec![6, 7], vec![8, 9]]
+        );
+        assert_eq!(sheets[1].kind, Kind::Four);
+        // Sans disposition pour la suite : les pages d'après, choisies d'après les photos,
+        // et chaque photo une fois, dans l'ordre.
+        let sheets = plan_fixed(&landscape, &[1], &[]);
+        assert_eq!(photos(&sheets)[..2], [vec![0], vec![1]]);
+        let all: Vec<usize> = sheets.iter().flat_map(|s| s.photos.clone()).collect();
+        assert_eq!(all, (0..10).collect::<Vec<_>>());
+        // Plus de pages choisies que de photos : le livre s'arrête ; une page de quatre
+        // qui n'en a plus que deux en prend deux.
+        assert_eq!(
+            photos(&plan_fixed(&[true; 4], &[1, 4, 4], &[])),
+            [vec![0], vec![1], vec![2, 3]]
+        );
+        // Rien de choisi : la disposition d'avant.
+        assert_eq!(plan_fixed(&landscape, &[], &[2]), plan_with(&landscape, &[2]));
     }
 
     #[test]
