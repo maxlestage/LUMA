@@ -106,6 +106,10 @@ The professional photo library, step by step.
 - **The card ejected after importing** (Mac, Linux): “Eject the card after importing”,
   once every photo has been copied and verified (`luma import --eject`); if the system
   refuses (an app is still reading the card), the import says so, without failing.
+- **Import on Windows**: the inserted card is found on its own (a drive from D: to Z:
+  with a DCIM folder), and ejected after importing as on Mac and Linux. Cards are looked
+  for in the background, every two seconds while the window is open: a card inserted
+  later shows up, and a missing network drive no longer freezes the window.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
