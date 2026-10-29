@@ -15,7 +15,8 @@ use std::path::{Path, PathBuf};
 use crate::Entry;
 
 /// Les cartes mémoire montées : les volumes qui ont un dossier `DCIM` (la norme des
-/// appareils photo). Sur Mac `/Volumes/…`, ailleurs `/media/…` et `/run/media/…`.
+/// appareils photo). Sur Mac `/Volumes/…`, sous Linux `/media/…` et `/run/media/…`,
+/// sous Windows les lecteurs D: à Z:.
 pub fn cards() -> Vec<PathBuf> {
     let mut roots = vec![PathBuf::from("/Volumes")];
     if let Some(user) = std::env::var_os("USER") {
@@ -23,10 +24,26 @@ pub fn cards() -> Vec<PathBuf> {
         roots.push(Path::new("/run/media").join(&user));
     }
     roots.push(PathBuf::from("/media"));
+    // Sous Windows, chaque lecteur est un volume : D: à Z: (A: et B:, les disquettes,
+    // et C:, le disque du système, ne sont pas des cartes).
+    let drives: Vec<PathBuf> = if cfg!(windows) {
+        (b'D'..=b'Z')
+            .map(|l| PathBuf::from(format!("{}:\\", l as char)))
+            .collect()
+    } else {
+        Vec::new()
+    };
+    cards_in(&roots, &drives)
+}
+
+/// Les cartes parmi les volumes de `roots` (les dossiers où le système les monte) et
+/// parmi `volumes` (des volumes eux‑mêmes) : celles qui ont un dossier DCIM.
+pub fn cards_in(roots: &[PathBuf], volumes: &[PathBuf]) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = roots
         .iter()
         .filter_map(|r| std::fs::read_dir(r).ok())
         .flat_map(|d| d.flatten().map(|e| e.path()))
+        .chain(volumes.iter().cloned())
         .filter(|v| v.join("DCIM").is_dir())
         .collect();
     out.sort();
@@ -35,7 +52,7 @@ pub fn cards() -> Vec<PathBuf> {
 }
 
 /// Éjecte la carte montée en `mount`, une fois l'import fini : sur Mac par `diskutil` ;
-/// sous Linux par `gio` (le bureau), sinon `umount`. Le message du système en cas
+/// sous Linux par `gio` (le bureau), sinon `umount` ; sous Windows par l'explorateur. Le message du système en cas
 /// d'échec (une app qui lit encore la carte, un dossier qui n'est pas une carte).
 pub fn eject(mount: &Path) -> Result<(), String> {
     let tries: &[(&str, &[&str])] = if cfg!(target_os = "macos") {
@@ -45,6 +62,9 @@ pub fn eject(mount: &Path) -> Result<(), String> {
     } else {
         &[]
     };
+    if cfg!(windows) {
+        return eject_windows(mount);
+    }
     let mut last = String::from("éjection non prise en charge ici");
     for (program, args) in tries {
         match std::process::Command::new(program).args(*args).arg(mount).output() {
@@ -62,6 +82,29 @@ pub fn eject(mount: &Path) -> Result<(), String> {
         }
     }
     Err(last)
+}
+
+/// Sous Windows : le verbe « Éjecter » de l'explorateur, sur le lecteur de la carte
+/// (`E:`). Il ne rend pas compte de son échec : la carte est éjectée si son lecteur a
+/// disparu dans les cinq secondes.
+fn eject_windows(mount: &Path) -> Result<(), String> {
+    let drive: String = mount.to_string_lossy().chars().take(2).collect();
+    if drive.len() != 2 || !drive.ends_with(':') || !drive.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return Err(format!("{} n'est pas un lecteur", mount.display()));
+    }
+    let script =
+        format!("(New-Object -ComObject Shell.Application).Namespace(17).ParseName('{drive}').InvokeVerb('Eject')");
+    std::process::Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()
+        .map_err(|e| format!("powershell : {e}"))?;
+    for _ in 0..50 {
+        if !mount.join("DCIM").exists() {
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    Err("Windows a refusé d'éjecter la carte (une app la lit encore ?)".into())
 }
 
 /// Les photos d'un dossier et de ses sous‑dossiers (les fichiers cachés exceptés).
@@ -383,6 +426,21 @@ mod tests {
             .map(|i| i.source.file_name().unwrap().to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, ["IMG_0001.CR3", "IMG_0001.JPG", "IMG_0003.CR3"]);
+    }
+
+    #[test]
+    fn cards_are_the_volumes_with_a_dcim_folder() {
+        let root = std::env::temp_dir().join(format!("luma-cartes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        for d in ["Volumes/CARTE/DCIM", "Volumes/Disque", "E/DCIM", "F"] {
+            std::fs::create_dir_all(root.join(d)).unwrap();
+        }
+        let found = cards_in(
+            &[root.join("Volumes"), root.join("absent")],
+            &[root.join("E"), root.join("F"), root.join("G")],
+        );
+        assert_eq!(found, [root.join("E"), root.join("Volumes/CARTE")]);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
