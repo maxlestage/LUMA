@@ -155,6 +155,9 @@ La fototeca profesional, paso a paso.
   (exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz,
   saturación, claridad, textura, nitidez, ruido, neblina), llevados al recorte. Los
   pinceles y las máscaras de sujeto, hechas de píxeles, no se recuperan.
+- **Track GPX en iPhone e iPad**: «Seguir un track GPX…» abre la app Archivos (iCloud
+  Drive, un reloj, una app de senderismo); el track elegido sitúa las fotos sin
+  posición, como en Mac.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
