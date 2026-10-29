@@ -186,6 +186,10 @@ La fototeca profesional, paso a paso.
   archivo lleva dentro (un JPEG, TIFF, DNG o PNG valorado en otra aplicación; un RAW
   valorado en la cámara): su valoración, su etiqueta y sus palabras clave entran en la
   fototeca y en la app. Un XMP al lado siempre manda.
+- **Exportación más ligera en memoria**: a resolución completa (una exportación, el
+  zoom 1:1), el render se hace en la propia imagen base en lugar de en una copia: el
+  pico de memoria de una exportación baja de un 19 a un 23 % (24 Mpx: 1,24 → 0,96 GB),
+  los archivos siguen idénticos byte a byte.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
