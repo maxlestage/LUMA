@@ -131,6 +131,10 @@ The professional photo library, step by step.
   (percentiles) are found twice as fast; a render is 3 to 15% shorter when these
   settings move (shadows on an RW2: 78 → 66 ms; grading on an ARW: 68 → 60 ms), without
   changing a pixel.
+- **iPhone DNGs open twice as fast**: a DNG already in RGB (ProRAW) is reduced straight
+  from its pixels, without first copying the whole image (145 MB); and a quarter turn is
+  done in tiles. First preview 220 → 109 ms, without changing a pixel; every portrait
+  photo also gains on orientation (15 → 9 ms).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
