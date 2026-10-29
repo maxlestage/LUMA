@@ -5675,6 +5675,30 @@ fr = Choisir photo par photo
 en = Choose photo by photo
 es = Elegir foto a foto
 
+fr = Pages du livre…
+en = Book pages…
+es = Páginas del libro…
+
+fr = Pages du livre : {pages}
+en = Book pages: {pages}
+es = Páginas del libro: {pages}
+
+fr = Chaque page et ses photos ; glisser une photo sur une autre les échange
+en = Each page and its photos; drag a photo onto another to swap them
+es = Cada página y sus fotos; arrastrar una foto sobre otra las intercambia
+
+fr = Glissez une photo sur une autre pour les échanger.
+en = Drag a photo onto another to swap them.
+es = Arrastre una foto sobre otra para intercambiarlas.
+
+fr = Couverture
+en = Cover
+es = Portada
+
+fr = Page {n}
+en = Page {n}
+es = Página {n}
+
 fr = Éjecter la carte après l'import
 en = Eject the card after importing
 es = Expulsar la tarjeta después de importar
