@@ -211,6 +211,10 @@ La photothèque professionnelle, étape par étape.
 - **Les photos par date** : le panneau Photothèque range toutes les photos par année
   (la plus récente d'abord, avec leur nombre) ; un triangle déplie les mois ; un clic
   sur une année ou un mois montre ses photos.
+- **Conversion 8 bits plus rapide** : chaque octet d'un JPEG ou de l'aperçu se lit
+  dans une table d'octets au lieu d'être interpolé puis arrondi (19 % de moins pour
+  24 Mpx, à l'export comme à l'écran) ; les mêmes octets, vérifiés pour chacun du
+  milliard de nombres possibles entre 0 et 1.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

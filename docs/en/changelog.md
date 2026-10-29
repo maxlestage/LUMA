@@ -196,6 +196,10 @@ The professional photo library, step by step.
 - **Photos by date**: the Library panel lists all photos by year (the most recent
   first, with their number); a triangle unfolds the months; a click on a year or a
   month shows its photos.
+- **Faster 8-bit conversion**: each byte of a JPEG or of the preview is read from a
+  byte table instead of being interpolated then rounded (19% less for 24 MP, on export
+  and on screen); the same bytes, checked for each of the billion possible numbers
+  between 0 and 1.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

@@ -679,13 +679,17 @@ pub fn encode8_rgba(img: &RgbImage, space: OutputSpace) -> Vec<u8> {
 /// quand on en a besoin (l'encodeur JPEG, bande par bande), aux mêmes octets.
 pub struct Encoder8 {
     lut: EncodeLut,
+    /// Les octets de `lut`, lus sans interpolation (deux fois moins de calcul).
+    bytes: Option<lc::Encode8Lut>,
     m: Mat3,
 }
 
 impl Encoder8 {
     pub fn new(space: OutputSpace) -> Encoder8 {
+        let lut = EncodeLut::new(|v| space.encode(v));
         Encoder8 {
-            lut: EncodeLut::new(|v| space.encode(v)),
+            bytes: lc::Encode8Lut::new(&lut),
+            lut,
             m: lc::rgb_to_rgb(&lc::WORKING, &space.primaries()),
         }
     }
@@ -708,7 +712,7 @@ impl Encoder8 {
         for (d, p) in head.as_chunks_mut::<LANES>().0.iter_mut().zip(blocks) {
             for (d, c) in d.iter_mut().zip(to_output_lanes(&self.m, p)) {
                 for i in 0..3 {
-                    d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
+                    d[i] = self.byte(c[i]);
                 }
                 rest(d);
             }
@@ -716,9 +720,18 @@ impl Encoder8 {
         for (d, &p) in tail.iter_mut().zip(left) {
             let c = to_output(&self.m, p);
             for i in 0..3 {
-                d[i] = (self.lut.get(c[i]) * 255.0 + 0.5) as u8;
+                d[i] = self.byte(c[i]);
             }
             rest(d);
+        }
+    }
+
+    /// L'octet d'une valeur linéaire de sortie (0 à 1).
+    #[inline]
+    fn byte(&self, v: f32) -> u8 {
+        match &self.bytes {
+            Some(b) => b.get(v),
+            None => (self.lut.get(v) * 255.0 + 0.5) as u8,
         }
     }
 }
@@ -776,10 +789,6 @@ pub fn histogram(encoded: &[u8]) -> [[u32; 256]; 3] {
 
 #[cfg(test)]
 mod tests {
-
-    /// La copie fondue dans la passe du rendu donne exactement les pixels de `finish` sur
-    /// une copie à part : réglages de base, puis toutes les étapes (blancs et noirs
-    /// adaptés, couleur, accentuation, effets), sur une image de largeur impaire.
     #[test]
     fn finish_from_gives_the_same_pixels() {
         use super::*;
