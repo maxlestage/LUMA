@@ -208,6 +208,9 @@ La photothèque professionnelle, étape par étape.
   une imprimante du système (la sienne par défaut d'abord), avec le nombre
   d'exemplaires, sans passer par le lecteur de PDF ; sur Mac et Linux, par le service
   d'impression du système. Sans imprimante, l'app le dit et « Ouvrir » reste là.
+- **Les photos par date** : le panneau Photothèque range toutes les photos par année
+  (la plus récente d'abord, avec leur nombre) ; un triangle déplie les mois ; un clic
+  sur une année ou un mois montre ses photos.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

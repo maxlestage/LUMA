@@ -255,6 +255,31 @@ impl Catalog {
         facet(self.entries.values().map(|e| e.lens.clone()).filter(|l| !l.is_empty()))
     }
 
+    /// Les photos par date de prise de vue : chaque année (la plus récente d'abord), son
+    /// nombre de photos, et ses mois (`"06"`, du plus récent au plus ancien) avec le leur.
+    /// Une photo sans date lisible n'y figure pas.
+    pub fn dates(&self) -> Vec<Year> {
+        let mut years: BTreeMap<&str, BTreeMap<&str, usize>> = BTreeMap::new();
+        for e in self.entries.values() {
+            let (Some(year), Some(month)) = (e.date.get(..4), e.date.get(5..7)) else {
+                continue;
+            };
+            if !year.bytes().all(|b| b.is_ascii_digit()) || !month.parse::<u8>().is_ok_and(|m| (1..=12).contains(&m)) {
+                continue;
+            }
+            *years.entry(year).or_default().entry(month).or_default() += 1;
+        }
+        years
+            .into_iter()
+            .rev()
+            .map(|(year, months)| Year {
+                year: year.to_owned(),
+                count: months.values().sum(),
+                months: months.into_iter().rev().map(|(m, n)| (m.to_owned(), n)).collect(),
+            })
+            .collect()
+    }
+
     /// Les dossiers du catalogue, sans doublon.
     pub fn folders(&self) -> Vec<PathBuf> {
         let mut v: Vec<PathBuf> = self
@@ -407,6 +432,14 @@ pub fn exists(path: &Path) -> bool {
     } else {
         path.is_file()
     }
+}
+
+/// Une année de [`Catalog::dates`] : son nombre de photos et ses mois.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Year {
+    pub year: String,
+    pub count: usize,
+    pub months: Vec<(String, usize)>,
 }
 
 /// Taille et date de modification d'un fichier ; (0, 0) s'il n'existe pas.
@@ -890,5 +923,37 @@ mod tests {
         assert_eq!(backup::list(&file).len(), 2);
         assert_eq!(std::fs::read(&good).unwrap(), b"un bon catalogue");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Les photos par année et par mois : les plus récentes d'abord ; une date sans
+    /// mois lisible, ou absente, n'entre pas.
+    #[test]
+    fn photos_by_year_and_month() {
+        let mut cat = Catalog::default();
+        for (name, date) in [
+            ("a", "2024-06-15T10:00:00"),
+            ("b", "2024-06-16T09:00:00"),
+            ("c", "2024-01-02T08:00:00"),
+            ("d", "2026-10-29T20:00:00"),
+            ("e", ""),
+            ("f", "2025-13-01T00:00:00"),
+            ("g", "inconnue"),
+        ] {
+            cat.insert(Entry {
+                path: PathBuf::from(format!("/photos/{name}.jpg")),
+                date: date.into(),
+                ..Entry::default()
+            });
+        }
+        let year = |y: &str, n, m: &[(&str, usize)]| Year {
+            year: y.into(),
+            count: n,
+            months: m.iter().map(|(a, b)| ((*a).to_owned(), *b)).collect(),
+        };
+        assert_eq!(
+            cat.dates(),
+            [year("2026", 1, &[("10", 1)]), year("2024", 3, &[("06", 2), ("01", 1)])]
+        );
+        assert!(Catalog::default().dates().is_empty());
     }
 }

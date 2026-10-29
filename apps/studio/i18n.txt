@@ -5868,3 +5868,61 @@ es = El último PDF, tal cual, sin pasar por el lector de PDF
 fr = Envoyé à l'imprimante {printer} : {file} ({id})
 en = Sent to printer {printer}: {file} ({id})
 es = Enviado a la impresora {printer}: {file} ({id})
+
+# ----- Les photos par date -----
+
+fr = Dates
+en = Dates
+es = Fechas
+
+fr = Les mois de cette année
+en = This year's months
+es = Los meses de este año
+
+fr = janvier
+en = January
+es = enero
+
+fr = février
+en = February
+es = febrero
+
+fr = mars
+en = March
+es = marzo
+
+fr = avril
+en = April
+es = abril
+
+fr = mai
+en = May
+es = mayo
+
+fr = juin
+en = June
+es = junio
+
+fr = juillet
+en = July
+es = julio
+
+fr = août
+en = August
+es = agosto
+
+fr = septembre
+en = September
+es = septiembre
+
+fr = octobre
+en = October
+es = octubre
+
+fr = novembre
+en = November
+es = noviembre
+
+fr = décembre
+en = December
+es = diciembre

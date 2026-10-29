@@ -172,6 +172,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | EXIF de las imágenes reveladas (JPEG, HEIC, AVIF, PNG, WebP, TIFF): fecha de la toma, cámara, objetivo, ajustes y posición GPS leídos como en un RAW; las fotos de un teléfono se ordenan por su fecha y aparecen en el mapa | ✅ |
 | Búsqueda y filtros (`luma catalog --search`): palabras sin tener en cuenta los acentos; valoración, bandera, etiqueta, fechas, ISO, focal, cámara, objetivo, palabra clave; recuento de palabras clave, cámaras y objetivos | ✅ |
 | Colecciones manuales e inteligentes (regla: valoración, fecha, cámara, objetivo, ISO, palabras clave…), guardadas en el catálogo | ✅ |
+| Fotos por fecha en el panel Fototeca: cada año con su número de fotos, sus meses desplegados con un clic; un año o un mes muestra sus fotos | ✅ |
 | Palabras clave en la app: escritura (varias a la vez, separadas por comas), añadidas y quitadas en todas las fotos seleccionadas, lista de palabras clave de la carpeta con su número, filtro de la cuadrícula | ✅ |
 | Fototeca en la app: cada carpeta abierta entra en ella (en segundo plano); todas las fotos, las colecciones y las carpetas, cada una con su número de fotos; búsqueda y filtros; vistas ordenadas por fecha de captura | ✅ |
 | Carpeta vigilada (captura conectada, tarjeta copiada): cada foto completa entra en la fototeca y en la tira, y se abre; `luma watch` | ✅ |
