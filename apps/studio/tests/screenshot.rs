@@ -3161,6 +3161,7 @@ fn premium_screen_on_iphone() {
 fn an_idle_screen_does_not_redraw() {
     let _gpu = one_at_a_time();
     let dir = std::env::temp_dir().join(format!("luma-repos-{}", std::process::id()));
+    let tmp = dir.clone();
     let mut harness = Harness::builder()
         .with_size([440.0, 956.0])
         .with_pixels_per_point(3.0)
@@ -3194,9 +3195,9 @@ fn an_idle_screen_does_not_redraw() {
         harness.step();
     }
     // Rien ne bouge : l'écran ne demande pas d'image de plus (la batterie).
-    assert!(
-        !harness.ctx.has_requested_repaint(),
-        "redessin demandé : {:?}",
-        harness.ctx.repaint_causes()
-    );
+    let repaint = harness.ctx.has_requested_repaint();
+    let causes = harness.ctx.repaint_causes();
+    drop(harness);
+    let _ = std::fs::remove_dir_all(&tmp);
+    assert!(!repaint, "redessin demandé : {causes:?}");
 }
