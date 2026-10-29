@@ -1882,6 +1882,23 @@ impl Studio {
     /// Place les photos du film qui n'ont pas de position d'après une trace GPX ;
     /// l'heure du boîtier est ramenée à l'heure universelle par l'écart qui en place le
     /// plus. Rend le nombre de photos placées.
+    /// Les documents choisis dans l'app Fichiers (iPhone, iPad) : une trace GPX place les
+    /// photos sans position ; le nombre de photos placées.
+    pub fn take_picked_documents(&mut self, documents: Vec<PathBuf>) -> usize {
+        let mut placed = 0;
+        for d in documents {
+            if d.extension().is_some_and(|x| x.eq_ignore_ascii_case("gpx")) {
+                placed += self.follow_gpx(&d);
+            } else {
+                self.status = trf(
+                    "{file} n'est pas une trace GPX.",
+                    &[("file", &file_name(&d))],
+                );
+            }
+        }
+        placed
+    }
+
     pub fn follow_gpx(&mut self, gpx: &Path) -> usize {
         use luma_library::geotag;
         const GAP: i64 = 3600;
@@ -6209,6 +6226,13 @@ impl Studio {
             self.rename_window(&ctx);
         }
         self.poll_printing(&ctx);
+        // Une trace choisie dans l'app Fichiers (iPhone, iPad).
+        if luma_apple::photos::AVAILABLE {
+            let picked = luma_apple::photos::picked_documents();
+            if !picked.is_empty() {
+                self.take_picked_documents(picked);
+            }
+        }
         self.tick_slideshow(&ctx);
         if self.print_open && allowed {
             self.print_window(&ctx);
@@ -7088,17 +7112,26 @@ impl Studio {
             if ui.button(tr("Cadrer sur les photos")).clicked() {
                 self.map = Some(None);
             }
-            // Le choix d'un fichier n'existe pas encore sur iPhone et iPad.
-            if !cfg!(target_os = "ios")
-                && ui
-                    .button(tr("Suivre une trace GPX…"))
-                    .on_hover_text(tr(
-                        "Placer les photos sans position d'après une trace GPX (téléphone, montre, GPS)",
-                    ))
-                    .clicked()
-                && let Some(path) = crate::dialogs::pick_gpx()
+            // Sur iPhone et iPad, l'app Fichiers : la trace arrive plus tard
+            // (`take_picked_documents`).
+            if ui
+                .button(tr("Suivre une trace GPX…"))
+                .on_hover_text(tr(
+                    "Placer les photos sans position d'après une trace GPX (téléphone, montre, GPS)",
+                ))
+                .clicked()
             {
-                self.follow_gpx(&path);
+                if luma_apple::photos::AVAILABLE {
+                    let opened = crate::dialogs::documents()
+                        .map(|d| d.join("Traces"))
+                        .ok_or("dossier Documents introuvable")
+                        .and_then(|d| luma_apple::photos::pick_document(d, &GPX_TYPES));
+                    if let Err(why) = opened {
+                        self.status = trf("Fichiers ne s'ouvre pas ({why}).", &[("why", &why)]);
+                    }
+                } else if let Some(path) = crate::dialogs::pick_gpx() {
+                    self.follow_gpx(&path);
+                }
             }
         } else if self.place.is_some() {
             ui.add_space(10.0);
@@ -12389,6 +12422,10 @@ fn file_name(p: &Path) -> String {
 }
 
 /// Le rectangle de taille `w × h` qui tient dans `area`, centré.
+/// Les types d'une trace GPX pour l'app Fichiers : le sien, et le XML ou n'importe quel
+/// fichier pour les apps qui ne le déclarent pas.
+const GPX_TYPES: [&str; 3] = ["com.topografix.gpx", "public.xml", "public.data"];
+
 /// Le moment d'une transition du diaporama : `t` va de 0 (la photo arrive) à 1 (elle
 /// est en place).
 struct SlideFrame {

@@ -2670,7 +2670,12 @@ fn map_of_geotagged_photos() {
             ),
         )
         .unwrap();
-        assert!(s.studio().follow_gpx(&gpx) >= 1);
+        // Comme une trace choisie dans l'app Fichiers (iPhone, iPad) : un autre fichier
+        // avec elle ne place rien, la trace place la photo.
+        let other = s.dir.join("notes.txt");
+        std::fs::write(&other, "pas une trace").unwrap();
+        assert_eq!(s.studio().take_picked_documents(vec![other]), 0);
+        assert!(s.studio().take_picked_documents(vec![gpx.clone()]) >= 1);
         let gps = s.studio().catalog().get(&photos[i]).unwrap().gps.unwrap();
         assert!(
             (gps[0] - 45.77).abs() < 1e-3 && (gps[1] - 4.84).abs() < 1e-3,

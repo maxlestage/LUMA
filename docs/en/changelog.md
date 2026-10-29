@@ -141,6 +141,9 @@ The professional photo library, step by step.
   highlights, shadows, whites, blacks, temperature, tint, saturation, clarity, texture,
   sharpness, noise, dehaze), brought into the crop. Brushes and subject masks, made of
   pixels, are not taken over.
+- **GPX track on iPhone and iPad**: “Follow a GPX track…” opens the Files app (iCloud
+  Drive, a watch, a hiking app); the chosen track places the photos that have no
+  position, as on Mac.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

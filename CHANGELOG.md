@@ -152,6 +152,9 @@ La photothèque professionnelle, étape par étape.
   lumières, ombres, blancs, noirs, température, teinte, saturation, clarté, texture,
   netteté, bruit, voile), ramenés dans le recadrage. Les pinceaux et les masques de
   sujet, faits de pixels, ne sont pas repris.
+- **Trace GPX sur iPhone et iPad** : « Suivre une trace GPX… » ouvre l'app Fichiers
+  (iCloud Drive, une montre, une app de randonnée) ; la trace choisie place les photos
+  sans position, comme sur Mac.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
