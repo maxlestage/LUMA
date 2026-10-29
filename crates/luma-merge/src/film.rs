@@ -93,6 +93,10 @@ const ANALYSIS: usize = 900;
 
 /// Les couleurs appariées d'une paire : (numérique, pellicule).
 fn samples(pair: &Pair) -> Result<Vec<([f32; 3], [f32; 3])>> {
+    // Une image vide (fichier abîmé) : rien à comparer, et pas de division par zéro.
+    if pair.digital.data.is_empty() || pair.film.data.is_empty() {
+        return Err(Error::Decode("une des deux images est vide".into()));
+    }
     let digital = crate::analysis(&pair.digital, ANALYSIS);
     let film = crate::analysis(&pair.film, ANALYSIS);
     let h = if pair.aligned {

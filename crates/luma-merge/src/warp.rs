@@ -101,6 +101,10 @@ fn transpose(img: &RgbImage, covered: &[bool]) -> (RgbImage, Vec<bool>) {
 /// Rend l'image et sa nouvelle couverture (presque tout, sauf là où une colonne ou une
 /// ligne entière était vide).
 pub fn boundary_warp(img: &RgbImage, covered: &[bool]) -> (RgbImage, Vec<bool>) {
+    // Rien à étirer : une image vide, ou une couverture qui ne lui correspond pas.
+    if img.data.is_empty() || covered.len() != img.data.len() {
+        return (img.clone(), covered.to_vec());
+    }
     let (cols, cover) = columns(img, covered);
     let (t, tc) = transpose(&cols, &cover);
     let (rows, rc) = columns(&t, &tc);
