@@ -92,7 +92,9 @@ La photothèque professionnelle, étape par étape.
   fichier temporaire renommé) : une app arrêtée ou un disque plein pendant l'écriture
   laisse l'ancien XMP entier, jamais un XMP coupé ; de même pour un préréglage
   enregistré, le XMP d'une fusion et l'état de la licence (une clé ou un achat ne se
-  perd plus sur un fichier coupé).
+  perd plus sur un fichier coupé). Les exports aussi (JPEG, PNG, TIFF) : un export
+  coupé ne laisse plus un fichier abîmé sous le nom voulu, ni n'abîme l'export d'avant
+  du même nom.
 - **Plus de place perdue** : un doublon de travail ou une vignette dont l'écriture
   échoue (disque plein) ou s'interrompt (app fermée) ne laisse plus de fichier à moitié
   écrit ; le ménage retire ceux d'avant (sur la machine d'essai : 5,3 Go retrouvés).
