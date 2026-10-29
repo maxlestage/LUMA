@@ -144,6 +144,47 @@ pub struct Local {
     pub defringe: f32,
 }
 
+impl Shape {
+    /// Ramène la forme dans des valeurs qui se dessinent : coordonnées, rayons et angle
+    /// finis et raisonnables (un XMP abîmé ou venu d'ailleurs), fondus de 0 à 100.
+    pub fn clamp(&mut self) {
+        let fix = |v: &mut f32, lo: f32, hi: f32, d: f32| *v = if v.is_finite() { v.clamp(lo, hi) } else { d };
+        let point = |p: &mut (f32, f32)| {
+            fix(&mut p.0, -10.0, 10.0, 0.5);
+            fix(&mut p.1, -10.0, 10.0, 0.5);
+        };
+        match self {
+            Shape::Linear { start, end } => {
+                point(start);
+                point(end);
+            }
+            Shape::Radial {
+                center,
+                radius,
+                angle,
+                feather,
+            } => {
+                point(center);
+                fix(&mut radius.0, 0.0, 10.0, 0.25);
+                fix(&mut radius.1, 0.0, 10.0, 0.25);
+                fix(angle, -360.0, 360.0, 0.0);
+                fix(feather, 0.0, 100.0, 50.0);
+            }
+            Shape::Brush { dabs } => {
+                dabs.retain(|d| d.x.is_finite() && d.y.is_finite());
+                for d in dabs {
+                    fix(&mut d.x, -10.0, 10.0, 0.5);
+                    fix(&mut d.y, -10.0, 10.0, 0.5);
+                    fix(&mut d.radius, 0.0, 10.0, 0.05);
+                    fix(&mut d.feather, 0.0, 100.0, 50.0);
+                    fix(&mut d.flow, 0.0, 100.0, 100.0);
+                }
+            }
+            Shape::Full | Shape::Sky => {}
+        }
+    }
+}
+
 impl Local {
     pub fn is_neutral(&self) -> bool {
         *self == Local::default()

@@ -120,6 +120,8 @@ fn number(attrs: &[(String, String)], name: &str) -> Option<f32> {
         .iter()
         .find(|(k, _)| k == name)
         .and_then(|(_, v)| v.trim().trim_start_matches('+').parse().ok())
+        // « NaN » et « inf » se lisent comme des nombres : pas pour un dégradé.
+        .filter(|v: &f32| v.is_finite())
 }
 
 fn yes(attrs: &[(String, String)], name: &str) -> bool {
@@ -292,6 +294,44 @@ mod tests {
 
     fn close(a: (f32, f32), b: (f32, f32)) -> bool {
         (a.0 - b.0).abs() < 1e-5 && (a.1 - b.1).abs() < 1e-5
+    }
+
+    /// Les nombres d'un masque : chaque coordonnée, rayon et angle de ses formes.
+    fn numbers(m: &Mask) -> Vec<f32> {
+        let mut v = vec![m.amount];
+        for shape in std::iter::once(&m.shape).chain(m.parts.iter().map(|p| &p.shape)) {
+            match shape {
+                Shape::Linear { start, end } => v.extend([start.0, start.1, end.0, end.1]),
+                Shape::Radial {
+                    center,
+                    radius,
+                    angle,
+                    feather,
+                } => v.extend([center.0, center.1, radius.0, radius.1, *angle, *feather]),
+                _ => {}
+            }
+        }
+        v
+    }
+
+    #[test]
+    fn numbers_that_are_not_numbers_are_not_read() {
+        // « NaN », « inf » : des nombres pour Rust, pas pour un dégradé. Un XMP abîmé ou
+        // écrit à la main n'amène jamais une forme qui ne se dessine pas.
+        for bad in ["NaN", "inf", "-inf", "1e39"] {
+            let text = XMP
+                .replace("crs:FullX=\"0.5\"", &format!("crs:FullX=\"{bad}\""))
+                .replace("crs:Top=\"0.2\"", &format!("crs:Top=\"{bad}\""))
+                .replace("crs:Angle=\"15\"", &format!("crs:Angle=\"{bad}\""))
+                .replace(
+                    "crs:CorrectionAmount=\"0.8\"",
+                    &format!("crs:CorrectionAmount=\"{bad}\""),
+                );
+            let s = crate::xmp::read(&text).unwrap();
+            for m in &s.masks {
+                assert!(numbers(m).iter().all(|v| v.is_finite()), "{bad} : {:?}", numbers(m));
+            }
+        }
     }
 
     #[test]
