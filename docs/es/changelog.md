@@ -222,6 +222,10 @@ La fototeca profesional, paso a paso.
   `date:30d` (los últimos treinta días, hoy incluido), `date:today` y
   `date:yesterday` (`30j`, `aujourd'hui`, `hier` en francés); una colección
   «date:7d» sigue los días.
+- **Encontrar lo que queda por hacer**: la búsqueda y las colecciones inteligentes
+  aceptan la valoración en rango o exacta (`rating:..2`, `rating:2..4`, `rating:=0`
+  para las fotos aún sin valorar) y `without:`: `without:rating`, `without:keyword`,
+  `without:location`, `without:label`, combinables.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

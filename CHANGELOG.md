@@ -219,6 +219,10 @@ La photothèque professionnelle, étape par étape.
   comprennent `date:30j` (les trente derniers jours, aujourd'hui compris),
   `date:aujourd'hui` et `date:hier` (`30d`, `today`, `yesterday` en anglais) ; une
   collection « date:7j » suit les jours.
+- **Trouver ce qui reste à faire** : la recherche et les collections dynamiques
+  prennent la note en plage ou exacte (`note:..2`, `note:2..4`, `note:=0` pour les
+  photos pas encore notées) et `sans:` : `sans:note`, `sans:mot` (aucun mot‑clé),
+  `sans:lieu` (pas de position), `sans:libellé`, à combiner.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
