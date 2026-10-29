@@ -460,9 +460,34 @@ fn read_entry(path: PathBuf, size: u64, modified: u64, sidecar: u64) -> Entry {
     };
     if sidecar != 0 {
         e.set_meta(read_meta(&xmp::sidecar_path(&path)));
+    } else if let Some(text) = embedded_xmp(&copies::source(&path)) {
+        // Sans XMP à côté : celui que le fichier porte en lui (une note, un libellé, des
+        // mots‑clés posés par un autre logiciel ou par le boîtier).
+        e.set_meta(xmp::read_meta(&text));
     }
     e.path = path;
     e
+}
+
+/// Où chercher le XMP qu'un fichier porte en lui : ses 256 premiers Ko (le paquet y est
+/// presque toujours, dans un JPEG, un TIFF, un DNG, un PNG ou un RAW qui en a un : à
+/// moins de 64 Ko dans tous ceux du corpus d'essai).
+const EMBEDDED_XMP_SPAN: u64 = 256 << 10;
+
+/// Le paquet XMP rangé dans le fichier lui‑même (`<x:xmpmeta …>…</x:xmpmeta>`), s'il y
+/// en a un dans ses premiers octets.
+pub fn embedded_xmp(path: &Path) -> Option<String> {
+    use std::io::Read;
+    let mut head = Vec::new();
+    std::fs::File::open(path)
+        .ok()?
+        .take(EMBEDDED_XMP_SPAN)
+        .read_to_end(&mut head)
+        .ok()?;
+    let find = |hay: &[u8], needle: &[u8]| hay.windows(needle.len()).position(|w| w == needle);
+    let start = find(&head, b"<x:xmpmeta")?;
+    let end = start + find(&head[start..], b"</x:xmpmeta>")? + b"</x:xmpmeta>".len();
+    String::from_utf8(head[start..end].to_vec()).ok()
 }
 
 /// Une date EXIF (`2026:10:26 14:03:00`) au format du catalogue.
@@ -524,6 +549,39 @@ mod tests {
         // La plus petite image PNG valide n'est pas nécessaire : seul le nom compte ici,
         // l'en‑tête d'une image développée n'étant pas lu.
         std::fs::write(path, b"\x89PNG\r\n\x1a\n").unwrap();
+    }
+
+    /// Le XMP porté par le fichier lui‑même (un JPEG noté ailleurs) : sa note, son
+    /// libellé et ses mots‑clés entrent au catalogue ; un XMP à côté l'emporte.
+    #[test]
+    fn the_xmp_inside_a_file_is_read() {
+        let dir = temp("xmp-integre");
+        let packet = r#"<x:xmpmeta xmlns:x="x"><rdf:RDF xmlns:rdf="r"><rdf:Description xmlns:xmp="m" xmlns:dc="d" xmp:Rating="4" xmp:Label="Rouge"><dc:subject><rdf:Bag><rdf:li>mer</rdf:li><rdf:li>été</rdf:li></rdf:Bag></dc:subject></rdf:Description></rdf:RDF></x:xmpmeta>"#;
+        let mut jpeg = vec![0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x10];
+        jpeg.extend_from_slice(packet.as_bytes());
+        jpeg.extend_from_slice(&[0xFF, 0xD9]);
+        let photo = dir.join("IMG_0001.jpg");
+        std::fs::write(&photo, &jpeg).unwrap();
+        assert!(embedded_xmp(&photo).is_some_and(|x| x.starts_with("<x:xmpmeta") && x.ends_with("</x:xmpmeta>")));
+        let e = entry_of(&photo);
+        assert_eq!((e.rating, e.label.as_str()), (4, "Rouge"));
+        assert_eq!(e.keywords, ["mer", "été"]);
+        // Un XMP à côté : c'est lui qui compte.
+        let meta = Meta {
+            rating: 2,
+            ..Meta::default()
+        };
+        std::fs::write(
+            xmp::sidecar_path(&photo),
+            xmp::write_with_meta(&luma_project::Settings::default(), &meta),
+        )
+        .unwrap();
+        assert_eq!(entry_of(&photo).rating, 2);
+        // Un fichier sans paquet : rien.
+        let plain = dir.join("b.jpg");
+        std::fs::write(&plain, [0xFF, 0xD8, 0xFF, 0xD9]).unwrap();
+        assert!(embedded_xmp(&plain).is_none());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// Une copie virtuelle entre au catalogue avec la date et la taille de son original,

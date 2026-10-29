@@ -179,6 +179,10 @@ La photothèque professionnelle, étape par étape.
   image par page (« JPEG » dans la fenêtre d'enregistrement, `-o planche.jpg` :
   `planche-1.jpg`, `planche-2.jpg`…), à la résolution choisie et en sRGB, pour un
   service d'impression de livres ou pour partager une planche contact.
+- **Les notes déjà posées ailleurs** : sans XMP à côté, LÜMA lit celui que le fichier
+  porte en lui (un JPEG, un TIFF, un DNG, un PNG noté par un autre logiciel ; un RAW
+  noté sur le boîtier) : sa note, son libellé et ses mots‑clés entrent dans la
+  photothèque et dans l'app. Un XMP à côté l'emporte toujours.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
