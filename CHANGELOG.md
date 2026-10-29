@@ -128,6 +128,10 @@ La photothèque professionnelle, étape par étape.
 - **Pages du livre** : « Pages du livre… » montre chaque page du livre photo en petit,
   ses photos à leur place ; glisser une photo sur une autre les échange, et le PDF suit
   ce nouvel ordre (la couverture comprise).
+- **Hautes lumières, ombres, clarté et étalonnage plus vifs** : leurs derniers calculs
+  huit pixels à la fois, et les repères de la photo (centiles) cherchés deux fois plus
+  vite ; un rendu 3 à 15 % plus court quand ces réglages bougent (ombres d'un RW2 :
+  78 → 66 ms ; étalonnage d'un ARW : 68 → 60 ms), sans changer un pixel.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
