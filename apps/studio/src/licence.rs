@@ -67,14 +67,7 @@ impl Transport for Curl {
 /// Ouvre une page (paiement, compte client) dans le navigateur. Sur iPhone et iPad, le
 /// lien est copié : `false`.
 pub fn open_url(url: &str) -> bool {
-    let program = if cfg!(target_os = "macos") {
-        "open"
-    } else if cfg!(target_os = "ios") {
-        return false;
-    } else {
-        "xdg-open"
-    };
-    std::process::Command::new(program).arg(url).spawn().is_ok()
+    crate::dialogs::open_with_system(url)
 }
 
 /// Le résultat d'une opération en ligne : le nouvel état, et un message (ou le refus :

@@ -742,6 +742,8 @@ pub struct Studio {
     pub print_convert: bool,
     /// Le PDF en cours : son résultat, les photos posées, leur nombre.
     printing: Option<Printing>,
+    /// Le dernier PDF, livre, diaporama ou galerie fait, à ouvrir avec l'app du système.
+    pub last_output: Option<PathBuf>,
     outputs_open: bool,
     /// L'ordre des photos du livre, choisi dans « Pages du livre » (vide : celui du film).
     pub book_order: Vec<PathBuf>,
@@ -1128,6 +1130,7 @@ impl Studio {
             print_layout: Default::default(),
             print_convert: true,
             printing: None,
+            last_output: None,
             outputs_open: false,
             book_order: Vec::new(),
             book_pages_open: false,
@@ -2196,12 +2199,12 @@ impl Studio {
                         &[("n", &n), ("file", &file)],
                     ),
                 };
-                if p.output == Output::Print {
-                    self.print_open = false;
-                }
+                // La fenêtre « Imprimer » reste ouverte : « Ouvrir » y propose le PDF.
                 let imported = p.output == Output::Import;
                 if imported {
                     self.import.report = self.status.clone();
+                } else {
+                    self.last_output = Some(path.clone());
                 }
                 self.printing = None;
                 if imported && n > 0 {
@@ -2968,6 +2971,48 @@ impl Studio {
             });
     }
 
+    /// « Ouvrir … » : le dernier PDF, livre, diaporama ou galerie fait, avec l'app du
+    /// système (le lecteur de PDF, d'où l'on imprime ; le navigateur). Pas sur iPhone et
+    /// iPad.
+    fn open_output_button(&mut self, ui: &mut Ui) {
+        let Some(path) = self.last_output.clone() else {
+            return;
+        };
+        if crate::dialogs::system_opener().is_none() {
+            return;
+        }
+        let shown = if path.extension().is_some_and(|x| x == "html") {
+            path.parent().map_or_else(|| file_name(&path), file_name)
+        } else {
+            file_name(&path)
+        };
+        if ui
+            .button(trf("Ouvrir « {file} »", &[("file", &shown)]))
+            .on_hover_text(tr(
+                "Avec l'app du système : le lecteur de PDF, d'où l'on imprime, ou le navigateur",
+            ))
+            .clicked()
+        {
+            self.open_last_output();
+        }
+    }
+
+    /// Ouvre le dernier PDF, livre, diaporama ou galerie fait avec l'app du système ;
+    /// `false` (et un message) si rien n'a pu être lancé.
+    pub fn open_last_output(&mut self) -> bool {
+        let Some(path) = self.last_output.clone() else {
+            return false;
+        };
+        let opened = crate::dialogs::open_with_system(&path.display().to_string());
+        if !opened {
+            self.status = trf(
+                "Le système n'a pas pu ouvrir {file}.",
+                &[("file", &path.display())],
+            );
+        }
+        opened
+    }
+
     /// La fenêtre « Pages du livre » : chaque page en petit, ses photos à leur place
     /// (leurs vignettes) ; glisser une photo sur une autre les échange, et le livre suit
     /// ce nouvel ordre.
@@ -3370,8 +3415,10 @@ impl Studio {
                         "Mise en page : {done} sur {n}",
                         &[("done", &done), ("n", &p.total)],
                     )));
+                } else {
+                    self.open_output_button(ui);
                 }
-            });
+                });
         self.outputs_open = open && !play;
         if play {
             self.start_slideshow();
@@ -3598,9 +3645,12 @@ impl Studio {
                         );
                     }
                     None => {
-                        go = ui
-                            .add_enabled(pages > 0, egui::Button::new(tr("Créer le PDF…")))
-                            .clicked();
+                        ui.horizontal(|ui| {
+                            go = ui
+                                .add_enabled(pages > 0, egui::Button::new(tr("Créer le PDF…")))
+                                .clicked();
+                            self.open_output_button(ui);
+                        });
                     }
                 }
             });

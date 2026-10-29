@@ -5675,6 +5675,18 @@ fr = Choisir photo par photo
 en = Choose photo by photo
 es = Elegir foto a foto
 
+fr = Ouvrir « {file} »
+en = Open “{file}”
+es = Abrir «{file}»
+
+fr = Avec l'app du système : le lecteur de PDF, d'où l'on imprime, ou le navigateur
+en = With the system's app: the PDF reader, to print from, or the browser
+es = Con la app del sistema: el lector de PDF, desde el que se imprime, o el navegador
+
+fr = Le système n'a pas pu ouvrir {file}.
+en = The system could not open {file}.
+es = El sistema no pudo abrir {file}.
+
 fr = {file} n'est pas une trace GPX.
 en = {file} is not a GPX track.
 es = {file} no es una traza GPX.
