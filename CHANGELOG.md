@@ -155,6 +155,11 @@ La photothèque professionnelle, étape par étape.
 - **Trace GPX sur iPhone et iPad** : « Suivre une trace GPX… » ouvre l'app Fichiers
   (iCloud Drive, une montre, une app de randonnée) ; la trace choisie place les photos
   sans position, comme sur Mac.
+- **Premier aperçu plus rapide** : la réduction du capteur qui le prépare ne cherche
+  plus la couleur de chaque photosite (une table par place dans le motif, et un chemin
+  à part pour les capteurs Bayer) : 30 % plus courte (X‑Trans 90 → 58 ms) ; le premier
+  aperçu 4 à 19 % plus court (RAF 216 → 175 ms, NEF 127 → 110 ms), sans changer un
+  pixel.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
