@@ -152,6 +152,10 @@ The professional photo library, step by step.
   printing and the photo book; pages are converted to its four inks (black point
   compensated) and the PDF is in CMYK, its inks kept lossless (“Print…”, `luma print
   --profile`, `luma book --profile`).
+- **Open the finished PDF**: “Open …” opens the last PDF, book, slideshow or gallery
+  with the system's app (the PDF reader, to print from; the browser); the “Print” window
+  stays open once the PDF is made. On Windows, links (account, payment) finally open:
+  LÜMA was launching a Linux program there.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

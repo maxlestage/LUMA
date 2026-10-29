@@ -167,6 +167,10 @@ La fototeca profesional, paso a paso.
   imprenta) para la impresión y el libro de fotos; las páginas se convierten a sus
   cuatro tintas (con compensación del punto negro) y el PDF está en CMYK, sus tintas
   sin pérdida («Imprimir…», `luma print --profile`, `luma book --profile`).
+- **Abrir el PDF hecho**: «Abrir …» abre el último PDF, libro, presentación o galería
+  con la app del sistema (el lector de PDF, desde el que se imprime; el navegador); la
+  ventana «Imprimir» queda abierta una vez hecho el PDF. En Windows, los enlaces (cuenta,
+  pago) por fin se abren: LÜMA lanzaba allí un programa de Linux.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

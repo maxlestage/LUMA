@@ -303,3 +303,24 @@ pub fn gallery_dir(name: &str) -> Option<PathBuf> {
 pub fn gallery_dir(name: &str) -> Option<PathBuf> {
     Some(documents()?.join("Galeries").join(name))
 }
+
+/// Le programme qui ouvre un fichier ou une page avec l'app choisie par le système : sur
+/// Mac `open`, sous Windows l'explorateur, sous Linux `xdg-open` ; `None` sur iPhone et
+/// iPad (pas de programme à lancer).
+pub fn system_opener() -> Option<&'static str> {
+    if cfg!(target_os = "ios") {
+        None
+    } else if cfg!(target_os = "macos") {
+        Some("open")
+    } else if cfg!(windows) {
+        Some("explorer")
+    } else {
+        Some("xdg-open")
+    }
+}
+
+/// Ouvre `target` (un PDF, une page web, un lien) avec l'app du système : le lecteur de
+/// PDF, d'où l'on imprime ; le navigateur. `false` si rien n'a pu être lancé.
+pub fn open_with_system(target: &str) -> bool {
+    system_opener().is_some_and(|p| std::process::Command::new(p).arg(target).spawn().is_ok())
+}

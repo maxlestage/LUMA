@@ -164,6 +164,10 @@ La photothèque professionnelle, étape par étape.
   accepté pour l'impression et le livre photo ; les pages sont converties vers ses
   quatre encres (noir compensé) et le PDF est en CMJN, ses encres gardées sans perte
   (« Imprimer… », `luma print --profile`, `luma book --profile`).
+- **Ouvrir le PDF fait** : « Ouvrir … » ouvre le dernier PDF, livre, diaporama ou
+  galerie avec l'app du système (le lecteur de PDF, d'où l'on imprime ; le navigateur) ;
+  la fenêtre « Imprimer » reste ouverte une fois le PDF fait. Sous Windows, les liens
+  (compte, paiement) s'ouvrent enfin : LÜMA y lançait un programme de Linux.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
