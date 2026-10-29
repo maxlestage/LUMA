@@ -189,6 +189,10 @@ The professional photo library, step by step.
   conversion for the screen is done in one pass, on all cores: a 4.4 MP preview 10 to
   15% faster, the conversion of a 24 MP image 38% faster (1:1 zoom, compare, look
   previews); the same pixels, byte for byte.
+- **Send to printer**: in “Print…”, the finished PDF goes straight to a system
+  printer (the default one first), with the number of copies, without going through
+  the PDF viewer; on Mac and Linux, through the system's printing service. With no
+  printer, the app says so and “Open” stays available.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

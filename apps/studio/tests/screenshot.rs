@@ -2750,6 +2750,30 @@ fn print_layout_and_pdf() {
     {
         assert!(!s.studio().open_last_output());
     }
+    // L'envoi direct à une imprimante du système : proposé pour le PDF ; ici, sans
+    // service d'impression, l'envoi échoue et le dit.
+    if luma_studio::printers::AVAILABLE {
+        s.studio()
+            .use_printers(vec!["Bureau".into(), "Salon_Photo".into()]);
+        for _ in 0..3 {
+            s.harness.step();
+        }
+        assert!(s.harness.query_by_label("Envoyer à l'imprimante").is_some());
+        if std::process::Command::new("lp").arg("-h").output().is_err() {
+            assert!(!s.studio().send_to_printer());
+            assert!(s.studio().status().starts_with("Impression impossible"));
+        }
+        s.studio().use_printers(Vec::new());
+        for _ in 0..3 {
+            s.harness.step();
+        }
+        assert!(s.harness.query_by_label("Envoyer à l'imprimante").is_none());
+        assert!(
+            s.harness
+                .query_by_label("Aucune imprimante trouvée : ouvrez le PDF pour l'imprimer.")
+                .is_some()
+        );
+    }
     // Les mêmes pages en JPEG : une image par page, la première à ouvrir.
     let jpeg = dir.join("Planche.jpg");
     s.studio().print_pdf(jpeg.clone());
@@ -2757,6 +2781,11 @@ fn print_layout_and_pdf() {
     let first = dir.join("Planche-1.jpg");
     assert!(first.is_file() && dir.join("Planche-2.jpg").is_file());
     assert_eq!(s.studio().last_output.as_deref(), Some(first.as_path()));
+    // Des pages en JPEG : pas d'envoi direct (le PDF seul).
+    for _ in 0..3 {
+        s.harness.step();
+    }
+    assert!(s.harness.query_by_label("Envoyer à l'imprimante").is_none());
 }
 
 #[test]

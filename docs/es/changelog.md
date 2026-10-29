@@ -207,6 +207,10 @@ La fototeca profesional, paso a paso.
   una vista de 4,4 Mpx entre un 10 y un 15 % más rápida, la conversión de una imagen de
   24 Mpx un 38 % más rápida (zoom 1:1, comparación, vistas de los looks); los mismos
   píxeles, byte a byte.
+- **Enviar a la impresora**: en «Imprimir…», el PDF hecho va directamente a una
+  impresora del sistema (la predeterminada primero), con el número de copias, sin
+  pasar por el lector de PDF; en Mac y Linux, por el servicio de impresión del
+  sistema. Sin impresora, la app lo dice y «Abrir» sigue ahí.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
