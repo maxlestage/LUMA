@@ -168,6 +168,9 @@ La photothèque professionnelle, étape par étape.
   galerie avec l'app du système (le lecteur de PDF, d'où l'on imprime ; le navigateur) ;
   la fenêtre « Imprimer » reste ouverte une fois le PDF fait. Sous Windows, les liens
   (compte, paiement) s'ouvrent enfin : LÜMA y lançait un programme de Linux.
+- **Diaporama dans un ordre aléatoire** : « Ordre aléatoire », dans l'app (chaque
+  photo une fois avant un nouveau tirage) et dans le diaporama exporté (un nouveau
+  tirage à chaque ouverture de la page ; `luma slideshow --shuffle`).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

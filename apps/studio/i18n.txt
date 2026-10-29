@@ -5675,6 +5675,10 @@ fr = Choisir photo par photo
 en = Choose photo by photo
 es = Elegir foto a foto
 
+fr = Ordre aléatoire
+en = Shuffle
+es = Orden aleatorio
+
 fr = Ouvrir « {file} »
 en = Open “{file}”
 es = Abrir «{file}»

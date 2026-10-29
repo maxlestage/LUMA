@@ -214,7 +214,13 @@ et blanc, vignetage après recadrage et grain existent).
   recadrage ; vérifier les conventions (angle du radial, inversion des anciens
   radiaux) sur de vrais fichiers.
 - Premier aperçu : la correction d'objectif des Sony et des Olympus (courbes) coûte
-  encore 60 à 90 ms sur l'image réduite de 6 Mpx, plus que la réduction elle‑même.
+  encore 60 à 90 ms sur l'image réduite de 6 Mpx (mesuré : l'image neuve 12 ms, les
+  coordonnées 26 ms, les lectures bilinéaires 32 ms) ; les calculs d'adresses en
+  colonnes n'y gagnent rien : il y faudrait des instructions SIMD explicites, ou le
+  GPU.
+- Pistes mesurées sans gain (mêmes pixels) : la réduction par aires à intervalles à plat
+  (limitée par la mémoire : 14 ms pour 6 Mpx → 2,8 Mpx), les deux plans de couleur de
+  la réduction du bruit lissés ensemble (dans le bruit des mesures).
 - Le test GPU `same_as_cpu` a planté une fois (SIGSEGV) sur le Vulkan logiciel de la CI,
   sans changement de `luma-gpu` : à surveiller.
 - La suppression d'une branche distante par `git push --delete` est refusée par le
@@ -401,3 +407,4 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-29 | Impression en CMJN : `Conversion` accepte un profil CMJN (quatre encres par case de sa table, `apply_cmyk`, `to_cmyk`) ; la page convertie garde ses encres (`Page.cmyk`, `print::convert`), le PDF les porte en `/DeviceCMYK`, compressées sans perte (`/FlateDecode`, miniz_oxide en Rust pur, déjà dans l'arbre) ; essayé d'abord en JPEG CMJN, écarté : le décodeur de référence relit les encres inversées, sans garantie d'un lecteur de PDF à l'autre | Essais `conversion_to_a_cmyk_printer` (blanc sans encre, noir au plus noir, gris à mi‑encre), `the_black_ink_profile_file_is_up_to_date` (le profil d'essai rangé), `a_cmyk_printer_gets_a_cmyk_pdf` (papier sans encre, photo noire, PDF CMJN relu sans perte), `luma print --profile encre-noire.icc` (un ARW en PDF CMJN), un profil à sens unique refusé |
 | 2026-10-29 | Stabilité (rendu, images vides) : une image sans pixel (0 × 0) faisait paniquer le développement (bruit, accentuation : des lignes de largeur nulle) et l'accentuation de sortie de l'export. `develop_base` et `finish_layers` rendent maintenant l'image vide telle quelle, et `detail::sharpen` n'y touche pas | Essais : `tiny_images_render_with_every_setting` (tous les réglages) avec une image de 0 × 0 en plus, et `output_sharpening_of_tiny_images` (trois supports, 0 × 0 à 4 × 1) : aucune panique (avant : panique dans `detail.rs`) |
 | 2026-10-29 | « Ouvrir … » : le dernier PDF, livre, diaporama ou galerie fait (`last_output`), ouvert avec l'app du système (`dialogs::open_with_system` : `open` sur Mac, l'explorateur sous Windows, `xdg-open` sous Linux ; pas sur iPhone et iPad) ; la fenêtre « Imprimer » reste ouverte après le PDF ; `licence::open_url` passe par la même fonction : sous Windows, les liens lançaient `xdg-open`, qui n'y existe pas | Essai d'écran `print_layout_and_pdf` : le PDF fait, `last_output` le désigne, le bouton « Ouvrir « … » » est là ; sans `xdg-open` (le conteneur d'essai), l'ouverture échoue avec un message. Pas essayé sous Windows ni sur Mac |
+| 2026-10-29 | Diaporama : « Ordre aléatoire » ; dans l'app, un tirage (Fisher–Yates, graine de l'heure) des photos du film, chaque photo une fois avant un nouveau tirage ; exporté, la page tire l'ordre à chaque ouverture ; `luma slideshow --shuffle` | Essais `a_shuffle_is_a_permutation`, `transitions_and_music` (le tirage seulement s'il est demandé) ; essai d'écran `slideshow_and_photo_book` : les 7 photos vues chacune une fois avant toute répétition |

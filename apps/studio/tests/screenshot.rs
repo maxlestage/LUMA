@@ -2809,6 +2809,33 @@ fn slideshow_and_photo_book() {
     s.keys(&[(NONE, Key::Escape)]);
     assert!(!s.studio().is_playing());
 
+    // Au hasard : chaque photo une fois avant de revenir à une déjà vue.
+    s.studio().show.shuffle = true;
+    s.studio().show.fade = 0.0;
+    s.studio().show.seconds = 0.5;
+    s.studio().start_slideshow();
+    s.harness.step();
+    let mut seen = vec![s.studio().current_path().unwrap().to_path_buf()];
+    let start = Instant::now();
+    while seen.len() < all {
+        assert!(
+            start.elapsed() < Duration::from_secs(90),
+            "le diaporama n'avance pas : {seen:?}"
+        );
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(20));
+        let now = s.studio().current_path().unwrap().to_path_buf();
+        if now != *seen.last().unwrap() {
+            assert!(
+                !seen.contains(&now),
+                "{now:?} revient avant les autres : {seen:?}"
+            );
+            seen.push(now);
+        }
+    }
+    s.keys(&[(NONE, Key::Escape)]);
+    s.studio().show.shuffle = false;
+
     // Les pages du livre : chacune en petit ; deux photos échangées, le livre suit.
     s.studio().book_pages_open = true;
     for _ in 0..3 {

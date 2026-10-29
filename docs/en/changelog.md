@@ -156,6 +156,9 @@ The professional photo library, step by step.
   with the system's app (the PDF reader, to print from; the browser); the “Print” window
   stays open once the PDF is made. On Windows, links (account, payment) finally open:
   LÜMA was launching a Linux program there.
+- **Slideshow in random order**: “Shuffle”, in the app (each photo once before a new
+  draw) and in the exported slideshow (a new draw each time the page opens; `luma
+  slideshow --shuffle`).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

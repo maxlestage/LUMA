@@ -653,6 +653,29 @@ struct Playing {
     count: usize,
     /// La photo qui part, le temps de la transition.
     leaving: Option<Leaving>,
+    /// L'ordre tiré au hasard (« Ordre aléatoire ») : chaque photo une fois avant un
+    /// nouveau tirage ; vide, l'ordre du film.
+    order: Vec<usize>,
+}
+
+/// Un tirage au hasard de `items` (Fisher–Yates, une graine tirée de l'heure) : pour le
+/// diaporama, rien de plus.
+fn shuffled(mut items: Vec<usize>, seed: u64) -> Vec<usize> {
+    let mut x = seed | 1;
+    for k in (1..items.len()).rev() {
+        // xorshift64
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        items.swap(k, (x % (k as u64 + 1)) as usize);
+    }
+    items
+}
+
+fn seed() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(1, |d| d.as_nanos() as u64)
 }
 
 /// L'image de la photo qui part, gardée le temps de la transition.
@@ -2252,6 +2275,7 @@ impl Studio {
             arrived: None,
             count: 0,
             leaving: None,
+            order: Vec::new(),
         });
     }
 
@@ -2288,12 +2312,32 @@ impl Studio {
             return;
         }
         let visible = self.visible();
-        let at = self
-            .current
-            .and_then(|c| visible.iter().position(|&v| v == c));
-        let next = match at {
-            Some(k) if k + 1 < visible.len() => visible[k + 1],
-            _ => visible.first().copied().unwrap_or(0),
+        let next = if self.show.shuffle {
+            // Au hasard : la suivante du tirage ; un nouveau tirage quand il est épuisé (ou
+            // que le film a changé).
+            let current = self.current;
+            let Some(p) = &mut self.playing else {
+                return;
+            };
+            p.order
+                .retain(|i| visible.contains(i) && Some(*i) != current);
+            if p.order.is_empty() {
+                let rest: Vec<usize> = visible
+                    .iter()
+                    .copied()
+                    .filter(|&v| Some(v) != current)
+                    .collect();
+                p.order = shuffled(rest, seed());
+            }
+            p.order.pop().or(current).unwrap_or(0)
+        } else {
+            let at = self
+                .current
+                .and_then(|c| visible.iter().position(|&v| v == c));
+            match at {
+                Some(k) if k + 1 < visible.len() => visible[k + 1],
+                _ => visible.first().copied().unwrap_or(0),
+            }
         };
         // L'image de la photo qui part est gardée pour la transition ; la suivante
         // arrive dans une image neuve.
@@ -3285,7 +3329,10 @@ impl Studio {
                         ui.end_row();
                     }
                 });
-                ui.checkbox(&mut self.show.captions, tr("Le nom de chaque photo dessous"));
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut self.show.captions, tr("Le nom de chaque photo dessous"));
+                    ui.checkbox(&mut self.show.shuffle, tr("Ordre aléatoire"));
+                });
                 ui.horizontal(|ui| {
                     play = ui
                         .button(tr("Lancer le diaporama"))
@@ -12950,6 +12997,21 @@ fn centered_text(painter: &egui::Painter, top: egui::Pos2, width: f32, text: Str
 #[cfg(test)]
 mod tests {
     use luma_render::slideshow::Transition;
+
+    #[test]
+    fn a_shuffle_is_a_permutation() {
+        let order = super::shuffled((0..50).collect(), 12345);
+        let mut sorted = order.clone();
+        sorted.sort_unstable();
+        assert_eq!(sorted, (0..50).collect::<Vec<_>>());
+        assert_ne!(order, (0..50).collect::<Vec<_>>(), "mélangé");
+        assert_ne!(
+            order,
+            super::shuffled((0..50).collect(), 999),
+            "une autre graine, un autre ordre"
+        );
+        assert!(super::shuffled(Vec::new(), 1).is_empty());
+    }
 
     #[test]
     fn slideshow_transitions_move_the_photos() {
