@@ -419,6 +419,76 @@ impl Catalog {
             e.set_meta(read_meta(&side));
         }
     }
+
+    /// Renomme un mot‑clé (`to`) ou le retire (`None`) dans toutes les photos du
+    /// catalogue qui l'ont, majuscules et accents mis à part : leurs XMP sont réécrits
+    /// (réglages, note et le reste gardés), puis relus. Rend le nombre de photos.
+    pub fn edit_keyword(&mut self, word: &str, to: Option<&str>) -> Result<usize, String> {
+        let paths: Vec<PathBuf> = self
+            .entries
+            .values()
+            .filter(|e| e.keywords.iter().any(|k| query::fold(k) == query::fold(word)))
+            .map(|e| e.path.clone())
+            .collect();
+        for p in &paths {
+            let mut meta = photo_meta(p);
+            rename_keyword(&mut meta.keywords, word, to);
+            write_photo_meta(p, &meta)?;
+            self.refresh_meta(p);
+        }
+        Ok(paths.len())
+    }
+}
+
+/// Dans une liste de mots‑clés, `word` (majuscules et accents mis à part) devient `to`,
+/// ou s'en va (`None`) ; un mot‑clé qui serait là deux fois ne l'est qu'une.
+pub fn rename_keyword(keywords: &mut Vec<String>, word: &str, to: Option<&str>) {
+    let mut out: Vec<String> = Vec::new();
+    for k in keywords.iter() {
+        let k = if query::fold(k) == query::fold(word) {
+            match to {
+                Some(t) => t.trim().to_owned(),
+                None => continue,
+            }
+        } else {
+            k.clone()
+        };
+        if !out.iter().any(|o| query::fold(o) == query::fold(&k)) {
+            out.push(k);
+        }
+    }
+    *keywords = out;
+}
+
+/// La note, le drapeau, le libellé et les mots‑clés d'une photo : ceux de son XMP, à
+/// défaut ceux que le fichier porte en lui.
+pub fn photo_meta(path: &Path) -> Meta {
+    match std::fs::read_to_string(xmp::sidecar_path(path)) {
+        Ok(t) => xmp::read_meta(&t),
+        Err(_) => embedded_xmp(&copies::source(path))
+            .map(|t| xmp::read_meta(&t))
+            .unwrap_or_default(),
+    }
+}
+
+/// Les réglages enregistrés d'une photo : ceux de son XMP, à défaut ceux qu'un RAW ou
+/// un DNG porte en lui.
+pub fn photo_settings(path: &Path) -> Option<luma_project::Settings> {
+    match std::fs::read_to_string(xmp::sidecar_path(path)) {
+        Ok(text) => xmp::read(&text).ok(),
+        Err(_) => embedded_settings(&copies::source(path)),
+    }
+}
+
+/// Écrit les métadonnées d'une photo dans son XMP, ses réglages gardés tels quels ;
+/// sans réglages, un XMP de métadonnées seules (la photo garde son rendu par défaut).
+pub fn write_photo_meta(path: &Path, meta: &Meta) -> Result<(), String> {
+    let target = xmp::sidecar_path(path);
+    let text = match photo_settings(path) {
+        Some(settings) => xmp::write_with_meta(&settings, meta),
+        None => xmp::write_meta(meta),
+    };
+    xmp::save(&target, &text).map_err(|e| format!("{} : {e}", target.display()))
 }
 
 /// Compte des valeurs, regroupées sans tenir compte des majuscules ni des accents ;
@@ -1071,5 +1141,60 @@ mod tests {
             }
         }
         assert_eq!(cat.folder_counts(), folders.into_iter().collect::<Vec<_>>());
+    }
+
+    /// Un mot‑clé renommé ou retiré dans toutes ses photos, sur les fichiers : les XMP
+    /// réécrits gardent la note et les réglages ; une photo sans le mot ne change pas ;
+    /// pas de doublon quand le nouveau nom y était déjà.
+    #[test]
+    fn a_keyword_is_renamed_in_the_files() {
+        let mut list = vec!["Mer".to_owned(), "Été".to_owned(), "ete".to_owned()];
+        rename_keyword(&mut list, "été", Some("Océan"));
+        assert_eq!(list, ["Mer", "Océan"]);
+        rename_keyword(&mut list, "OCEAN", Some("mer"));
+        assert_eq!(list, ["Mer"]);
+        rename_keyword(&mut list, "mer", None);
+        assert!(list.is_empty());
+
+        let dir = std::env::temp_dir().join(format!("luma-mot-fichiers-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (a, b) = (dir.join("a.png"), dir.join("b.png"));
+        for p in [&a, &b] {
+            std::fs::write(p, b"\x89PNG\r\n\x1a\n").unwrap();
+        }
+        let settings = luma_project::Settings {
+            exposure: 0.7,
+            ..luma_project::Settings::default()
+        };
+        let meta = Meta {
+            rating: 4,
+            keywords: vec!["mer".into(), "Plage".into()],
+            ..Meta::default()
+        };
+        xmp::save(&xmp::sidecar_path(&a), &xmp::write_with_meta(&settings, &meta)).unwrap();
+        xmp::save(
+            &xmp::sidecar_path(&b),
+            &xmp::write_meta(&Meta {
+                keywords: vec!["Montagne".into()],
+                ..Meta::default()
+            }),
+        )
+        .unwrap();
+        let mut cat = Catalog::default();
+        cat.add_folder(&dir, false);
+        assert_eq!(cat.edit_keyword("MER", Some("Océan")).unwrap(), 1);
+        let got = photo_meta(&a);
+        assert_eq!(
+            (got.rating, got.keywords.clone()),
+            (4, vec!["Océan".to_owned(), "Plage".to_owned()])
+        );
+        assert_eq!(photo_settings(&a).unwrap().exposure, 0.7);
+        assert_eq!(photo_meta(&b).keywords, ["Montagne"]);
+        assert!(cat.keywords().iter().any(|(k, n)| k == "Océan" && *n == 1));
+        assert_eq!(cat.edit_keyword("plage", None).unwrap(), 1);
+        assert_eq!(photo_meta(&a).keywords, ["Océan"]);
+        assert_eq!(cat.edit_keyword("absent", None).unwrap(), 0);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

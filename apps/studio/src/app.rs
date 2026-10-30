@@ -4717,18 +4717,7 @@ impl Studio {
             return 0;
         }
         let n = self.edit_keyword_everywhere(from, |m| {
-            let mut out: Vec<String> = Vec::new();
-            for k in &m.keywords {
-                let k = if fold(k) == fold(from) {
-                    to.clone()
-                } else {
-                    k.clone()
-                };
-                if !out.iter().any(|o| fold(o) == fold(&k)) {
-                    out.push(k);
-                }
-            }
-            m.keywords = out;
+            luma_library::rename_keyword(&mut m.keywords, from, Some(&to));
         });
         self.status = trf(
             "« {from} » devient « {to} » sur {n} photos",

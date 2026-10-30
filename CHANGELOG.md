@@ -268,6 +268,11 @@ La photothèque professionnelle, étape par étape.
 - **Une collection renommée** : le clic droit sur une collection la renomme (le nom
   s'écrit sur place) ; elle garde ses photos et sa règle, reprend sa place dans l'ordre
   alphabétique, et reste affichée si elle l'était ; un nom déjà pris est refusé.
+- **Mots‑clés et collections en ligne de commande** : `luma catalog` renomme un
+  mot‑clé dans toutes ses photos (`--rename-keyword ancien nouveau`) ou l'en retire
+  (`--delete-keyword`), les XMP réécrits sans rien perdre d'autre ; renomme une
+  collection (`--rename-collection`) et en retire une photo (`--remove-from`) : ce
+  que fait l'app, par le même code.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
