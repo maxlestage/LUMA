@@ -405,6 +405,100 @@ fn open_svg(path: &Path) -> Result<RawPhoto> {
 
 /// Une image décodée, en photo linéaire. La transparence est posée sur du blanc.
 pub fn from_image(img: &image::DynamicImage, space: Space, orientation: Orientation) -> RawPhoto {
+    let (width, height) = (img.width() as usize, img.height() as usize);
+    let data = match bytes_table(img, space) {
+        Some((table, alpha)) => from_bytes(img.as_bytes(), img.color().channel_count().into(), alpha, &table),
+        None => linear(img, space),
+    };
+    photo(width, height, data, space, orientation)
+}
+
+/// Pour une image de 8 bits par canal : la valeur linéaire de chaque octet (et de
+/// chaque opacité, s'il y en a une), calculée par [`linear`] elle‑même sur une image
+/// qui les contient toutes, du même type : les mêmes valeurs que pixel par pixel,
+/// par construction. Avec la transparence, l'octet `c` d'opacité `a` est en
+/// `a × 256 + c`.
+fn bytes_table(img: &image::DynamicImage, space: Space) -> Option<(Vec<f32>, bool)> {
+    use image::DynamicImage as D;
+    let every = |alpha: bool| -> Vec<(u8, u8)> {
+        let opacities: Vec<u8> = if alpha { (0..=255).collect() } else { vec![255] };
+        opacities
+            .into_iter()
+            .flat_map(|a| (0..=255u8).map(move |c| (c, a)))
+            .collect()
+    };
+    let (sample, alpha): (D, bool) = match img {
+        D::ImageLuma8(_) => {
+            let v = every(false);
+            (
+                D::ImageLuma8(image::GrayImage::from_fn(256, 1, |x, _| image::Luma([v[x as usize].0]))),
+                false,
+            )
+        }
+        D::ImageLumaA8(_) => {
+            let v = every(true);
+            (
+                D::ImageLumaA8(image::GrayAlphaImage::from_fn(256, 256, |x, y| {
+                    let (c, a) = v[(y * 256 + x) as usize];
+                    image::LumaA([c, a])
+                })),
+                true,
+            )
+        }
+        D::ImageRgb8(_) => {
+            let v = every(false);
+            (
+                D::ImageRgb8(image::RgbImage::from_fn(256, 1, |x, _| {
+                    image::Rgb([v[x as usize].0; 3])
+                })),
+                false,
+            )
+        }
+        D::ImageRgba8(_) => {
+            let v = every(true);
+            (
+                D::ImageRgba8(image::RgbaImage::from_fn(256, 256, |x, y| {
+                    let (c, a) = v[(y * 256 + x) as usize];
+                    image::Rgba([c, c, c, a])
+                })),
+                true,
+            )
+        }
+        _ => return None,
+    };
+    // Le premier canal de chaque pixel de l'échantillon : sa valeur linéaire.
+    let table = linear(&sample, space).as_chunks::<3>().0.iter().map(|p| p[0]).collect();
+    Some((table, alpha))
+}
+
+/// Les valeurs linéaires d'une image de 8 bits par canal (`channels` octets par
+/// pixel, le dernier étant l'opacité si `alpha`), par la table de [`bytes_table`], sur
+/// tous les cœurs.
+fn from_bytes(bytes: &[u8], channels: usize, alpha: bool, table: &[f32]) -> Vec<f32> {
+    use rayon::prelude::*;
+    let pixels = bytes.len() / channels;
+    let mut data = vec![0.0f32; pixels * 3];
+    data.par_chunks_mut(3 * 4096)
+        .zip(bytes.par_chunks(channels * 4096))
+        .for_each(|(out, src)| {
+            for (o, p) in out.as_chunks_mut::<3>().0.iter_mut().zip(src.chunks_exact(channels)) {
+                let a = if alpha { usize::from(p[channels - 1]) << 8 } else { 0 };
+                *o = if channels >= 3 {
+                    [
+                        table[a + usize::from(p[0])],
+                        table[a + usize::from(p[1])],
+                        table[a + usize::from(p[2])],
+                    ]
+                } else {
+                    [table[a + usize::from(p[0])]; 3]
+                };
+            }
+        });
+    data
+}
+
+/// Les valeurs linéaires de n'importe quelle image, pixel par pixel.
+fn linear(img: &image::DynamicImage, space: Space) -> Vec<f32> {
     let rgba = img.to_rgba32f();
     let (width, height) = (rgba.width() as usize, rgba.height() as usize);
     let linear = space.transfer == Transfer::Linear;
@@ -426,7 +520,7 @@ pub fn from_image(img: &image::DynamicImage, space: Space, orientation: Orientat
             data.push(decode(c * a + (1.0 - a)));
         }
     }
-    photo(width, height, data, space, orientation)
+    data
 }
 
 /// La photo d'une image linéaire dans l'espace `space`.
@@ -453,6 +547,43 @@ fn photo(width: usize, height: usize, data: Vec<f32>, space: Space, orientation:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// La table des octets donne exactement les valeurs du calcul pixel par pixel :
+    /// les quatre types d'image de 8 bits, avec et sans opacité, toutes les valeurs.
+    #[test]
+    fn eight_bit_images_by_table_are_the_same_as_pixel_by_pixel() {
+        use image::DynamicImage as D;
+        let v = |x: u32, y: u32, k: u32| ((x * 31 + y * 17 + k * 101 + (x * y) % 7) % 256) as u8;
+        let images = [
+            D::ImageRgb8(image::RgbImage::from_fn(300, 260, |x, y| {
+                image::Rgb([v(x, y, 0), v(x, y, 1), v(x, y, 2)])
+            })),
+            D::ImageRgba8(image::RgbaImage::from_fn(300, 260, |x, y| {
+                image::Rgba([v(x, y, 0), v(x, y, 1), v(x, y, 2), v(x, y, 3)])
+            })),
+            D::ImageLuma8(image::GrayImage::from_fn(300, 260, |x, y| image::Luma([v(x, y, 0)]))),
+            D::ImageLumaA8(image::GrayAlphaImage::from_fn(300, 260, |x, y| {
+                image::LumaA([v(x, y, 0), v(x, y, 3)])
+            })),
+        ];
+        for space in [Space::SRGB, Space::LINEAR_SRGB] {
+            for img in &images {
+                let fast = from_image(img, space, Orientation::Normal).data;
+                let slow = linear(img, space);
+                assert_eq!(fast.len(), slow.len());
+                assert!(
+                    fast.iter().zip(&slow).all(|(a, b)| a.to_bits() == b.to_bits()),
+                    "{:?}",
+                    img.color()
+                );
+            }
+        }
+        // Une image de 16 bits passe pixel par pixel.
+        let deep = D::ImageRgb16(image::ImageBuffer::from_fn(4, 4, |x, _| {
+            image::Rgb([x as u16 * 9000; 3])
+        }));
+        assert!(bytes_table(&deep, Space::SRGB).is_none());
+    }
 
     fn temp(name: &str) -> std::path::PathBuf {
         std::env::temp_dir().join(format!("luma-raster-{}-{name}", std::process::id()))
