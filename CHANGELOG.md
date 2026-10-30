@@ -248,6 +248,10 @@ La photothèque professionnelle, étape par étape.
   l'export d'une photo de 24 Mpx en PNG 16 bits prend 1,8 à 2,0 s au lieu de 2,5 à
   2,7 s, pour un fichier 10 % plus léger ; les mêmes pixels. Le PNG 8 bits garde son
   codeur, déjà le plus rapide et le plus léger (mesuré).
+- **Les mots‑clés dans la photothèque** : une section « Mots-clés » du panneau
+  Photothèque, repliée, liste chaque mot‑clé avec son nombre de photos ; un clic
+  montre ses photos. La recherche garde les espaces entre guillemets
+  (`mot:"coucher de soleil"`, guillemets droits, courbes ou chevrons).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

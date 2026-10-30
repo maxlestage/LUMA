@@ -953,6 +953,9 @@ pub struct Studio {
     catalog_dates: Vec<luma_library::Year>,
     /// « À faire » : le nombre de photos pas encore notées, sans mot‑clé, sans lieu.
     catalog_todo: [usize; 3],
+    /// Les mots‑clés de la photothèque et leur nombre de photos ; leur liste dépliée.
+    catalog_keywords: Vec<(String, usize)>,
+    keywords_open: bool,
     open_years: BTreeSet<String>,
     pub view: View,
     catalog_search: String,
@@ -1307,6 +1310,8 @@ impl Studio {
             catalog_collections: Vec::new(),
             catalog_dates: Vec::new(),
             catalog_todo: [0; 3],
+            catalog_keywords: Vec::new(),
+            keywords_open: false,
             open_years: BTreeSet::new(),
             view: View::Folder,
             catalog_search: String::new(),
@@ -1629,6 +1634,7 @@ impl Studio {
         }
         self.catalog_folders = folders.into_iter().collect();
         self.catalog_dates = self.catalog.dates();
+        self.catalog_keywords = self.catalog.keywords();
         self.catalog_todo = TODO.map(|rule| {
             luma_library::Query::parse(rule).map_or(0, |q| self.catalog.search(&q).len())
         });
@@ -9601,6 +9607,46 @@ impl Studio {
                 }
             }
         }
+        // Les mots‑clés, repliés : un clic sur l'un montre ses photos.
+        if !self.catalog_keywords.is_empty() {
+            let mut toggle = false;
+            ui.horizontal(|ui| {
+                toggle = fold_triangle(
+                    ui,
+                    self.keywords_open,
+                    tr("Les mots-clés de la photothèque"),
+                )
+                .on_hover_text(tr("Les mots-clés de la photothèque"))
+                .clicked();
+                let title = trf("Mots-clés ({n})", &[("n", &self.catalog_keywords.len())]);
+                toggle |= ui
+                    .add(
+                        egui::Label::new(RichText::new(title).color(theme::DIM).size(11.5))
+                            .sense(egui::Sense::click()),
+                    )
+                    .clicked();
+            });
+            if toggle {
+                self.keywords_open = !self.keywords_open;
+            }
+            if self.keywords_open {
+                egui::ScrollArea::vertical()
+                    .id_salt("mots-cles-photothèque")
+                    .max_height(220.0)
+                    .show(ui, |ui| {
+                        for (word, n) in &self.catalog_keywords {
+                            let query = luma_library::query::keyword_filter(word);
+                            let on = self.view == View::Search(query.clone());
+                            ui.horizontal(|ui| {
+                                ui.add_space(22.0);
+                                if ui.selectable_label(on, format!("{word} ({n})")).clicked() {
+                                    chosen = Some(View::Search(query));
+                                }
+                            });
+                        }
+                    });
+            }
+        }
         if !self.catalog_dates.is_empty() {
             ui.label(RichText::new(tr("Dates")).color(theme::DIM).size(11.5));
             let mut toggle = None;
@@ -9610,7 +9656,7 @@ impl Studio {
                 let on = self.view == View::Search(query.clone());
                 ui.horizontal(|ui| {
                     // Le triangle déplie les mois ; l'année montre ses photos.
-                    if fold_triangle(ui, unfolded)
+                    if fold_triangle(ui, unfolded, tr("Les mois de cette année"))
                         .on_hover_text(tr("Les mois de cette année"))
                         .clicked()
                     {
@@ -12834,11 +12880,9 @@ fn todo_name(i: usize) -> &'static str {
 
 /// Un petit triangle qui déplie (pointe vers le bas une fois déplié), dessiné : il ne
 /// dépend d'aucun signe de la police.
-fn fold_triangle(ui: &mut Ui, unfolded: bool) -> egui::Response {
+fn fold_triangle(ui: &mut Ui, unfolded: bool, label: &str) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(16.0, 16.0), egui::Sense::click());
-    response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::Role::Button, true, tr("Les mois de cette année"))
-    });
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
     let c = rect.center();
     let color = if response.hovered() {
         theme::TEXT
