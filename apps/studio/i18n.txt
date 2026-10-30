@@ -6014,3 +6014,21 @@ es = Las palabras clave de la fototeca
 fr = Mots-clés ({n})
 en = Keywords ({n})
 es = Palabras clave ({n})
+
+# ----- Le matériel dans la photothèque -----
+
+fr = Boîtiers ({n})
+en = Cameras ({n})
+es = Cámaras ({n})
+
+fr = Les boîtiers de la photothèque
+en = The library's cameras
+es = Las cámaras de la fototeca
+
+fr = Objectifs ({n})
+en = Lenses ({n})
+es = Objetivos ({n})
+
+fr = Les objectifs de la photothèque
+en = The library's lenses
+es = Los objetivos de la fototeca
