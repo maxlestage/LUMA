@@ -288,6 +288,11 @@ La photothèque professionnelle, étape par étape.
   `luma catalog --csv`) écrit les photos montrées — une collection, une recherche, une
   date — en tableau pour un client ou des archives : fichier, date, boîtier, objectif,
   ISO, ouverture, vitesse, focale, note, drapeau, libellé, mots‑clés, position.
+- **Vues de la photothèque plus rapides** : en montrant toutes les photos, une
+  collection ou une recherche, l'app regarde si chaque photo est encore là sur tous
+  les cœurs (et de même pour les photos manquantes de « Entretien… ») : 3 fois plus
+  vite sur un disque local (20 000 photos : 17 → 5 ms), davantage sur un disque
+  externe ou en réseau ; les mêmes photos, dans le même ordre.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
