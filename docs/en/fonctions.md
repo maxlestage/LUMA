@@ -171,7 +171,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | EXIF of developed images (JPEG, HEIC, AVIF, PNG, WebP, TIFF): capture date, camera, lens, settings and GPS position read as for a RAW; a phone's photos are sorted by their date and appear on the map | ✅ |
 | Search and filters (`luma catalog --search`): words with accents ignored; rating, flag, label, dates (written, or relative to today: `date:30d`, `date:today`, `date:yesterday`), ISO, rating as a range or exact (`rating:..2`, `rating:=0`), what is still missing (`without:rating`, `without:keyword`, `without:location`, `without:label`), focal length, camera, lens, keyword; counts of keywords, cameras and lenses | ✅ |
 | Manual and smart collections (rule: rating, date, camera, lens, ISO, keywords…), saved in the catalogue | ✅ |
-| Photos by date in the Library panel: each year with its number of photos, its months unfolded with a click; a year or a month shows its photos | ✅ |
+| Photos by date in the Library panel: each year with its number of photos, its months unfolded with a click; a year or a month shows its photos; “To do”: photos not yet rated, without keywords, without location, with their number | ✅ |
 | Keywords in the app: entry (several at once, separated by commas), added to and removed from every selected photo, the folder's keywords with their count, grid filter | ✅ |
 | Catalog in the app: every folder you open is added (in the background); all photos, collections and folders, each with its number of photos; search and filters; views sorted by capture date | ✅ |
 | Watched folder (tethered shooting, copied card): each complete photo enters the catalog and the filmstrip, and opens; `luma watch` | ✅ |

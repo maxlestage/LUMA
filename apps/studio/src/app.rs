@@ -951,6 +951,8 @@ pub struct Studio {
     catalog_collections: Vec<(String, usize)>,
     /// Les photos par année et par mois, et les années dépliées dans le panneau.
     catalog_dates: Vec<luma_library::Year>,
+    /// « À faire » : le nombre de photos pas encore notées, sans mot‑clé, sans lieu.
+    catalog_todo: [usize; 3],
     open_years: BTreeSet<String>,
     pub view: View,
     catalog_search: String,
@@ -1295,6 +1297,7 @@ impl Studio {
             catalog_folders: Vec::new(),
             catalog_collections: Vec::new(),
             catalog_dates: Vec::new(),
+            catalog_todo: [0; 3],
             open_years: BTreeSet::new(),
             view: View::Folder,
             catalog_search: String::new(),
@@ -1615,6 +1618,9 @@ impl Studio {
         }
         self.catalog_folders = folders.into_iter().collect();
         self.catalog_dates = self.catalog.dates();
+        self.catalog_todo = TODO.map(|rule| {
+            luma_library::Query::parse(rule).map_or(0, |q| self.catalog.search(&q).len())
+        });
         self.catalog_collections = self
             .catalog
             .collections()
@@ -9370,6 +9376,23 @@ impl Studio {
                 }
             }
         }
+        // Ce qui reste à faire, s'il reste quelque chose : chaque ligne montre ses photos.
+        if self.catalog_todo.iter().any(|&n| n > 0) {
+            ui.label(RichText::new(tr("À faire")).color(theme::DIM).size(11.5));
+            for (i, (rule, &n)) in TODO.iter().zip(&self.catalog_todo).enumerate() {
+                if n == 0 {
+                    continue;
+                }
+                let on = self.view == View::Search((*rule).to_owned());
+                if ui
+                    .selectable_label(on, format!("{} ({n})", todo_name(i)))
+                    .on_hover_text(*rule)
+                    .clicked()
+                {
+                    chosen = Some(View::Search((*rule).to_owned()));
+                }
+            }
+        }
         if !self.catalog_dates.is_empty() {
             ui.label(RichText::new(tr("Dates")).color(theme::DIM).size(11.5));
             let mut toggle = None;
@@ -12586,6 +12609,18 @@ fn big_choice_sized(
 
 /// Les étoiles et le drapeau en bas d'une vignette.
 /// Les images de la marque (luma-brand), chargées une fois.
+/// Les recherches de « À faire », dans le panneau Photothèque.
+const TODO: [&str; 3] = ["sans:note", "sans:mot", "sans:lieu"];
+
+/// Le nom d'une ligne de « À faire », dans la langue de l'app.
+fn todo_name(i: usize) -> &'static str {
+    match i {
+        0 => tr("Pas encore notées"),
+        1 => tr("Sans mot-clé"),
+        _ => tr("Sans lieu"),
+    }
+}
+
 /// Un petit triangle qui déplie (pointe vers le bas une fois déplié), dessiné : il ne
 /// dépend d'aucun signe de la police.
 fn fold_triangle(ui: &mut Ui, unfolded: bool) -> egui::Response {
@@ -12622,24 +12657,21 @@ fn fold_triangle(ui: &mut Ui, unfolded: bool) -> egui::Response {
 
 /// Le nom d'un mois (`"06"` → « juin »), dans la langue de l'app.
 fn month_name(m: &str) -> &'static str {
-    const MONTHS: [&str; 12] = [
-        "janvier",
-        "février",
-        "mars",
-        "avril",
-        "mai",
-        "juin",
-        "juillet",
-        "août",
-        "septembre",
-        "octobre",
-        "novembre",
-        "décembre",
-    ];
-    m.parse::<usize>()
-        .ok()
-        .and_then(|i| MONTHS.get(i.wrapping_sub(1)))
-        .map_or("?", |name| tr(name))
+    match m.parse::<usize>().unwrap_or(0) {
+        1 => tr("janvier"),
+        2 => tr("février"),
+        3 => tr("mars"),
+        4 => tr("avril"),
+        5 => tr("mai"),
+        6 => tr("juin"),
+        7 => tr("juillet"),
+        8 => tr("août"),
+        9 => tr("septembre"),
+        10 => tr("octobre"),
+        11 => tr("novembre"),
+        12 => tr("décembre"),
+        _ => "?",
+    }
 }
 
 /// La date d'une sauvegarde, lue dans son nom (`Catalogue 2026-10-27 081502.lumacat`
