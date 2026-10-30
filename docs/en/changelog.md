@@ -256,6 +256,9 @@ The professional photo library, step by step.
   (`--delete-keyword`), the XMPs rewritten without losing anything else; renames a
   collection (`--rename-collection`) and removes a photo from one (`--remove-from`):
   what the app does, through the same code.
+- **Ratings and labels in the library**: two more folded sections, “Ratings” (the
+  number of photos from 5 to 1 star) and “Labels” (each label and its number of
+  photos); a click shows their photos.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

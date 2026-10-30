@@ -6052,3 +6052,25 @@ es = «{word}» quitado de {n} fotos
 fr = « {from} » devient « {to} »
 en = “{from}” becomes “{to}”
 es = «{from}» pasa a ser «{to}»
+
+# ----- Notes et libellés dans la photothèque -----
+
+fr = Notes
+en = Ratings
+es = Valoraciones
+
+fr = Les photos par note
+en = Photos by rating
+es = Fotos por valoración
+
+fr = Libellés ({n})
+en = Labels ({n})
+es = Etiquetas ({n})
+
+fr = Les libellés de la photothèque
+en = The library's labels
+es = Las etiquetas de la fototeca
+
+fr = {n} étoiles
+en = {n} stars
+es = {n} estrellas
