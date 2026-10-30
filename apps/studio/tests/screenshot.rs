@@ -3512,3 +3512,41 @@ fn photos_in_a_manual_collection() {
     );
     assert!(s.studio().status().contains("retirées de « Choix »"));
 }
+
+/// Un mot‑clé renommé partout, puis supprimé partout : les XMP des photos et les listes
+/// de la photothèque suivent ; le reste des métadonnées (la note) ne bouge pas.
+#[test]
+fn a_keyword_renamed_and_deleted_everywhere() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("mot-cle-partout") else {
+        return;
+    };
+    let start = Instant::now();
+    while s.studio().is_indexing() && start.elapsed() < Duration::from_secs(60) {
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let path = s.studio().current_path().unwrap().to_path_buf();
+    s.keys(&[(NONE, Key::Num3)]);
+    assert_eq!(s.studio().add_keywords("mer, Été"), 1);
+    s.studio().flush_xmp();
+    s.studio().catalog_mut().refresh_meta(&path);
+    assert_eq!(s.studio().rename_keyword_everywhere("MER", "Océan"), 1);
+    let meta = luma_studio::worker::read_meta(&path);
+    assert_eq!(meta.keywords, ["Océan", "Été"]);
+    assert_eq!(meta.rating, 3, "la note reste");
+    assert!(
+        s.studio()
+            .catalog()
+            .keywords()
+            .iter()
+            .any(|(k, n)| k == "Océan" && *n == 1)
+    );
+    // Renommé en un mot déjà là : pas deux fois.
+    assert_eq!(s.studio().rename_keyword_everywhere("Océan", "été"), 1);
+    assert_eq!(luma_studio::worker::read_meta(&path).keywords, ["été"]);
+    assert_eq!(s.studio().delete_keyword_everywhere("Ete"), 1);
+    assert!(luma_studio::worker::read_meta(&path).keywords.is_empty());
+    assert!(s.studio().catalog().keywords().is_empty());
+    assert!(s.studio().status().contains("retiré de 1 photos"));
+}
