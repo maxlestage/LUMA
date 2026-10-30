@@ -259,7 +259,8 @@ La photothèque professionnelle, étape par étape.
 - **Photothèque plus vive** : les listes du panneau (dossiers, mots‑clés, boîtiers,
   objectifs) se comptent sans copier chaque valeur de chaque photo ; pour 100 000
   photos, leur mise à jour après un changement passe d'environ 200 ms à 90 ms ; les
-  mêmes listes.
+  mêmes listes. Les nombres de « À faire » et des collections se comptent sans trier
+  les photos : 11 ms au lieu de 36 ms pour les trois lignes de « À faire ».
 - **Un mot‑clé renommé ou supprimé partout** : dans la liste des mots‑clés, un clic
   droit renomme un mot‑clé dans toutes les photos qui l'ont, ou l'en retire ; leurs
   XMP sont réécrits (la note, le drapeau et le reste ne bougent pas), et une photo qui

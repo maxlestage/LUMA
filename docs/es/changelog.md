@@ -261,7 +261,9 @@ La fototeca profesional, paso a paso.
   de fotos, un clic muestra sus fotos (el nombre entero, espacios incluidos).
 - **Una fototeca más ágil**: las listas del panel (carpetas, palabras clave, cámaras,
   objetivos) se cuentan sin copiar cada valor de cada foto; para 100 000 fotos, su
-  actualización tras un cambio pasa de unos 200 ms a 90 ms; las mismas listas.
+  actualización tras un cambio pasa de unos 200 ms a 90 ms; las mismas listas. Los
+  números de «Pendiente» y de las colecciones se cuentan sin ordenar las fotos: 11 ms
+  en lugar de 36 ms para las tres líneas de «Pendiente».
 - **Una palabra clave renombrada o quitada en todas partes**: en la lista de palabras
   clave, un clic derecho renombra una palabra clave en todas las fotos que la tienen,
   o la quita; sus XMP se reescriben (la valoración, la bandera y lo demás no cambian),

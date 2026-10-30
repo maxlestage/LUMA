@@ -149,6 +149,18 @@ impl Catalog {
 
     /// Les photos d'une collection, par date de prise de vue ; seules celles du catalogue
     /// y figurent.
+    /// Le nombre de photos d'une collection : celui de [`Catalog::collection_photos`],
+    /// sans les trier.
+    pub fn collection_count(&self, name: &str) -> Result<usize, String> {
+        let c = self
+            .collection(name)
+            .ok_or_else(|| format!("pas de collection « {name} »"))?;
+        Ok(match &c.content {
+            Content::Smart(rule) => self.count(&Query::parse(rule)?),
+            Content::Manual(list) => list.iter().filter(|p| self.get(p).is_some()).count(),
+        })
+    }
+
     pub fn collection_photos(&self, name: &str) -> Result<Vec<&Entry>, String> {
         let c = self
             .collection(name)
@@ -202,6 +214,28 @@ mod tests {
 
     /// Renommée, une collection garde ses photos et sa place alphabétique ; un nom vide,
     /// pris ou inconnu est refusé.
+    /// Compter sans trier donne les nombres des listes : collections manuelles (photos
+    /// absentes du catalogue comprises) et dynamiques, recherches.
+    #[test]
+    fn counts_are_the_lengths_of_the_lists() {
+        let mut cat = catalog();
+        cat.add_to_collection("Tirages", &["c.arw", "b.arw", "absente.arw"].map(PathBuf::from))
+            .unwrap();
+        cat.set_collection(Collection::smart("Meilleures", "note:4").unwrap())
+            .unwrap();
+        for name in ["Tirages", "Meilleures"] {
+            assert_eq!(
+                cat.collection_count(name).unwrap(),
+                cat.collection_photos(name).unwrap().len()
+            );
+        }
+        for q in ["", "note:4", "sans:lieu", "date:2025", "note:=0"] {
+            let q = Query::parse(q).unwrap();
+            assert_eq!(cat.count(&q), cat.search(&q).len());
+        }
+        assert!(cat.collection_count("Absente").is_err());
+    }
+
     #[test]
     fn a_collection_is_renamed() {
         let mut cat = catalog();

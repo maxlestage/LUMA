@@ -1646,18 +1646,14 @@ impl Studio {
         self.catalog_keywords = self.catalog.keywords();
         self.catalog_cameras = self.catalog.cameras();
         self.catalog_lenses = self.catalog.lenses();
-        self.catalog_todo = TODO.map(|rule| {
-            luma_library::Query::parse(rule).map_or(0, |q| self.catalog.search(&q).len())
-        });
+        self.catalog_todo =
+            TODO.map(|rule| luma_library::Query::parse(rule).map_or(0, |q| self.catalog.count(&q)));
         self.catalog_collections = self
             .catalog
             .collections()
             .iter()
             .map(|c| {
-                let n = self
-                    .catalog
-                    .collection_photos(&c.name)
-                    .map_or(0, |v| v.len());
+                let n = self.catalog.collection_count(&c.name).unwrap_or(0);
                 (c.name.clone(), n)
             })
             .collect();
