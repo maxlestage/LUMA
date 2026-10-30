@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Lighter folder tree**: rebuilt only when the library changes, no longer on every
+  frame drawn (0.7 ms less per frame with 2,000 folders).
 - **Import from the Files app on iPhone and iPad**: “From Files” under “Import photos”
   (and in the “•••” menu) opens the Files app: RAW files from a memory card in a card
   reader, from iCloud Drive or from a drive arrive in LÜMA, several at once.

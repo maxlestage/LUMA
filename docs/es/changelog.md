@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Árbol de carpetas más ligero**: se rehace solo cuando cambia la fototeca, ya no en
+  cada imagen dibujada (0,7 ms menos por imagen con 2000 carpetas).
 - **Importar desde la app Archivos en iPhone y iPad**: «Desde Archivos» bajo «Importar
   fotos» (y en el menú «•••») abre la app Archivos: los RAW de una tarjeta de memoria en
   un lector, de iCloud Drive o de un disco llegan a LÜMA, varios a la vez.

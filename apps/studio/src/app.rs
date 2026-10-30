@@ -948,6 +948,8 @@ pub struct Studio {
     /// Les dossiers et les collections du catalogue, avec leur nombre de photos
     /// (recalculés quand le catalogue change, pas à chaque image).
     catalog_folders: Vec<(PathBuf, usize)>,
+    /// Leur arbre, refait avec eux et non à chaque image.
+    catalog_tree: Vec<luma_library::Folder>,
     catalog_collections: Vec<(String, usize)>,
     /// Les photos par année et par mois, et les années dépliées dans le panneau.
     catalog_dates: Vec<luma_library::Year>,
@@ -1324,6 +1326,7 @@ impl Studio {
             watch_count: 0,
             watch_follow: true,
             catalog_folders: Vec::new(),
+            catalog_tree: Vec::new(),
             catalog_collections: Vec::new(),
             catalog_dates: Vec::new(),
             catalog_todo: [0; 3],
@@ -1655,6 +1658,7 @@ impl Studio {
     fn refresh_catalog_lists(&mut self) {
         self.find_stacks();
         self.catalog_folders = self.catalog.folder_counts();
+        self.catalog_tree = luma_library::folder_tree(&self.catalog_folders);
         self.catalog_dates = self.catalog.dates();
         self.catalog_keywords = self.catalog.keywords();
         self.catalog_cameras = self.catalog.cameras();
@@ -9910,8 +9914,7 @@ impl Studio {
                 .map(Path::to_path_buf);
             let mut forget = None;
             let mut toggle = None;
-            let tree = luma_library::folder_tree(&self.catalog_folders);
-            for top in &tree {
+            for top in &self.catalog_tree {
                 folder_rows(
                     ui,
                     top,
