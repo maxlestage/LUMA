@@ -259,6 +259,10 @@ The professional photo library, step by step.
 - **Ratings and labels in the library**: two more folded sections, “Ratings” (the
   number of photos from 5 to 1 star) and “Labels” (each label and its number of
   photos); a click shows their photos.
+- **Faster catalog reading and writing**: for 100,000 photos, writing goes from 59 to
+  43 ms and reading from 108 to 78 ms (a fast hash for the text table, the number of
+  the previous photo's folder, camera and lens reused without a lookup); the file is
+  the same, byte for byte.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
