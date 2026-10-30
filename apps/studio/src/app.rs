@@ -4854,6 +4854,7 @@ impl Studio {
             && self.texture.is_some()
             && !self.tiles.is_loading()
             && self.printing.is_none()
+            && !self.measuring
     }
 
     fn select(&mut self, index: usize) {
@@ -5091,18 +5092,27 @@ impl Studio {
                         ));
                     }
                 }
-                Event::Measured { result } => {
+                Event::Measured { result, camera } => {
                     self.measuring = false;
                     match result {
                         Ok((name, before, after)) => {
-                            self.status = trf(
-                                "Pellicule mesurée : « {name} » (écart du numérique au film {before}, avec le film {after})",
-                                &[
-                                    ("name", &name),
-                                    ("before", &format_value(before, 1, false)),
-                                    ("after", &format_value(after, 1, false)),
-                                ],
+                            let (b, a) = (
+                                format_value(before, 1, false),
+                                format_value(after, 1, false),
                             );
+                            let values: [(&str, &dyn std::fmt::Display); 3] =
+                                [("name", &name), ("before", &b), ("after", &a)];
+                            self.status = if camera {
+                                trf(
+                                    "Rendu du boîtier mesuré : « {name} » (écart du numérique au JPEG du boîtier {before}, avec ce film {after})",
+                                    &values,
+                                )
+                            } else {
+                                trf(
+                                    "Pellicule mesurée : « {name} » (écart du numérique au film {before}, avec le film {after})",
+                                    &values,
+                                )
+                            };
                             self.refresh_luts();
                             if let Some(k) = self.luts.iter().position(|n| *n == name) {
                                 self.choose_film(PRESETS.len() + k);
@@ -9271,6 +9281,31 @@ impl Studio {
         self.reload_user_presets();
     }
 
+    /// Mesure le rendu du boîtier sur la photo ouverte (un RAW) : le film, nommé
+    /// d'après le boîtier, est enregistré dans `dir` (le dossier Films) et choisi.
+    pub fn measure_camera(&mut self, dir: PathBuf) {
+        let (Some(photo), Some(raw)) = (
+            self.photo.clone(),
+            self.current_path()
+                .filter(|p| luma_raw::is_raw(p))
+                .map(Path::to_path_buf),
+        ) else {
+            return;
+        };
+        let r = photo.raw();
+        let camera = camera_name(&r.make, &r.model);
+        self.measuring = true;
+        self.status = trf(
+            "Mesure du rendu du boîtier : {camera}…",
+            &[("camera", &camera)],
+        );
+        self.worker.measure_film(
+            photo,
+            crate::worker::FilmSource::Camera { raw, camera },
+            dir,
+        );
+    }
+
     /// Les boutons de « Mes pellicules » : mesurer une vraie pellicule, importer une LUT.
     fn my_films(&mut self, ui: &mut Ui, photo: &Arc<Photo>) {
         ui.label(
@@ -9297,7 +9332,8 @@ impl Studio {
                         "Mesure de la pellicule : {file}…",
                         &[("file", &file_name(&scan))],
                     );
-                    self.worker.measure_film(photo.clone(), scan, dir);
+                    self.worker
+                        .measure_film(photo.clone(), crate::worker::FilmSource::Scan(scan), dir);
                 }
                 if ui.button(tr("Importer une LUT…")).clicked()
                     && let Some(path) = crate::dialogs::pick_lut()
@@ -9306,6 +9342,22 @@ impl Studio {
                 }
             } else if ui.button(tr("Actualiser")).clicked() {
                 self.refresh_luts();
+            }
+            // Le rendu du boîtier : le JPEG qu'il a rangé dans le RAW, sans rien choisir.
+            let raw = self.current_path().is_some_and(luma_raw::is_raw);
+            let camera = ui
+                .add_enabled(
+                    !self.measuring && raw,
+                    egui::Button::new(tr("Mesurer le rendu du boîtier")),
+                )
+                .on_hover_text(tr(
+                    "Compare cette photo au JPEG que le boîtier a rangé dans le RAW et en fait un film : les RAW de ce boîtier rendus comme il le fait.",
+                ))
+                .on_disabled_hover_text(tr("Ouvrez d'abord un RAW."));
+            if camera.clicked()
+                && let Some(dir) = crate::dialogs::films_dir()
+            {
+                self.measure_camera(dir);
             }
         });
         if self.measuring {

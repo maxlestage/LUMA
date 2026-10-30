@@ -36,6 +36,14 @@ pub struct Frame {
     pub clean: Option<Vec<u8>>,
 }
 
+/// Ce qu'on mesure contre le rendu neutre d'une photo.
+pub enum FilmSource {
+    /// Le scan de la même scène sur pellicule.
+    Scan(PathBuf),
+    /// Le JPEG que le boîtier a rangé dans le RAW `raw` ; `camera` nomme le film.
+    Camera { raw: PathBuf, camera: String },
+}
+
 pub enum Event {
     Loaded {
         path: PathBuf,
@@ -88,10 +96,11 @@ pub enum Event {
         size: [usize; 2],
         rgba: Vec<u8>,
     },
-    /// Une pellicule est mesurée : le nom du film, et l'écart (OKLab × 100) entre le
-    /// numérique et la pellicule, avant et après.
+    /// Une pellicule (ou le rendu du boîtier, `camera`) est mesurée : le nom du film, et
+    /// l'écart (OKLab × 100) entre le numérique et la pellicule, avant et après.
     Measured {
         result: Result<(String, f32, f32), String>,
+        camera: bool,
     },
     /// Une photo de l'export est écrite (ou a échoué) : `done` sur `total`.
     Exported {
@@ -378,24 +387,33 @@ impl Worker {
     }
 
     /// Fusionne des RAW en un DNG, à côté du premier.
-    /// Mesure une pellicule : `photo` en numérique (son rendu neutre) et `scan`, la même
-    /// scène sur film. La LUT est enregistrée dans `dir` et chargée.
-    pub fn measure_film(&self, photo: Arc<Photo>, scan: PathBuf, dir: PathBuf) {
+    /// Mesure une pellicule : `photo` en numérique (son rendu neutre) et `source`, la
+    /// même scène sur film (son scan), ou le rendu du boîtier (le JPEG rangé dans le RAW,
+    /// nommé d'après le boîtier `camera`). La LUT est enregistrée dans `dir` et chargée.
+    pub fn measure_film(&self, photo: Arc<Photo>, source: FilmSource, dir: PathBuf) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::Builder::new()
             .name("luma-mesure".into())
             .spawn(move || {
                 let result = caught(|| -> Result<(String, f32, f32), String> {
                     use luma_merge::film;
-                    let pair = film::Pair {
-                        digital: film::reference(&photo).map_err(|e| e.to_string())?,
-                        film: film::load_scan(&scan).map_err(|e| e.to_string())?,
-                        aligned: false,
+                    let (pair, stem) = match &source {
+                        FilmSource::Scan(scan) => (
+                            film::Pair {
+                                digital: film::reference(&photo).map_err(|e| e.to_string())?,
+                                film: film::load_scan(scan).map_err(|e| e.to_string())?,
+                                aligned: false,
+                            },
+                            scan.file_stem().map_or_else(
+                                || "Pellicule".to_owned(),
+                                |s| s.to_string_lossy().into_owned(),
+                            ),
+                        ),
+                        FilmSource::Camera { raw, camera } => (
+                            film::camera_pair(&photo, raw).map_err(|e| e.to_string())?,
+                            format!("{camera} JPEG"),
+                        ),
                     };
-                    let stem = scan.file_stem().map_or_else(
-                        || "Pellicule".to_owned(),
-                        |s| s.to_string_lossy().into_owned(),
-                    );
                     // Un nom libre : « Portra », « Portra 2 »…
                     let mut name = stem.clone();
                     let mut k = 2;
@@ -412,7 +430,8 @@ impl Worker {
                     luma_image::cube::register(&name, m.cube);
                     Ok((name, m.before, m.after))
                 });
-                let _ = sender.send(Event::Measured { result });
+                let camera = matches!(source, FilmSource::Camera { .. });
+                let _ = sender.send(Event::Measured { result, camera });
                 repaint();
             })
             .expect("fil de mesure");

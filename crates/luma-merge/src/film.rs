@@ -76,6 +76,31 @@ pub fn reference(photo: &luma_render::Photo) -> Result<RgbImage> {
     })
 }
 
+/// La paire du rendu du boîtier : le rendu neutre de `photo` et le JPEG que le boîtier a
+/// rangé dans son RAW `path` (la même prise, ses couleurs à lui). Mesurée comme une
+/// pellicule, elle donne une LUT qui rend le RAW comme le boîtier l'aurait fait.
+pub fn camera_pair(photo: &luma_render::Photo, path: &std::path::Path) -> Result<Pair> {
+    let jpeg = luma_raw::RawPhoto::embedded_preview(path, 1600)
+        .ok_or_else(|| Error::Decode(format!("{} : pas de JPEG du boîtier", path.display())))?;
+    let (w, h) = (jpeg.width() as usize, jpeg.height() as usize);
+    Ok(Pair {
+        digital: reference(photo)?,
+        film: RgbImage {
+            width: w,
+            height: h,
+            data: jpeg
+                .as_raw()
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .map(|p| p.map(|v| f32::from(v) / 255.0))
+                .collect(),
+        },
+        // Le boîtier corrige parfois son objectif, ou recadre un peu : on aligne.
+        aligned: false,
+    })
+}
+
 /// Le résultat d'une mesure.
 pub struct Measured {
     pub cube: Cube,
@@ -409,5 +434,42 @@ mod tests {
             "",
         );
         assert!(r.is_err());
+    }
+
+    /// Le rendu du boîtier, sur un RAW de chaque marque du corpus : la LUT mesurée sur
+    /// son propre JPEG le reproduit (écart divisé par plus de cinq, sous 2) ; une
+    /// image sans JPEG du boîtier est refusée.
+    #[test]
+    fn the_camera_look_is_measured_from_its_own_jpeg() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus");
+        let raws: Vec<_> = std::fs::read_dir(&dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| luma_raw::is_raw(p))
+            .collect();
+        if raws.is_empty() {
+            eprintln!("corpus absent (scripts/fetch-corpus.sh) : essai ignoré");
+            return;
+        }
+        for path in &raws {
+            let photo = luma_render::Photo::open(path).unwrap();
+            let m = measure(&[camera_pair(&photo, path).unwrap()], 33, "boîtier").unwrap();
+            assert!(
+                m.after < 2.0 && m.after * 5.0 < m.before,
+                "{} : {} -> {}",
+                path.display(),
+                m.before,
+                m.after
+            );
+        }
+        let png = std::env::temp_dir().join(format!("luma-sans-jpeg-{}.png", std::process::id()));
+        image::RgbImage::from_pixel(64, 48, image::Rgb([90, 120, 150]))
+            .save(&png)
+            .unwrap();
+        let photo = luma_render::Photo::open(&png).unwrap();
+        assert!(camera_pair(&photo, &png).is_err());
+        let _ = std::fs::remove_file(&png);
     }
 }
