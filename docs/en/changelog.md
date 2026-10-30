@@ -241,7 +241,9 @@ The professional photo library, step by step.
   click shows its photos (the whole name, spaces included).
 - **A snappier library**: the panel's lists (folders, keywords, cameras, lenses) are
   counted without copying each value of each photo; for 100,000 photos, updating them
-  after a change goes from about 200 ms to 90 ms; the same lists.
+  after a change goes from about 200 ms to 90 ms; the same lists. The numbers of “To
+  do” and of the collections are counted without sorting the photos: 11 ms instead
+  of 36 ms for the three “To do” lines.
 - **A keyword renamed or removed everywhere**: in the keyword list, a right click
   renames a keyword in every photo that has it, or removes it; their XMPs are
   rewritten (rating, flag and the rest stay), and a photo that already had the new
