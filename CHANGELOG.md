@@ -243,6 +243,11 @@ La photothèque professionnelle, étape par étape.
 - **Collections manuelles depuis l'app** : le menu « Collection » range la photo
   ouverte et les photos choisies dans une collection (une existante, ou une nouvelle,
   nommée sur place), et les retire de la collection affichée.
+- **PNG 16 bits plus rapides et plus légers** : écrits par LÜMA sur tous les cœurs
+  (l'image en bandes filtrées et compressées chacune de son côté, un seul flux) :
+  l'export d'une photo de 24 Mpx en PNG 16 bits prend 1,8 à 2,0 s au lieu de 2,5 à
+  2,7 s, pour un fichier 10 % plus léger ; les mêmes pixels. Le PNG 8 bits garde son
+  codeur, déjà le plus rapide et le plus léger (mesuré).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

@@ -227,6 +227,11 @@ The professional photo library, step by step.
 - **Manual collections from the app**: the “Collection” menu puts the open photo and
   the selected photos in a collection (an existing one, or a new one named on the
   spot), and removes them from the collection shown.
+- **Faster and lighter 16-bit PNGs**: written by LÜMA on all cores (the image in
+  bands, each filtered and compressed on its own, one stream): exporting a 24 MP photo
+  as a 16-bit PNG takes 1.8 to 2.0 s instead of 2.5 to 2.7 s, for a file 10% lighter;
+  the same pixels. 8-bit PNG keeps its encoder, already the fastest and lightest
+  (measured).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
