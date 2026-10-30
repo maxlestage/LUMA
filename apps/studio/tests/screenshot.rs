@@ -3680,3 +3680,79 @@ fn library_folders_as_a_tree() {
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// « Tout remettre à zéro » : la photo ouverte et une autre choisie perdent leurs
+/// réglages (la note reste, et Annuler rend ceux de l'ouverte), un raccourci changé
+/// revient, la langue choisie est oubliée, les panneaux masqués reviennent.
+#[test]
+fn everything_is_reset_after_a_confirmation() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_sized("tout-a-zero", [1440.0, 1000.0], 1.0) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let k = photos.iter().position(|p| *p == open).unwrap();
+    let other = (k + 1) % photos.len();
+    let edited = luma_project::Settings {
+        exposure: 1.5,
+        ..luma_project::Settings::default()
+    };
+    let meta = luma_project::xmp::Meta {
+        rating: 3,
+        ..luma_project::xmp::Meta::default()
+    };
+    luma_studio::worker::write_sidecar(&photos[other], &edited, &meta).unwrap();
+    // +0,8 IL gardé dans l'historique (copié puis collé).
+    s.studio().settings.exposure = 0.8;
+    let cmd_shift = Modifiers::COMMAND | Modifiers::SHIFT;
+    s.keys(&[(cmd_shift, Key::C), (cmd_shift, Key::V)]);
+    s.studio().selected = [k, other].into_iter().collect();
+    let keys = s.dir.join("Raccourcis.txt");
+    s.studio().use_keys_file(keys.clone());
+    s.studio()
+        .set_shortcut("library", luma_studio::keys::Combo::new(Key::B));
+    let lang = s.dir.join("langue.txt");
+    std::fs::write(&lang, "es").unwrap();
+    s.studio().use_language_file(lang.clone());
+    s.studio().hide_panels = true;
+
+    // La fenêtre dit combien de photos ; Annuler ne touche à rien.
+    s.studio().reset_all_open = true;
+    s.wait();
+    s.harness.get_by_label_contains("de 2 photo(s)");
+    // (le dernier « Annuler » : celui de la fenêtre, pas celui de l'historique)
+    s.harness
+        .get_all_by_label("Annuler")
+        .last()
+        .unwrap()
+        .click();
+    s.wait();
+    assert!(!s.studio().reset_all_open);
+    assert_eq!(s.studio().settings.exposure, 0.8);
+
+    s.studio().reset_all_open = true;
+    s.wait();
+    s.capture("tout-a-zero");
+    s.harness
+        .get_by_role_and_label(egui::accesskit::Role::Button, "Tout remettre à zéro")
+        .click();
+    s.wait();
+    let now = luma_studio::i18n::lang();
+    // La langue d'avant pour les essais suivants.
+    luma_studio::i18n::set_lang(luma_studio::i18n::Lang::Fr);
+    assert!(!s.studio().reset_all_open);
+    assert_eq!(s.studio().settings.exposure, 0.0);
+    assert!(luma_studio::worker::read_sidecar(&photos[other]).is_none());
+    assert_eq!(luma_studio::worker::read_meta(&photos[other]).rating, 3);
+    assert!(!lang.exists(), "la langue choisie est oubliée");
+    assert_eq!(now, luma_studio::i18n::system());
+    assert_eq!(
+        std::fs::read_to_string(&keys).unwrap_or_default().trim(),
+        ""
+    );
+    assert!(!s.studio().hide_panels);
+    // Annuler rend les réglages de la photo ouverte.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(s.studio().settings.exposure, 0.8);
+}

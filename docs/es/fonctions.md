@@ -183,6 +183,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | Copias virtuales: varios revelados de una foto sin duplicar el archivo (un XMP por copia), cada una con su valoración, sus palabras clave y su miniatura, junto a su original; exportada como `IMG_0001-2`; eliminada sin tocar el original; también en el catálogo (todas las fotos, búsquedas, colecciones), con la fecha y la cámara de su original | ✅ |
 | Importación de catálogos existentes | ⏳ |
 | Atajos de teclado personalizables («Atajos de teclado…»: cada comando, sus teclas, una tecla ya usada pasa al nuevo comando, vuelta a las teclas por defecto; «Raccourcis.txt»); Tab oculta los paneles; espacios de trabajo (Selección, Revelado, Retoque, Presentación y los suyos: herramienta y paneles), Cmd+1 a Cmd+9 | ✅ |
+| «Restablecer todo…» (menú del idioma, y «•••» en iPhone), tras una confirmación: se borran los ajustes de las fotos elegidas y de la foto abierta (sus valoraciones, palabras clave y archivos se quedan; Deshacer devuelve los de la foto abierta), el idioma, los atajos, los paneles, los filtros y las opciones de exportación, impresión, presentación, libro y galería vuelven al primer inicio; fototeca, ajustes preestablecidos, plantillas, espacios de trabajo y licencia se conservan | ✅ |
 | Nombres de archivo, palabras clave y leyendas en todas las escrituras (japonés, chino, coreano, árabe, hebreo…): las letras que la fuente de LÜMA no tiene se toman, a petición, de las fuentes del sistema (Mac, Windows, Linux), en lugar de cajas vacías | ✅ |
 
 ## Lo que distingue a LÜMA

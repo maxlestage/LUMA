@@ -4,6 +4,12 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Tout remettre à zéro** : dans le menu de la langue (« ••• » sur iPhone), après une
+  confirmation qui dit ce qui change et ce qui reste : les réglages des photos choisies
+  et de la photo ouverte sont effacés (notes, mots‑clés et fichiers gardés ; Annuler
+  les rend à la photo ouverte), et la langue, les raccourcis, les panneaux, les filtres
+  et les choix d'export, d'impression, de diaporama, de livre et de galerie reviennent
+  comme au premier lancement. La photothèque, les préréglages et la licence restent.
 - **Arbre des dossiers plus léger** : refait seulement quand la photothèque change, et
   non plus à chaque image affichée (0,7 ms par image en moins sur 2 000 dossiers).
 - **Importer depuis l'app Fichiers sur iPhone et iPad** : « Depuis Fichiers » sous

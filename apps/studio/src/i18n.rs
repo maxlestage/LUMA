@@ -80,6 +80,20 @@ pub fn choose(lang: Lang) {
     }
 }
 
+/// Oublie la langue choisie dans l'app (son fichier `file`, sinon celui de LÜMA) :
+/// celle de `LUMA_LANG` ou du système revient tout de suite, et au prochain lancement.
+pub fn forget(file: Option<&std::path::Path>) -> Lang {
+    if let Some(p) = file.map(std::path::Path::to_path_buf).or_else(saved_path) {
+        let _ = std::fs::remove_file(p);
+    }
+    let lang = std::env::var("LUMA_LANG")
+        .ok()
+        .and_then(|v| Lang::negotiate(&v))
+        .unwrap_or_else(system);
+    set_lang(lang);
+    lang
+}
+
 /// La langue au démarrage : `LUMA_LANG`, sinon le choix fait dans l'app, sinon celle
 /// du système.
 pub fn startup() -> Lang {

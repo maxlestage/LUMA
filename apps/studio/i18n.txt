@@ -4001,6 +4001,30 @@ fr = Raccourcis clavier…
 en = Keyboard shortcuts…
 es = Atajos de teclado…
 
+fr = Tout remettre à zéro…
+en = Reset everything…
+es = Restablecer todo…
+
+fr = Tout remettre à zéro
+en = Reset everything
+es = Restablecer todo
+
+fr = Tout est remis à zéro ({n} photo(s)).
+en = Everything is reset ({n} photo(s)).
+es = Todo está restablecido ({n} foto(s)).
+
+fr = Les réglages de {n} photo(s) (celles choisies et la photo ouverte) sont effacés : elles reprennent leur rendu par défaut.
+en = The edits of {n} photo(s) (the selected ones and the open photo) are cleared: they go back to their default look.
+es = Los ajustes de {n} foto(s) (las elegidas y la foto abierta) se borran: vuelven a su aspecto predeterminado.
+
+fr = La langue, les raccourcis, les panneaux, les filtres et les choix d'export, d'impression, de diaporama, de livre et de galerie reviennent comme au premier lancement.
+en = Language, shortcuts, panels, filters and the export, print, slideshow, book and gallery choices go back to how they were at first launch.
+es = El idioma, los atajos, los paneles, los filtros y las opciones de exportación, impresión, presentación, libro y galería vuelven a como estaban en el primer inicio.
+
+fr = Restent : vos fichiers, leurs notes et mots-clés, la photothèque, les préréglages, les modèles, les espaces de travail et la licence.
+en = Kept: your files, their ratings and keywords, the library, presets, templates, workspaces and the license.
+es = Se conservan: sus archivos, sus valoraciones y palabras clave, la fototeca, los ajustes preestablecidos, las plantillas, los espacios de trabajo y la licencia.
+
 fr = Tout remettre par défaut
 en = Reset all to defaults
 es = Restablecer todo

@@ -649,6 +649,14 @@ pub fn write_photo_meta(path: &Path, meta: &Meta) -> Result<(), String> {
     xmp::save(&target, &text).map_err(|e| format!("{} : {e}", target.display()))
 }
 
+/// Efface les réglages d'une photo : son XMP ne garde que ses métadonnées (note,
+/// drapeau, mots‑clés…), et elle reprend son rendu par défaut, même si le fichier en
+/// porte en lui. Le fichier de la photo n'est pas touché.
+pub fn clear_photo_settings(path: &Path, meta: &Meta) -> Result<(), String> {
+    let target = xmp::sidecar_path(path);
+    xmp::save(&target, &xmp::write_meta(meta)).map_err(|e| format!("{} : {e}", target.display()))
+}
+
 /// Compte des valeurs, regroupées sans tenir compte des majuscules ni des accents ;
 /// chaque groupe garde la première graphie rencontrée.
 fn facet<S: AsRef<str>>(values: impl IntoIterator<Item = (S, usize)>) -> Vec<(String, usize)> {
@@ -1360,6 +1368,14 @@ mod tests {
         assert_eq!(cat.edit_keyword("plage", None).unwrap(), 1);
         assert_eq!(photo_meta(&a).keywords, ["Océan"]);
         assert_eq!(cat.edit_keyword("absent", None).unwrap(), 0);
+        // Les réglages effacés : la note et les mots‑clés restent, le fichier aussi.
+        clear_photo_settings(&a, &photo_meta(&a)).unwrap();
+        assert!(photo_settings(&a).is_none());
+        assert_eq!(
+            (photo_meta(&a).rating, photo_meta(&a).keywords),
+            (4, vec!["Océan".to_owned()])
+        );
+        assert_eq!(std::fs::read(&a).unwrap(), b"\x89PNG\r\n\x1a\n");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
