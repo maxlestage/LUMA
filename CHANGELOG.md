@@ -228,6 +228,9 @@ La photothèque professionnelle, étape par étape.
   (et de ses opacités), sur tous les cœurs, sans image intermédiaire en flottants :
   un JPEG de 24 Mpx s'ouvre en 0,18 s au lieu de 0,9 s ; les mêmes valeurs, au bit
   près.
+- **« À faire » dans la photothèque** : le panneau Photothèque compte les photos pas
+  encore notées, sans mot-clé et sans lieu ; un clic les montre (une ligne disparaît
+  quand il n'en reste plus).
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

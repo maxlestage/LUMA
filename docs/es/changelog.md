@@ -231,6 +231,9 @@ La fototeca profesional, paso a paso.
   valores (y de sus opacidades), en todos los núcleos, sin imagen intermedia en coma
   flotante: un JPEG de 24 Mpx se abre en 0,18 s en lugar de 0,9 s; los mismos
   valores, al bit.
+- **«Pendiente» en la fototeca**: el panel Fototeca cuenta las fotos aún sin valorar,
+  sin palabras clave y sin ubicación; un clic las muestra (una línea desaparece
+  cuando ya no queda ninguna).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
