@@ -302,10 +302,15 @@ fn tokens(text: &str) -> Vec<String> {
 
 /// Un mot‑clé en filtre de recherche : entre guillemets s'il a des espaces.
 pub fn keyword_filter(keyword: &str) -> String {
-    if keyword.chars().any(char::is_whitespace) {
-        format!("mot:\"{keyword}\"")
+    filter("mot", keyword)
+}
+
+/// Le filtre `key:value`, la valeur entre guillemets si elle a des espaces.
+pub fn filter(key: &str, value: &str) -> String {
+    if value.chars().any(char::is_whitespace) {
+        format!("{key}:\"{value}\"")
     } else {
-        format!("mot:{keyword}")
+        format!("{key}:{value}")
     }
 }
 
@@ -558,6 +563,21 @@ mod tests {
         assert!(!found("mot:coucher"));
         assert!(found(&keyword_filter("Coucher de soleil")));
         assert_eq!(keyword_filter("mer"), "mot:mer");
+        // Un boîtier et un objectif de plusieurs mots, retrouvés entiers.
+        let shot = Entry {
+            path: "/p/a.arw".into(),
+            make: "SONY".into(),
+            model: "ILCE-7M3".into(),
+            lens: "FE 24-70mm F2.8 GM".into(),
+            ..Entry::default()
+        };
+        let q = format!(
+            "{} {}",
+            filter("boîtier", &shot.camera()),
+            filter("objectif", &shot.lens)
+        );
+        assert!(Query::parse(&q).unwrap().matches(&shot), "{q}");
+        assert!(!Query::parse(&filter("objectif", "FE 70-200mm")).unwrap().matches(&shot));
         assert_eq!(tokens("  a  \"b c\" d"), ["a", "b c", "d"]);
     }
 }

@@ -256,6 +256,9 @@ La fototeca profesional, paso a paso.
   Fototeca, plegada, lista cada palabra clave con su número de fotos; un clic muestra
   sus fotos. La búsqueda conserva los espacios entre comillas
   (`keyword:"puesta de sol"`, comillas rectas, curvas o angulares).
+- **Las cámaras y los objetivos en la fototeca**: dos secciones plegadas, «Cámaras»
+  y «Objetivos», como las palabras clave: cada cámara y cada objetivo con su número
+  de fotos, un clic muestra sus fotos (el nombre entero, espacios incluidos).
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

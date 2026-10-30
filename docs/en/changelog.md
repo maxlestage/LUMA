@@ -236,6 +236,9 @@ The professional photo library, step by step.
   lists each keyword with its number of photos; a click shows its photos. Search keeps
   spaces between quotes (`keyword:"sunset sky"`, straight or curly quotes, or
   guillemets).
+- **Cameras and lenses in the library**: two folded sections, “Cameras” and
+  “Lenses”, like keywords: each camera and each lens with its number of photos, a
+  click shows its photos (the whole name, spaces included).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

@@ -3343,6 +3343,9 @@ fn library_by_year_and_month() {
         rating: 3,
         keywords: vec!["mer".into(), "coucher de soleil".into()],
         gps: Some([48.85, 2.35]),
+        make: "SONY".into(),
+        model: "ILCE-7M3".into(),
+        lens: "FE 24-70mm F2.8 GM".into(),
         ..luma_library::Entry::default()
     });
     cat.save(&catalog).unwrap();
@@ -3386,6 +3389,23 @@ fn library_by_year_and_month() {
     assert_eq!(
         harness.state().as_ref().unwrap().view,
         View::Search("mot:\"coucher de soleil\"".into())
+    );
+    // Les boîtiers et les objectifs, de même : le nom entier, espaces compris.
+    harness.get_by_label("Boîtiers (1)").click();
+    harness.run_steps(2);
+    harness.get_by_label("SONY ILCE-7M3 (1)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("boîtier:\"SONY ILCE-7M3\"".into())
+    );
+    harness.get_by_label("Objectifs (1)").click();
+    harness.run_steps(2);
+    harness.get_by_label("FE 24-70mm F2.8 GM (1)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("objectif:\"FE 24-70mm F2.8 GM\"".into())
     );
     harness.get_by_label("Sans lieu (4)").click();
     harness.run_steps(2);
