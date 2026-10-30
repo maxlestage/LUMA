@@ -3756,3 +3756,29 @@ fn everything_is_reset_after_a_confirmation() {
     s.keys(&[(Modifiers::COMMAND, Key::Z)]);
     assert_eq!(s.studio().settings.exposure, 0.8);
 }
+
+/// « Mesurer le rendu du boîtier » : le JPEG rangé dans le RAW ouvert devient un film,
+/// nommé d'après le boîtier, enregistré et choisi.
+#[test]
+fn the_camera_look_becomes_a_film() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("rendu-boitier") else {
+        return;
+    };
+    let films = s.dir.join("Films");
+    std::fs::create_dir_all(&films).unwrap();
+    s.studio().measure_camera(films.clone());
+    s.wait();
+    let status = s.studio().status().to_owned();
+    assert!(status.starts_with("Rendu du boîtier mesuré"), "{status}");
+    let cubes: Vec<_> = std::fs::read_dir(&films)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(cubes.len(), 1, "{cubes:?}");
+    assert!(cubes[0].ends_with(" JPEG.cube"), "{cubes:?}");
+    let film = s.studio().settings.lut.clone().expect("le film choisi");
+    assert_eq!(format!("{}.cube", film.name), cubes[0]);
+    assert!(s.studio().has_image());
+    s.capture("rendu-boitier");
+}

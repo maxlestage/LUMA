@@ -4,6 +4,13 @@
 
 La fototeca profesional, paso a paso.
 
+- **El aspecto de la cámara, medido**: «Medir el aspecto de la cámara» (Películas ›
+  Mis películas) compara el RAW abierto con el JPEG que la cámara guardó en él y lo
+  convierte en una película con el nombre de la cámara («Sony ILCE-7M3 JPEG»): sus RAW
+  revelados como ella lo hace, con intensidad ajustable. Sin IA: la medición de
+  películas, aplicada a la misma toma. En las siete marcas del corpus de prueba, la
+  diferencia con el JPEG de la cámara baja de 8–29 a menos de 2, en medio segundo. En
+  línea de comandos: `luma film-lut --camera`.
 - **Restablecer todo**: en el menú del idioma («•••» en iPhone), tras una confirmación
   que dice qué cambia y qué se queda: se borran los ajustes de las fotos elegidas y de
   la foto abierta (valoraciones, palabras clave y archivos se conservan; Deshacer
