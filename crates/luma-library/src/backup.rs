@@ -207,14 +207,14 @@ impl Catalog {
         self.forget(&gone)
     }
 
-    /// Retire du catalogue les photos rangées directement dans `dir` (le dossier n'est
-    /// plus suivi), et leur place dans les collections manuelles ; les fichiers ne sont
-    /// pas touchés, et les sous‑dossiers restent. Rend le nombre de photos retirées.
+    /// Retire du catalogue les photos du dossier `dir` et de ses sous‑dossiers (ils ne
+    /// sont plus suivis), et leur place dans les collections manuelles ; les fichiers
+    /// ne sont pas touchés. Rend le nombre de photos retirées.
     pub fn remove_folder(&mut self, dir: &Path) -> usize {
         let gone: Vec<PathBuf> = self
             .entries
             .keys()
-            .filter(|p| p.parent() == Some(dir))
+            .filter(|p| p.starts_with(dir) && p.as_path() != dir)
             .cloned()
             .collect();
         self.forget(&gone)
@@ -505,9 +505,9 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    /// Un dossier retiré de la photothèque : ses photos sortent du catalogue et des
-    /// collections, ses sous‑dossiers et les autres dossiers restent, les fichiers
-    /// aussi.
+    /// Un dossier retiré de la photothèque : ses photos et celles de ses sous‑dossiers
+    /// sortent du catalogue et des collections ; un dossier au nom voisin et les autres
+    /// restent, les fichiers aussi.
     #[test]
     fn a_folder_is_removed_but_its_files_stay() {
         let dir = temp("retire");
@@ -516,7 +516,7 @@ mod tests {
             std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(p, b"\x89PNG\r\n\x1a\n").unwrap();
         }
-        let other = dir.join("Autre/d.png");
+        let other = dir.join("Voyage 2/d.png");
         std::fs::create_dir_all(other.parent().unwrap()).unwrap();
         std::fs::write(&other, b"\x89PNG\r\n\x1a\n").unwrap();
         let mut cat = Catalog::default();
@@ -525,9 +525,9 @@ mod tests {
         c.content = Content::Manual(vec![dir.join("Voyage/a.png"), other.clone()]);
         cat.collections.push(c);
         assert_eq!(cat.len(), 4);
-        assert_eq!(cat.remove_folder(&dir.join("Voyage")), 2);
-        assert_eq!(cat.len(), 2);
-        assert!(cat.get(&dir.join("Voyage/sous/c.png")).is_some());
+        assert_eq!(cat.remove_folder(&dir.join("Voyage")), 3);
+        assert_eq!(cat.len(), 1);
+        assert!(cat.get(&other).is_some(), "« Voyage 2 » n'est pas sous « Voyage »");
         assert_eq!(cat.collections()[0].content, Content::Manual(vec![other.clone()]));
         assert!(dir.join("Voyage/a.png").is_file(), "le fichier reste");
         assert_eq!(cat.remove_folder(&dir.join("Absent")), 0);

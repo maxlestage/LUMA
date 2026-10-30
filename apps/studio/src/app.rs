@@ -953,6 +953,9 @@ pub struct Studio {
     catalog_dates: Vec<luma_library::Year>,
     /// « À faire » : le nombre de photos pas encore notées, sans mot‑clé, sans lieu.
     catalog_todo: [usize; 3],
+    /// Les dossiers de l'arbre dépliés ou repliés autrement que d'habitude (le sommet
+    /// déplié, le reste replié).
+    folders_toggled: BTreeSet<PathBuf>,
     /// Les mots‑clés de la photothèque et leur nombre de photos ; leur liste dépliée.
     catalog_keywords: Vec<(String, usize)>,
     keywords_open: bool,
@@ -1325,6 +1328,7 @@ impl Studio {
             catalog_dates: Vec::new(),
             catalog_todo: [0; 3],
             catalog_keywords: Vec::new(),
+            folders_toggled: BTreeSet::new(),
             keywords_open: false,
             keyword_rename: String::new(),
             catalog_cameras: Vec::new(),
@@ -9905,38 +9909,25 @@ impl Studio {
                 .and_then(|p| p.parent())
                 .map(Path::to_path_buf);
             let mut forget = None;
-            for (dir, n) in &self.catalog_folders {
-                let on = self.view == View::Folder && current.as_ref() == Some(dir);
-                let name = dir.file_name().map_or_else(
-                    || dir.display().to_string(),
-                    |n| n.to_string_lossy().into_owned(),
+            let mut toggle = None;
+            let tree = luma_library::folder_tree(&self.catalog_folders);
+            for top in &tree {
+                folder_rows(
+                    ui,
+                    top,
+                    0,
+                    &self.folders_toggled,
+                    current.as_deref(),
+                    self.view == View::Folder,
+                    &mut open,
+                    &mut toggle,
+                    &mut forget,
                 );
-                let row = ui
-                    .selectable_label(on, format!("{name} ({n})"))
-                    .on_hover_text(dir.display().to_string());
-                if row.clicked() {
-                    open = Some(dir.clone());
-                }
-                // Clic droit : le retirer de la photothèque (ses fichiers restent), ou
-                // l'ouvrir dans le gestionnaire de fichiers du système.
-                row.context_menu(|ui| {
-                    if crate::dialogs::system_opener().is_some()
-                        && ui.button(tr("Ouvrir le dossier")).clicked()
-                    {
-                        crate::dialogs::open_with_system(&dir.display().to_string());
-                        ui.close();
-                    }
-                    if ui
-                        .button(tr("Retirer de la photothèque"))
-                        .on_hover_text(tr(
-                            "Ses photos ne sont plus suivies ; les fichiers ne sont pas touchés",
-                        ))
-                        .clicked()
-                    {
-                        forget = Some(dir.clone());
-                        ui.close();
-                    }
-                });
+            }
+            if let Some(dir) = toggle
+                && !self.folders_toggled.remove(&dir)
+            {
+                self.folders_toggled.insert(dir);
             }
             if let Some(dir) = forget {
                 self.remove_folder(&dir);
@@ -13186,6 +13177,80 @@ fn facet_section(
             });
     }
     chosen
+}
+
+/// Une ligne de l'arbre des dossiers et, dépliée, celles de ses sous‑dossiers : le
+/// triangle déplie ou replie, le nom ouvre le dossier (ou le déplie s'il n'a pas de
+/// photo à lui), le clic droit l'ouvre dans le gestionnaire de fichiers ou le retire de
+/// la photothèque (sous‑dossiers compris).
+#[allow(clippy::too_many_arguments)]
+fn folder_rows(
+    ui: &mut Ui,
+    f: &luma_library::Folder,
+    depth: usize,
+    toggled: &BTreeSet<PathBuf>,
+    current: Option<&Path>,
+    folder_view: bool,
+    open: &mut Option<PathBuf>,
+    toggle: &mut Option<PathBuf>,
+    forget: &mut Option<PathBuf>,
+) {
+    let unfolded = (depth == 0) != toggled.contains(&f.path);
+    ui.horizontal(|ui| {
+        ui.add_space(depth as f32 * 14.0);
+        if f.children.is_empty() {
+            ui.add_space(20.0);
+        } else if fold_triangle(ui, unfolded, tr("Les sous-dossiers"))
+            .on_hover_text(tr("Les sous-dossiers"))
+            .clicked()
+        {
+            *toggle = Some(f.path.clone());
+        }
+        let on = folder_view && current == Some(f.path.as_path());
+        let row = ui
+            .selectable_label(on, format!("{} ({})", f.name, f.total))
+            .on_hover_text(f.path.display().to_string());
+        if row.clicked() {
+            if f.own > 0 {
+                *open = Some(f.path.clone());
+            } else {
+                *toggle = Some(f.path.clone());
+            }
+        }
+        row.context_menu(|ui| {
+            if crate::dialogs::system_opener().is_some()
+                && ui.button(tr("Ouvrir le dossier")).clicked()
+            {
+                crate::dialogs::open_with_system(&f.path.display().to_string());
+                ui.close();
+            }
+            if ui
+                .button(tr("Retirer de la photothèque"))
+                .on_hover_text(tr(
+                    "Ses photos ne sont plus suivies ; les fichiers ne sont pas touchés",
+                ))
+                .clicked()
+            {
+                *forget = Some(f.path.clone());
+                ui.close();
+            }
+        });
+    });
+    if unfolded {
+        for c in &f.children {
+            folder_rows(
+                ui,
+                c,
+                depth + 1,
+                toggled,
+                current,
+                folder_view,
+                open,
+                toggle,
+                forget,
+            );
+        }
+    }
 }
 
 /// Ce que demande une section de [`facet_section`].

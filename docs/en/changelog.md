@@ -265,7 +265,7 @@ The professional photo library, step by step.
   the same, byte for byte.
 - **A folder removed from the library**: the right click on a folder of the Library
   panel removes it from the library (its photos are no longer tracked, nor in
-  collections; the files are not touched, subfolders stay) or opens it in the
+  collections; subfolders included; the files are not touched) or opens it in the
   system's file manager.
 - **The photo list as CSV**: “Export list (CSV)…” (and `luma catalog --csv`) writes
   the photos shown — a collection, a search, a date — as a table for a client or for
@@ -276,6 +276,10 @@ The professional photo library, step by step.
   missing photos of “Maintenance…”): 3 times faster on a local disk (20,000 photos:
   17 → 5 ms), more on an external or network drive; the same photos, in the same
   order.
+- **Folders as a tree**: the Library panel arranges folders as a tree; each with the
+  photos of its whole tree, a triangle that unfolds its subfolders, and photo-less
+  paths merged into one line (“Photos/2024” rather than every step of the disk).
+  Removed from the library, a folder takes its subfolders with it.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

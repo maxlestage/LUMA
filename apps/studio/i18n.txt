@@ -6158,3 +6158,9 @@ es = {n} fotos en {file}
 fr = Liste impossible : {error}
 en = List not possible: {error}
 es = Lista imposible: {error}
+
+# ----- L'arbre des dossiers -----
+
+fr = Les sous-dossiers
+en = Subfolders
+es = Las subcarpetas

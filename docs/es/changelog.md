@@ -285,7 +285,7 @@ La fototeca profesional, paso a paso.
   sin búsqueda); el archivo es el mismo, byte a byte.
 - **Una carpeta quitada de la fototeca**: el clic derecho en una carpeta del panel
   Fototeca la quita de la fototeca (sus fotos dejan de seguirse, también en las
-  colecciones; los archivos no se tocan, las subcarpetas se quedan) o la abre en el
+  colecciones; subcarpetas incluidas; los archivos no se tocan) o la abre en el
   gestor de archivos del sistema.
 - **La lista de fotos en CSV**: «Exportar la lista (CSV)…» (y `luma catalog --csv`)
   escribe las fotos mostradas —una colección, una búsqueda, una fecha— en una tabla
@@ -296,6 +296,10 @@ La fototeca profesional, paso a paso.
   para las fotos que faltan de «Mantenimiento…»): 3 veces más rápido en un disco local
   (20 000 fotos: 17 → 5 ms), más en un disco externo o en red; las mismas fotos, en el
   mismo orden.
+- **Las carpetas en árbol**: el panel Fototeca ordena las carpetas en árbol; cada una
+  con las fotos de todo su árbol, un triángulo que despliega sus subcarpetas, y las
+  rutas sin fotos fundidas en una línea («Photos/2024» en lugar de cada escalón del
+  disco). Quitada de la fototeca, una carpeta se lleva sus subcarpetas.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
