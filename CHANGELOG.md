@@ -260,6 +260,10 @@ La photothèque professionnelle, étape par étape.
   objectifs) se comptent sans copier chaque valeur de chaque photo ; pour 100 000
   photos, leur mise à jour après un changement passe d'environ 200 ms à 90 ms ; les
   mêmes listes.
+- **Un mot‑clé renommé ou supprimé partout** : dans la liste des mots‑clés, un clic
+  droit renomme un mot‑clé dans toutes les photos qui l'ont, ou l'en retire ; leurs
+  XMP sont réécrits (la note, le drapeau et le reste ne bougent pas), et une photo qui
+  avait déjà le nouveau nom ne l'a pas deux fois.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

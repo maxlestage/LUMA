@@ -956,6 +956,8 @@ pub struct Studio {
     /// Les mots‑clés de la photothèque et leur nombre de photos ; leur liste dépliée.
     catalog_keywords: Vec<(String, usize)>,
     keywords_open: bool,
+    /// Le nouveau nom d'un mot‑clé, pendant qu'on l'écrit (clic droit dans la liste).
+    keyword_rename: String,
     /// Les boîtiers et les objectifs, de même.
     catalog_cameras: Vec<(String, usize)>,
     cameras_open: bool,
@@ -1317,6 +1319,7 @@ impl Studio {
             catalog_todo: [0; 3],
             catalog_keywords: Vec::new(),
             keywords_open: false,
+            keyword_rename: String::new(),
             catalog_cameras: Vec::new(),
             cameras_open: false,
             catalog_lenses: Vec::new(),
@@ -4657,6 +4660,71 @@ impl Studio {
             }
         });
         targets.len()
+    }
+
+    /// Change les mots‑clés de toutes les photos de la photothèque qui ont `word` (aux
+    /// majuscules et accents près) : leurs métadonnées sont lues d'abord si elles ne le
+    /// sont pas (rien d'autre ne bouge), puis écrites ; la photothèque est relue.
+    /// Rend le nombre de photos touchées.
+    fn edit_keyword_everywhere(&mut self, word: &str, f: impl Fn(&mut Meta)) -> usize {
+        let paths: Vec<PathBuf> = self
+            .catalog
+            .entries()
+            .filter(|e| e.keywords.iter().any(|k| fold(k) == fold(word)))
+            .map(|e| e.path.clone())
+            .collect();
+        for p in &paths {
+            if !self.meta.contains_key(p) {
+                let meta = crate::worker::read_meta(p);
+                self.meta.insert(p.clone(), meta);
+            }
+        }
+        self.edit_meta(&paths, f);
+        self.flush_xmp();
+        for p in &paths {
+            self.catalog.refresh_meta(p);
+        }
+        self.upkeep_changed();
+        paths.len()
+    }
+
+    /// Renomme un mot‑clé dans toutes les photos qui l'ont ; une photo qui avait déjà le
+    /// nouveau ne l'a pas deux fois. Rend le nombre de photos.
+    pub fn rename_keyword_everywhere(&mut self, from: &str, to: &str) -> usize {
+        let to = to.trim().to_owned();
+        if to.is_empty() {
+            return 0;
+        }
+        let n = self.edit_keyword_everywhere(from, |m| {
+            let mut out: Vec<String> = Vec::new();
+            for k in &m.keywords {
+                let k = if fold(k) == fold(from) {
+                    to.clone()
+                } else {
+                    k.clone()
+                };
+                if !out.iter().any(|o| fold(o) == fold(&k)) {
+                    out.push(k);
+                }
+            }
+            m.keywords = out;
+        });
+        self.status = trf(
+            "« {from} » devient « {to} » sur {n} photos",
+            &[("from", &from), ("to", &to), ("n", &n)],
+        );
+        n
+    }
+
+    /// Retire un mot‑clé de toutes les photos qui l'ont. Rend le nombre de photos.
+    pub fn delete_keyword_everywhere(&mut self, word: &str) -> usize {
+        let n =
+            self.edit_keyword_everywhere(word, |m| m.keywords.retain(|k| fold(k) != fold(word)));
+        self.status = trf(
+            "« {word} » retiré de {n} photos",
+            &[("word", &word), ("n", &n)],
+        );
+        n
     }
 
     /// Retire un mot‑clé de la sélection, ou de la photo affichée.
@@ -9637,10 +9705,22 @@ impl Studio {
                 "objectif",
             ),
         ];
+        let mut asked = None;
         for (open, title, help, items, key) in facets {
-            if let Some(v) = facet_section(ui, open, &title, help, items, key, &self.view) {
-                chosen = Some(v);
+            let rename = (key == "mot").then_some(&mut self.keyword_rename);
+            if let Some(a) = facet_section(ui, open, &title, help, items, key, &self.view, rename) {
+                asked = Some(a);
             }
+        }
+        match asked {
+            Some(Facet::Show(v)) => chosen = Some(v),
+            Some(Facet::Rename(from, to)) => {
+                self.rename_keyword_everywhere(&from, &to);
+            }
+            Some(Facet::Delete(word)) => {
+                self.delete_keyword_everywhere(&word);
+            }
+            None => {}
         }
         if !self.catalog_dates.is_empty() {
             ui.label(RichText::new(tr("Dates")).color(theme::DIM).size(11.5));
@@ -12876,6 +12956,7 @@ fn todo_name(i: usize) -> &'static str {
 /// Une section repliable du panneau Photothèque (mots‑clés, boîtiers, objectifs) : son
 /// titre, et une fois dépliée chaque valeur avec son nombre de photos ; rend la vue
 /// choisie (la recherche `key:valeur`).
+#[allow(clippy::too_many_arguments)]
 fn facet_section(
     ui: &mut Ui,
     open: &mut bool,
@@ -12884,7 +12965,8 @@ fn facet_section(
     items: &[(String, usize)],
     key: &str,
     view: &View,
-) -> Option<View> {
+    rename: Option<&mut String>,
+) -> Option<Facet> {
     if items.is_empty() {
         return None;
     }
@@ -12902,6 +12984,7 @@ fn facet_section(
         *open = !*open;
     }
     let mut chosen = None;
+    let mut rename = rename;
     if *open {
         egui::ScrollArea::vertical()
             .id_salt(key)
@@ -12912,14 +12995,50 @@ fn facet_section(
                     let on = *view == View::Search(query.clone());
                     ui.horizontal(|ui| {
                         ui.add_space(22.0);
-                        if ui.selectable_label(on, format!("{value} ({n})")).clicked() {
-                            chosen = Some(View::Search(query));
+                        let row = ui.selectable_label(on, format!("{value} ({n})"));
+                        if row.clicked() {
+                            chosen = Some(Facet::Show(View::Search(query)));
+                        }
+                        // Les mots‑clés : renommés ou supprimés partout (clic droit).
+                        if let Some(name) = rename.as_deref_mut() {
+                            row.context_menu(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.add(
+                                        egui::TextEdit::singleline(name)
+                                            .hint_text(value.as_str())
+                                            .desired_width(140.0),
+                                    );
+                                    let ok = !name.trim().is_empty() && name.trim() != value;
+                                    if ui
+                                        .add_enabled(ok, egui::Button::new(tr("Renommer")).small())
+                                        .clicked()
+                                    {
+                                        chosen = Some(Facet::Rename(
+                                            value.clone(),
+                                            name.trim().to_owned(),
+                                        ));
+                                        name.clear();
+                                        ui.close();
+                                    }
+                                });
+                                if ui.button(tr("Supprimer de toutes les photos")).clicked() {
+                                    chosen = Some(Facet::Delete(value.clone()));
+                                    ui.close();
+                                }
+                            });
                         }
                     });
                 }
             });
     }
     chosen
+}
+
+/// Ce que demande une section de [`facet_section`].
+enum Facet {
+    Show(View),
+    Rename(String, String),
+    Delete(String),
 }
 
 /// Un petit triangle qui déplie (pointe vers le bas une fois déplié), dessiné : il ne

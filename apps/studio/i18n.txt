@@ -6032,3 +6032,17 @@ es = Objetivos ({n})
 fr = Les objectifs de la photothèque
 en = The library's lenses
 es = Los objetivos de la fototeca
+
+# ----- Les mots-clés renommés ou supprimés partout -----
+
+fr = Supprimer de toutes les photos
+en = Remove from all photos
+es = Quitar de todas las fotos
+
+fr = « {from} » devient « {to} » sur {n} photos
+en = “{from}” becomes “{to}” on {n} photos
+es = «{from}» pasa a ser «{to}» en {n} fotos
+
+fr = « {word} » retiré de {n} photos
+en = “{word}” removed from {n} photos
+es = «{word}» quitado de {n} fotos

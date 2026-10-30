@@ -262,6 +262,10 @@ La fototeca profesional, paso a paso.
 - **Una fototeca más ágil**: las listas del panel (carpetas, palabras clave, cámaras,
   objetivos) se cuentan sin copiar cada valor de cada foto; para 100 000 fotos, su
   actualización tras un cambio pasa de unos 200 ms a 90 ms; las mismas listas.
+- **Una palabra clave renombrada o quitada en todas partes**: en la lista de palabras
+  clave, un clic derecho renombra una palabra clave en todas las fotos que la tienen,
+  o la quita; sus XMP se reescriben (la valoración, la bandera y lo demás no cambian),
+  y una foto que ya tenía el nuevo nombre no lo tiene dos veces.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

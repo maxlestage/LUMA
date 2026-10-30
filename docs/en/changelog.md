@@ -242,6 +242,10 @@ The professional photo library, step by step.
 - **A snappier library**: the panel's lists (folders, keywords, cameras, lenses) are
   counted without copying each value of each photo; for 100,000 photos, updating them
   after a change goes from about 200 ms to 90 ms; the same lists.
+- **A keyword renamed or removed everywhere**: in the keyword list, a right click
+  renames a keyword in every photo that has it, or removes it; their XMPs are
+  rewritten (rating, flag and the rest stay), and a photo that already had the new
+  name does not get it twice.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
