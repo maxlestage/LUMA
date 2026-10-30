@@ -251,6 +251,11 @@ The professional photo library, step by step.
 - **A collection renamed**: the right click on a collection renames it (the name is
   typed on the spot); it keeps its photos and its rule, takes its place in
   alphabetical order, and stays shown if it was; a name already taken is refused.
+- **Keywords and collections from the command line**: `luma catalog` renames a
+  keyword in all its photos (`--rename-keyword old new`) or removes it
+  (`--delete-keyword`), the XMPs rewritten without losing anything else; renames a
+  collection (`--rename-collection`) and removes a photo from one (`--remove-from`):
+  what the app does, through the same code.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
