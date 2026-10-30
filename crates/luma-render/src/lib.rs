@@ -15,6 +15,7 @@ pub mod gallery;
 pub mod jpeg;
 pub mod metadata;
 pub mod pdf;
+pub mod png;
 pub mod print;
 pub mod rename;
 pub mod slideshow;

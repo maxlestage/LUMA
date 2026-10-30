@@ -147,6 +147,17 @@ fn write_at(
             };
             std::fs::write(path, out).map_err(|e| format!("{} : {e}", path.display()))
         }
+        "png" if sixteen => {
+            // En 16 bits, écrit par LÜMA sur tous les cœurs (voir `png`) : plus vite et
+            // plus léger que le codeur d'images, aux mêmes pixels ; en 8 bits, ce codeur
+            // reste le plus rapide et le plus léger (mesuré).
+            let mut f = std::io::BufWriter::new(create()?);
+            crate::png::write(
+                &mut f, &bytes, img.width, img.height, true, &profile, &meta.exif, meta.dpi,
+            )
+            .and_then(|()| std::io::Write::flush(&mut f))
+            .map_err(|e| format!("{} : {e}", path.display()))
+        }
         "png" => {
             let Some(dpi) = meta.dpi else {
                 let mut enc = image::codecs::png::PngEncoder::new(std::io::BufWriter::new(create()?));
@@ -1444,6 +1455,48 @@ pub fn describe(o: &Options) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Les PNG se relisent aux octets de la conversion, en 8 bits (codeur d'images) et
+    /// en 16 bits (écrit sur tous les cœurs), avec la résolution d'un tirage en 16 bits
+    /// aussi.
+    #[test]
+    fn png_exports_decode_to_the_converted_bytes() {
+        let img = RgbImage::from_fn(131, 77, |x, y| {
+            [x as f32 / 140.0, y as f32 / 80.0, 0.3 + (x * y % 7) as f32 / 50.0]
+        });
+        let dir = std::env::temp_dir().join(format!("luma-png-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for bits in [8, 16] {
+            let path = dir.join(format!("x{bits}.png"));
+            write(&path, &img, OutputSpace::DisplayP3, 92, bits).unwrap();
+            let back = image::open(&path).unwrap();
+            if bits == 16 {
+                assert_eq!(
+                    back.to_rgb16().into_raw(),
+                    luma_image::encode16(&img, OutputSpace::DisplayP3)
+                );
+            } else {
+                assert_eq!(
+                    back.to_rgb8().into_raw(),
+                    luma_image::encode8(&img, OutputSpace::DisplayP3)
+                );
+            }
+        }
+        let path = dir.join("tirage16.png");
+        let meta = Embedded {
+            dpi: Some(300),
+            ..Embedded::default()
+        };
+        write_file(&path, &img, OutputSpace::Srgb, 90, 16, &meta, false).unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        assert_eq!(&bytes[37..41], b"pHYs");
+        assert_eq!(&bytes[41..45], &11_811u32.to_be_bytes());
+        assert_eq!(
+            image::open(&path).unwrap().to_rgb16().into_raw(),
+            luma_image::encode16(&img, OutputSpace::Srgb)
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn tiff_exports_decode_like_before() {
