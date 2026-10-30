@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Arbre des dossiers plus léger** : refait seulement quand la photothèque change, et
+  non plus à chaque image affichée (0,7 ms par image en moins sur 2 000 dossiers).
 - **Importer depuis l'app Fichiers sur iPhone et iPad** : « Depuis Fichiers » sous
   « Importer des photos » (et dans le menu « ••• ») ouvre l'app Fichiers : les RAW d'une
   carte mémoire branchée au lecteur, d'iCloud Drive ou d'un disque arrivent dans LÜMA,
