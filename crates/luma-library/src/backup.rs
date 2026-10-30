@@ -201,12 +201,31 @@ impl Catalog {
             .filter(|e| e.path.starts_with(dir))
             .map(|e| e.path.clone())
             .collect();
-        for p in &gone {
+        self.forget(&gone)
+    }
+
+    /// Retire du catalogue les photos rangées directement dans `dir` (le dossier n'est
+    /// plus suivi), et leur place dans les collections manuelles ; les fichiers ne sont
+    /// pas touchés, et les sous‑dossiers restent. Rend le nombre de photos retirées.
+    pub fn remove_folder(&mut self, dir: &Path) -> usize {
+        let gone: Vec<PathBuf> = self
+            .entries
+            .keys()
+            .filter(|p| p.parent() == Some(dir))
+            .cloned()
+            .collect();
+        self.forget(&gone)
+    }
+
+    /// Ces photos sortent du catalogue et des collections manuelles.
+    fn forget(&mut self, gone: &[PathBuf]) -> usize {
+        for p in gone {
             self.entries.remove(p);
         }
+        let set: std::collections::HashSet<&PathBuf> = gone.iter().collect();
         for c in &mut self.collections {
             if let crate::Content::Manual(list) = &mut c.content {
-                list.retain(|p| !(p.starts_with(dir) && gone.contains(p)));
+                list.retain(|p| !set.contains(p));
             }
         }
         gone.len()
@@ -480,6 +499,35 @@ mod tests {
         assert_eq!(cat.len(), 4);
         assert_eq!(cat.collections()[0].content, Content::Manual(vec![keep.clone()]));
         assert_eq!(cat.forget_missing(&dir), 0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Un dossier retiré de la photothèque : ses photos sortent du catalogue et des
+    /// collections, ses sous‑dossiers et les autres dossiers restent, les fichiers
+    /// aussi.
+    #[test]
+    fn a_folder_is_removed_but_its_files_stay() {
+        let dir = temp("retire");
+        for f in ["a.png", "b.png", "sous/c.png"] {
+            let p = dir.join("Voyage").join(f);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, b"\x89PNG\r\n\x1a\n").unwrap();
+        }
+        let other = dir.join("Autre/d.png");
+        std::fs::create_dir_all(other.parent().unwrap()).unwrap();
+        std::fs::write(&other, b"\x89PNG\r\n\x1a\n").unwrap();
+        let mut cat = Catalog::default();
+        cat.add_folder(&dir, true);
+        let mut c = Collection::manual("Choix");
+        c.content = Content::Manual(vec![dir.join("Voyage/a.png"), other.clone()]);
+        cat.collections.push(c);
+        assert_eq!(cat.len(), 4);
+        assert_eq!(cat.remove_folder(&dir.join("Voyage")), 2);
+        assert_eq!(cat.len(), 2);
+        assert!(cat.get(&dir.join("Voyage/sous/c.png")).is_some());
+        assert_eq!(cat.collections()[0].content, Content::Manual(vec![other.clone()]));
+        assert!(dir.join("Voyage/a.png").is_file(), "le fichier reste");
+        assert_eq!(cat.remove_folder(&dir.join("Absent")), 0);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

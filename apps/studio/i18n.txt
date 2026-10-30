@@ -6074,3 +6074,21 @@ es = Las etiquetas de la fototeca
 fr = {n} étoiles
 en = {n} stars
 es = {n} estrellas
+
+# ----- Un dossier retiré de la photothèque -----
+
+fr = Ouvrir le dossier
+en = Open folder
+es = Abrir la carpeta
+
+fr = Retirer de la photothèque
+en = Remove from library
+es = Quitar de la fototeca
+
+fr = Ses photos ne sont plus suivies ; les fichiers ne sont pas touchés
+en = Its photos are no longer tracked; the files are not touched
+es = Sus fotos dejan de seguirse; los archivos no se tocan
+
+fr = {n} photos de « {name} » retirées de la photothèque
+en = {n} photos of “{name}” removed from the library
+es = {n} fotos de «{name}» quitadas de la fototeca
