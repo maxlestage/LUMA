@@ -207,6 +207,10 @@ The professional photo library, step by step.
   range or exact (`rating:..2`, `rating:2..4`, `rating:=0` for photos not yet rated)
   and `without:`: `without:rating`, `without:keyword`, `without:location`,
   `without:label`, which can be combined.
+- **JPEG and PNG five times faster to open**: an 8-bit-per-channel image (JPEG, PNG,
+  TIFF, WebP, PSD…) is turned into linear values through a table of its 256 values
+  (and its opacities), on all cores, with no intermediate floating-point image: a
+  24 MP JPEG opens in 0.18 s instead of 0.9 s; the same values, to the bit.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

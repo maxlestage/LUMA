@@ -226,6 +226,11 @@ La fototeca profesional, paso a paso.
   aceptan la valoración en rango o exacta (`rating:..2`, `rating:2..4`, `rating:=0`
   para las fotos aún sin valorar) y `without:`: `without:rating`, `without:keyword`,
   `without:location`, `without:label`, combinables.
+- **JPEG y PNG cinco veces más rápidos de abrir**: una imagen de 8 bits por canal
+  (JPEG, PNG, TIFF, WebP, PSD…) pasa a valores lineales mediante una tabla de sus 256
+  valores (y de sus opacidades), en todos los núcleos, sin imagen intermedia en coma
+  flotante: un JPEG de 24 Mpx se abre en 0,18 s en lugar de 0,9 s; los mismos
+  valores, al bit.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
