@@ -5944,3 +5944,33 @@ es = Sin palabras clave
 fr = Sans lieu
 en = No location
 es = Sin ubicación
+
+# ----- Les collections dans l'app -----
+
+fr = Enregistrer comme collection…
+en = Save as collection…
+es = Guardar como colección…
+
+fr = Une collection dynamique : ses photos sont celles que la recherche trouve, à chaque fois
+en = A smart collection: its photos are the ones the search finds, every time
+es = Una colección inteligente: sus fotos son las que la búsqueda encuentra, cada vez
+
+fr = Nom de la collection
+en = Collection name
+es = Nombre de la colección
+
+fr = Supprimer la collection
+en = Delete collection
+es = Eliminar la colección
+
+fr = Collection « {name} » enregistrée
+en = Collection “{name}” saved
+es = Colección «{name}» guardada
+
+fr = Collection impossible : {error}
+en = Collection not possible: {error}
+es = Colección imposible: {error}
+
+fr = Collection « {name} » supprimée
+en = Collection “{name}” deleted
+es = Colección «{name}» eliminada

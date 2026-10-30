@@ -956,6 +956,8 @@ pub struct Studio {
     open_years: BTreeSet<String>,
     pub view: View,
     catalog_search: String,
+    /// Le nom de la collection à faire de la recherche affichée, pendant qu'on l'écrit.
+    collection_name: Option<String>,
     pub export_options: ExportOptions,
     /// Les préréglages d'export (relus à l'ouverture de la fenêtre), ceux qui sont
     /// cochés, et si les réglages de la fenêtre sont exportés eux aussi.
@@ -1306,6 +1308,7 @@ impl Studio {
             open_years: BTreeSet::new(),
             view: View::Folder,
             catalog_search: String::new(),
+            collection_name: None,
             export_options: ExportOptions::default(),
             export_presets: luma_render::export::Presets::default(),
             export_targets: Vec::new(),
@@ -1638,6 +1641,42 @@ impl Studio {
                 (c.name.clone(), n)
             })
             .collect();
+    }
+
+    /// La recherche `rule` enregistrée en collection dynamique `name` (une collection du
+    /// même nom est remplacée), puis montrée.
+    pub fn save_search_as_collection(&mut self, name: &str, rule: &str) -> bool {
+        let made = luma_library::Collection::smart(name, rule)
+            .and_then(|c| self.catalog.set_collection(c));
+        match made {
+            Ok(()) => {
+                self.collection_name = None;
+                self.upkeep_changed();
+                self.status = trf(
+                    "Collection « {name} » enregistrée",
+                    &[("name", &name.trim())],
+                );
+                self.show_view(View::Collection(name.trim().to_owned()));
+                true
+            }
+            Err(e) => {
+                self.status = trf("Collection impossible : {error}", &[("error", &e)]);
+                false
+            }
+        }
+    }
+
+    /// Supprime une collection (ses photos restent dans la photothèque).
+    pub fn delete_collection(&mut self, name: &str) -> bool {
+        let gone = self.catalog.remove_collection(name);
+        if gone {
+            if self.view == View::Collection(name.to_owned()) {
+                self.show_view(View::All);
+            }
+            self.upkeep_changed();
+            self.status = trf("Collection « {name} » supprimée", &[("name", &name)]);
+        }
+        gone
     }
 
     /// Ouvre la fenêtre d'entretien de la photothèque (ou la relit).
@@ -9363,6 +9402,51 @@ impl Studio {
                 View::Search(text)
             });
         }
+        // La recherche affichée devient une collection dynamique, qui la refait à chaque
+        // fois (« sans:mot », « date:30j »…).
+        if let View::Search(rule) = self.view.clone() {
+            match self.collection_name.as_mut() {
+                None => {
+                    if ui
+                        .small_button(tr("Enregistrer comme collection…"))
+                        .on_hover_text(tr("Une collection dynamique : ses photos sont celles que la recherche trouve, à chaque fois"))
+                        .clicked()
+                    {
+                        self.collection_name = Some(String::new());
+                        // Le nom s'écrit tout de suite, sans cliquer dans le champ.
+                        ui.memory_mut(|m| m.request_focus(egui::Id::unique("nom-de-collection")));
+                    }
+                }
+                Some(name) => {
+                    let mut save = false;
+                    let mut cancel = false;
+                    ui.horizontal(|ui| {
+                        let field = ui.add(
+                            egui::TextEdit::singleline(name)
+                                .id(egui::Id::unique("nom-de-collection"))
+                                .hint_text(tr("Nom de la collection"))
+                                .desired_width(150.0),
+                        );
+                        save = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
+                        save |= ui
+                            .add_enabled(
+                                !name.trim().is_empty(),
+                                egui::Button::new(tr("Enregistrer")).small(),
+                            )
+                            .clicked();
+                        cancel = ui.small_button(tr("Annuler")).clicked();
+                    });
+                    if save && !name.trim().is_empty() {
+                        let name = name.clone();
+                        self.save_search_as_collection(&name, &rule);
+                    } else if cancel {
+                        self.collection_name = None;
+                    }
+                }
+            }
+        } else {
+            self.collection_name = None;
+        }
         let mut chosen = None;
         let all = trf("Toutes les photos ({n})", &[("n", &self.catalog.len())]);
         if ui.selectable_label(self.view == View::All, all).clicked() {
@@ -9374,11 +9458,23 @@ impl Studio {
                     .color(theme::DIM)
                     .size(11.5),
             );
+            let mut delete = None;
             for (name, n) in &self.catalog_collections {
                 let on = self.view == View::Collection(name.clone());
-                if ui.selectable_label(on, format!("{name} ({n})")).clicked() {
+                let row = ui.selectable_label(on, format!("{name} ({n})"));
+                if row.clicked() {
                     chosen = Some(View::Collection(name.clone()));
                 }
+                // Clic droit (ou appui long) : la supprimer ; ses photos restent.
+                row.context_menu(|ui| {
+                    if ui.button(tr("Supprimer la collection")).clicked() {
+                        delete = Some(name.clone());
+                        ui.close();
+                    }
+                });
+            }
+            if let Some(name) = delete {
+                self.delete_collection(&name);
             }
         }
         // Ce qui reste à faire, s'il reste quelque chose : chaque ligne montre ses photos.
