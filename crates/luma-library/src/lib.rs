@@ -456,6 +456,71 @@ impl Catalog {
     }
 }
 
+/// Un dossier de l'arbre de la photothèque ([`folder_tree`]) : son chemin, son nom
+/// (relatif à son parent ; tout le chemin au sommet), ses photos, celles de tout son
+/// arbre, et ses sous‑dossiers.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Folder {
+    pub path: PathBuf,
+    pub name: String,
+    pub own: usize,
+    pub total: usize,
+    pub children: Vec<Folder>,
+}
+
+/// L'arbre des dossiers de la photothèque, d'après leur nombre de photos
+/// ([`Catalog::folder_counts`]) : un dossier sans photo qui n'a qu'un sous‑dossier se
+/// fond avec lui (« Photos/2024 »), pour ne pas montrer tout le chemin du disque marche
+/// par marche ; les dossiers par nom.
+pub fn folder_tree(counts: &[(PathBuf, usize)]) -> Vec<Folder> {
+    #[derive(Default)]
+    struct Node {
+        own: usize,
+        children: BTreeMap<std::ffi::OsString, Node>,
+    }
+    let mut root = Node::default();
+    for (path, n) in counts {
+        let mut node = &mut root;
+        for part in path.iter() {
+            node = node.children.entry(part.to_owned()).or_default();
+        }
+        node.own += n;
+    }
+    fn build(parent: &Path, node: Node, top: bool) -> Vec<Folder> {
+        node.children
+            .into_iter()
+            .map(|(part, mut n)| {
+                let mut path = parent.join(&part);
+                let mut name = part.to_string_lossy().into_owned();
+                while n.own == 0 && n.children.len() == 1 {
+                    let (next, child) = n.children.pop_first().expect("un sous‑dossier");
+                    path.push(&next);
+                    name = if top || name.ends_with(std::path::MAIN_SEPARATOR) {
+                        format!("{name}{}", next.to_string_lossy())
+                    } else {
+                        format!("{name}{}{}", std::path::MAIN_SEPARATOR, next.to_string_lossy())
+                    };
+                    n = child;
+                }
+                if top {
+                    name = path.display().to_string();
+                }
+                let own = n.own;
+                let children = build(&path, n, false);
+                let total = own + children.iter().map(|c| c.total).sum::<usize>();
+                Folder {
+                    path,
+                    name,
+                    own,
+                    total,
+                    children,
+                }
+            })
+            .collect()
+    }
+    build(Path::new(""), root, true)
+}
+
 /// Les colonnes d'une liste en CSV, dans l'ordre de [`csv`] (la ligne de commande les
 /// écrit ainsi ; l'app, dans sa langue).
 pub const CSV_COLUMNS: [&str; 14] = [
@@ -1380,5 +1445,27 @@ mod tests {
         assert_eq!(expected.len(), 334);
         assert_eq!(expected.last(), Some(&copy));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// L'arbre des dossiers : les nombres de tout l'arbre, les chemins sans photo fondus,
+    /// les dossiers par nom (chemins à la manière de Mac et Linux).
+    #[cfg(unix)]
+    #[test]
+    fn folders_as_a_tree() {
+        let p = |s: &str| PathBuf::from(s);
+        let tree = folder_tree(&[
+            (p("/home/max/Photos/2024/06"), 3),
+            (p("/home/max/Photos/2024/07"), 2),
+            (p("/home/max/Photos/2025/01/Mariage"), 4),
+            (p("/home/max/Photos"), 1),
+        ]);
+        assert_eq!(tree.len(), 1);
+        let top = &tree[0];
+        assert_eq!((top.name.as_str(), top.own, top.total), ("/home/max/Photos", 1, 10));
+        let names: Vec<(&str, usize)> = top.children.iter().map(|c| (c.name.as_str(), c.total)).collect();
+        assert_eq!(names, [("2024", 5), ("2025/01/Mariage", 4)]);
+        assert_eq!(top.children[1].path, p("/home/max/Photos/2025/01/Mariage"));
+        assert_eq!(top.children[0].children[1].path, p("/home/max/Photos/2024/07"));
+        assert!(folder_tree(&[]).is_empty());
     }
 }

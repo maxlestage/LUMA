@@ -282,7 +282,7 @@ La photothèque professionnelle, étape par étape.
   repris sans recherche) ; le fichier est le même, octet pour octet.
 - **Un dossier retiré de la photothèque** : le clic droit sur un dossier du panneau
   Photothèque le retire de la photothèque (ses photos ne sont plus suivies, ni dans
-  les collections ; les fichiers ne sont pas touchés, les sous‑dossiers restent) ou
+  les collections ; sous‑dossiers compris ; les fichiers ne sont pas touchés) ou
   l'ouvre dans le gestionnaire de fichiers du système.
 - **La liste des photos en CSV** : « Exporter la liste (CSV)… » (et
   `luma catalog --csv`) écrit les photos montrées — une collection, une recherche, une
@@ -293,6 +293,10 @@ La photothèque professionnelle, étape par étape.
   les cœurs (et de même pour les photos manquantes de « Entretien… ») : 3 fois plus
   vite sur un disque local (20 000 photos : 17 → 5 ms), davantage sur un disque
   externe ou en réseau ; les mêmes photos, dans le même ordre.
+- **Les dossiers en arbre** : le panneau Photothèque range les dossiers en arbre ;
+  chacun avec les photos de tout son arbre, un triangle qui déplie ses sous‑dossiers,
+  et les chemins sans photo fondus en une ligne (« Photos/2024 » plutôt que chaque
+  marche du disque). Retiré de la photothèque, un dossier emporte ses sous‑dossiers.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

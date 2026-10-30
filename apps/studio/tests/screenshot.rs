@@ -3507,7 +3507,8 @@ fn library_by_year_and_month() {
     assert!(csv.contains("SONY ILCE-7M3,FE 24-70mm F2.8 GM"), "{csv}");
     // Le dossier retiré de la photothèque par son menu : plus aucune photo suivie, les
     // fichiers restent.
-    let folder = format!("{} (5)", dir.file_name().unwrap().to_string_lossy());
+    // Au sommet de l'arbre des dossiers, tout son chemin.
+    let folder = format!("{} (5)", dir.display());
     harness.get_by_label(&folder).click_secondary();
     harness.run_steps(3);
     harness.get_by_label("Retirer de la photothèque").click();
@@ -3602,4 +3603,63 @@ fn a_keyword_renamed_and_deleted_everywhere() {
     assert!(luma_studio::worker::read_meta(&path).keywords.is_empty());
     assert!(s.studio().catalog().keywords().is_empty());
     assert!(s.studio().status().contains("retiré de 1 photos"));
+}
+
+/// L'arbre des dossiers : le sommet, déplié, montre ses sous‑dossiers avec leurs
+/// nombres ; le triangle les replie et les déplie ; un clic ouvre un sous‑dossier.
+#[test]
+fn library_folders_as_a_tree() {
+    let _gpu = one_at_a_time();
+    let dir = std::env::temp_dir().join(format!("luma-arbre-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let mut cat = luma_library::Catalog::default();
+    for (sub, name) in [("Mer", "a.png"), ("Mer", "b.png"), ("Montagne", "c.png")] {
+        let path = dir.join("Photos").join(sub).join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        image::RgbImage::from_pixel(8, 8, image::Rgb([90, 120, 200]))
+            .save(&path)
+            .unwrap();
+        cat.insert(luma_library::Entry {
+            path,
+            date: "2026-06-01T10:00:00".into(),
+            ..luma_library::Entry::default()
+        });
+    }
+    cat.save(&dir.join("cat.lumacat")).unwrap();
+    let tmp = dir.clone();
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 1400.0])
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(tmp.join("licence"));
+                        s.use_catalog(tmp.join("cat.lumacat"));
+                        s.tool = luma_studio::app::Tool::Library;
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    harness.run_steps(3);
+    harness.get_by_label(&format!("{} (3)", dir.join("Photos").display()));
+    harness.get_by_label("Mer (2)");
+    harness.get_by_label("Montagne (1)");
+    harness.get_by_label("Les sous-dossiers").click();
+    harness.run_steps(2);
+    assert!(harness.query_by_label("Mer (2)").is_none(), "replié");
+    harness.get_by_label("Les sous-dossiers").click();
+    harness.run_steps(2);
+    harness.get_by_label("Montagne (1)").click();
+    harness.run_steps(3);
+    let s = harness.state().as_ref().unwrap();
+    assert_eq!(s.view, View::Folder);
+    assert!(
+        s.current_path()
+            .is_some_and(|p| p.ends_with("Montagne/c.png"))
+    );
+    drop(harness);
+    let _ = std::fs::remove_dir_all(&dir);
 }
