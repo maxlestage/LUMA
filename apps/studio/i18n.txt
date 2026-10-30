@@ -6164,3 +6164,9 @@ es = Lista imposible: {error}
 fr = Les sous-dossiers
 en = Subfolders
 es = Las subcarpetas
+
+# ----- Toutes les photos d'un dossier -----
+
+fr = Toutes ses photos
+en = All its photos
+es = Todas sus fotos

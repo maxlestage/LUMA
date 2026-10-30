@@ -9922,6 +9922,7 @@ impl Studio {
                     &mut open,
                     &mut toggle,
                     &mut forget,
+                    &mut chosen,
                 );
             }
             if let Some(dir) = toggle
@@ -13194,6 +13195,7 @@ fn folder_rows(
     open: &mut Option<PathBuf>,
     toggle: &mut Option<PathBuf>,
     forget: &mut Option<PathBuf>,
+    whole: &mut Option<View>,
 ) {
     let unfolded = (depth == 0) != toggled.contains(&f.path);
     ui.horizontal(|ui| {
@@ -13218,6 +13220,12 @@ fn folder_rows(
             }
         }
         row.context_menu(|ui| {
+            // Le dossier et tous ses sous‑dossiers, d'un coup (`dossier:` et son chemin).
+            if ui.button(tr("Toutes ses photos")).clicked() {
+                let path = f.path.display().to_string();
+                *whole = Some(View::Search(luma_library::query::filter("dossier", &path)));
+                ui.close();
+            }
             if crate::dialogs::system_opener().is_some()
                 && ui.button(tr("Ouvrir le dossier")).clicked()
             {
@@ -13248,6 +13256,7 @@ fn folder_rows(
                 open,
                 toggle,
                 forget,
+                whole,
             );
         }
     }
