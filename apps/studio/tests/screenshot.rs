@@ -3660,6 +3660,23 @@ fn library_folders_as_a_tree() {
         s.current_path()
             .is_some_and(|p| p.ends_with("Montagne/c.png"))
     );
+    // « Toutes ses photos » : le dossier et ses sous‑dossiers d'un coup.
+    let top = dir.join("Photos");
+    harness
+        .get_by_label(&format!("{} (3)", top.display()))
+        .click_secondary();
+    harness.run_steps(3);
+    harness.get_by_label("Toutes ses photos").click();
+    harness.run_steps(3);
+    let s = harness.state().as_ref().unwrap();
+    assert_eq!(
+        s.view,
+        View::Search(luma_library::query::filter(
+            "dossier",
+            &top.display().to_string()
+        ))
+    );
+    assert_eq!(s.photos().len(), 3);
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
 }

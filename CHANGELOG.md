@@ -297,6 +297,10 @@ La photothèque professionnelle, étape par étape.
   chacun avec les photos de tout son arbre, un triangle qui déplie ses sous‑dossiers,
   et les chemins sans photo fondus en une ligne (« Photos/2024 » plutôt que chaque
   marche du disque). Retiré de la photothèque, un dossier emporte ses sous‑dossiers.
+- **Chercher par dossier** : `dossier:mariage` (ou `folder:`) garde les photos dont
+  le chemin du dossier contient ce texte, majuscules et accents mis à part, dans la
+  recherche et les collections dynamiques ; dans l'arbre des dossiers, le clic droit
+  « Toutes ses photos » montre un dossier et tous ses sous‑dossiers d'un coup.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
