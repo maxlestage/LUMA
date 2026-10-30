@@ -408,7 +408,10 @@ pub fn from_image(img: &image::DynamicImage, space: Space, orientation: Orientat
     let (width, height) = (img.width() as usize, img.height() as usize);
     let data = match bytes_table(img, space) {
         Some((table, alpha)) => from_bytes(img.as_bytes(), img.color().channel_count().into(), alpha, &table),
-        None => linear(img, space),
+        None => match words_table(img, space) {
+            Some((table, words, channels)) => from_words(words, channels, &table),
+            None => linear(img, space),
+        },
     };
     photo(width, height, data, space, orientation)
 }
@@ -469,6 +472,73 @@ fn bytes_table(img: &image::DynamicImage, space: Space) -> Option<(Vec<f32>, boo
     // Le premier canal de chaque pixel de l'échantillon : sa valeur linéaire.
     let table = linear(&sample, space).as_chunks::<3>().0.iter().map(|p| p[0]).collect();
     Some((table, alpha))
+}
+
+/// Pour une image de 16 bits par canal, opaque (sans opacité, ou toutes au maximum) :
+/// la valeur linéaire de chacune des 65 536 valeurs, calculée par [`linear`] sur une
+/// image du même type qui les contient toutes, avec ses mots et leur nombre par pixel.
+fn words_table(img: &image::DynamicImage, space: Space) -> Option<(Vec<f32>, &[u16], usize)> {
+    use image::DynamicImage as D;
+    use rayon::prelude::*;
+    let opaque = |words: &[u16], channels: usize| {
+        words
+            .par_chunks(channels * 4096)
+            .all(|c| c.chunks_exact(channels).all(|p| p[channels - 1] == u16::MAX))
+    };
+    let all = |x: u32, y: u32| (y * 256 + x) as u16;
+    let (sample, words, channels): (D, &[u16], usize) = match img {
+        D::ImageLuma16(i) => (
+            D::ImageLuma16(image::ImageBuffer::from_fn(256, 256, |x, y| image::Luma([all(x, y)]))),
+            i.as_raw(),
+            1,
+        ),
+        D::ImageLumaA16(i) if opaque(i.as_raw(), 2) => (
+            D::ImageLumaA16(image::ImageBuffer::from_fn(256, 256, |x, y| {
+                image::LumaA([all(x, y), u16::MAX])
+            })),
+            i.as_raw(),
+            2,
+        ),
+        D::ImageRgb16(i) => (
+            D::ImageRgb16(image::ImageBuffer::from_fn(256, 256, |x, y| image::Rgb([all(x, y); 3]))),
+            i.as_raw(),
+            3,
+        ),
+        D::ImageRgba16(i) if opaque(i.as_raw(), 4) => (
+            D::ImageRgba16(image::ImageBuffer::from_fn(256, 256, |x, y| {
+                let v = all(x, y);
+                image::Rgba([v, v, v, u16::MAX])
+            })),
+            i.as_raw(),
+            4,
+        ),
+        _ => return None,
+    };
+    let table = linear(&sample, space).as_chunks::<3>().0.iter().map(|p| p[0]).collect();
+    Some((table, words, channels))
+}
+
+/// Les valeurs linéaires d'une image opaque de 16 bits par canal, par la table de
+/// [`words_table`], sur tous les cœurs.
+fn from_words(words: &[u16], channels: usize, table: &[f32]) -> Vec<f32> {
+    use rayon::prelude::*;
+    let mut data = vec![0.0f32; words.len() / channels * 3];
+    data.par_chunks_mut(3 * 4096)
+        .zip(words.par_chunks(channels * 4096))
+        .for_each(|(out, src)| {
+            for (o, p) in out.as_chunks_mut::<3>().0.iter_mut().zip(src.chunks_exact(channels)) {
+                *o = if channels >= 3 {
+                    [
+                        table[usize::from(p[0])],
+                        table[usize::from(p[1])],
+                        table[usize::from(p[2])],
+                    ]
+                } else {
+                    [table[usize::from(p[0])]; 3]
+                };
+            }
+        });
+    data
 }
 
 /// Les valeurs linéaires d'une image de 8 bits par canal (`channels` octets par
@@ -578,11 +648,51 @@ mod tests {
                 );
             }
         }
-        // Une image de 16 bits passe pixel par pixel.
+        // Une image de 16 bits n'a pas de table d'octets.
         let deep = D::ImageRgb16(image::ImageBuffer::from_fn(4, 4, |x, _| {
             image::Rgb([x as u16 * 9000; 3])
         }));
         assert!(bytes_table(&deep, Space::SRGB).is_none());
+    }
+
+    /// Les images opaques de 16 bits par la table de leurs valeurs : exactement le
+    /// calcul pixel par pixel ; une image de 16 bits qui a une transparence passe
+    /// pixel par pixel.
+    #[test]
+    fn sixteen_bit_images_by_table_are_the_same_as_pixel_by_pixel() {
+        use image::DynamicImage as D;
+        let v = |x: u32, y: u32, k: u32| ((x * 7919 + y * 104_729 + k * 31_337) % 65_536) as u16;
+        let images = [
+            D::ImageRgb16(image::ImageBuffer::from_fn(300, 260, |x, y| {
+                image::Rgb([v(x, y, 0), v(x, y, 1), v(x, y, 2)])
+            })),
+            D::ImageRgba16(image::ImageBuffer::from_fn(300, 260, |x, y| {
+                image::Rgba([v(x, y, 0), v(x, y, 1), v(x, y, 2), u16::MAX])
+            })),
+            D::ImageLuma16(image::ImageBuffer::from_fn(300, 260, |x, y| image::Luma([v(x, y, 0)]))),
+            D::ImageLumaA16(image::ImageBuffer::from_fn(300, 260, |x, y| {
+                image::LumaA([v(x, y, 0), u16::MAX])
+            })),
+        ];
+        for space in [Space::SRGB, Space::LINEAR_SRGB] {
+            for img in &images {
+                assert!(words_table(img, space).is_some(), "{:?}", img.color());
+                let fast = from_image(img, space, Orientation::Normal).data;
+                let slow = linear(img, space);
+                assert!(
+                    fast.len() == slow.len() && fast.iter().zip(&slow).all(|(a, b)| a.to_bits() == b.to_bits()),
+                    "{:?}",
+                    img.color()
+                );
+            }
+        }
+        let clear = D::ImageRgba16(image::ImageBuffer::from_fn(4, 4, |x, _| {
+            image::Rgba([9000, 9000, 9000, x as u16 * 1000])
+        }));
+        assert!(words_table(&clear, Space::SRGB).is_none());
+        let slow = linear(&clear, Space::SRGB);
+        let got = from_image(&clear, Space::SRGB, Orientation::Normal).data;
+        assert!(got.iter().zip(&slow).all(|(a, b)| a.to_bits() == b.to_bits()));
     }
 
     fn temp(name: &str) -> std::path::PathBuf {

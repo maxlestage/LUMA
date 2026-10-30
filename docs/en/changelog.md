@@ -210,7 +210,9 @@ The professional photo library, step by step.
 - **JPEG and PNG five times faster to open**: an 8-bit-per-channel image (JPEG, PNG,
   TIFF, WebP, PSD…) is turned into linear values through a table of its 256 values
   (and its opacities), on all cores, with no intermediate floating-point image: a
-  24 MP JPEG opens in 0.18 s instead of 0.9 s; the same values, to the bit.
+  24 MP JPEG opens in 0.18 s instead of 0.9 s; the same values, to the bit. Likewise
+  opaque 16-bit-per-channel images (TIFF, PNG), through a table of their 65,536
+  values: a 24 MP 16-bit TIFF in 0.25 s instead of 0.95 s.
 - **“To do” in the library**: the Library panel counts the photos not yet rated,
   without keywords and without location; a click shows them (a line disappears when
   none are left).
