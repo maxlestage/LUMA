@@ -240,6 +240,10 @@ La fototeca profesional, paso a paso.
   leyenda en japonés, chino, coreano, árabe o hebreo se muestra con una fuente del
   sistema (Mac, Windows, Linux), encontrada en la primera letra que falta, en lugar de
   pequeñas cajas vacías; no se carga nada mientras no falte nada.
+- **Colecciones inteligentes desde la app**: la búsqueda actual se guarda como
+  colección inteligente («Guardar como colección…», un nombre, Intro), que la repite
+  cada vez; un clic derecho en una colección la elimina (sus fotos se quedan). Hasta
+  ahora, solo la línea de comandos lo permitía.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

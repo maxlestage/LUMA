@@ -220,6 +220,10 @@ The professional photo library, step by step.
   Korean, Arabic or Hebrew is shown with a system font (Mac, Windows, Linux), found at
   the first missing letter, instead of small empty boxes; nothing is loaded while
   nothing is missing.
+- **Smart collections from the app**: the current search is saved as a smart
+  collection (“Save as collection…”, a name, Enter), which runs it again every time;
+  a right click on a collection deletes it (its photos stay). Until now, only the
+  command line could do it.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

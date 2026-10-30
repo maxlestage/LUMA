@@ -236,6 +236,10 @@ La photothèque professionnelle, étape par étape.
   japonais, en chinois, en coréen, en arabe ou en hébreu s'affiche avec une police du
   système (Mac, Windows, Linux), trouvée à la première lettre qui manque, au lieu de
   petites boîtes vides ; rien n'est chargé tant que rien ne manque.
+- **Collections dynamiques depuis l'app** : la recherche affichée s'enregistre comme
+  collection dynamique (« Enregistrer comme collection… », un nom, Entrée), qui la
+  refait à chaque fois ; un clic droit sur une collection la supprime (ses photos
+  restent). Jusqu'ici, seule la ligne de commande le permettait.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
