@@ -234,6 +234,13 @@ impl Catalog {
         v
     }
 
+    /// Le nombre de photos qui répondent à la recherche : celui de [`Catalog::search`],
+    /// sans rien trier ni garder.
+    pub fn count(&self, query: &Query) -> usize {
+        let all: Vec<&Entry> = self.entries.values().collect();
+        all.into_par_iter().filter(|e| query.matches(e)).count()
+    }
+
     /// Les mots‑clés du catalogue et leur nombre de photos, par ordre alphabétique
     /// sans tenir compte des majuscules ni des accents (« été » et « Été » ne font
     /// qu'un, rangé à « e »).
