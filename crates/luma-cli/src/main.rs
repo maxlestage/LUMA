@@ -191,7 +191,9 @@ USAGE
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
       et ce que donnent le blanc, le noir et les primaires du périphérique.
   luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords]
-               [--smart nom \"règle\"] [--add nom photo]… [--remove-collection nom]
+               [--smart nom \"règle\"] [--add nom photo]… [--remove-from nom photo]…
+               [--rename-collection ancien nouveau] [--remove-collection nom]
+               [--rename-keyword ancien nouveau] [--delete-keyword mot]
                [--collections] [--collection nom] [--backup] [--backups] [--restore f]
                [--missing] [--relocate ancien nouveau] [--duplicates]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
@@ -208,8 +210,11 @@ USAGE
       --keywords compte les mots‑clés, les boîtiers et les objectifs du catalogue.
       Collections : --smart crée une collection dynamique (sa règle s'écrit comme une
       recherche : \"note:4 date:2024\"), --add range une photo dans une collection
-      manuelle (créée au besoin), --collections les liste, --collection montre les
-      photos de l'une d'elles.
+      manuelle (créée au besoin), --remove-from l'en retire, --rename-collection la
+      renomme, --collections les liste, --collection montre les photos de l'une d'elles.
+      Mots‑clés : --rename-keyword renomme un mot‑clé dans toutes les photos qui l'ont,
+      --delete-keyword l'en retire (majuscules et accents mis à part ; les XMP sont
+      réécrits, réglages et notes gardés).
       Entretien : --backup copie le catalogue dans « Sauvegardes » à côté de lui (les dix
       dernières sont gardées ; l'app en fait une par semaine), --backups les liste,
       --restore remet l'une d'elles (le catalogue remplacé est sauvegardé d'abord).
@@ -440,6 +445,17 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
                 query = Some(luma_library::Query::parse(&text)?);
             }
             "--keywords" => facets = true,
+            "--rename-collection" | "--rename-keyword" | "--remove-from" => {
+                let name = it.next().ok_or_else(|| format!("{arg} attend deux valeurs"))?;
+                let value = it
+                    .next()
+                    .ok_or_else(|| format!("{arg} {name} attend une seconde valeur"))?;
+                edits.push((arg, name, value));
+            }
+            "--delete-keyword" => {
+                let word = it.next().ok_or("--delete-keyword attend un mot-clé")?;
+                edits.push((arg, word, String::new()));
+            }
             "--smart" | "--add" => {
                 let name = it.next().ok_or_else(|| format!("{arg} attend un nom de collection"))?;
                 let value = it.next().ok_or_else(|| {
@@ -508,6 +524,23 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
                     ));
                 }
                 cat.add_to_collection(name, &[photo])?;
+            }
+            "--remove-from" => {
+                let photo = Path::new(value).canonicalize().map_err(|e| format!("{value} : {e}"))?;
+                let n = cat.remove_from_collection(name, &[photo]);
+                println!("{n} photo retirée de « {name} »");
+            }
+            "--rename-collection" => {
+                cat.rename_collection(name, value)?;
+                println!("collection « {name} » renommée « {} »", value.trim());
+            }
+            "--rename-keyword" => {
+                let n = cat.edit_keyword(name, Some(value))?;
+                println!("« {name} » devient « {} » sur {n} photos", value.trim());
+            }
+            "--delete-keyword" => {
+                let n = cat.edit_keyword(name, None)?;
+                println!("« {name} » retiré de {n} photos");
             }
             _ if cat.remove_collection(name) => println!("collection « {name} » retirée"),
             _ => return Err(format!("pas de collection « {name} »")),

@@ -187,22 +187,14 @@ pub fn sidecar_path(raw: &Path) -> PathBuf {
 
 /// Les réglages enregistrés à côté d'un RAW, s'il y en a.
 pub fn read_sidecar(raw: &Path) -> Option<Settings> {
-    match std::fs::read_to_string(sidecar_path(raw)) {
-        Ok(text) => xmp::read(&text).ok(),
-        // Sans XMP à côté : les réglages qu'un RAW ou un DNG porte en lui.
-        Err(_) => luma_library::embedded_settings(&luma_project::copies::source(raw)),
-    }
+    // Sans XMP à côté : les réglages qu'un RAW ou un DNG porte en lui.
+    luma_library::photo_settings(raw)
 }
 
 /// La note, le drapeau et le libellé enregistrés à côté d'un RAW ; sans XMP à côté,
 /// ceux que le fichier porte en lui (posés par un autre logiciel ou par le boîtier).
 pub fn read_meta(raw: &Path) -> xmp::Meta {
-    match std::fs::read_to_string(sidecar_path(raw)) {
-        Ok(t) => xmp::read_meta(&t),
-        Err(_) => luma_library::embedded_xmp(&luma_project::copies::source(raw))
-            .map(|t| xmp::read_meta(&t))
-            .unwrap_or_default(),
-    }
+    luma_library::photo_meta(raw)
 }
 
 /// Écrit le sidecar d'un RAW : réglages, note et drapeau.
@@ -216,14 +208,7 @@ pub fn write_sidecar(raw: &Path, settings: &Settings, meta: &xmp::Meta) -> Resul
 /// ses réglages enregistrés sont gardés tels quels ; sans réglages, seul un XMP de
 /// métadonnées est écrit, et la photo garde son rendu par défaut.
 pub fn write_meta(raw: &Path, meta: &xmp::Meta) -> Result<(), String> {
-    match read_sidecar(raw) {
-        Some(settings) => write_sidecar(raw, &settings, meta),
-        None => {
-            let target = sidecar_path(raw);
-            xmp::save(&target, &xmp::write_meta(meta))
-                .map_err(|e| format!("{} : {e}", target.display()))
-        }
-    }
+    luma_library::write_photo_meta(raw, meta)
 }
 
 /// La couleur de l'indicateur d'écrêtage (touche J) pour un pixel, couche par couche :
