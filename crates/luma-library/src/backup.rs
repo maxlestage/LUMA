@@ -104,7 +104,10 @@ impl Catalog {
     /// Les photos du catalogue dont le fichier n'est plus là (disque débranché,
     /// dossier déplacé ou renommé hors de LÜMA).
     pub fn missing(&self) -> Vec<&Entry> {
-        self.entries().filter(|e| !exists(&e.path)).collect()
+        use rayon::prelude::*;
+        // Sur tous les cœurs, dans l'ordre des chemins.
+        let all: Vec<&Entry> = self.entries().collect();
+        all.into_par_iter().filter(|e| !exists(&e.path)).collect()
     }
 
     /// Les doublons : les photos du même boîtier, prises au même instant, dont les
