@@ -239,6 +239,9 @@ The professional photo library, step by step.
 - **Cameras and lenses in the library**: two folded sections, “Cameras” and
   “Lenses”, like keywords: each camera and each lens with its number of photos, a
   click shows its photos (the whole name, spaces included).
+- **A snappier library**: the panel's lists (folders, keywords, cameras, lenses) are
+  counted without copying each value of each photo; for 100,000 photos, updating them
+  after a change goes from about 200 ms to 90 ms; the same lists.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

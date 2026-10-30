@@ -71,11 +71,7 @@ pub struct Entry {
 impl Entry {
     /// Le boîtier, marque comprise (« Sony ILCE-7M3 »).
     pub fn camera(&self) -> String {
-        if self.model.starts_with(&self.make) {
-            self.model.clone()
-        } else {
-            format!("{} {}", self.make, self.model).trim().to_owned()
-        }
+        camera_name(&self.make, &self.model)
     }
 
     pub fn flag(&self) -> Flag {
@@ -242,17 +238,30 @@ impl Catalog {
     /// sans tenir compte des majuscules ni des accents (« été » et « Été » ne font
     /// qu'un, rangé à « e »).
     pub fn keywords(&self) -> Vec<(String, usize)> {
-        facet(self.entries.values().flat_map(|e| e.keywords.iter().cloned()))
+        facet(distinct(
+            self.entries
+                .values()
+                .flat_map(|e| e.keywords.iter().map(String::as_str)),
+        ))
     }
 
-    /// Les boîtiers du catalogue et leur nombre de photos.
+    /// Les boîtiers du catalogue et leur nombre de photos. Les paires marque et modèle
+    /// sont comptées d'abord : le nom d'un boîtier ne s'écrit qu'une fois par paire.
     pub fn cameras(&self) -> Vec<(String, usize)> {
-        facet(self.entries.values().map(Entry::camera).filter(|c| !c.is_empty()))
+        let pairs = distinct(self.entries.values().map(|e| (e.make.as_str(), e.model.as_str())));
+        facet(
+            pairs
+                .into_iter()
+                .map(|((make, model), n)| (camera_name(make, model), n))
+                .filter(|(c, _)| !c.is_empty()),
+        )
     }
 
     /// Les objectifs du catalogue et leur nombre de photos.
     pub fn lenses(&self) -> Vec<(String, usize)> {
-        facet(self.entries.values().map(|e| e.lens.clone()).filter(|l| !l.is_empty()))
+        facet(distinct(
+            self.entries.values().map(|e| e.lens.as_str()).filter(|l| !l.is_empty()),
+        ))
     }
 
     /// Les photos par date de prise de vue : chaque année (la plus récente d'abord), son
@@ -278,6 +287,29 @@ impl Catalog {
                 months: months.into_iter().rev().map(|(m, n)| (m.to_owned(), n)).collect(),
             })
             .collect()
+    }
+
+    /// Les dossiers du catalogue et leur nombre de photos, rangés par chemin. Les photos
+    /// d'un même dossier se suivent (le catalogue est rangé par chemin) : chaque dossier
+    /// n'est copié qu'une fois.
+    pub fn folder_counts(&self) -> Vec<(PathBuf, usize)> {
+        let mut out: Vec<(PathBuf, usize)> = Vec::new();
+        let mut index: HashMap<&Path, usize> = HashMap::new();
+        let mut last: Option<(&Path, usize)> = None;
+        for p in self.entries.keys() {
+            let Some(dir) = p.parent() else { continue };
+            let i = match last {
+                Some((d, i)) if d == dir => i,
+                _ => *index.entry(dir).or_insert_with(|| {
+                    out.push((dir.to_path_buf(), 0));
+                    out.len() - 1
+                }),
+            };
+            out[i].1 += 1;
+            last = Some((dir, i));
+        }
+        out.sort_by(|a, b| a.0.cmp(&b.0));
+        out
     }
 
     /// Les dossiers du catalogue, sans doublon.
@@ -384,12 +416,40 @@ impl Catalog {
 
 /// Compte des valeurs, regroupées sans tenir compte des majuscules ni des accents ;
 /// chaque groupe garde la première graphie rencontrée.
-fn facet(values: impl Iterator<Item = String>) -> Vec<(String, usize)> {
+fn facet<S: AsRef<str>>(values: impl IntoIterator<Item = (S, usize)>) -> Vec<(String, usize)> {
     let mut groups: BTreeMap<String, (String, usize)> = BTreeMap::new();
-    for v in values {
-        groups.entry(query::fold(&v)).or_insert_with(|| (v, 0)).1 += 1;
+    for (v, n) in values {
+        let v = v.as_ref();
+        groups.entry(query::fold(v)).or_insert_with(|| (v.to_owned(), 0)).1 += n;
     }
     groups.into_values().collect()
+}
+
+/// Les valeurs distinctes, dans l'ordre où elles paraissent, avec leur nombre : sans
+/// copie, pour que [`facet`] ne replie (minuscules, accents) chaque valeur qu'une
+/// fois. Le premier venu d'un groupe reste celui qui le nomme, comme avant.
+fn distinct<T: Eq + std::hash::Hash + Copy>(values: impl Iterator<Item = T>) -> Vec<(T, usize)> {
+    let mut index: HashMap<T, usize> = HashMap::new();
+    let mut order: Vec<(T, usize)> = Vec::new();
+    for v in values {
+        match index.get(&v) {
+            Some(&i) => order[i].1 += 1,
+            None => {
+                index.insert(v, order.len());
+                order.push((v, 1));
+            }
+        }
+    }
+    order
+}
+
+/// Le nom d'un boîtier, marque et modèle (le modèle seul s'il commence par la marque).
+fn camera_name(make: &str, model: &str) -> String {
+    if model.starts_with(make) {
+        model.to_owned()
+    } else {
+        format!("{make} {model}").trim().to_owned()
+    }
 }
 
 /// Les photos d'un dossier.
@@ -955,5 +1015,54 @@ mod tests {
             [year("2026", 1, &[("10", 1)]), year("2024", 3, &[("06", 2), ("01", 1)])]
         );
         assert!(Catalog::default().dates().is_empty());
+    }
+
+    /// Les listes de mots‑clés, de boîtiers et d'objectifs comptées sans copie sont
+    /// celles d'avant : mêmes groupes (majuscules et accents mis à part), même nom pour
+    /// chacun (le premier venu), mêmes nombres.
+    #[test]
+    fn facets_are_the_same_as_counted_one_by_one() {
+        fn before(values: impl Iterator<Item = String>) -> Vec<(String, usize)> {
+            let mut groups: BTreeMap<String, (String, usize)> = BTreeMap::new();
+            for v in values {
+                groups.entry(query::fold(&v)).or_insert_with(|| (v, 0)).1 += 1;
+            }
+            groups.into_values().collect()
+        }
+        let mut cat = Catalog::default();
+        let words = ["Été", "été", "ete", "Mer", "mer", "coucher de soleil", "Œuvre"];
+        let makes = [
+            ("SONY", "ILCE-7M3"),
+            ("Sony", "ILCE-7M3"),
+            ("", "iPhone 15"),
+            ("Canon", "Canon EOS R5"),
+            ("", ""),
+        ];
+        for i in 0..400usize {
+            cat.insert(Entry {
+                path: PathBuf::from(format!("/p/{:03}/{i}.jpg", (i * 37) % 101)),
+                make: makes[i % 5].0.into(),
+                model: makes[i % 5].1.into(),
+                lens: ["", "FE 24-70mm", "fe 24-70MM", "XF 35mm"][i % 4].into(),
+                keywords: (0..i % 4).map(|k| words[(i + k) % 7].to_owned()).collect(),
+                ..Entry::default()
+            });
+        }
+        let e = || cat.entries.values();
+        assert_eq!(cat.keywords(), before(e().flat_map(|e| e.keywords.iter().cloned())));
+        assert_eq!(cat.cameras(), before(e().map(Entry::camera).filter(|c| !c.is_empty())));
+        assert_eq!(
+            cat.lenses(),
+            before(e().map(|e| e.lens.clone()).filter(|l| !l.is_empty()))
+        );
+        assert_eq!(cat.cameras().len(), 3);
+        // Les dossiers et leurs nombres : ceux du comptage photo par photo.
+        let mut folders: BTreeMap<PathBuf, usize> = BTreeMap::new();
+        for e in e() {
+            if let Some(d) = e.path.parent() {
+                *folders.entry(d.to_path_buf()).or_default() += 1;
+            }
+        }
+        assert_eq!(cat.folder_counts(), folders.into_iter().collect::<Vec<_>>());
     }
 }

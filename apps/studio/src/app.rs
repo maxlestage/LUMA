@@ -1635,13 +1635,7 @@ impl Studio {
 
     fn refresh_catalog_lists(&mut self) {
         self.find_stacks();
-        let mut folders: BTreeMap<PathBuf, usize> = BTreeMap::new();
-        for e in self.catalog.entries() {
-            if let Some(d) = e.path.parent() {
-                *folders.entry(d.to_path_buf()).or_default() += 1;
-            }
-        }
-        self.catalog_folders = folders.into_iter().collect();
+        self.catalog_folders = self.catalog.folder_counts();
         self.catalog_dates = self.catalog.dates();
         self.catalog_keywords = self.catalog.keywords();
         self.catalog_cameras = self.catalog.cameras();
