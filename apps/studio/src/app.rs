@@ -956,6 +956,11 @@ pub struct Studio {
     /// Les mots‑clés de la photothèque et leur nombre de photos ; leur liste dépliée.
     catalog_keywords: Vec<(String, usize)>,
     keywords_open: bool,
+    /// Les boîtiers et les objectifs, de même.
+    catalog_cameras: Vec<(String, usize)>,
+    cameras_open: bool,
+    catalog_lenses: Vec<(String, usize)>,
+    lenses_open: bool,
     open_years: BTreeSet<String>,
     pub view: View,
     catalog_search: String,
@@ -1312,6 +1317,10 @@ impl Studio {
             catalog_todo: [0; 3],
             catalog_keywords: Vec::new(),
             keywords_open: false,
+            catalog_cameras: Vec::new(),
+            cameras_open: false,
+            catalog_lenses: Vec::new(),
+            lenses_open: false,
             open_years: BTreeSet::new(),
             view: View::Folder,
             catalog_search: String::new(),
@@ -1635,6 +1644,8 @@ impl Studio {
         self.catalog_folders = folders.into_iter().collect();
         self.catalog_dates = self.catalog.dates();
         self.catalog_keywords = self.catalog.keywords();
+        self.catalog_cameras = self.catalog.cameras();
+        self.catalog_lenses = self.catalog.lenses();
         self.catalog_todo = TODO.map(|rule| {
             luma_library::Query::parse(rule).map_or(0, |q| self.catalog.search(&q).len())
         });
@@ -9607,44 +9618,34 @@ impl Studio {
                 }
             }
         }
-        // Les mots‑clés, repliés : un clic sur l'un montre ses photos.
-        if !self.catalog_keywords.is_empty() {
-            let mut toggle = false;
-            ui.horizontal(|ui| {
-                toggle = fold_triangle(
-                    ui,
-                    self.keywords_open,
-                    tr("Les mots-clés de la photothèque"),
-                )
-                .on_hover_text(tr("Les mots-clés de la photothèque"))
-                .clicked();
-                let title = trf("Mots-clés ({n})", &[("n", &self.catalog_keywords.len())]);
-                toggle |= ui
-                    .add(
-                        egui::Label::new(RichText::new(title).color(theme::DIM).size(11.5))
-                            .sense(egui::Sense::click()),
-                    )
-                    .clicked();
-            });
-            if toggle {
-                self.keywords_open = !self.keywords_open;
-            }
-            if self.keywords_open {
-                egui::ScrollArea::vertical()
-                    .id_salt("mots-cles-photothèque")
-                    .max_height(220.0)
-                    .show(ui, |ui| {
-                        for (word, n) in &self.catalog_keywords {
-                            let query = luma_library::query::keyword_filter(word);
-                            let on = self.view == View::Search(query.clone());
-                            ui.horizontal(|ui| {
-                                ui.add_space(22.0);
-                                if ui.selectable_label(on, format!("{word} ({n})")).clicked() {
-                                    chosen = Some(View::Search(query));
-                                }
-                            });
-                        }
-                    });
+        // Les mots‑clés, les boîtiers et les objectifs, repliés : un clic sur l'un
+        // montre ses photos.
+        let facets = [
+            (
+                &mut self.keywords_open,
+                trf("Mots-clés ({n})", &[("n", &self.catalog_keywords.len())]),
+                tr("Les mots-clés de la photothèque"),
+                &self.catalog_keywords,
+                "mot",
+            ),
+            (
+                &mut self.cameras_open,
+                trf("Boîtiers ({n})", &[("n", &self.catalog_cameras.len())]),
+                tr("Les boîtiers de la photothèque"),
+                &self.catalog_cameras,
+                "boîtier",
+            ),
+            (
+                &mut self.lenses_open,
+                trf("Objectifs ({n})", &[("n", &self.catalog_lenses.len())]),
+                tr("Les objectifs de la photothèque"),
+                &self.catalog_lenses,
+                "objectif",
+            ),
+        ];
+        for (open, title, help, items, key) in facets {
+            if let Some(v) = facet_section(ui, open, &title, help, items, key, &self.view) {
+                chosen = Some(v);
             }
         }
         if !self.catalog_dates.is_empty() {
@@ -12876,6 +12877,55 @@ fn todo_name(i: usize) -> &'static str {
         1 => tr("Sans mot-clé"),
         _ => tr("Sans lieu"),
     }
+}
+
+/// Une section repliable du panneau Photothèque (mots‑clés, boîtiers, objectifs) : son
+/// titre, et une fois dépliée chaque valeur avec son nombre de photos ; rend la vue
+/// choisie (la recherche `key:valeur`).
+fn facet_section(
+    ui: &mut Ui,
+    open: &mut bool,
+    title: &str,
+    help: &str,
+    items: &[(String, usize)],
+    key: &str,
+    view: &View,
+) -> Option<View> {
+    if items.is_empty() {
+        return None;
+    }
+    let mut toggle = false;
+    ui.horizontal(|ui| {
+        toggle = fold_triangle(ui, *open, help).on_hover_text(help).clicked();
+        toggle |= ui
+            .add(
+                egui::Label::new(RichText::new(title).color(theme::DIM).size(11.5))
+                    .sense(egui::Sense::click()),
+            )
+            .clicked();
+    });
+    if toggle {
+        *open = !*open;
+    }
+    let mut chosen = None;
+    if *open {
+        egui::ScrollArea::vertical()
+            .id_salt(key)
+            .max_height(220.0)
+            .show(ui, |ui| {
+                for (value, n) in items {
+                    let query = luma_library::query::filter(key, value);
+                    let on = *view == View::Search(query.clone());
+                    ui.horizontal(|ui| {
+                        ui.add_space(22.0);
+                        if ui.selectable_label(on, format!("{value} ({n})")).clicked() {
+                            chosen = Some(View::Search(query));
+                        }
+                    });
+                }
+            });
+    }
+    chosen
 }
 
 /// Un petit triangle qui déplie (pointe vers le bas une fois déplié), dessiné : il ne
