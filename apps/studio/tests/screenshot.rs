@@ -3348,7 +3348,7 @@ fn library_by_year_and_month() {
     cat.save(&catalog).unwrap();
     let tmp = dir.clone();
     let mut harness = Harness::builder()
-        .with_size([1280.0, 900.0])
+        .with_size([1280.0, 1400.0])
         .build_ui_state(
             move |ui, studio: &mut Option<Studio>| {
                 studio
@@ -3376,6 +3376,35 @@ fn library_by_year_and_month() {
         harness.state().as_ref().unwrap().view,
         View::Search("sans:lieu".into())
     );
+    // La recherche devient une collection dynamique, nommée, puis supprimée par son
+    // menu (clic droit) ; ses photos restent.
+    harness
+        .get_by_label("Enregistrer comme collection…")
+        .click();
+    harness.run_steps(3);
+    harness
+        .get_all_by_role(egui::accesskit::Role::TextInput)
+        .find(|n| n.is_focused())
+        .expect("le nom, prêt à écrire")
+        .type_text("À indexer");
+    harness.run_steps(2);
+    harness
+        .get_all_by_label("Enregistrer")
+        .next()
+        .unwrap()
+        .click();
+    harness.run_steps(3);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Collection("À indexer".into())
+    );
+    harness.get_by_label("À indexer (4)").click_secondary();
+    harness.run_steps(3);
+    harness.get_by_label("Supprimer la collection").click();
+    harness.run_steps(3);
+    assert!(harness.query_by_label("À indexer (4)").is_none());
+    assert_eq!(harness.state().as_ref().unwrap().view, View::All);
+    assert_eq!(harness.state().as_ref().unwrap().catalog().len(), 5);
     assert!(
         harness.query_by_label("juin (2)").is_none(),
         "les mois repliés"
