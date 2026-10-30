@@ -958,6 +958,8 @@ pub struct Studio {
     catalog_search: String,
     /// Le nom de la collection à faire de la recherche affichée, pendant qu'on l'écrit.
     collection_name: Option<String>,
+    /// Le nom d'une nouvelle collection manuelle, dans le menu « Collection ».
+    new_collection: String,
     pub export_options: ExportOptions,
     /// Les préréglages d'export (relus à l'ouverture de la fenêtre), ceux qui sont
     /// cochés, et si les réglages de la fenêtre sont exportés eux aussi.
@@ -1309,6 +1311,7 @@ impl Studio {
             view: View::Folder,
             catalog_search: String::new(),
             collection_name: None,
+            new_collection: String::new(),
             export_options: ExportOptions::default(),
             export_presets: luma_render::export::Presets::default(),
             export_targets: Vec::new(),
@@ -1664,6 +1667,107 @@ impl Studio {
                 false
             }
         }
+    }
+
+    /// Le menu « Collection » des photos choisies : les ranger dans une collection
+    /// manuelle (une des leurs, ou une nouvelle), ou les retirer de celle affichée.
+    fn collection_menu(&mut self, ui: &mut Ui) {
+        let manual: Vec<String> = self
+            .catalog
+            .collections()
+            .iter()
+            .filter(|c| !c.is_smart())
+            .map(|c| c.name.clone())
+            .collect();
+        let shown = match &self.view {
+            View::Collection(name) if manual.contains(name) => Some(name.clone()),
+            _ => None,
+        };
+        let mut add = None;
+        let mut remove = false;
+        ui.menu_button(tr("Collection"), |ui| {
+            ui.label(RichText::new(tr("Ajouter à")).size(11.5).color(theme::DIM));
+            for name in &manual {
+                if ui.button(name).clicked() {
+                    add = Some(name.clone());
+                    ui.close();
+                }
+            }
+            ui.horizontal(|ui| {
+                let field = ui.add(
+                    egui::TextEdit::singleline(&mut self.new_collection)
+                        .hint_text(tr("Nouvelle collection"))
+                        .desired_width(140.0),
+                );
+                let enter = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
+                let name = self.new_collection.trim().to_owned();
+                if (ui
+                    .add_enabled(!name.is_empty(), egui::Button::new(tr("Créer")).small())
+                    .clicked()
+                    || enter)
+                    && !name.is_empty()
+                {
+                    add = Some(name);
+                    ui.close();
+                }
+            });
+            if let Some(name) = &shown {
+                ui.separator();
+                if ui
+                    .button(trf("Retirer de « {name} »", &[("name", name)]))
+                    .clicked()
+                {
+                    remove = true;
+                    ui.close();
+                }
+            }
+        })
+        .response
+        .on_hover_text(tr("Ranger les photos choisies dans une collection"));
+        if let Some(name) = add {
+            self.new_collection.clear();
+            self.add_to_collection(&name);
+        }
+        if remove {
+            self.remove_from_shown_collection();
+        }
+    }
+
+    /// Range la photo ouverte et les photos choisies dans la collection manuelle `name`
+    /// (créée au besoin). Rend le nombre de photos ajoutées.
+    pub fn add_to_collection(&mut self, name: &str) -> usize {
+        let photos = self.rename_targets();
+        match self.catalog.add_to_collection(name, &photos) {
+            Ok(n) => {
+                self.upkeep_changed();
+                self.status = trf(
+                    "{n} photos ajoutées à « {name} »",
+                    &[("n", &n), ("name", &name.trim())],
+                );
+                n
+            }
+            Err(e) => {
+                self.status = trf("Collection impossible : {error}", &[("error", &e)]);
+                0
+            }
+        }
+    }
+
+    /// Retire la photo ouverte et les photos choisies de la collection manuelle
+    /// affichée, qui est remontrée sans elles. Rend le nombre de photos retirées.
+    pub fn remove_from_shown_collection(&mut self) -> usize {
+        let View::Collection(name) = self.view.clone() else {
+            return 0;
+        };
+        let photos = self.rename_targets();
+        let n = self.catalog.remove_from_collection(&name, &photos);
+        self.upkeep_changed();
+        self.show_view(View::Collection(name.clone()));
+        self.status = trf(
+            "{n} photos retirées de « {name} »",
+            &[("n", &n), ("name", &name)],
+        );
+        n
     }
 
     /// Supprime une collection (ses photos restent dans la photothèque).
@@ -4370,6 +4474,9 @@ impl Studio {
                 .clicked()
             {
                 self.rename_open = true;
+            }
+            if self.catalog_path.is_some() {
+                self.collection_menu(ui);
             }
             if ui
                 .small_button(tr("Imprimer…"))
@@ -9687,6 +9794,9 @@ impl Studio {
                 .clicked()
             {
                 self.rename_open = true;
+            }
+            if self.catalog_path.is_some() {
+                self.collection_menu(ui);
             }
             if ui
                 .small_button(tr("Imprimer…"))

@@ -240,6 +240,9 @@ La photothèque professionnelle, étape par étape.
   collection dynamique (« Enregistrer comme collection… », un nom, Entrée), qui la
   refait à chaque fois ; un clic droit sur une collection la supprime (ses photos
   restent). Jusqu'ici, seule la ligne de commande le permettait.
+- **Collections manuelles depuis l'app** : le menu « Collection » range la photo
+  ouverte et les photos choisies dans une collection (une existante, ou une nouvelle,
+  nommée sur place), et les retire de la collection affichée.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
