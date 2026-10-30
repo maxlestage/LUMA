@@ -230,7 +230,9 @@ La fototeca profesional, paso a paso.
   (JPEG, PNG, TIFF, WebP, PSD…) pasa a valores lineales mediante una tabla de sus 256
   valores (y de sus opacidades), en todos los núcleos, sin imagen intermedia en coma
   flotante: un JPEG de 24 Mpx se abre en 0,18 s en lugar de 0,9 s; los mismos
-  valores, al bit.
+  valores, al bit. Igual para las imágenes opacas de 16 bits por canal (TIFF, PNG),
+  mediante una tabla de sus 65 536 valores: un TIFF de 16 bits de 24 Mpx en 0,25 s en
+  lugar de 0,95 s.
 - **«Pendiente» en la fototeca**: el panel Fototeca cuenta las fotos aún sin valorar,
   sin palabras clave y sin ubicación; un clic las muestra (una línea desaparece
   cuando ya no queda ninguna).
