@@ -7,6 +7,9 @@
 //! mer note:3 drapeau:retenue date:2024-06..2024-08 iso:..800 boîtier:sony
 //! ```
 //!
+//! `dossier:` garde les photos dont le chemin du dossier contient ce texte
+//! (`dossier:mariage`, `dossier:"Clients/2026"`), majuscules et accents mis à part.
+//!
 //! La note se donne en minimum (`note:3`), en plage (`note:..2`, `note:2..4`) ou
 //! exactement (`note:=0`, les photos pas encore notées) ; `sans:` trouve ce qui
 //! manque encore : `sans:note`, `sans:mot` (aucun mot‑clé), `sans:lieu` (pas de
@@ -76,6 +79,8 @@ pub struct Query {
     pub camera: Option<String>,
     pub lens: Option<String>,
     pub keyword: Option<String>,
+    /// Un morceau du chemin du dossier (`dossier:mariage`), replié.
+    pub folder: Option<String>,
 }
 
 /// Minuscules et sans accents, pour comparer des textes comme on les tape.
@@ -124,7 +129,7 @@ fn range<T: std::str::FromStr + PartialOrd + Copy>(s: &str) -> Option<Range<T>> 
 impl Query {
     /// Lit une recherche écrite en une ligne. Les filtres ont un nom français ou
     /// anglais : `note`/`rating`, `drapeau`/`flag` (`retenue`, `rejetée`, `aucun`),
-    /// `sans`/`without` (`note`, `mot`, `lieu`, `libellé`),
+    /// `sans`/`without` (`note`, `mot`, `lieu`, `libellé`), `dossier`/`folder`,
     /// `libellé`/`label`, `date`, `iso`, `focale`/`focal`, `boîtier`/`camera`,
     /// `objectif`/`lens`, `mot`/`keyword`. Un filtre inconnu ou mal écrit est une
     /// erreur, qui le nomme.
@@ -204,6 +209,7 @@ impl Query {
                 "boitier" | "camera" => q.camera = Some(fold(value)),
                 "objectif" | "lens" => q.lens = Some(fold(value)),
                 "mot" | "keyword" => q.keyword = Some(fold(value)),
+                "dossier" | "folder" => q.folder = Some(fold(value)),
                 _ => return Err(format!("filtre inconnu « {key} »")),
             }
         }
@@ -262,6 +268,13 @@ impl Query {
             .keyword
             .as_ref()
             .is_some_and(|k| !e.keywords.iter().any(|w| fold(w) == *k))
+        {
+            return false;
+        }
+        if self
+            .folder
+            .as_ref()
+            .is_some_and(|f| !e.path.parent().is_some_and(|d| contains(&d.to_string_lossy(), f)))
         {
             return false;
         }
@@ -579,5 +592,24 @@ mod tests {
         assert!(Query::parse(&q).unwrap().matches(&shot), "{q}");
         assert!(!Query::parse(&filter("objectif", "FE 70-200mm")).unwrap().matches(&shot));
         assert_eq!(tokens("  a  \"b c\" d"), ["a", "b c", "d"]);
+    }
+
+    /// `dossier:` : un morceau du chemin du dossier, pas du nom de la photo ;
+    /// majuscules, accents et espaces entre guillemets compris.
+    #[test]
+    fn photos_by_folder() {
+        let photo = |path: &str| Entry {
+            path: path.into(),
+            ..Entry::default()
+        };
+        let found = |q: &str, e: &Entry| Query::parse(q).unwrap().matches(e);
+        let wedding = photo("/Photos/Clients 2026/Mariage Été/IMG_1.ARW");
+        let other = photo("/Photos/Voyages/mariage.jpg");
+        assert!(found("dossier:mariage", &wedding));
+        assert!(found("dossier:ete", &wedding));
+        assert!(!found("dossier:mariage", &other), "le nom de la photo ne compte pas");
+        assert!(found("folder:\"clients 2026\"", &wedding));
+        assert!(!found("dossier:\"clients 2026\"", &other));
+        assert!(found("dossier:photos", &other));
     }
 }

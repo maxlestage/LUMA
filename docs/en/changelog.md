@@ -280,6 +280,10 @@ The professional photo library, step by step.
   photos of its whole tree, a triangle that unfolds its subfolders, and photo-less
   paths merged into one line (“Photos/2024” rather than every step of the disk).
   Removed from the library, a folder takes its subfolders with it.
+- **Searching by folder**: `folder:wedding` (or `dossier:`) keeps the photos whose
+  folder path contains that text, case and accents aside, in search and smart
+  collections; in the folder tree, the right click “All its photos” shows a folder
+  and all its subfolders at once.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
