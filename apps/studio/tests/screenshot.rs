@@ -3496,6 +3496,15 @@ fn library_by_year_and_month() {
         harness.state().as_ref().unwrap().view,
         View::Search("date:2024-06".into())
     );
+    // La liste des photos montrées, en tableau : toutes les photos, une ligne chacune.
+    harness.state_mut().as_mut().unwrap().show_view(View::All);
+    harness.run_steps(2);
+    let list = dir.join("liste.csv");
+    assert_eq!(harness.state_mut().as_mut().unwrap().export_list(&list), 5);
+    let csv = std::fs::read_to_string(&list).unwrap();
+    assert!(csv.starts_with("Fichier,Date,Boîtier,Objectif"), "{csv}");
+    assert_eq!(csv.lines().count(), 6);
+    assert!(csv.contains("SONY ILCE-7M3,FE 24-70mm F2.8 GM"), "{csv}");
     // Le dossier retiré de la photothèque par son menu : plus aucune photo suivie, les
     // fichiers restent.
     let folder = format!("{} (5)", dir.file_name().unwrap().to_string_lossy());

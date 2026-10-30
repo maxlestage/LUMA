@@ -1837,6 +1837,42 @@ impl Studio {
         n
     }
 
+    /// Les photos montrées, en tableau CSV dans `to`, avec les noms de colonnes de la
+    /// langue de l'app. Rend leur nombre.
+    pub fn export_list(&mut self, to: &Path) -> usize {
+        let entries: Vec<&luma_library::Entry> = self
+            .folder
+            .iter()
+            .filter_map(|p| self.catalog.get(p))
+            .collect();
+        let columns = [
+            tr("Fichier"),
+            tr("Date"),
+            tr("Boîtier"),
+            tr("Objectif"),
+            tr("ISO|colonne"),
+            tr("Ouverture"),
+            tr("Vitesse (s)"),
+            tr("Focale (mm)"),
+            tr("Note"),
+            tr("Drapeau"),
+            tr("Libellé"),
+            tr("Mots-clés"),
+            tr("Latitude"),
+            tr("Longitude"),
+        ];
+        let text = luma_library::csv(&entries, &columns, [tr("retenue"), tr("rejetée")]);
+        let n = entries.len();
+        self.status = match std::fs::write(to, text) {
+            Ok(()) => trf(
+                "{n} photos dans {file}",
+                &[("n", &n), ("file", &file_name(to))],
+            ),
+            Err(e) => trf("Liste impossible : {error}", &[("error", &e)]),
+        };
+        n
+    }
+
     /// Supprime une collection (ses photos restent dans la photothèque).
     pub fn delete_collection(&mut self, name: &str) -> bool {
         let gone = self.catalog.remove_collection(name);
@@ -9674,6 +9710,18 @@ impl Studio {
             }
         } else {
             self.collection_name = None;
+        }
+        // La liste des photos montrées (une collection, une recherche, une date…), en
+        // tableau pour un client ou des archives.
+        if self.view != View::Folder
+            && !self.folder.is_empty()
+            && ui
+                .small_button(tr("Exporter la liste (CSV)…"))
+                .on_hover_text(tr("Fichier, date, boîtier, objectif, réglages, note, mots-clés et position de chaque photo montrée"))
+                .clicked()
+            && let Some(to) = crate::dialogs::save_csv(&format!("{}.csv", tr("Photos")))
+        {
+            self.export_list(&to);
         }
         let mut chosen = None;
         let all = trf("Toutes les photos ({n})", &[("n", &self.catalog.len())]);

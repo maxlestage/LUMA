@@ -6092,3 +6092,69 @@ es = Sus fotos dejan de seguirse; los archivos no se tocan
 fr = {n} photos de « {name} » retirées de la photothèque
 en = {n} photos of “{name}” removed from the library
 es = {n} fotos de «{name}» quitadas de la fototeca
+
+# ----- La liste des photos en CSV -----
+
+fr = Enregistrer la liste des photos
+en = Save the photo list
+es = Guardar la lista de fotos
+
+fr = Exporter la liste (CSV)…
+en = Export list (CSV)…
+es = Exportar la lista (CSV)…
+
+fr = Fichier, date, boîtier, objectif, réglages, note, mots-clés et position de chaque photo montrée
+en = File, date, camera, lens, settings, rating, keywords and location of each photo shown
+es = Archivo, fecha, cámara, objetivo, ajustes, valoración, palabras clave y ubicación de cada foto mostrada
+
+fr = Fichier
+en = File
+es = Archivo
+
+fr = Date
+en = Date
+es = Fecha
+
+fr = Boîtier
+en = Camera
+es = Cámara
+
+fr = Objectif
+en = Lens
+es = Objetivo
+
+fr = ISO|colonne
+en = ISO
+es = ISO
+
+fr = Vitesse (s)
+en = Shutter (s)
+es = Velocidad (s)
+
+fr = Focale (mm)
+en = Focal length (mm)
+es = Focal (mm)
+
+fr = Latitude
+en = Latitude
+es = Latitud
+
+fr = Longitude
+en = Longitude
+es = Longitud
+
+fr = retenue
+en = picked
+es = elegida
+
+fr = rejetée
+en = rejected
+es = rechazada
+
+fr = {n} photos dans {file}
+en = {n} photos in {file}
+es = {n} fotos en {file}
+
+fr = Liste impossible : {error}
+en = List not possible: {error}
+es = Lista imposible: {error}
