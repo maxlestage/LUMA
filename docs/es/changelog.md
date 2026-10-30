@@ -283,6 +283,10 @@ La fototeca profesional, paso a paso.
   de 59 a 43 ms y la lectura de 108 a 78 ms (un hash rápido para la tabla de textos,
   el número de la carpeta, la cámara y el objetivo de la foto anterior reutilizado
   sin búsqueda); el archivo es el mismo, byte a byte.
+- **Una carpeta quitada de la fototeca**: el clic derecho en una carpeta del panel
+  Fototeca la quita de la fototeca (sus fotos dejan de seguirse, también en las
+  colecciones; los archivos no se tocan, las subcarpetas se quedan) o la abre en el
+  gestor de archivos del sistema.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

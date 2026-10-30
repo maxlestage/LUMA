@@ -280,6 +280,10 @@ La photothèque professionnelle, étape par étape.
   passe de 59 à 43 ms et la lecture de 108 à 78 ms (un hachage rapide pour la table
   des textes, le numéro du dossier, du boîtier et de l'objectif de la photo d'avant
   repris sans recherche) ; le fichier est le même, octet pour octet.
+- **Un dossier retiré de la photothèque** : le clic droit sur un dossier du panneau
+  Photothèque le retire de la photothèque (ses photos ne sont plus suivies, ni dans
+  les collections ; les fichiers ne sont pas touchés, les sous‑dossiers restent) ou
+  l'ouvre dans le gestionnaire de fichiers du système.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

@@ -3496,6 +3496,16 @@ fn library_by_year_and_month() {
         harness.state().as_ref().unwrap().view,
         View::Search("date:2024-06".into())
     );
+    // Le dossier retiré de la photothèque par son menu : plus aucune photo suivie, les
+    // fichiers restent.
+    let folder = format!("{} (5)", dir.file_name().unwrap().to_string_lossy());
+    harness.get_by_label(&folder).click_secondary();
+    harness.run_steps(3);
+    harness.get_by_label("Retirer de la photothèque").click();
+    harness.run_steps(3);
+    assert_eq!(harness.state().as_ref().unwrap().catalog().len(), 0);
+    assert!(harness.query_by_label(&folder).is_none());
+    assert!(dir.join("a.png").is_file());
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -263,6 +263,10 @@ The professional photo library, step by step.
   43 ms and reading from 108 to 78 ms (a fast hash for the text table, the number of
   the previous photo's folder, camera and lens reused without a lookup); the file is
   the same, byte for byte.
+- **A folder removed from the library**: the right click on a folder of the Library
+  panel removes it from the library (its photos are no longer tracked, nor in
+  collections; the files are not touched, subfolders stay) or opens it in the
+  system's file manager.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
