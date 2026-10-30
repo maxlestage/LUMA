@@ -266,6 +266,9 @@ La fototeca profesional, paso a paso.
   clave, un clic derecho renombra una palabra clave en todas las fotos que la tienen,
   o la quita; sus XMP se reescriben (la valoración, la bandera y lo demás no cambian),
   y una foto que ya tenía el nuevo nombre no lo tiene dos veces.
+- **Una colección renombrada**: el clic derecho en una colección la renombra (el
+  nombre se escribe allí mismo); conserva sus fotos y su regla, ocupa su lugar en el
+  orden alfabético y sigue mostrándose si lo estaba; un nombre ya usado se rechaza.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

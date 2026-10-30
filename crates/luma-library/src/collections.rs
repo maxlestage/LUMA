@@ -81,6 +81,26 @@ impl Catalog {
         Ok(())
     }
 
+    /// Renomme une collection, son contenu gardé, à sa place dans l'ordre alphabétique ;
+    /// refusé si le nom est vide, déjà pris par une autre, ou si elle n'existe pas.
+    pub fn rename_collection(&mut self, from: &str, to: &str) -> Result<(), String> {
+        let to = to.trim();
+        if to.is_empty() {
+            return Err("une collection a besoin d'un nom".into());
+        }
+        if to != from && self.collection(to).is_some() {
+            return Err(format!("une collection s'appelle déjà « {to} »"));
+        }
+        let c = self
+            .collections
+            .iter_mut()
+            .find(|c| c.name == from)
+            .ok_or_else(|| format!("pas de collection « {from} »"))?;
+        c.name = to.to_owned();
+        self.collections.sort_by_key(|c| crate::query::fold(&c.name));
+        Ok(())
+    }
+
     /// Retire une collection (les photos restent dans le catalogue) ; `false` si elle
     /// n'existait pas.
     pub fn remove_collection(&mut self, name: &str) -> bool {
@@ -178,6 +198,31 @@ mod tests {
         assert_eq!(cat.remove_from_collection("Tirages", &[PathBuf::from("b.arw")]), 1);
         assert_eq!(names(cat.collection_photos("Tirages").unwrap()), ["c.arw"]);
         assert!(!cat.collection("Tirages").unwrap().is_smart());
+    }
+
+    /// Renommée, une collection garde ses photos et sa place alphabétique ; un nom vide,
+    /// pris ou inconnu est refusé.
+    #[test]
+    fn a_collection_is_renamed() {
+        let mut cat = catalog();
+        cat.add_to_collection("Tirages", &[PathBuf::from("c.arw")]).unwrap();
+        cat.set_collection(Collection::smart("Meilleures", "note:4").unwrap())
+            .unwrap();
+        cat.rename_collection("Tirages", " Albums ").unwrap();
+        assert_eq!(names(cat.collection_photos("Albums").unwrap()), ["c.arw"]);
+        assert!(cat.collection("Tirages").is_none());
+        let order: Vec<&str> = cat.collections().iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(order, ["Albums", "Meilleures"]);
+        assert!(
+            cat.rename_collection("Albums", "meilleures").is_ok(),
+            "le nom d'une autre, aux majuscules près"
+        );
+        assert_eq!(
+            cat.rename_collection("meilleures", "Meilleures").unwrap_err(),
+            "une collection s'appelle déjà « Meilleures »"
+        );
+        assert!(cat.rename_collection("meilleures", "  ").is_err());
+        assert!(cat.rename_collection("Absente", "X").is_err());
     }
 
     #[test]

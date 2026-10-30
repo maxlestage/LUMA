@@ -6046,3 +6046,9 @@ es = «{from}» pasa a ser «{to}» en {n} fotos
 fr = « {word} » retiré de {n} photos
 en = “{word}” removed from {n} photos
 es = «{word}» quitado de {n} fotos
+
+# ----- Une collection renommée -----
+
+fr = « {from} » devient « {to} »
+en = “{from}” becomes “{to}”
+es = «{from}» pasa a ser «{to}»
