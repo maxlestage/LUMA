@@ -968,6 +968,8 @@ pub struct Studio {
     catalog_search: String,
     /// Le nom de la collection à faire de la recherche affichée, pendant qu'on l'écrit.
     collection_name: Option<String>,
+    /// Le nouveau nom d'une collection, pendant qu'on l'écrit (clic droit).
+    collection_rename: String,
     /// Le nom d'une nouvelle collection manuelle, dans le menu « Collection ».
     new_collection: String,
     pub export_options: ExportOptions,
@@ -1328,6 +1330,7 @@ impl Studio {
             view: View::Folder,
             catalog_search: String::new(),
             collection_name: None,
+            collection_rename: String::new(),
             new_collection: String::new(),
             export_options: ExportOptions::default(),
             export_presets: luma_render::export::Presets::default(),
@@ -1782,6 +1785,28 @@ impl Studio {
             &[("n", &n), ("name", &name)],
         );
         n
+    }
+
+    /// Renomme une collection ; affichée, elle le reste sous son nouveau nom.
+    pub fn rename_collection(&mut self, from: &str, to: &str) -> bool {
+        match self.catalog.rename_collection(from, to) {
+            Ok(()) => {
+                let to = to.trim().to_owned();
+                if self.view == View::Collection(from.to_owned()) {
+                    self.view = View::Collection(to.clone());
+                }
+                self.upkeep_changed();
+                self.status = trf(
+                    "« {from} » devient « {to} »",
+                    &[("from", &from), ("to", &to)],
+                );
+                true
+            }
+            Err(e) => {
+                self.status = trf("Collection impossible : {error}", &[("error", &e)]);
+                false
+            }
+        }
     }
 
     /// Supprime une collection (ses photos restent dans la photothèque).
@@ -9645,14 +9670,33 @@ impl Studio {
                     .size(11.5),
             );
             let mut delete = None;
+            let mut rename = None;
+            let new_name = &mut self.collection_rename;
             for (name, n) in &self.catalog_collections {
                 let on = self.view == View::Collection(name.clone());
                 let row = ui.selectable_label(on, format!("{name} ({n})"));
                 if row.clicked() {
                     chosen = Some(View::Collection(name.clone()));
                 }
-                // Clic droit (ou appui long) : la supprimer ; ses photos restent.
+                // Clic droit (ou appui long) : la renommer, ou la supprimer (ses photos
+                // restent).
                 row.context_menu(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::TextEdit::singleline(new_name)
+                                .hint_text(name.as_str())
+                                .desired_width(140.0),
+                        );
+                        let ok = !new_name.trim().is_empty() && new_name.trim() != name;
+                        if ui
+                            .add_enabled(ok, egui::Button::new(tr("Renommer")).small())
+                            .clicked()
+                        {
+                            rename = Some((name.clone(), new_name.trim().to_owned()));
+                            new_name.clear();
+                            ui.close();
+                        }
+                    });
                     if ui.button(tr("Supprimer la collection")).clicked() {
                         delete = Some(name.clone());
                         ui.close();
@@ -9661,6 +9705,9 @@ impl Studio {
             }
             if let Some(name) = delete {
                 self.delete_collection(&name);
+            }
+            if let Some((from, to)) = rename {
+                self.rename_collection(&from, &to);
             }
         }
         // Ce qui reste à faire, s'il reste quelque chose : chaque ligne montre ses photos.

@@ -246,6 +246,9 @@ The professional photo library, step by step.
   renames a keyword in every photo that has it, or removes it; their XMPs are
   rewritten (rating, flag and the rest stay), and a photo that already had the new
   name does not get it twice.
+- **A collection renamed**: the right click on a collection renames it (the name is
+  typed on the spot); it keeps its photos and its rule, takes its place in
+  alphabetical order, and stays shown if it was; a name already taken is refused.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
