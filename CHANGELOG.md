@@ -264,6 +264,9 @@ La photothèque professionnelle, étape par étape.
   droit renomme un mot‑clé dans toutes les photos qui l'ont, ou l'en retire ; leurs
   XMP sont réécrits (la note, le drapeau et le reste ne bougent pas), et une photo qui
   avait déjà le nouveau nom ne l'a pas deux fois.
+- **Une collection renommée** : le clic droit sur une collection la renomme (le nom
+  s'écrit sur place) ; elle garde ses photos et sa règle, reprend sa place dans l'ordre
+  alphabétique, et reste affichée si elle l'était ; un nom déjà pris est refusé.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

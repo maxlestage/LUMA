@@ -3431,11 +3431,27 @@ fn library_by_year_and_month() {
         harness.state().as_ref().unwrap().view,
         View::Collection("À indexer".into())
     );
-    harness.get_by_label("À indexer (4)").click_secondary();
+    // Renommée : affichée, elle le reste sous son nouveau nom ; puis supprimée par son
+    // menu (clic droit) ; ses photos restent.
+    assert!(
+        harness
+            .state_mut()
+            .as_mut()
+            .unwrap()
+            .rename_collection("À indexer", "À ranger")
+    );
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Collection("À ranger".into())
+    );
+    assert!(harness.query_by_label("À indexer (4)").is_none());
+    harness.get_by_label("À ranger (4)").click_secondary();
     harness.run_steps(3);
+    harness.get_by_label("Renommer");
     harness.get_by_label("Supprimer la collection").click();
     harness.run_steps(3);
-    assert!(harness.query_by_label("À indexer (4)").is_none());
+    assert!(harness.query_by_label("À ranger (4)").is_none());
     assert_eq!(harness.state().as_ref().unwrap().view, View::All);
     assert_eq!(harness.state().as_ref().unwrap().catalog().len(), 5);
     assert!(
