@@ -276,6 +276,10 @@ La photothèque professionnelle, étape par étape.
 - **Notes et libellés dans la photothèque** : deux sections repliées de plus,
   « Notes » (le nombre de photos de 5 à 1 étoile) et « Libellés » (chaque libellé et
   son nombre de photos) ; un clic montre leurs photos.
+- **Catalogue plus rapide à lire et à écrire** : pour 100 000 photos, l'écriture
+  passe de 59 à 43 ms et la lecture de 108 à 78 ms (un hachage rapide pour la table
+  des textes, le numéro du dossier, du boîtier et de l'objectif de la photo d'avant
+  repris sans recherche) ; le fichier est le même, octet pour octet.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
