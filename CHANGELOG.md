@@ -256,6 +256,10 @@ La photothèque professionnelle, étape par étape.
   « Boîtiers » et « Objectifs », comme les mots‑clés : chaque boîtier et chaque
   objectif avec son nombre de photos, un clic montre ses photos (le nom entier, espaces
   compris).
+- **Photothèque plus vive** : les listes du panneau (dossiers, mots‑clés, boîtiers,
+  objectifs) se comptent sans copier chaque valeur de chaque photo ; pour 100 000
+  photos, leur mise à jour après un changement passe d'environ 200 ms à 90 ms ; les
+  mêmes listes.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
