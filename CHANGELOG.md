@@ -223,6 +223,11 @@ La photothèque professionnelle, étape par étape.
   prennent la note en plage ou exacte (`note:..2`, `note:2..4`, `note:=0` pour les
   photos pas encore notées) et `sans:` : `sans:note`, `sans:mot` (aucun mot‑clé),
   `sans:lieu` (pas de position), `sans:libellé`, à combiner.
+- **JPEG et PNG cinq fois plus vite à ouvrir** : une image de 8 bits par canal (JPEG,
+  PNG, TIFF, WebP, PSD…) passe en valeurs linéaires par une table de ses 256 valeurs
+  (et de ses opacités), sur tous les cœurs, sans image intermédiaire en flottants :
+  un JPEG de 24 Mpx s'ouvre en 0,18 s au lieu de 0,9 s ; les mêmes valeurs, au bit
+  près.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
