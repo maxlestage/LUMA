@@ -231,6 +231,10 @@ La photothèque professionnelle, étape par étape.
 - **« À faire » dans la photothèque** : le panneau Photothèque compte les photos pas
   encore notées, sans mot-clé et sans lieu ; un clic les montre (une ligne disparaît
   quand il n'en reste plus).
+- **Toutes les écritures à l'écran** : un nom de fichier, un mot‑clé ou une légende en
+  japonais, en chinois, en coréen, en arabe ou en hébreu s'affiche avec une police du
+  système (Mac, Windows, Linux), trouvée à la première lettre qui manque, au lieu de
+  petites boîtes vides ; rien n'est chargé tant que rien ne manque.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

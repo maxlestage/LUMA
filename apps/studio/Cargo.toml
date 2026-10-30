@@ -25,6 +25,8 @@ luma-licence.workspace = true
 luma-i18n.workspace = true
 luma-apple.workspace = true
 egui.workspace = true
+# Lire la table des caractères des polices du système (déjà compilé pour egui).
+skrifa = { version = "0.44", default-features = false, features = ["std", "autohint_shaping"] }
 # Les tuiles de la carte (PNG).
 image.workspace = true
 wgpu.workspace = true

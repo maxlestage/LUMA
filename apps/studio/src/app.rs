@@ -1161,6 +1161,11 @@ impl Studio {
         // fenêtre s'ouvre, et non à la première photo.
         luma_raw::warm_up();
         crate::style::apply(ctx);
+        // Les lettres que la police n'a pas (noms de fichiers, mots‑clés en japonais,
+        // en arabe…) : cherchées dans les polices du système, au lieu de boîtes vides.
+        ctx.add_font_provider(Arc::new(crate::fallback_fonts::SystemFallback::new(
+            crate::fallback_fonts::system_dirs(),
+        )));
         crate::set_screen(ctx);
         let repaint_ctx = ctx.clone();
         let mut studio = Self {
