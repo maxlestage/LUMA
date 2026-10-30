@@ -9,6 +9,7 @@
 //! luma bench <raw> [options]        mesure la réactivité (aperçus successifs)
 //! luma merge <raw>… [options]       empilement, HDR ou panorama, en DNG
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
+//! luma film-lut --camera <raw>… [opt] mesure le rendu du boîtier (son JPEG), en LUT 3D
 //! luma presets [dossier]            exporte les 275 films en préréglages XMP
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
@@ -101,6 +102,9 @@ USAGE
       au lieu d'être rognés.
   luma film-lut <numérique> <scan> [<numérique> <scan>]… [-o film.cube] [--size 17-65]
                     [--aligned] [--title nom]
+  luma film-lut --camera <raw> [<raw>]… [-o boîtier.cube] [--size 17-65] [--title nom]
+      Le rendu du boîtier : chaque RAW comparé au JPEG que le boîtier y a rangé (la
+      même prise, ses couleurs à lui) ; la LUT rend les RAW comme le boîtier.
   luma watch <dossier> [--catalog f.lumacat] [--interval secondes]
       Surveille un dossier (prise de vue en connexion, carte copiée) : chaque photo
       arrivée, une fois complète, entre dans la photothèque et s'affiche (boîtier,
@@ -1562,6 +1566,7 @@ fn export_presets(dir: &Path) -> Result<usize, String> {
 fn film_lut(args: Vec<String>) -> Result<(), String> {
     use luma_merge::film;
     let (mut out, mut size, mut aligned, mut title) = (None, 33, false, None);
+    let mut camera = false;
     let mut paths = Vec::new();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -1570,26 +1575,40 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
             "-o" | "--output" => out = Some(PathBuf::from(value()?)),
             "--size" => size = value()?.parse().map_err(|_| "--size : 17 à 65")?,
             "--aligned" => aligned = true,
+            "--camera" => camera = true,
             "--title" => title = Some(value()?),
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => paths.push(PathBuf::from(a)),
         }
     }
-    if paths.is_empty() || paths.len() % 2 != 0 {
+    if camera && paths.is_empty() {
+        return Err("--camera : il faut un RAW au moins".into());
+    }
+    if !camera && (paths.is_empty() || paths.len() % 2 != 0) {
         return Err("il faut des paires : <numérique> <scan> [<numérique> <scan>]…".into());
     }
     let started = Instant::now();
-    let pairs = paths
-        .chunks(2)
-        .map(|p| {
-            Ok(film::Pair {
-                digital: film::load_reference(&p[0]).map_err(|e| e.to_string())?,
-                film: film::load_scan(&p[1]).map_err(|e| e.to_string())?,
-                aligned,
+    let pairs = if camera {
+        paths
+            .iter()
+            .map(|p| {
+                let photo = luma_render::Photo::open(p).map_err(|e| format!("{} : {e}", p.display()))?;
+                film::camera_pair(&photo, p).map_err(|e| e.to_string())
             })
-        })
-        .collect::<Result<Vec<_>, String>>()?;
-    let out = out.unwrap_or_else(|| paths[1].with_extension("cube"));
+            .collect::<Result<Vec<_>, String>>()?
+    } else {
+        paths
+            .chunks(2)
+            .map(|p| {
+                Ok(film::Pair {
+                    digital: film::load_reference(&p[0]).map_err(|e| e.to_string())?,
+                    film: film::load_scan(&p[1]).map_err(|e| e.to_string())?,
+                    aligned,
+                })
+            })
+            .collect::<Result<Vec<_>, String>>()?
+    };
+    let out = out.unwrap_or_else(|| paths[usize::from(!camera)].with_extension("cube"));
     let title = title.unwrap_or_else(|| {
         out.file_stem()
             .map(|s| s.to_string_lossy().into_owned())
@@ -1605,8 +1624,14 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
         n = m.cube.size
     );
     println!(
-        "  écart numérique → pellicule : {:.2} ; avec la LUT : {:.2} (OKLab ×100, 1 ≈ à peine visible)",
-        m.before, m.after
+        "  écart {} : {:.2} ; avec la LUT : {:.2} (OKLab ×100, 1 ≈ à peine visible)",
+        if camera {
+            "numérique → boîtier"
+        } else {
+            "numérique → pellicule"
+        },
+        m.before,
+        m.after
     );
     Ok(())
 }

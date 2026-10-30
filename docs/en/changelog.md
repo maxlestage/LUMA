@@ -4,6 +4,13 @@
 
 The professional photo library, step by step.
 
+- **The camera's look, measured**: “Measure the camera's look” (Films › My film stocks)
+  compares the open RAW with the JPEG the camera stored in it and turns it into a film
+  named after the camera (“Sony ILCE-7M3 JPEG”): its RAW files rendered the way it
+  does, at an adjustable strength. No AI: the film measurement, applied to the same
+  shot. On the seven brands of the test corpus, the difference from the camera's JPEG
+  drops from 8–29 to under 2, in half a second. From the command line:
+  `luma film-lut --camera`.
 - **Reset everything**: in the language menu (“•••” on iPhone), after a confirmation
   that says what changes and what stays: the edits of the selected photos and of the
   open photo are cleared (ratings, keywords and files kept; Undo brings back the open
