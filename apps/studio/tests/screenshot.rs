@@ -3346,6 +3346,7 @@ fn library_by_year_and_month() {
         make: "SONY".into(),
         model: "ILCE-7M3".into(),
         lens: "FE 24-70mm F2.8 GM".into(),
+        label: "Rouge".into(),
         ..luma_library::Entry::default()
     });
     cat.save(&catalog).unwrap();
@@ -3406,6 +3407,23 @@ fn library_by_year_and_month() {
     assert_eq!(
         harness.state().as_ref().unwrap().view,
         View::Search("objectif:\"FE 24-70mm F2.8 GM\"".into())
+    );
+    // Les notes (seule la note 3 est donnée) et les libellés.
+    harness.get_by_label("Notes").click();
+    harness.run_steps(2);
+    harness.get_by_label("3 étoiles (1)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("note:=3".into())
+    );
+    harness.get_by_label("Libellés (1)").click();
+    harness.run_steps(2);
+    harness.get_by_label("Rouge (1)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("libellé:Rouge".into())
     );
     harness.get_by_label("Sans lieu (4)").click();
     harness.run_steps(2);
