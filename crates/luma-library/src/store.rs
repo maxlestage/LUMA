@@ -28,10 +28,49 @@ const WITHOUT_IMAGE_EXIF: u64 = 2;
 /// mise à jour de leur dossier.
 const WITHOUT_GPS: u64 = 1;
 
+/// Un hachage rapide pour la table des textes (celui de la bibliothèque standard,
+/// fait pour résister aux attaques, coûtait la moitié de l'écriture) : la table ne
+/// garde que l'ordre d'arrivée des textes, le fichier ne change pas.
+#[derive(Default, Clone, Copy)]
+struct Quick(u64);
+
+impl std::hash::Hasher for Quick {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        let (words, rest) = bytes.as_chunks::<8>();
+        for w in words {
+            self.add(u64::from_le_bytes(*w));
+        }
+        for &b in rest {
+            self.add(u64::from(b));
+        }
+    }
+
+    fn write_u8(&mut self, b: u8) {
+        self.add(u64::from(b));
+    }
+
+    fn write_usize(&mut self, v: usize) {
+        self.add(v as u64);
+    }
+}
+
+impl Quick {
+    #[inline]
+    fn add(&mut self, v: u64) {
+        self.0 = (self.0.rotate_left(5) ^ v).wrapping_mul(0x51_7c_c1_b7_27_22_0a_95);
+    }
+}
+
+type QuickMap<K, V> = HashMap<K, V, std::hash::BuildHasherDefault<Quick>>;
+
 /// Les textes du fichier, chacun une fois.
 #[derive(Default)]
 struct Table<'a> {
-    index: HashMap<&'a str, u64>,
+    index: QuickMap<&'a str, u64>,
     texts: Vec<&'a str>,
 }
 
@@ -91,15 +130,30 @@ fn encode_as(cat: &Catalog, version: u64) -> Vec<u8> {
     let mut table = Table::default();
     let mut body = Vec::with_capacity(entries.len() * 48);
     varint(&mut body, entries.len() as u64);
+    // Les photos d'un même dossier se suivent : son numéro est repris sans recherche.
+    let mut last_dir: Option<(&str, u64)> = None;
+    let mut last: [Option<(&str, u64)>; 4] = [None; 4];
     for (dir, name, e) in &entries {
-        varint(&mut body, table.id(dir));
+        let id = match last_dir {
+            Some((d, id)) if d == *dir => id,
+            _ => table.id(dir),
+        };
+        last_dir = Some((dir, id));
+        varint(&mut body, id);
         text(&mut body, name);
         for v in [e.size, e.modified, e.sidecar] {
             varint(&mut body, v);
         }
         text(&mut body, &e.date);
-        for s in [&e.make, &e.model, &e.lens, &e.label] {
-            varint(&mut body, table.id(s));
+        // De même la marque, le modèle, l'objectif et le libellé, le plus souvent ceux
+        // de la photo d'avant.
+        for (k, s) in [&e.make, &e.model, &e.lens, &e.label].into_iter().enumerate() {
+            let id = match last[k] {
+                Some((t, id)) if t == s.as_str() => id,
+                _ => table.id(s),
+            };
+            last[k] = Some((s.as_str(), id));
+            varint(&mut body, id);
         }
         optional(&mut body, e.iso);
         real(&mut body, e.aperture);
@@ -217,16 +271,16 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Catalog> {
     if photos > bytes.len() {
         return None;
     }
-    // Le dossier, joint une fois par texte et non une fois par photo.
-    let mut dirs: HashMap<u64, PathBuf> = HashMap::new();
+    // Le dossier, joint une fois par texte et non une fois par photo, rangé à son numéro.
+    let mut dirs: Vec<Option<PathBuf>> = vec![None; texts.len()];
     let mut entries = Vec::with_capacity(photos.min(1 << 20));
     for _ in 0..photos {
         let dir = r.varint()?;
         let name = r.text()?;
-        if let std::collections::hash_map::Entry::Vacant(v) = dirs.entry(dir) {
-            v.insert(PathBuf::from(get(dir)?));
-        }
-        let path = dirs[&dir].join(name);
+        let slot = dirs.get_mut(usize::try_from(dir).ok()?)?;
+        let path = slot
+            .get_or_insert_with(|| PathBuf::from(texts[dir as usize]))
+            .join(name);
         let (size, modified, sidecar) = (r.varint()?, r.varint()?, r.varint()?);
         let date = r.text()?.to_owned();
         let mut owned = || get(r.varint()?).map(str::to_owned);
@@ -323,6 +377,108 @@ mod tests {
         cat.set_collection(Collection::smart("Meilleures", "note:4").unwrap())
             .unwrap();
         cat
+    }
+
+    // L'écriture d'avant le hachage rapide et la reprise des numéros, telle quelle.
+    /// Les textes du fichier, chacun une fois.
+    #[derive(Default)]
+    struct PlainTable<'a> {
+        index: HashMap<&'a str, u64>,
+        texts: Vec<&'a str>,
+    }
+
+    impl<'a> PlainTable<'a> {
+        fn id(&mut self, s: &'a str) -> u64 {
+            *self.index.entry(s).or_insert_with(|| {
+                self.texts.push(s);
+                self.texts.len() as u64 - 1
+            })
+        }
+    }
+
+    /// Le catalogue écrit dans cette version (l'ancienne, pour les essais).
+    fn plain_encode(cat: &Catalog, version: u64) -> Vec<u8> {
+        let entries: Vec<(&str, &str, &Entry)> = cat
+            .entries
+            .values()
+            .filter_map(|e| {
+                let dir = e.path.parent()?.to_str()?;
+                let name = e.path.file_name()?.to_str()?;
+                Some((dir, name, e))
+            })
+            .collect();
+        let mut table = PlainTable::default();
+        let mut body = Vec::with_capacity(entries.len() * 48);
+        varint(&mut body, entries.len() as u64);
+        for (dir, name, e) in &entries {
+            varint(&mut body, table.id(dir));
+            text(&mut body, name);
+            for v in [e.size, e.modified, e.sidecar] {
+                varint(&mut body, v);
+            }
+            text(&mut body, &e.date);
+            for s in [&e.make, &e.model, &e.lens, &e.label] {
+                varint(&mut body, table.id(s));
+            }
+            optional(&mut body, e.iso);
+            real(&mut body, e.aperture);
+            real(&mut body, e.exposure_time);
+            real(&mut body, e.focal_length);
+            match e.gps.filter(|_| version >= WITHOUT_IMAGE_EXIF) {
+                Some([lat, lon]) => {
+                    body.push(1);
+                    body.extend_from_slice(&lat.to_le_bytes());
+                    body.extend_from_slice(&lon.to_le_bytes());
+                }
+                None if version >= WITHOUT_IMAGE_EXIF => body.push(0),
+                None => {}
+            }
+            body.push(e.rating);
+            body.push(e.flag as u8);
+            varint(&mut body, e.keywords.len() as u64);
+            for k in &e.keywords {
+                varint(&mut body, table.id(k));
+            }
+        }
+        let mut out = Vec::with_capacity(body.len() + table.texts.len() * 24 + 64);
+        out.extend_from_slice(MAGIC);
+        varint(&mut out, version);
+        varint(&mut out, table.texts.len() as u64);
+        for t in &table.texts {
+            text(&mut out, t);
+        }
+        out.extend_from_slice(&body);
+        text(&mut out, &serde_json::to_string(&cat.collections).unwrap_or_default());
+        out
+    }
+
+    /// Le hachage rapide et la reprise du numéro de la photo d'avant ne changent pas un
+    /// octet du fichier : dossiers, boîtiers, objectifs et libellés qui se suivent ou
+    /// alternent, mots‑clés partagés, versions d'avant.
+    #[test]
+    fn same_bytes_as_the_plain_writing() {
+        let mut cat = sample();
+        for i in 0..300usize {
+            cat.insert(Entry {
+                path: PathBuf::from(format!("/p/{}/{i}.arw", ["a", "b", "a/b"][i / 7 % 3])),
+                make: ["SONY", "Canon", ""][i / 3 % 3].into(),
+                model: ["ILCE-7M3", "EOS R5"][i % 2].into(),
+                lens: ["FE 24-70", "", "RF 50"][i / 5 % 3].into(),
+                label: ["", "Rouge", "SONY"][i % 3].into(),
+                keywords: (0..i % 3)
+                    .map(|k| ["mer", "SONY", "Été"][(i + k) % 3].to_owned())
+                    .collect(),
+                date: format!("2026-01-{:02}T00:00:00", 1 + i % 28),
+                ..Entry::default()
+            });
+        }
+        for version in [VERSION, WITHOUT_IMAGE_EXIF] {
+            assert_eq!(
+                encode_as(&cat, version),
+                plain_encode(&cat, version),
+                "version {version}"
+            );
+        }
     }
 
     #[test]
