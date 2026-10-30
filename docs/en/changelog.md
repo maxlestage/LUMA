@@ -232,6 +232,10 @@ The professional photo library, step by step.
   as a 16-bit PNG takes 1.8 to 2.0 s instead of 2.5 to 2.7 s, for a file 10% lighter;
   the same pixels. 8-bit PNG keeps its encoder, already the fastest and lightest
   (measured).
+- **Keywords in the library**: a folded “Keywords” section of the Library panel
+  lists each keyword with its number of photos; a click shows its photos. Search keeps
+  spaces between quotes (`keyword:"sunset sky"`, straight or curly quotes, or
+  guillemets).
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

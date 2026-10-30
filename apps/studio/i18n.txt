@@ -6004,3 +6004,13 @@ es = {n} fotos añadidas a «{name}»
 fr = {n} photos retirées de « {name} »
 en = {n} photos removed from “{name}”
 es = {n} fotos quitadas de «{name}»
+
+# ----- Les mots-clés dans la photothèque -----
+
+fr = Les mots-clés de la photothèque
+en = The library's keywords
+es = Las palabras clave de la fototeca
+
+fr = Mots-clés ({n})
+en = Keywords ({n})
+es = Palabras clave ({n})
