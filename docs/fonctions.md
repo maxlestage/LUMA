@@ -182,6 +182,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Copies virtuelles : plusieurs développements d'une photo sans dupliquer le fichier (un XMP par copie), chacune avec sa note, ses mots‑clés et sa vignette, à côté de son original ; export nommé `IMG_0001-2` ; suppression sans toucher l'original ; dans le catalogue aussi (toutes les photos, recherches, collections), avec la date et le boîtier de leur original | ✅ |
 | Import de catalogues existants | ⏳ |
 | Raccourcis clavier personnalisables (« Raccourcis clavier… » : chaque commande, ses touches, une touche déjà prise passe à la nouvelle commande, retour aux touches par défaut ; « Raccourcis.txt ») ; Tab masque les panneaux ; espaces de travail (Tri, Développement, Retouche, Présentation et les vôtres : outil et panneaux), Cmd+1 à Cmd+9 | ✅ |
+| Noms de fichiers, mots‑clés et légendes dans toutes les écritures (japonais, chinois, coréen, arabe, hébreu…) : les lettres que la police de LÜMA n'a pas sont prises, à la demande, dans les polices du système (Mac, Windows, Linux), au lieu de boîtes vides | ✅ |
 
 ## Ce qui distingue LÜMA
 

@@ -181,6 +181,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | Virtual copies: several developments of a photo without duplicating the file (one XMP per copy), each with its own rating, keywords and thumbnail, next to its original; exported as `IMG_0001-2`; deleted without touching the original; in the catalogue too (all photos, searches, collections), with their original's date and camera | ✅ |
 | Importing existing catalogues | ⏳ |
 | Customizable keyboard shortcuts (“Keyboard shortcuts…”: every command, its keys, a key already taken moves to the new command, back to the default keys; “Raccourcis.txt”); Tab hides the panels; workspaces (Culling, Develop, Retouching, Presentation and your own: tool and panels), Cmd+1 to Cmd+9 | ✅ |
+| File names, keywords and captions in every script (Japanese, Chinese, Korean, Arabic, Hebrew…): letters LÜMA's font lacks are taken, on demand, from the system fonts (Mac, Windows, Linux), instead of empty boxes | ✅ |
 
 ## What sets LÜMA apart
 
