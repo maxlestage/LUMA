@@ -3432,3 +3432,50 @@ fn library_by_year_and_month() {
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Le menu « Collection » des photos : la photo ouverte rangée dans une collection
+/// manuelle nouvelle (pas deux fois), montrée, puis retirée par le menu.
+#[test]
+fn photos_in_a_manual_collection() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("collection-manuelle") else {
+        return;
+    };
+    // Le dossier entre dans la photothèque en arrière‑plan.
+    let start = Instant::now();
+    while s.studio().is_indexing() && start.elapsed() < Duration::from_secs(60) {
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    s.studio().tool = luma_studio::app::Tool::Library;
+    s.harness.run_steps(3);
+    assert!(s.harness.query_all_by_label("Collection").next().is_some());
+    assert_eq!(s.studio().add_to_collection("Choix"), 1);
+    assert_eq!(s.studio().add_to_collection("Choix"), 0, "pas deux fois");
+    assert_eq!(
+        s.studio()
+            .catalog()
+            .collection_photos("Choix")
+            .unwrap()
+            .len(),
+        1
+    );
+    s.studio().show_view(View::Collection("Choix".into()));
+    s.wait();
+    s.harness
+        .get_all_by_label("Collection")
+        .next()
+        .unwrap()
+        .click();
+    s.harness.run_steps(3);
+    s.harness.get_by_label("Retirer de « Choix »").click();
+    s.harness.run_steps(3);
+    assert!(
+        s.studio()
+            .catalog()
+            .collection_photos("Choix")
+            .unwrap()
+            .is_empty()
+    );
+    assert!(s.studio().status().contains("retirées de « Choix »"));
+}

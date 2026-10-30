@@ -5974,3 +5974,33 @@ es = Colección imposible: {error}
 fr = Collection « {name} » supprimée
 en = Collection “{name}” deleted
 es = Colección «{name}» eliminada
+
+# ----- Ranger dans une collection -----
+
+fr = Collection
+en = Collection
+es = Colección
+
+fr = Ajouter à
+en = Add to
+es = Añadir a
+
+fr = Nouvelle collection
+en = New collection
+es = Nueva colección
+
+fr = Retirer de « {name} »
+en = Remove from “{name}”
+es = Quitar de «{name}»
+
+fr = Ranger les photos choisies dans une collection
+en = Put the selected photos in a collection
+es = Guardar las fotos elegidas en una colección
+
+fr = {n} photos ajoutées à « {name} »
+en = {n} photos added to “{name}”
+es = {n} fotos añadidas a «{name}»
+
+fr = {n} photos retirées de « {name} »
+en = {n} photos removed from “{name}”
+es = {n} fotos quitadas de «{name}»

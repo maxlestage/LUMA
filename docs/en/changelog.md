@@ -224,6 +224,9 @@ The professional photo library, step by step.
   collection (“Save as collection…”, a name, Enter), which runs it again every time;
   a right click on a collection deletes it (its photos stay). Until now, only the
   command line could do it.
+- **Manual collections from the app**: the “Collection” menu puts the open photo and
+  the selected photos in a collection (an existing one, or a new one named on the
+  spot), and removes them from the collection shown.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and
