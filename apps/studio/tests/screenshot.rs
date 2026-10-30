@@ -3334,6 +3334,17 @@ fn library_by_year_and_month() {
             ..luma_library::Entry::default()
         });
     }
+    // Une photo déjà faite (notée, avec mots‑clés et lieu), sans date : ni dans les
+    // dates, ni dans « À faire ».
+    let done = dir.join("e.png");
+    std::fs::write(&done, b"\x89PNG\r\n\x1a\n").unwrap();
+    cat.insert(luma_library::Entry {
+        path: done,
+        rating: 3,
+        keywords: vec!["mer".into()],
+        gps: Some([48.85, 2.35]),
+        ..luma_library::Entry::default()
+    });
     cat.save(&catalog).unwrap();
     let tmp = dir.clone();
     let mut harness = Harness::builder()
@@ -3355,6 +3366,16 @@ fn library_by_year_and_month() {
     harness.run_steps(3);
     harness.get_by_label("Dates");
     harness.get_by_label("2026 (1)");
+    // « À faire » : les quatre photos sans note, sans mot‑clé, sans lieu.
+    harness.get_by_label("À faire");
+    harness.get_by_label("Pas encore notées (4)");
+    harness.get_by_label("Sans mot-clé (4)");
+    harness.get_by_label("Sans lieu (4)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("sans:lieu".into())
+    );
     assert!(
         harness.query_by_label("juin (2)").is_none(),
         "les mois repliés"

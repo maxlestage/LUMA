@@ -5926,3 +5926,21 @@ es = noviembre
 fr = décembre
 en = December
 es = diciembre
+
+# ----- À faire, dans la photothèque -----
+
+fr = À faire
+en = To do
+es = Pendiente
+
+fr = Pas encore notées
+en = Not yet rated
+es = Aún sin valorar
+
+fr = Sans mot-clé
+en = No keywords
+es = Sin palabras clave
+
+fr = Sans lieu
+en = No location
+es = Sin ubicación
