@@ -284,6 +284,10 @@ La photothèque professionnelle, étape par étape.
   Photothèque le retire de la photothèque (ses photos ne sont plus suivies, ni dans
   les collections ; les fichiers ne sont pas touchés, les sous‑dossiers restent) ou
   l'ouvre dans le gestionnaire de fichiers du système.
+- **La liste des photos en CSV** : « Exporter la liste (CSV)… » (et
+  `luma catalog --csv`) écrit les photos montrées — une collection, une recherche, une
+  date — en tableau pour un client ou des archives : fichier, date, boîtier, objectif,
+  ISO, ouverture, vitesse, focale, note, drapeau, libellé, mots‑clés, position.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.

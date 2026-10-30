@@ -126,3 +126,49 @@ fn keywords_and_collections_are_edited() {
     assert!(!ok && text.contains("pas de collection « Absente »"), "{text}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `luma catalog --search … --csv` : la liste des photos trouvées, en tableau.
+#[test]
+fn found_photos_are_written_as_csv() {
+    let dir = std::env::temp_dir().join(format!("luma-cli-csv-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("photos")).unwrap();
+    for (name, rating) in [("a.png", 4u8), ("b.png", 0)] {
+        let p = dir.join("photos").join(name);
+        image::RgbImage::from_pixel(8, 8, image::Rgb([90, 120, 200]))
+            .save(&p)
+            .unwrap();
+        let meta = luma_project::xmp::Meta {
+            rating,
+            keywords: vec!["mer".into()],
+            ..luma_project::xmp::Meta::default()
+        };
+        luma_project::xmp::save(
+            &luma_project::xmp::sidecar_path(&p),
+            &luma_project::xmp::write_meta(&meta),
+        )
+        .unwrap();
+    }
+    let (cat, list) = (dir.join("cat.lumacat"), dir.join("liste.csv"));
+    let (ok, text) = luma(&[
+        "catalog",
+        dir.join("photos").to_str().unwrap(),
+        "--catalog",
+        cat.to_str().unwrap(),
+        "--search",
+        "note:4",
+        "--csv",
+        list.to_str().unwrap(),
+    ]);
+    assert!(ok, "{text}");
+    assert!(text.contains("1 photos dans"), "{text}");
+    let csv = std::fs::read_to_string(&list).unwrap();
+    let lines: Vec<&str> = csv.lines().collect();
+    assert_eq!(lines.len(), 2, "{csv}");
+    assert!(lines[0].starts_with("Fichier,Date,Boîtier"), "{csv}");
+    assert!(
+        lines[1].contains("a.png") && lines[1].contains(",4,") && lines[1].ends_with(",mer,,"),
+        "{csv}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
