@@ -214,6 +214,10 @@ The professional photo library, step by step.
 - **“To do” in the library**: the Library panel counts the photos not yet rated,
   without keywords and without location; a click shows them (a line disappears when
   none are left).
+- **Every script on screen**: a file name, keyword or caption in Japanese, Chinese,
+  Korean, Arabic or Hebrew is shown with a system font (Mac, Windows, Linux), found at
+  the first missing letter, instead of small empty boxes; nothing is loaded while
+  nothing is missing.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

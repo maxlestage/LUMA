@@ -7,6 +7,7 @@ pub mod app;
 pub mod crop;
 pub mod curving;
 pub mod dialogs;
+pub mod fallback_fonts;
 pub mod i18n;
 pub mod icons;
 pub mod keys;

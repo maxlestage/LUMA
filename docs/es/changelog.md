@@ -234,6 +234,10 @@ La fototeca profesional, paso a paso.
 - **«Pendiente» en la fototeca**: el panel Fototeca cuenta las fotos aún sin valorar,
   sin palabras clave y sin ubicación; un clic las muestra (una línea desaparece
   cuando ya no queda ninguna).
+- **Todas las escrituras en pantalla**: un nombre de archivo, una palabra clave o una
+  leyenda en japonés, chino, coreano, árabe o hebreo se muestra con una fuente del
+  sistema (Mac, Windows, Linux), encontrada en la primera letra que falta, en lugar de
+  pequeñas cajas vacías; no se carga nada mientras no falte nada.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
