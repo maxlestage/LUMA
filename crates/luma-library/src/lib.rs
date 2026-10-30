@@ -264,6 +264,22 @@ impl Catalog {
         )
     }
 
+    /// Les libellés du catalogue et leur nombre de photos.
+    pub fn labels(&self) -> Vec<(String, usize)> {
+        facet(distinct(
+            self.entries.values().map(|e| e.label.trim()).filter(|l| !l.is_empty()),
+        ))
+    }
+
+    /// Le nombre de photos de chaque note, de 0 (pas encore notée) à 5.
+    pub fn ratings(&self) -> [usize; 6] {
+        let mut n = [0; 6];
+        for e in self.entries.values() {
+            n[usize::from(e.rating.min(5))] += 1;
+        }
+        n
+    }
+
     /// Les objectifs du catalogue et leur nombre de photos.
     pub fn lenses(&self) -> Vec<(String, usize)> {
         facet(distinct(
@@ -1196,5 +1212,25 @@ mod tests {
         assert_eq!(photo_meta(&a).keywords, ["Océan"]);
         assert_eq!(cat.edit_keyword("absent", None).unwrap(), 0);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Les libellés comptés comme les mots‑clés (majuscules mises à part), et les notes
+    /// une à une.
+    #[test]
+    fn labels_and_ratings_are_counted() {
+        let mut cat = Catalog::default();
+        for (i, (label, rating)) in [("Rouge", 5), ("rouge", 3), ("Vert", 5), ("", 0), ("  ", 9)]
+            .into_iter()
+            .enumerate()
+        {
+            cat.insert(Entry {
+                path: PathBuf::from(format!("/p/{i}.jpg")),
+                label: label.into(),
+                rating,
+                ..Entry::default()
+            });
+        }
+        assert_eq!(cat.labels(), [("Rouge".to_owned(), 2), ("Vert".to_owned(), 1)]);
+        assert_eq!(cat.ratings(), [1, 0, 0, 1, 0, 3], "une note au‑delà de 5 compte pour 5");
     }
 }

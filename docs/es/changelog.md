@@ -276,6 +276,9 @@ La fototeca profesional, paso a paso.
   (`--delete-keyword`), con los XMP reescritos sin perder nada más; renombra una
   colección (`--rename-collection`) y quita una foto de ella (`--remove-from`): lo
   que hace la app, con el mismo código.
+- **Valoraciones y etiquetas en la fototeca**: dos secciones plegadas más,
+  «Valoraciones» (el número de fotos de 5 a 1 estrella) y «Etiquetas» (cada etiqueta
+  y su número de fotos); un clic muestra sus fotos.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,

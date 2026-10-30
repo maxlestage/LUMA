@@ -963,6 +963,11 @@ pub struct Studio {
     cameras_open: bool,
     catalog_lenses: Vec<(String, usize)>,
     lenses_open: bool,
+    /// Les notes (« =5 » à « =1 ») et les libellés, de même.
+    catalog_ratings: Vec<(String, usize)>,
+    ratings_open: bool,
+    catalog_labels: Vec<(String, usize)>,
+    labels_open: bool,
     open_years: BTreeSet<String>,
     pub view: View,
     catalog_search: String,
@@ -1326,6 +1331,10 @@ impl Studio {
             cameras_open: false,
             catalog_lenses: Vec::new(),
             lenses_open: false,
+            catalog_ratings: Vec::new(),
+            ratings_open: false,
+            catalog_labels: Vec::new(),
+            labels_open: false,
             open_years: BTreeSet::new(),
             view: View::Folder,
             catalog_search: String::new(),
@@ -1646,6 +1655,13 @@ impl Studio {
         self.catalog_keywords = self.catalog.keywords();
         self.catalog_cameras = self.catalog.cameras();
         self.catalog_lenses = self.catalog.lenses();
+        let ratings = self.catalog.ratings();
+        self.catalog_ratings = (1..=5)
+            .rev()
+            .filter(|&r| ratings[r] > 0)
+            .map(|r| (format!("={r}"), ratings[r]))
+            .collect();
+        self.catalog_labels = self.catalog.labels();
         self.catalog_todo =
             TODO.map(|rule| luma_library::Query::parse(rule).map_or(0, |q| self.catalog.count(&q)));
         self.catalog_collections = self
@@ -9736,11 +9752,32 @@ impl Studio {
                 &self.catalog_lenses,
                 "objectif",
             ),
+            (
+                &mut self.ratings_open,
+                tr("Notes").to_owned(),
+                tr("Les photos par note"),
+                &self.catalog_ratings,
+                "note",
+            ),
+            (
+                &mut self.labels_open,
+                trf("Libellés ({n})", &[("n", &self.catalog_labels.len())]),
+                tr("Les libellés de la photothèque"),
+                &self.catalog_labels,
+                "libellé",
+            ),
         ];
         let mut asked = None;
         for (open, title, help, items, key) in facets {
             let rename = (key == "mot").then_some(&mut self.keyword_rename);
-            if let Some(a) = facet_section(ui, open, &title, help, items, key, &self.view, rename) {
+            // Les notes s'écrivent « =5 » dans la recherche, « 5 étoiles » à l'écran.
+            let shown = |v: &str| match v.strip_prefix('=') {
+                Some(n) if key == "note" => trf("{n} étoiles", &[("n", &n)]),
+                _ => v.to_owned(),
+            };
+            if let Some(a) = facet_section(
+                ui, open, &title, help, items, key, &self.view, rename, &shown,
+            ) {
                 asked = Some(a);
             }
         }
@@ -12998,6 +13035,7 @@ fn facet_section(
     key: &str,
     view: &View,
     rename: Option<&mut String>,
+    shown: &dyn Fn(&str) -> String,
 ) -> Option<Facet> {
     if items.is_empty() {
         return None;
@@ -13027,7 +13065,7 @@ fn facet_section(
                     let on = *view == View::Search(query.clone());
                     ui.horizontal(|ui| {
                         ui.add_space(22.0);
-                        let row = ui.selectable_label(on, format!("{value} ({n})"));
+                        let row = ui.selectable_label(on, format!("{} ({n})", shown(value)));
                         if row.clicked() {
                             chosen = Some(Facet::Show(View::Search(query)));
                         }

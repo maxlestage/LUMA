@@ -273,6 +273,9 @@ La photothèque professionnelle, étape par étape.
   (`--delete-keyword`), les XMP réécrits sans rien perdre d'autre ; renomme une
   collection (`--rename-collection`) et en retire une photo (`--remove-from`) : ce
   que fait l'app, par le même code.
+- **Notes et libellés dans la photothèque** : deux sections repliées de plus,
+  « Notes » (le nombre de photos de 5 à 1 étoile) et « Libellés » (chaque libellé et
+  son nombre de photos) ; un clic montre leurs photos.
 - **LÜMA pour Windows** : Windows 10 et 11 (x64), rendu par DirectX 12 (ou Vulkan) ;
   un installateur sans mot de passe administrateur (menu Démarrer, désinstallation) et
   une archive .zip à décompresser n'importe où, avec la ligne de commande `luma.exe`.
