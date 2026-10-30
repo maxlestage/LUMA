@@ -229,9 +229,12 @@ mod tests {
             }
             let text = format!("Photo {c}");
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+                let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
                     ui.label(&text);
                 });
+                // Les textures du dessin ne vont nulle part : les laisser tomber sans les
+                // vider est une erreur pour egui (en mode vérifié).
+                out.textures_delta.clear();
             }))
             .is_ok()
         };
