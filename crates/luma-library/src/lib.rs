@@ -456,6 +456,83 @@ impl Catalog {
     }
 }
 
+/// Les colonnes d'une liste en CSV, dans l'ordre de [`csv`] (la ligne de commande les
+/// écrit ainsi ; l'app, dans sa langue).
+pub const CSV_COLUMNS: [&str; 14] = [
+    "Fichier",
+    "Date",
+    "Boîtier",
+    "Objectif",
+    "ISO",
+    "Ouverture",
+    "Vitesse (s)",
+    "Focale (mm)",
+    "Note",
+    "Drapeau",
+    "Libellé",
+    "Mots-clés",
+    "Latitude",
+    "Longitude",
+];
+
+/// Les mots du drapeau dans une liste en CSV : retenue, rejetée.
+pub const CSV_FLAGS: [&str; 2] = ["retenue", "rejetée"];
+
+/// Des photos en tableau CSV (RFC 4180 : virgules, guillemets doublés, fins de ligne
+/// CRLF), une ligne d'en‑tête (`columns`), puis une ligne par photo ; les mots‑clés
+/// séparés par « ; », les nombres avec un point, une valeur absente laissée vide ; le
+/// drapeau écrit avec `flags` (retenue, rejetée).
+pub fn csv(entries: &[&Entry], columns: &[&str; 14], flags: [&str; 2]) -> String {
+    fn cell(out: &mut String, v: &str) {
+        if v.contains([',', '"', '\n', '\r']) {
+            out.push('"');
+            out.push_str(&v.replace('"', "\"\""));
+            out.push('"');
+        } else {
+            out.push_str(v);
+        }
+    }
+    let mut out = String::new();
+    let row = |out: &mut String, values: &[String]| {
+        for (i, v) in values.iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            cell(out, v);
+        }
+        out.push_str("\r\n");
+    };
+    row(&mut out, &columns.map(str::to_owned));
+    let num = |v: Option<f32>| v.map(|v| format!("{v}")).unwrap_or_default();
+    for e in entries {
+        let flag = match e.flag() {
+            Flag::Pick => flags[0],
+            Flag::Reject => flags[1],
+            Flag::None => "",
+        };
+        row(
+            &mut out,
+            &[
+                e.path.display().to_string(),
+                e.date.replace('T', " "),
+                e.camera(),
+                e.lens.clone(),
+                e.iso.map(|i| i.to_string()).unwrap_or_default(),
+                num(e.aperture),
+                num(e.exposure_time),
+                num(e.focal_length),
+                e.rating.to_string(),
+                flag.to_owned(),
+                e.label.clone(),
+                e.keywords.join("; "),
+                e.gps.map(|g| format!("{:.6}", g[0])).unwrap_or_default(),
+                e.gps.map(|g| format!("{:.6}", g[1])).unwrap_or_default(),
+            ],
+        );
+    }
+    out
+}
+
 /// Dans une liste de mots‑clés, `word` (majuscules et accents mis à part) devient `to`,
 /// ou s'en va (`None`) ; un mot‑clé qui serait là deux fois ne l'est qu'une.
 pub fn rename_keyword(keywords: &mut Vec<String>, word: &str, to: Option<&str>) {
@@ -1232,5 +1309,44 @@ mod tests {
         }
         assert_eq!(cat.labels(), [("Rouge".to_owned(), 2), ("Vert".to_owned(), 1)]);
         assert_eq!(cat.ratings(), [1, 0, 0, 1, 0, 3], "une note au‑delà de 5 compte pour 5");
+    }
+
+    /// La liste en CSV : en‑tête, une ligne par photo, guillemets là où il le faut
+    /// (virgule, guillemet), valeurs absentes vides.
+    #[test]
+    fn photos_as_csv() {
+        let a = Entry {
+            path: PathBuf::from("/p/Mer, été/IMG_1.ARW"),
+            date: "2026-06-01T10:00:00".into(),
+            make: "SONY".into(),
+            model: "ILCE-7M3".into(),
+            lens: "FE 24-70mm".into(),
+            iso: Some(100),
+            aperture: Some(4.0),
+            exposure_time: Some(0.004),
+            focal_length: Some(35.0),
+            rating: 4,
+            flag: 1,
+            label: "Rouge".into(),
+            keywords: vec!["mer".into(), "dit \"bleu\"".into()],
+            gps: Some([48.8584, 2.2945]),
+            ..Entry::default()
+        };
+        let b = Entry {
+            path: PathBuf::from("/p/b.jpg"),
+            ..Entry::default()
+        };
+        let text = csv(&[&a, &b], &CSV_COLUMNS, CSV_FLAGS);
+        let lines: Vec<&str> = text.split("\r\n").collect();
+        assert_eq!(
+            lines[0],
+            "Fichier,Date,Boîtier,Objectif,ISO,Ouverture,Vitesse (s),Focale (mm),Note,Drapeau,Libellé,Mots-clés,Latitude,Longitude"
+        );
+        assert_eq!(
+            lines[1],
+            "\"/p/Mer, été/IMG_1.ARW\",2026-06-01 10:00:00,SONY ILCE-7M3,FE 24-70mm,100,4,0.004,35,4,retenue,Rouge,\"mer; dit \"\"bleu\"\"\",48.858400,2.294500"
+        );
+        assert_eq!(lines[2], "/p/b.jpg,,,,,,,,0,,,,,");
+        assert_eq!(lines[3], "");
     }
 }

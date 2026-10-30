@@ -265,6 +265,24 @@ pub fn pick_presets() -> Vec<PathBuf> {
 /// Où écrire le PDF d'impression (ou ses pages en JPEG, si l'on choisit ce format). Sur
 /// iPhone et iPad : `Documents/Tirages` (lisible dans l'app Fichiers, d'où il
 /// s'imprime).
+/// Où enregistrer une liste de photos en CSV. Sur iPhone et iPad :
+/// `Documents/Listes/<nom>`.
+#[cfg(not(target_os = "ios"))]
+pub fn save_csv(name: &str) -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title(tr("Enregistrer la liste des photos"))
+        .set_file_name(name)
+        .add_filter("CSV", &["csv"])
+        .save_file()
+}
+
+#[cfg(target_os = "ios")]
+pub fn save_csv(name: &str) -> Option<PathBuf> {
+    let dir = documents()?.join("Listes");
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir.join(name))
+}
+
 #[cfg(not(target_os = "ios"))]
 pub fn save_pdf(name: &str) -> Option<PathBuf> {
     rfd::FileDialog::new()

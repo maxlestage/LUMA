@@ -194,7 +194,7 @@ USAGE
                [--smart nom \"règle\"] [--add nom photo]… [--remove-from nom photo]…
                [--rename-collection ancien nouveau] [--remove-collection nom]
                [--rename-keyword ancien nouveau] [--delete-keyword mot]
-               [--collections] [--collection nom] [--backup] [--backups] [--restore f]
+               [--collections] [--collection nom] [--csv liste.csv] [--backup] [--backups] [--restore f]
                [--missing] [--relocate ancien nouveau] [--duplicates]
       La photothèque : ajoute chaque dossier (sous‑dossiers compris, sauf avec --flat)
       au catalogue de LÜMA, ou le remet à jour ; seuls les fichiers modifiés sont relus.
@@ -212,6 +212,9 @@ USAGE
       recherche : \"note:4 date:2024\"), --add range une photo dans une collection
       manuelle (créée au besoin), --remove-from l'en retire, --rename-collection la
       renomme, --collections les liste, --collection montre les photos de l'une d'elles.
+      --csv écrit les photos montrées (--list, --search ou --collection) en tableau CSV :
+      fichier, date, boîtier, objectif, ISO, ouverture, vitesse, focale, note, drapeau,
+      libellé, mots‑clés, position.
       Mots‑clés : --rename-keyword renomme un mot‑clé dans toutes les photos qui l'ont,
       --delete-keyword l'en retire (majuscules et accents mis à part ; les XMP sont
       réécrits, réglages et notes gardés).
@@ -430,6 +433,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     // Les changements de collections, appliqués dans l'ordre ; la collection à montrer.
     let mut edits: Vec<(String, String, String)> = Vec::new();
     let (mut list_collections, mut shown) = (false, None);
+    let mut csv: Option<PathBuf> = None;
     // Sauvegardes et photos manquantes.
     let (mut save_copy, mut list_backups, mut missing, mut duplicates) = (false, false, false, false);
     let mut restore = None;
@@ -472,6 +476,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
             }
             "--collections" => list_collections = true,
             "--collection" => shown = Some(it.next().ok_or("--collection attend un nom")?),
+            "--csv" => csv = Some(PathBuf::from(it.next().ok_or("--csv attend un fichier")?)),
             "--backup" => save_copy = true,
             "--backups" => list_backups = true,
             "--restore" => restore = Some(PathBuf::from(it.next().ok_or("--restore attend une sauvegarde")?)),
@@ -621,7 +626,17 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     } else {
         None
     };
-    for e in found.unwrap_or_default() {
+    let found = found.unwrap_or_default();
+    if let Some(to) = &csv {
+        std::fs::write(
+            to,
+            luma_library::csv(&found, &luma_library::CSV_COLUMNS, luma_library::CSV_FLAGS),
+        )
+        .map_err(|e| format!("{} : {e}", to.display()))?;
+        println!("{} photos dans {}", found.len(), to.display());
+        return Ok(());
+    }
+    for e in found {
         let iso = e.iso.map(|i| format!("ISO {i}")).unwrap_or_default();
         println!(
             "{}  {}  {}  {}  {}  {}",

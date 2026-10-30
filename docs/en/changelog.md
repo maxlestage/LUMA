@@ -267,6 +267,10 @@ The professional photo library, step by step.
   panel removes it from the library (its photos are no longer tracked, nor in
   collections; the files are not touched, subfolders stay) or opens it in the
   system's file manager.
+- **The photo list as CSV**: “Export list (CSV)…” (and `luma catalog --csv`) writes
+  the photos shown — a collection, a search, a date — as a table for a client or for
+  archives: file, date, camera, lens, ISO, aperture, shutter, focal length, rating,
+  flag, label, keywords, location.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

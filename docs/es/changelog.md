@@ -287,6 +287,10 @@ La fototeca profesional, paso a paso.
   Fototeca la quita de la fototeca (sus fotos dejan de seguirse, también en las
   colecciones; los archivos no se tocan, las subcarpetas se quedan) o la abre en el
   gestor de archivos del sistema.
+- **La lista de fotos en CSV**: «Exportar la lista (CSV)…» (y `luma catalog --csv`)
+  escribe las fotos mostradas —una colección, una búsqueda, una fecha— en una tabla
+  para un cliente o para archivos: archivo, fecha, cámara, objetivo, ISO, apertura,
+  velocidad, focal, valoración, bandera, etiqueta, palabras clave, ubicación.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
