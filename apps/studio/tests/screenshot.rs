@@ -3341,7 +3341,7 @@ fn library_by_year_and_month() {
     cat.insert(luma_library::Entry {
         path: done,
         rating: 3,
-        keywords: vec!["mer".into()],
+        keywords: vec!["mer".into(), "coucher de soleil".into()],
         gps: Some([48.85, 2.35]),
         ..luma_library::Entry::default()
     });
@@ -3376,6 +3376,19 @@ fn library_by_year_and_month() {
         harness.state().as_ref().unwrap().view,
         View::Search("sans:lieu".into())
     );
+    // Les mots‑clés, repliés ; dépliés, un mot de plusieurs mots montre sa photo.
+    assert!(harness.query_by_label("mer (1)").is_none());
+    harness.get_by_label("Mots-clés (2)").click();
+    harness.run_steps(2);
+    harness.get_by_label("mer (1)");
+    harness.get_by_label("coucher de soleil (1)").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().view,
+        View::Search("mot:\"coucher de soleil\"".into())
+    );
+    harness.get_by_label("Sans lieu (4)").click();
+    harness.run_steps(2);
     // La recherche devient une collection dynamique, nommée, puis supprimée par son
     // menu (clic droit) ; ses photos restent.
     harness

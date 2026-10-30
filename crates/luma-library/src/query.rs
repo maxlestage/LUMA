@@ -139,7 +139,8 @@ impl Query {
     /// les dates relatives.
     pub fn parse_at(text: &str, now: u64) -> Result<Query, String> {
         let mut q = Query::default();
-        for token in text.split_whitespace() {
+        for token in tokens(text) {
+            let token = token.as_str();
             let Some((key, value)) = token.split_once(':').filter(|(k, _)| !k.is_empty()) else {
                 q.words.push(fold(token));
                 continue;
@@ -272,6 +273,39 @@ impl Query {
                 || contains(&e.label, w)
                 || e.keywords.iter().any(|k| contains(k, w))
         })
+    }
+}
+
+/// Les morceaux d'une recherche, séparés par les espaces ; entre guillemets droits ou
+/// typographiques, les espaces restent (`mot:"coucher de soleil"`), et les guillemets
+/// partent.
+fn tokens(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let mut quoted = false;
+    for c in text.chars() {
+        match c {
+            '"' | '“' | '”' | '«' | '»' => quoted = !quoted,
+            c if c.is_whitespace() && !quoted => {
+                if !cur.is_empty() {
+                    out.push(std::mem::take(&mut cur));
+                }
+            }
+            c => cur.push(c),
+        }
+    }
+    if !cur.is_empty() {
+        out.push(cur);
+    }
+    out
+}
+
+/// Un mot‑clé en filtre de recherche : entre guillemets s'il a des espaces.
+pub fn keyword_filter(keyword: &str) -> String {
+    if keyword.chars().any(char::is_whitespace) {
+        format!("mot:\"{keyword}\"")
+    } else {
+        format!("mot:{keyword}")
     }
 }
 
@@ -507,5 +541,23 @@ mod tests {
         for bad in ["sans:objectif", "note:..", "note:=beaucoup", "note:a..3"] {
             assert!(Query::parse(bad).is_err(), "{bad}");
         }
+    }
+
+    /// Entre guillemets, un filtre garde ses espaces : un mot‑clé de plusieurs mots se
+    /// retrouve, et un mot libre de même.
+    #[test]
+    fn quoted_values_keep_their_spaces() {
+        let photo = Entry {
+            path: "/p/plage.jpg".into(),
+            keywords: vec!["Coucher de soleil".into(), "mer".into()],
+            ..Entry::default()
+        };
+        let found = |q: &str| Query::parse(q).unwrap().matches(&photo);
+        assert!(found("mot:\"coucher de soleil\""));
+        assert!(found("mot:“Coucher de soleil” mer"));
+        assert!(!found("mot:coucher"));
+        assert!(found(&keyword_filter("Coucher de soleil")));
+        assert_eq!(keyword_filter("mer"), "mot:mer");
+        assert_eq!(tokens("  a  \"b c\" d"), ["a", "b c", "d"]);
     }
 }
