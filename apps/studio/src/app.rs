@@ -1821,6 +1821,22 @@ impl Studio {
         }
     }
 
+    /// Retire de la photothèque les photos d'un dossier (les fichiers restent). Rend leur
+    /// nombre.
+    pub fn remove_folder(&mut self, dir: &Path) -> usize {
+        let n = self.catalog.remove_folder(dir);
+        self.upkeep_changed();
+        let name = dir.file_name().map_or_else(
+            || dir.display().to_string(),
+            |n| n.to_string_lossy().into_owned(),
+        );
+        self.status = trf(
+            "{n} photos de « {name} » retirées de la photothèque",
+            &[("n", &n), ("name", &name)],
+        );
+        n
+    }
+
     /// Supprime une collection (ses photos restent dans la photothèque).
     pub fn delete_collection(&mut self, name: &str) -> bool {
         let gone = self.catalog.remove_collection(name);
@@ -9843,19 +9859,42 @@ impl Studio {
                 .first()
                 .and_then(|p| p.parent())
                 .map(Path::to_path_buf);
+            let mut forget = None;
             for (dir, n) in &self.catalog_folders {
                 let on = self.view == View::Folder && current.as_ref() == Some(dir);
                 let name = dir.file_name().map_or_else(
                     || dir.display().to_string(),
                     |n| n.to_string_lossy().into_owned(),
                 );
-                if ui
+                let row = ui
                     .selectable_label(on, format!("{name} ({n})"))
-                    .on_hover_text(dir.display().to_string())
-                    .clicked()
-                {
+                    .on_hover_text(dir.display().to_string());
+                if row.clicked() {
                     open = Some(dir.clone());
                 }
+                // Clic droit : le retirer de la photothèque (ses fichiers restent), ou
+                // l'ouvrir dans le gestionnaire de fichiers du système.
+                row.context_menu(|ui| {
+                    if crate::dialogs::system_opener().is_some()
+                        && ui.button(tr("Ouvrir le dossier")).clicked()
+                    {
+                        crate::dialogs::open_with_system(&dir.display().to_string());
+                        ui.close();
+                    }
+                    if ui
+                        .button(tr("Retirer de la photothèque"))
+                        .on_hover_text(tr(
+                            "Ses photos ne sont plus suivies ; les fichiers ne sont pas touchés",
+                        ))
+                        .clicked()
+                    {
+                        forget = Some(dir.clone());
+                        ui.close();
+                    }
+                });
+            }
+            if let Some(dir) = forget {
+                self.remove_folder(&dir);
             }
         }
         if self.is_indexing() {
