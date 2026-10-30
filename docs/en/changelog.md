@@ -4,6 +4,12 @@
 
 The professional photo library, step by step.
 
+- **Reset everything**: in the language menu (“•••” on iPhone), after a confirmation
+  that says what changes and what stays: the edits of the selected photos and of the
+  open photo are cleared (ratings, keywords and files kept; Undo brings back the open
+  photo's), and language, shortcuts, panels, filters and the export, print, slideshow,
+  book and gallery choices go back to first launch. The library, presets and license
+  stay.
 - **Lighter folder tree**: rebuilt only when the library changes, no longer on every
   frame drawn (0.7 ms less per frame with 2,000 folders).
 - **Import from the Files app on iPhone and iPad**: “From Files” under “Import photos”

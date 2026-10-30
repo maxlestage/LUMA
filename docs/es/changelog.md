@@ -4,6 +4,12 @@
 
 La fototeca profesional, paso a paso.
 
+- **Restablecer todo**: en el menú del idioma («•••» en iPhone), tras una confirmación
+  que dice qué cambia y qué se queda: se borran los ajustes de las fotos elegidas y de
+  la foto abierta (valoraciones, palabras clave y archivos se conservan; Deshacer
+  devuelve los de la foto abierta), y el idioma, los atajos, los paneles, los filtros y
+  las opciones de exportación, impresión, presentación, libro y galería vuelven al
+  primer inicio. La fototeca, los ajustes preestablecidos y la licencia se quedan.
 - **Árbol de carpetas más ligero**: se rehace solo cuando cambia la fototeca, ya no en
   cada imagen dibujada (0,7 ms menos por imagen con 2000 carpetas).
 - **Importar desde la app Archivos en iPhone y iPad**: «Desde Archivos» bajo «Importar

@@ -797,6 +797,10 @@ pub struct Studio {
     pub keymap: crate::keys::Keymap,
     keys_path: Option<PathBuf>,
     keys_open: bool,
+    /// Le fichier de la langue choisie (les essais en prennent un à eux), et la fenêtre
+    /// « Tout remettre à zéro », quand elle est ouverte.
+    lang_path: Option<PathBuf>,
+    pub reset_all_open: bool,
     /// La commande dont la fenêtre des raccourcis attend les nouvelles touches.
     keys_listening: Option<&'static str>,
     /// Ce qu'a fait le dernier changement (une touche reprise à une autre commande).
@@ -1226,6 +1230,8 @@ impl Studio {
                 .unwrap_or_default(),
             keys_path: None,
             keys_open: false,
+            lang_path: None,
+            reset_all_open: false,
             keys_listening: None,
             keys_note: None,
             hide_panels: false,
@@ -5340,6 +5346,11 @@ impl Studio {
                 }
             }
             ui.separator();
+            if ui.button(tr("Tout remettre à zéro…")).clicked() {
+                self.reset_all_open = true;
+                ui.close();
+            }
+            ui.separator();
             ui.label(RichText::new(tr("Cache")).small().color(theme::DIM));
             let used = crate::dialogs::duplicates_dir()
                 .map_or(0, |d| luma_render::duplicate::usage(&d))
@@ -5812,6 +5823,114 @@ impl Studio {
         self.keys_path
             .clone()
             .or_else(|| Some(crate::dialogs::app_dir()?.join("Raccourcis.txt")))
+    }
+
+    /// Garde le choix de la langue dans ce fichier (les essais).
+    pub fn use_language_file(&mut self, path: PathBuf) {
+        self.lang_path = Some(path);
+    }
+
+    /// Les photos que « Tout remettre à zéro » efface : celles choisies, et l'ouverte.
+    fn reset_targets(&self) -> Vec<PathBuf> {
+        let mut paths = self.sync_targets();
+        paths.extend(self.current_path().map(Path::to_path_buf));
+        paths
+    }
+
+    /// Tout remis comme au premier lancement : les réglages des photos choisies et de
+    /// la photo ouverte (leurs notes, mots‑clés et fichiers restent ; la photo ouverte
+    /// se rétablit par Annuler), la langue, les raccourcis, les panneaux, les filtres
+    /// et les choix d'export, d'impression, de diaporama, de livre et de galerie. La
+    /// photothèque, les préréglages, les modèles, les espaces de travail, les réglages
+    /// par boîtier et la licence restent. Rend le nombre de photos remises à zéro.
+    pub fn reset_everything(&mut self) -> usize {
+        let mut done = 0;
+        for path in self.sync_targets() {
+            // Les métadonnées telles qu'écrites (celles d'une photo qui n'est pas
+            // ouverte le sont tout de suite) : rien de plus ancien ne les remplace.
+            let meta = read_meta(&path);
+            match luma_library::clear_photo_settings(&path, &meta) {
+                Ok(()) => {
+                    done += 1;
+                    self.edits.insert(path.clone(), presets::Summary::default());
+                    self.meta.insert(path.clone(), meta);
+                    self.worker.thumbnail(path);
+                }
+                Err(e) => self.status = trf("XMP non enregistré : {error}", &[("error", &e)]),
+            }
+        }
+        if self.photo.is_some() {
+            self.act_once("reset");
+            done += 1;
+        }
+        crate::i18n::forget(self.lang_path.as_deref());
+        self.keymap.reset(None);
+        self.keys_note = None;
+        self.save_keys();
+        self.hide_panels = false;
+        self.stacking = true;
+        self.auto_advance = true;
+        self.min_rating = 0;
+        self.flag_filter = FlagFilter::All;
+        self.keyword_filter = None;
+        self.export_options = ExportOptions::default();
+        self.print_copies = 1;
+        self.print_layout = Default::default();
+        self.print_convert = true;
+        self.show = Default::default();
+        self.book = Default::default();
+        self.gallery = Default::default();
+        self.rename_template = "{date}_{séquence}".into();
+        self.status = trf("Tout est remis à zéro ({n} photo(s)).", &[("n", &done)]);
+        done
+    }
+
+    /// La confirmation de « Tout remettre à zéro » : ce qui change, ce qui reste.
+    fn reset_all_window(&mut self, ctx: &egui::Context) {
+        let mut open = self.reset_all_open;
+        let (mut confirmed, mut cancelled) = (false, false);
+        let n = self.reset_targets().len();
+        egui::Window::new(tr("Tout remettre à zéro"))
+            .id(egui::Id::unique("fenetre-tout-a-zero"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_max_width(380.0);
+                ui.label(trf(
+                    "Les réglages de {n} photo(s) (celles choisies et la photo ouverte) sont effacés : elles reprennent leur rendu par défaut.",
+                    &[("n", &n)],
+                ));
+                ui.add_space(4.0);
+                ui.label(tr(
+                    "La langue, les raccourcis, les panneaux, les filtres et les choix d'export, d'impression, de diaporama, de livre et de galerie reviennent comme au premier lancement.",
+                ));
+                ui.add_space(4.0);
+                ui.label(
+                    RichText::new(tr(
+                        "Restent : vos fichiers, leurs notes et mots-clés, la photothèque, les préréglages, les modèles, les espaces de travail et la licence.",
+                    ))
+                    .color(theme::DIM),
+                );
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(tr("Tout remettre à zéro")).clicked() {
+                        confirmed = true;
+                    }
+                    if ui.button(tr("Annuler")).clicked() {
+                        cancelled = true;
+                    }
+                });
+            });
+        if cancelled {
+            open = false;
+        }
+        if confirmed {
+            self.reset_everything();
+            open = false;
+        }
+        self.reset_all_open = open;
     }
 
     /// Lit les raccourcis de ce fichier, et les y garde (les essais).
@@ -7009,6 +7128,9 @@ impl Studio {
         }
         if self.keys_open {
             self.keys_window(&ctx);
+        }
+        if self.reset_all_open {
+            self.reset_all_window(&ctx);
         }
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
