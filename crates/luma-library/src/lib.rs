@@ -655,6 +655,13 @@ fn copy_of_sidecar(path: &Path) -> Option<PathBuf> {
     (luma_raw::is_photo(&source) && source.is_file()).then_some(copy)
 }
 
+/// Les photos encore là (voir [`exists`]), dans leur ordre : regardées sur tous les
+/// cœurs, chaque fichier demandé au système de son côté (un disque externe ou réseau
+/// répond lentement à chacun).
+pub fn existing(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    paths.into_par_iter().filter(|p| exists(p)).collect()
+}
+
 /// La photo est‑elle encore là ? Pour une copie virtuelle : son original et son XMP.
 pub fn exists(path: &Path) -> bool {
     if copies::number(path).is_some() {
@@ -1348,5 +1355,30 @@ mod tests {
         );
         assert_eq!(lines[2], "/p/b.jpg,,,,,,,,0,,,,,");
         assert_eq!(lines[3], "");
+    }
+
+    /// Les photos encore là, dans leur ordre : celles qui manquent sortent, les copies
+    /// virtuelles restent tant que leur original et leur XMP sont là.
+    #[test]
+    fn existing_photos_keep_their_order() {
+        let dir = std::env::temp_dir().join(format!("luma-existantes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut paths = Vec::new();
+        for i in 0..500 {
+            let p = dir.join(format!("{:03}.png", 499 - i));
+            if i % 3 != 0 {
+                std::fs::write(&p, b"x").unwrap();
+            }
+            paths.push(p);
+        }
+        let copy = copies::path(&paths[1], 2);
+        std::fs::write(copies::sidecar(&copy), b"<x/>").unwrap();
+        paths.push(copy.clone());
+        let expected: Vec<PathBuf> = paths.iter().filter(|p| exists(p)).cloned().collect();
+        assert_eq!(existing(paths.clone()), expected);
+        assert_eq!(expected.len(), 334);
+        assert_eq!(expected.last(), Some(&copy));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

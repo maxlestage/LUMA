@@ -271,6 +271,11 @@ The professional photo library, step by step.
   the photos shown — a collection, a search, a date — as a table for a client or for
   archives: file, date, camera, lens, ISO, aperture, shutter, focal length, rating,
   flag, label, keywords, location.
+- **Faster library views**: when showing all photos, a collection or a search, the
+  app checks whether each photo is still there on all cores (and likewise for the
+  missing photos of “Maintenance…”): 3 times faster on a local disk (20,000 photos:
+  17 → 5 ms), more on an external or network drive; the same photos, in the same
+  order.
 - **LÜMA for Windows**: Windows 10 and 11 (x64), rendered with DirectX 12 (or Vulkan);
   an installer that needs no administrator password (Start menu, uninstall) and a .zip
   archive to unpack anywhere, with the `luma.exe` command line. Settings, catalogue and

@@ -291,6 +291,11 @@ La fototeca profesional, paso a paso.
   escribe las fotos mostradas —una colección, una búsqueda, una fecha— en una tabla
   para un cliente o para archivos: archivo, fecha, cámara, objetivo, ISO, apertura,
   velocidad, focal, valoración, bandera, etiqueta, palabras clave, ubicación.
+- **Vistas de la fototeca más rápidas**: al mostrar todas las fotos, una colección o
+  una búsqueda, la app comprueba si cada foto sigue ahí en todos los núcleos (igual
+  para las fotos que faltan de «Mantenimiento…»): 3 veces más rápido en un disco local
+  (20 000 fotos: 17 → 5 ms), más en un disco externo o en red; las mismas fotos, en el
+  mismo orden.
 - **LÜMA para Windows**: Windows 10 y 11 (x64), con DirectX 12 (o Vulkan); un
   instalador sin contraseña de administrador (menú Inicio, desinstalación) y un archivo
   .zip para descomprimir donde quieras, con la línea de comandos `luma.exe`. Ajustes,
