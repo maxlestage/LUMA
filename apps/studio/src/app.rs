@@ -867,6 +867,9 @@ pub struct Studio {
     /// L'avant / après côte à côte (Y) : la place de la séparation (0 à 1 sur la largeur
     /// de la photo), l'« avant » rendu (ce qui l'a donné, sa texture) et celui demandé.
     pub split: Option<f32>,
+    /// L'instantané comparé dans la vue côte à côte (son nom, ses réglages), à la place
+    /// de la photo sans retouche.
+    pub split_against: Option<(String, Settings)>,
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
     /// son chemin, la vue allumée, son rendu (et sa taille), et le rendu demandé.
     pub reference: Option<PathBuf>,
@@ -1296,6 +1299,7 @@ impl Studio {
             renders_logged: 0,
             before: false,
             split: None,
+            split_against: None,
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -6606,6 +6610,7 @@ impl Studio {
                 } else {
                     Some(0.5)
                 };
+                self.split_against = None;
                 self.before = false;
             }
             "prev" | "next" => {
@@ -8375,7 +8380,10 @@ impl Studio {
     fn split_before(&mut self) -> Option<egui::TextureId> {
         let photo = self.photo.clone()?;
         let request = self.last_request.as_ref()?;
-        let mut settings = photo.default_settings();
+        let mut settings = self
+            .split_against
+            .as_ref()
+            .map_or_else(|| photo.default_settings(), |(_, s)| s.clone());
         settings.crop = self.settings.crop;
         settings.transform = self.settings.transform.clone();
         settings.lens.distortion = self.settings.lens.distortion;
@@ -8478,10 +8486,14 @@ impl Studio {
             );
             painter.text(at, align, text, font, Color32::WHITE);
         };
+        let left = self
+            .split_against
+            .as_ref()
+            .map_or_else(|| tr("Avant").to_owned(), |(n, _)| n.clone());
         label(
             pos2(x - 10.0, target.min.y + 8.0),
             egui::Align2::RIGHT_TOP,
-            tr("Avant"),
+            &left,
         );
         label(
             pos2(x + 10.0, target.min.y + 8.0),
@@ -8790,6 +8802,23 @@ impl Studio {
         }
     }
 
+    /// Compare l'instantané `k` à la photo telle qu'elle est réglée, de part et d'autre
+    /// de la séparation (avec la géométrie d'aujourd'hui des deux côtés).
+    pub fn compare_snapshot(&mut self, k: usize) {
+        let Some(snap) = self.current_meta().snapshots.get(k).cloned() else {
+            return;
+        };
+        if let Some(s) = snap.settings() {
+            self.status = trf(
+                "Côte à côte : « {name} » et maintenant",
+                &[("name", &snap.name)],
+            );
+            self.split_against = Some((snap.name, s));
+            self.split = Some(0.5);
+            self.before = false;
+        }
+    }
+
     pub fn delete_snapshot(&mut self, k: usize) {
         if let Some(path) = self.current_path().map(Path::to_path_buf) {
             self.edit_meta(&[path], |m| {
@@ -8803,7 +8832,7 @@ impl Studio {
     /// Le panneau des instantanés : en créer un, y revenir d'un clic, le retirer.
     fn snapshots_panel(&mut self, ui: &mut Ui) {
         let snaps = self.snapshots();
-        let (mut apply, mut delete, mut take) = (None, None, false);
+        let (mut apply, mut delete, mut take, mut compare) = (None, None, false, None);
         egui::CollapsingHeader::new(RichText::new(tr("Instantanés")).strong())
             .id_salt("instantanes")
             .default_open(false)
@@ -8835,6 +8864,13 @@ impl Studio {
                         {
                             apply = Some(k);
                         }
+                        if ui
+                            .small_button(tr("Comparer"))
+                            .on_hover_text(tr("Cet instantané et la photo telle qu'elle est, côte à côte (Y pour sortir)"))
+                            .clicked()
+                        {
+                            compare = Some(k);
+                        }
                     });
                 }
                 if snaps.is_empty() {
@@ -8854,6 +8890,9 @@ impl Studio {
         }
         if let Some(k) = delete {
             self.delete_snapshot(k);
+        }
+        if let Some(k) = compare {
+            self.compare_snapshot(k);
         }
     }
 

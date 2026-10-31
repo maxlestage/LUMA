@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Un instantané comparé à maintenant** : « Comparer » à côté d'un instantané ouvre la
+  vue côte à côte avec lui à gauche (son nom au‑dessus), la photo telle qu'elle est
+  réglée à droite : pour choisir entre deux versions d'une retouche. Y referme.
 - **Accorder sur la référence** : avec une photo de référence affichée, « Accorder »
   donne à la photo la répartition de couleurs de la référence (clarté, teintes,
   saturation : moyennes et étendues en OKLab, sans IA), en un film « Accord … » à
