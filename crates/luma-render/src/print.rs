@@ -304,7 +304,9 @@ pub fn compose(layout: &Layout, pictures: &[Picture], printer: Option<&Conversio
     pictures
         .chunks(cells.len())
         .map(|chunk| {
-            let mut p = page(pw, ph, &cells, chunk, printer);
+            // La conversion vient en dernier : les traits de coupe et le texte du bas
+            // vont aussi à l'imprimante (dans ses encres, pour une CMJN).
+            let mut p = page(pw, ph, &cells, chunk, None);
             if layout.crop_marks {
                 for (pic, cell) in chunk.iter().zip(&cells) {
                     crop_marks(&mut p, placed(pic, cell), layout.px(1.0), layout.px(4.0));
@@ -312,6 +314,9 @@ pub fn compose(layout: &Layout, pictures: &[Picture], printer: Option<&Conversio
             }
             if !layout.text.trim().is_empty() {
                 footer(&mut p, layout);
+            }
+            if let Some(c) = printer {
+                convert(&mut p, c);
             }
             p
         })
@@ -859,6 +864,31 @@ mod tests {
         let pdf = pdf_of(&l, &[encoded]);
         let text = String::from_utf8_lossy(&pdf);
         assert!(text.contains("/ColorSpace /DeviceCMYK") && text.contains("/Filter /FlateDecode"));
+    }
+
+    /// Les traits de coupe et le texte du bas vont aussi dans les encres CMJN.
+    #[test]
+    fn crop_marks_and_footer_reach_the_cmyk_inks() {
+        let bytes = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../luma-color/tests/profils/encre-noire.icc"
+        ))
+        .unwrap();
+        let profile = luma_color::profile::Profile::parse(&bytes).unwrap();
+        let c = Conversion::new(&profile, luma_color::profile::Intent::Relative).unwrap();
+        let plain = Layout {
+            dpi: 40,
+            ..Layout::default()
+        };
+        let marked = Layout {
+            crop_marks: true,
+            text: "© Moi".into(),
+            ..plain.clone()
+        };
+        let pictures = [solid(40, 40, 128, "")];
+        let inks = |l: &Layout| compose(l, &pictures, Some(&c))[0].cmyk.clone().unwrap();
+        let ink_sum = |v: &[u8]| v.iter().map(|&b| u64::from(b)).sum::<u64>();
+        assert!(ink_sum(&inks(&marked)) > ink_sum(&inks(&plain)));
     }
 
     #[test]
