@@ -4,6 +4,11 @@
 
 The professional photo library, step by step.
 
+- **Lens distortion for Canon, Nikon, Pentax…**: “Distortion from the camera's JPEG”
+  (Lens corrections, when the file carries none that LÜMA reads) compares the photo
+  with the JPEG the camera stored in the RAW, already corrected for its lens, and sets
+  Distortion for the same geometry; empty borders are removed if the photo isn't
+  cropped. No AI: the same details found on both sides, fitted by least squares.
 - **The glimpse when a photo opens is two to three times faster**: the preview the
   camera stored in the RAW is shrunk on every core, with the same pixels. At 2048 px:
   RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms; measuring the

@@ -11,6 +11,7 @@
 //! RANSAC, homographies, projections et fondus sont écrits ici, en Rust.
 
 pub mod autocrop;
+pub mod camera_lens;
 pub mod features;
 pub mod film;
 pub mod frames;
