@@ -157,7 +157,7 @@ et blanc, vignetage après recadrage et grain existent).
 
 - [x] 14.1 Impression : mise en page, marges, planche contact, profil de l'imprimante.
 - [x] 14.2 Diaporama exportable ; livre photo simple en PDF.
-- [x] 14.3 Galerie web statique ; fichiers optimisés pour le web (WebP, AVIF, JPEG XL). (galerie et JPEG allégé pour le web ; WebP, AVIF et JPEG XL attendent un encodeur léger en Rust pur, voir les idées)
+- [x] 14.3 Galerie web statique ; fichiers optimisés pour le web (WebP, AVIF, JPEG XL). (galerie, JPEG allégé pour le web et WebP sans perte ; WebP avec perte, AVIF et JPEG XL attendent un encodeur léger en Rust pur, voir les idées)
 
 ### 15. Flux de travail
 
@@ -194,7 +194,7 @@ et blanc, vignetage après recadrage et grain existent).
   d'impression des PDF) ; un PDF CMJN plus léger (un JPEG CMJN n'est pas lu de la
   même façon par tous les lecteurs : les encres vont aujourd'hui sans perte).
 - Diaporama dans l'app : la musique du diaporama exporté.
-- Formats du web : WebP (avec perte), AVIF et JPEG XL n'ont pas d'encodeur en Rust pur
+- Formats du web : le WebP sans perte est fait ; WebP avec perte, AVIF et JPEG XL n'ont pas d'encodeur en Rust pur
   qui soit léger (AVIF demanderait rav1e, long à compiler et lourd ; aucun encodeur
   JPEG XL avec perte en Rust) ; à reprendre quand il y en aura un, ou en écrire un.
 - Import : sur iPhone et iPad, l'app Fichiers donne les photos une à une : un dossier
@@ -228,7 +228,9 @@ et blanc, vignetage après recadrage et grain existent).
   16 ms par passe en colonne (la mémoire) ; l'accentuation, ≈ 70 ms de luminance
   perçue, ≈ 85 ms de flou, ≈ 90 ms de gain (les deux `powf`). La conversion de sortie
   écrite en colonnes (`to_output_lanes`) : 150 contre 154 ms, rien (les lectures de
-  table dominaient). Les binaires sans symboles (`strip`) : 16 % plus légers (6 % une
+  table dominaient). Les flous du filtre guidé menés deux par deux (`rayon::join`) : les
+  coefficients d'un plan réduit 5,3 → 3,0 ms, mais rien sur un rendu entier (la Tonalité
+  locale mène déjà ses trois bases de front). Les binaires sans symboles (`strip`) : 16 % plus légers (6 % une
   fois compressés), mais les traces de plantage du journal n'auraient plus de noms de
   fonctions : pas fait.
 - Masques d'un XMP d'ailleurs, les pinceaux : le sens des nombres de `crs:Dabs` et de
@@ -489,5 +491,6 @@ et blanc, vignetage après recadrage et grain existent).
 | 2026-10-31 | Séparation avant / après tournée : commande « split_turn » (Alt+Y, configurable), `Studio::split_across` ; dessin des deux parts et poignée selon le sens (l'avant en haut, la séparation glissée de haut en bas), libellés « Avant » / « Après » de part et d'autre | Essai `the_before_and_after_divider_turns` : Alt+Y → séparation couchée (la poignée plus large que haute) ; une même ligne plus claire côté après (+1 IL) que côté avant ; Alt+Y la remet debout |
 | 2026-10-31 | La photo et sa référence en une image : `luma_render::side_by_side` (partagé avec l'avant / après), `Studio::export_reference_pair` (la référence avec ses réglages, la photo telle qu'elle est réglée, 1600 px chacune ; « nom-et-reference.jpg », numéroté s'il existe), bouton « Exporter la paire » dans la vue de référence | Essai `the_reference_pair_is_exported` (le JPEG, plus de 2400 px de large, et le message) ; `before_and_after_in_one_image` toujours vert |
 | 2026-10-31 | Navigateur du zoom 1:1 : la photo entière en petit (180 px) en bas à droite, le cadre de la vue (décalage et taille rendus par la zone de défilement), un clic ou un glissement y centre la vue (`zoom_jump`, appliqué à l'image suivante) ; `Studio::zoom_offset` | Essai `the_zoom_navigator_moves_the_view` : Z, décalage nul ; un clic au coin bas droit du navigateur → la vue en bas à droite (décalage > 1000 × 500 points) |
+| 2026-10-31 | WebP sans perte à l'export : `Format::WebP`, écrit par le codeur WebP de Rust pur déjà présent (`image-webp`, sans nouvelle bibliothèque), 8 bits, ICC, EXIF et XMP ; l'app (format « WebP », sans choix de profondeur), les préréglages, `luma develop -o x.webp`. Mesuré à 2048 px : ARW 6,0 → 3,4 Mo, NEF 2,7 → 2,2 Mo, même durée que le PNG | Essai `webp_is_lossless_with_its_profile_and_metadata` (relu : les octets exacts du 8 bits ; ICC Display P3, EXIF, XMP) ; `the_tiniest_photos_export_with_every_option` en quatre formats |
 | 2026-10-31 | Avant / après d'une sélection : `Worker::before_after` (un fil, une photo après l'autre, ses réglages : ceux donnés pour la photo ouverte, sinon son XMP, sinon ceux par défaut ; fichier numéroté s'il existe), `Event::BeforeAfterWritten`, compte `before_after_batch`, bouton « Avant / après » de la barre de sélection | Essai `the_before_and_after_of_a_selection_are_exported` : ARW ouvert (+1 IL) et NEF choisis → deux JPEG de la bonne largeur, l'après de l'ARW plus clair que son avant |
 | 2026-10-31 | Zoom 1:1 sur le point cliqué : le point cliqué (0 à 1) gardé (`zoom_target`), appliqué une fois la pleine définition affichée ; le décalage redonné quelques images tant que la zone de défilement ne l'a pas atteint (elle ne connaît sa nouvelle taille qu'une image plus tard) | Essai `the_zoom_opens_on_the_clicked_point` : un clic vers le coin bas droit → zoom, la vue en bas à droite (décalage > 1500 × 1000) ; `the_zoom_navigator_moves_the_view` toujours vert |

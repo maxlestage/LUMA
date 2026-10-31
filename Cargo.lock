@@ -2329,6 +2329,7 @@ version = "0.2.0"
 dependencies = [
  "epaint_default_fonts",
  "image",
+ "image-webp",
  "luma-color",
  "luma-core",
  "luma-image",

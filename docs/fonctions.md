@@ -132,7 +132,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 
 | Fonction | État |
 |---|---|
-| JPEG (qualité), PNG et TIFF 8 ou 16 bits | ✅ |
+| JPEG (qualité), PNG et TIFF 8 ou 16 bits, WebP sans perte (de 20 à 45 % plus léger que le PNG, les mêmes pixels) | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, avec profil ICC incorporé | ✅ |
 | Redimensionnement : grand côté, petit côté, largeur × hauteur, mégapixels, sans agrandir par défaut (`--resize`) | ✅ |
 | Agrandissement au besoin (« Agrandir au besoin », `--enlarge`) : Lanczos sans halo, jusqu'à quatre fois chaque côté et 200 Mpx, pour les grands tirages ; sans IA | ✅ |
