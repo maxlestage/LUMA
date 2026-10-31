@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **La foto y su referencia en una imagen**: «Exportar el par» (vista de referencia)
+  escribe un JPEG junto a la foto, la referencia a la izquierda y la foto ajustada a la
+  derecha.
 - **Separación antes / después girada** (Alt+Y): el antes arriba, el después abajo, la
   separación se desliza de arriba abajo; para las fotos verticales.
 - **El antes / después en una imagen**: «Exportar antes / después» (en la vista lado a

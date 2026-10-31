@@ -4094,3 +4094,27 @@ fn the_before_and_after_divider_turns() {
     s.keys(&[(Modifiers::ALT, Key::Y)]);
     assert!(!s.studio().split_across);
 }
+
+/// « Exporter la paire » dans la vue de référence : la référence et la photo côte à
+/// côte en un JPEG à côté de la photo.
+#[test]
+fn the_reference_pair_is_exported() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("paire-reference") else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let other = photos.iter().find(|p| **p != open).unwrap().clone();
+    s.studio().set_reference(other);
+    s.wait();
+    let out = s.studio().export_reference_pair().expect("l'export");
+    assert!(
+        out.ends_with("_DSC0009-et-reference.jpg"),
+        "{}",
+        out.display()
+    );
+    let img = image::open(&out).unwrap();
+    assert!(img.width() > 2400, "{} × {}", img.width(), img.height());
+    assert!(s.studio().status().starts_with("Paire exportée"));
+}
