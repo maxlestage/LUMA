@@ -175,6 +175,71 @@ fn samples(pair: &Pair) -> Result<Vec<([f32; 3], [f32; 3])>> {
     Ok(out)
 }
 
+/// L'accord sur une photo de référence, sans IA : la répartition des couleurs de
+/// `source` (moyenne et étendue de la clarté et des deux axes de couleur, en OKLab)
+/// amenée sur celle de `reference`, en LUT de `size`³ couleurs (sRGB encodé, 0 à 1,
+/// comme les rendus). Les étendues ne changent que de 0,5 à 2 fois : une référence en
+/// noir et blanc ternit, elle n'éteint pas tout ; une photo grise ne s'allume pas
+/// d'un coup. `before`/`after` : l'écart (OKLab × 100) entre les couleurs moyennes.
+pub fn transfer(source: &RgbImage, reference: &RgbImage, size: usize, title: &str) -> Result<Measured> {
+    let ok = luma_color::OkLab::for_working();
+    let to_working = luma_color::rgb_to_rgb(&luma_color::SRGB, &luma_color::WORKING);
+    let to_srgb = luma_color::rgb_to_rgb(&luma_color::WORKING, &luma_color::SRGB);
+    let lab = |p: [f32; 3]| ok.from_rgb(luma_color::apply(&to_working, p.map(luma_color::srgb_decode)));
+    let stats = |img: &RgbImage| -> Result<([f64; 3], [f64; 3])> {
+        let analysis = crate::analysis(img, 512);
+        let n = analysis.data.len() as f64;
+        if n < 64.0 {
+            return Err(Error::Decode("image trop petite pour l'accord".into()));
+        }
+        let mut sum = [0.0f64; 3];
+        let mut sq = [0.0f64; 3];
+        for p in &analysis.data {
+            let l = lab(*p);
+            for c in 0..3 {
+                sum[c] += f64::from(l[c]);
+                sq[c] += f64::from(l[c]) * f64::from(l[c]);
+            }
+        }
+        let mean = sum.map(|v| v / n);
+        let spread = std::array::from_fn(|c| (sq[c] / n - mean[c] * mean[c]).max(0.0).sqrt());
+        Ok((mean, spread))
+    };
+    let (ms, ss) = stats(source)?;
+    let (mr, sr) = stats(reference)?;
+    let scale: [f64; 3] = std::array::from_fn(|c| {
+        if ss[c] > 1e-4 {
+            (sr[c] / ss[c]).clamp(0.5, 2.0)
+        } else {
+            1.0
+        }
+    });
+    let n = size.clamp(9, 65);
+    let mut cube = Cube::identity(n);
+    cube.title = title.to_string();
+    for p in cube.data.iter_mut() {
+        let l = lab(*p);
+        let moved: [f32; 3] = std::array::from_fn(|c| ((f64::from(l[c]) - ms[c]) * scale[c] + mr[c]) as f32);
+        let rgb = luma_color::apply(&to_srgb, ok.to_rgb(moved));
+        *p = rgb.map(|v| luma_color::srgb_encode(v.max(0.0)).clamp(0.0, 1.0));
+    }
+    let gap = |a: [f64; 3], b: [f64; 3]| ((0..3).map(|c| (a[c] - b[c]).powi(2)).sum::<f64>()).sqrt() as f32 * 100.0;
+    // L'écart après : la source passée dans la LUT, mesurée à nouveau.
+    let analysis = crate::analysis(source, 512);
+    let moved = RgbImage {
+        width: analysis.width,
+        height: analysis.height,
+        data: analysis.data.iter().map(|p| cube.sample(*p)).collect(),
+    };
+    let (ma, _) = stats(&moved)?;
+    Ok(Measured {
+        cube,
+        samples: analysis.data.len(),
+        before: gap(ms, mr),
+        after: gap(ma, mr),
+    })
+}
+
 /// Le champ des écarts lissé sur la grille `n`³ : 400 tours de Jacobi, chaque nœud
 /// tiré vers sa mesure (selon sa confiance), vers la moyenne de ses voisins, et un peu
 /// vers zéro. Les termes constants d'un nœud (sa mesure pondérée, le dénominateur) sont
@@ -657,5 +722,34 @@ mod tests {
         let photo = luma_render::Photo::open(&png).unwrap();
         assert!(camera_pair(&photo, &png).is_err());
         let _ = std::fs::remove_file(&png);
+    }
+
+    /// L'accord sur une référence : une photo froide et sombre accordée sur une photo
+    /// chaude et claire en prend la couleur moyenne ; une photo accordée sur elle‑même
+    /// ne change pas.
+    #[test]
+    fn a_photo_is_matched_to_a_reference() {
+        let scene = |warm: f32, light: f32| {
+            RgbImage::from_fn(200, 150, |x, y| {
+                let v = (0.15 + 0.6 * ((x * 7 + y * 3) % 97) as f32 / 97.0) * light;
+                [(v * (1.0 + warm)).min(1.0), v, (v * (1.0 - warm)).clamp(0.0, 1.0)]
+            })
+        };
+        let cool = scene(-0.25, 0.7);
+        let warm = scene(0.25, 1.1);
+        let m = transfer(&cool, &warm, 33, "accord").unwrap();
+        assert!(
+            m.before > 5.0 && m.after < m.before / 4.0,
+            "{} -> {}",
+            m.before,
+            m.after
+        );
+        let same = transfer(&warm, &warm, 33, "même").unwrap();
+        assert!(same.after < 0.5, "{}", same.after);
+        let p = same.cube.sample([0.5, 0.4, 0.3]);
+        assert!(
+            (p[0] - 0.5).abs() < 0.02 && (p[1] - 0.4).abs() < 0.02 && (p[2] - 0.3).abs() < 0.02,
+            "{p:?}"
+        );
     }
 }
