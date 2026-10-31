@@ -131,7 +131,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 
 | Feature | Status |
 |---|---|
-| JPEG (quality), PNG and TIFF, 8 or 16 bits | ✅ |
+| JPEG (quality), PNG and TIFF, 8 or 16 bits, lossless WebP (20 to 45% lighter than PNG, the same pixels) | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, with an embedded ICC profile | ✅ |
 | Resizing: long edge, short edge, width × height, megapixels, no enlarging by default (`--resize`) | ✅ |
 | Enlarging if needed (“Enlarge if needed”, `--enlarge`): halo-free Lanczos, up to four times each side and 200 MP, for large prints; no AI | ✅ |

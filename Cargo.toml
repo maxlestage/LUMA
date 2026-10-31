@@ -36,6 +36,7 @@ quick-xml = "0.42"
 skrifa = { version = "0.44", default-features = false, features = ["std"] }
 epaint_default_fonts = "0.37"
 # Lecture : JPEG, PNG, TIFF, WebP, GIF, BMP, TGA, QOI, OpenEXR, Radiance HDR, PNM, ICO.
+image-webp = "0.2"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tiff", "webp", "gif", "bmp", "tga", "qoi", "exr", "hdr", "pnm", "ico", "dds", "ff"] }
 # Interface : egui dessine tout (sans contrôles natifs, même rendu partout), wgpu affiche
 # avec Metal sur Mac et iPhone, DirectX 12 (ou Vulkan) sous Windows, Vulkan ailleurs.

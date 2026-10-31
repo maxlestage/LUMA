@@ -13,6 +13,7 @@ luma-raw.workspace = true
 luma-project.workspace = true
 luma-image.workspace = true
 image.workspace = true
+image-webp.workspace = true
 rayon.workspace = true
 serde.workspace = true
 skrifa.workspace = true

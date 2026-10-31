@@ -6999,6 +6999,8 @@ impl Studio {
                             ui.radio_value(&mut o.format, Format::Jpeg, "JPEG");
                             ui.radio_value(&mut o.format, Format::Png, "PNG");
                             ui.radio_value(&mut o.format, Format::Tiff, "TIFF");
+                            ui.radio_value(&mut o.format, Format::WebP, "WebP")
+                                .on_hover_text(tr("WebP sans perte, 8 bits : plus léger qu'un PNG"));
                         });
                         form_end(ui, compact);
                         if o.format == Format::Jpeg {
@@ -7016,7 +7018,7 @@ impl Studio {
                             form_end(ui, compact);
                             form_row(ui, compact, tr("Poids maximal"));
                             ui.horizontal(|ui| max_weight_editor(ui, &mut o.max_kb));
-                        } else {
+                        } else if o.format != Format::WebP {
                             form_row(ui, compact, tr("Profondeur"));
                             ui.horizontal(|ui| {
                                 ui.radio_value(&mut o.bits, 8, "8 bits");
@@ -15177,6 +15179,7 @@ fn export_summary(o: &ExportOptions) -> String {
         },
         Format::Png => format!("PNG {} bits", o.bits),
         Format::Tiff => format!("TIFF {} bits", o.bits),
+        Format::WebP => "WebP".to_owned(),
     };
     let space = match o.space {
         OutputSpace::Srgb => "sRGB",

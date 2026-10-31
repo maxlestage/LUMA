@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Export en WebP sans perte** : les mêmes pixels qu'un PNG 8 bits, de 20 à 45 %
+  plus léger, avec le profil de couleur, l'EXIF et le XMP (app, préréglages,
+  `luma develop -o photo.webp`).
 - **L'avant / après de toute une sélection** : « Avant / après » dans la barre de
   sélection écrit, en arrière‑plan, un JPEG à côté de chaque photo choisie, chacune avec
   ses réglages.
