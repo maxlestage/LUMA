@@ -8448,8 +8448,53 @@ impl Studio {
                 {
                     self.act("split");
                 }
+                if !compact
+                    && self.split.is_some()
+                    && ui
+                        .button(tr("Exporter l'avant / après"))
+                        .on_hover_text(tr("L'avant et l'après côte à côte en une image JPEG, à côté de la photo"))
+                        .clicked()
+                {
+                    self.export_before_after();
+                }
             });
         });
+    }
+
+    /// L'avant / après côte à côte en un JPEG (chaque moitié à 1600 px), à côté de la
+    /// photo : « nom-avant-apres.jpg » (un numéro s'il existe déjà). Rend le fichier.
+    pub fn export_before_after(&mut self) -> Option<PathBuf> {
+        let (photo, path) = (self.photo.clone()?, self.current_path()?.to_path_buf());
+        let stem = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let mut out = path.with_file_name(format!("{stem}-avant-apres.jpg"));
+        let mut k = 2;
+        while out.exists() {
+            out = path.with_file_name(format!("{stem}-avant-apres-{k}.jpg"));
+            k += 1;
+        }
+        let written = photo
+            .before_after(&self.settings, 1600)
+            .map_err(|e| e.to_string())
+            .and_then(|img| {
+                luma_render::export::write(&out, &img, luma_color::OutputSpace::Srgb, 92, 8)
+            });
+        match written {
+            Ok(()) => {
+                self.status = trf(
+                    "Avant / après exporté : {file}",
+                    &[("file", &file_name(&out))],
+                );
+                self.last_output = Some(out.clone());
+                Some(out)
+            }
+            Err(e) => {
+                self.status = trf("Export impossible : {error}", &[("error", &e)]);
+                None
+            }
+        }
     }
 
     /// La texture de l'« avant » de la vue côte à côte, si elle est à jour ; sinon elle

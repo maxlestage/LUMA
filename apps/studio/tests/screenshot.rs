@@ -4031,3 +4031,30 @@ fn a_snapshot_side_by_side_with_now() {
     assert_eq!(s.studio().split, None);
     assert!(s.studio().split_against.is_none());
 }
+
+/// « Exporter l'avant / après » depuis la vue côte à côte : un JPEG à côté de la photo,
+/// deux images et la bande entre elles ; un second export prend un autre nom.
+#[test]
+fn before_and_after_are_exported() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("avant-apres-export") else {
+        return;
+    };
+    s.studio().settings.exposure = 0.8;
+    s.keys(&[(NONE, Key::Y)]);
+    let out = s.studio().export_before_after().expect("l'export");
+    assert!(
+        out.ends_with("_DSC0009-avant-apres.jpg"),
+        "{}",
+        out.display()
+    );
+    let img = image::open(&out).unwrap();
+    assert!(img.width() > 3000 && img.width() < 3300, "{}", img.width());
+    assert!(s.studio().status().starts_with("Avant / après exporté"));
+    let again = s.studio().export_before_after().unwrap();
+    assert!(
+        again.ends_with("_DSC0009-avant-apres-2.jpg"),
+        "{}",
+        again.display()
+    );
+}

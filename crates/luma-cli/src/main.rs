@@ -47,7 +47,7 @@ USAGE
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille] [--enlarge] [--web]
-                     [--max-kb N] [--auto-tone]
+                     [--max-kb N] [--auto-tone] [--before-after]
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
@@ -61,6 +61,9 @@ USAGE
       {iso} {note} {libellé} ; un « / » crée un sous‑dossier ({année}/{mois}/{nom}).
       --auto-tone : exposition, contraste, hautes lumières et ombres lus sur
       l'histogramme de la photo (blancs et noirs remis à zéro), sans IA.
+      --before-after : l'avant / après côte à côte en une image (la photo sans ses
+      retouches, sa géométrie gardée, puis retouchée ; --size : le grand côté de
+      chacune, 1600 par défaut ; sortie « nom-avant-apres.jpg »).
       --web : un JPEG allégé pour le web (chrominance 4:2:0 et tables de Huffman
       calculées pour l'image : de 9 à 29 % plus léger ; le préréglage Web le fait).
       --max-kb : le poids maximal d'un JPEG, en kilo‑octets (1 000 octets),
@@ -309,6 +312,8 @@ struct Args {
     max_kb: Option<u32>,
     /// `--auto-tone` : exposition, contraste, hautes lumières et ombres lus sur la photo.
     auto_tone: bool,
+    /// `--before-after` : l'avant / après côte à côte, en une image.
+    before_after: bool,
 }
 
 /// L'erreur d'un `--max-kb` illisible.
@@ -339,6 +344,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         enlarge: None,
         max_kb: None,
         auto_tone: false,
+        before_after: false,
     };
     while let Some(arg) = it.next() {
         let mut value = |name: &str| it.next().ok_or_else(|| format!("{name} attend une valeur"));
@@ -358,6 +364,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--no-enlarge" => a.enlarge = Some(false),
             "--max-kb" => a.max_kb = Some(value(&arg)?.parse().map_err(|_| MAX_KB)?),
             "--auto-tone" => a.auto_tone = true,
+            "--before-after" => a.before_after = true,
             "--name" => a.name = Some(value(&arg)?),
             s if s.starts_with("--watermark") => {
                 let v = if s == "--watermark-dark" {
@@ -744,6 +751,34 @@ fn develop(a: &Args) -> Result<(), String> {
     }
     if a.presets.len() > 1 {
         return Err("develop : un seul préréglage (luma export pour en utiliser plusieurs)".into());
+    }
+    if a.before_after {
+        // L'avant / après côte à côte, chaque moitié au grand côté demandé (1600 px).
+        let img = photo
+            .before_after(&settings, a.size.unwrap_or(1600))
+            .map_err(|e| e.to_string())?;
+        let out = a.output.clone().unwrap_or_else(|| {
+            let stem = path
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            path.with_file_name(format!("{stem}-avant-apres.jpg"))
+        });
+        export::write(
+            &out,
+            &img,
+            a.space.unwrap_or(OutputSpace::Srgb),
+            a.quality.unwrap_or(92),
+            8,
+        )?;
+        println!(
+            "{} → {} (avant / après, {} × {})",
+            path.display(),
+            out.display(),
+            img.width,
+            img.height
+        );
+        return Ok(());
     }
     if !a.presets.is_empty()
         || a.name.is_some()

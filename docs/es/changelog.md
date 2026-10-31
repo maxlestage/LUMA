@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **El antes / después en una imagen**: «Exportar antes / después» (en la vista lado a
+  lado) escribe un JPEG junto a la foto, la foto sin sus ajustes a la izquierda (con su
+  geometría) y ajustada a la derecha, para compartir. En línea de comandos:
+  `luma develop --before-after`.
 - **Controles más ágiles**: el búfer de trabajo de los desenfoques se conserva de uno a
   otro, con los mismos píxeles: el enfoque de la vista previa baja de unos 80 a 60 ms,
   un renderizado de ajuste a 3072 px es un 14 % más rápido.
