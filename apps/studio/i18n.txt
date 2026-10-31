@@ -6270,3 +6270,31 @@ es = Y: el antes y el después a cada lado de una separación que se desliza
 fr = Séparation avant / après
 en = Before / after divider
 es = Separación antes / después
+
+fr = Photo de référence à côté
+en = Reference photo alongside
+es = Foto de referencia al lado
+
+fr = Choisissez d'abord une photo de référence (clic droit sur une vignette).
+en = Choose a reference photo first (right-click a thumbnail).
+es = Elija primero una foto de referencia (clic derecho en una miniatura).
+
+fr = Utiliser comme référence
+en = Use as reference
+es = Usar como referencia
+
+fr = Référence : {file}
+en = Reference: {file}
+es = Referencia: {file}
+
+fr = Référence
+en = Reference
+es = Referencia
+
+fr = Photo
+en = Photo
+es = Foto
+
+fr = Maj+Y : la photo de référence entière à côté de la photo retouchée
+en = Shift+Y: the whole reference photo next to the photo being edited
+es = Mayús+Y: la foto de referencia entera junto a la foto que se ajusta

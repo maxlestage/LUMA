@@ -237,6 +237,14 @@ pub const ACTIONS: &[Action] = &[
     a("label4", "Libellé violet", &[]),
     a("before", "Avant / après", &[Combo::new(Key::Backslash)]),
     a("split", "Avant / après côte à côte", &[Combo::new(Key::Y)]),
+    a(
+        "reference",
+        "Photo de référence à côté",
+        &[Combo {
+            shift: true,
+            ..Combo::new(Key::Y)
+        }],
+    ),
     a("zoom", "Zoom 100 %", &[Combo::new(Key::Z)]),
     a("clipping", "Écrêtage", &[Combo::new(Key::J)]),
     a("scope", "Instruments de mesure", &[Combo::shift(Key::J)]),

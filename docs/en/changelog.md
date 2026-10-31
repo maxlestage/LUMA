@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **Reference photo**: right-click a thumbnail, “Use as reference”: it shows whole on
+  the left, with its own settings, the photo being edited on the right; to match a
+  series to a successful photo. Shift+Y (or “Reference”) hides and shows it again.
 - **Before / after side by side** (Y, or “Side by side” in the top bar): the photo
   without its edits on the left of a divider, the edited photo on the right; drag the
   divider. The “before” keeps the geometry (crop, Transform, Distortion): both halves

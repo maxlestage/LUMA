@@ -116,6 +116,12 @@ pub enum Event {
         size: [usize; 2],
         rgba: Vec<u8>,
     },
+    /// La photo de référence, développée avec ses réglages.
+    Reference {
+        path: PathBuf,
+        size: [usize; 2],
+        rgba: Vec<u8>,
+    },
     /// L'aperçu d'un préréglage sur la photo affichée.
     Preview {
         tag: u64,
@@ -685,6 +691,32 @@ impl Worker {
                 repaint();
             })
             .expect("fil de l'avant");
+    }
+
+    /// Développe la photo de référence `path` avec ses propres réglages, au grand côté
+    /// `side`.
+    pub fn reference(&self, path: PathBuf, side: usize) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-reference".into())
+            .spawn(move || {
+                let Ok(r) = caught(|| {
+                    let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
+                    let settings = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());
+                    photo
+                        .render(&settings, Size::Fit(side), &Cancel::new())
+                        .map_err(|e| e.to_string())
+                }) else {
+                    return;
+                };
+                let _ = sender.send(Event::Reference {
+                    path,
+                    size: [r.image.width, r.image.height],
+                    rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
+                });
+                repaint();
+            })
+            .expect("fil de la référence");
     }
 
     pub fn previews(&self, photo: Arc<Photo>, settings: Vec<Settings>, tag: u64) {

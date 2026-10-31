@@ -867,6 +867,12 @@ pub struct Studio {
     /// L'avant / après côte à côte (Y) : la place de la séparation (0 à 1 sur la largeur
     /// de la photo), l'« avant » rendu (ce qui l'a donné, sa texture) et celui demandé.
     pub split: Option<f32>,
+    /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
+    /// son chemin, la vue allumée, son rendu (et sa taille), et le rendu demandé.
+    pub reference: Option<PathBuf>,
+    pub reference_view: bool,
+    reference_texture: Option<(PathBuf, TextureHandle, [usize; 2])>,
+    reference_asked: Option<PathBuf>,
     before_view: Option<(BeforeKey, TextureHandle)>,
     before_asked: Option<(u64, BeforeKey)>,
     clipping: bool,
@@ -1288,6 +1294,10 @@ impl Studio {
             renders_logged: 0,
             before: false,
             split: None,
+            reference: None,
+            reference_view: false,
+            reference_texture: None,
+            reference_asked: None,
             before_view: None,
             before_asked: None,
             clipping: false,
@@ -4881,6 +4891,7 @@ impl Studio {
             && !self.measuring
             && self.lens_batch.0 == 0
             && (self.split.is_none() || self.before_asked.is_none())
+            && self.reference_asked.is_none()
     }
 
     fn select(&mut self, index: usize) {
@@ -5086,6 +5097,24 @@ impl Studio {
                 }
                 Event::AutoBalanced { path, balance } => self.apply_auto_balance(path, balance),
                 Event::LensMeasured { path, result } => self.apply_lens_measure(path, result),
+                Event::Reference { path, size, rgba } => {
+                    if self.reference_asked.as_ref() == Some(&path) {
+                        self.reference_asked = None;
+                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        match &mut self.reference_texture {
+                            Some((p, texture, s)) => {
+                                texture.set(image, TextureOptions::LINEAR);
+                                *p = path;
+                                *s = size;
+                            }
+                            None => {
+                                let texture =
+                                    ctx.load_texture("reference", image, TextureOptions::LINEAR);
+                                self.reference_texture = Some((path, texture, size));
+                            }
+                        }
+                    }
+                }
                 Event::Before { tag, size, rgba } => {
                     if let Some((_, key)) = self.before_asked.take_if(|(t, _)| *t == tag) {
                         let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
@@ -6548,6 +6577,16 @@ impl Studio {
                 }
             }
             "before" => self.before = !self.before,
+            "reference" => {
+                if self.reference.is_some() {
+                    self.reference_view = !self.reference_view;
+                } else {
+                    self.status = tr(
+                        "Choisissez d'abord une photo de référence (clic droit sur une vignette).",
+                    )
+                    .into();
+                }
+            }
             "split" => {
                 self.split = if self.split.is_some() {
                     None
@@ -8283,6 +8322,15 @@ impl Studio {
                     self.act("before");
                 }
                 if !compact
+                    && self.reference.is_some()
+                    && ui
+                        .selectable_label(self.reference_view, tr("Référence"))
+                        .on_hover_text(tr("Maj+Y : la photo de référence entière à côté de la photo retouchée"))
+                        .clicked()
+                {
+                    self.act("reference");
+                }
+                if !compact
                     && ui
                         .selectable_label(self.split.is_some(), tr("Côte à côte"))
                         .on_hover_text(tr("Y : l'avant et l'après de part et d'autre d'une séparation qu'on glisse"))
@@ -8322,6 +8370,25 @@ impl Studio {
             .as_ref()
             .filter(|(k, _)| k.0 == request.path)
             .map(|(_, t)| t.id())
+    }
+
+    /// Choisit la photo de référence et l'affiche à côté de la photo retouchée ; son
+    /// rendu (avec ses propres réglages) est demandé.
+    pub fn set_reference(&mut self, path: PathBuf) {
+        self.reference_asked = Some(path.clone());
+        self.worker.reference(path.clone(), 2048);
+        self.status = trf("Référence : {file}", &[("file", &file_name(&path))]);
+        self.reference = Some(path);
+        self.reference_view = true;
+    }
+
+    /// La référence est‑elle rendue et affichée ?
+    pub fn showing_reference(&self) -> bool {
+        self.reference_view
+            && self
+                .reference_texture
+                .as_ref()
+                .is_some_and(|(p, _, _)| self.reference.as_ref() == Some(p))
     }
 
     /// La séparation de la vue côte à côte : un trait et sa poignée, qu'on glisse ; les
@@ -11155,6 +11222,7 @@ impl Studio {
 
     fn filmstrip(&mut self, ui: &mut Ui) {
         let mut clicked = None;
+        let mut reference = None;
         let mut chosen = None;
         let thumb_h = (ui.available_height() - 4.0).clamp(36.0, 84.0);
         egui::ScrollArea::horizontal()
@@ -11222,6 +11290,12 @@ impl Studio {
                                 egui::StrokeKind::Outside,
                             );
                         }
+                        r.context_menu(|ui| {
+                            if ui.button(tr("Utiliser comme référence")).clicked() {
+                                reference = Some(path.clone());
+                                ui.close();
+                            }
+                        });
                         if crate::touch() && r.long_touched() {
                             chosen = Some(i);
                         } else if r.on_hover_text(file_name(path)).clicked() {
@@ -11231,6 +11305,9 @@ impl Studio {
                     }
                 });
             });
+        if let Some(path) = reference {
+            self.set_reference(path);
+        }
         if let Some(i) = chosen {
             // Toucher longuement : ajouter à la sélection (ou en retirer), comme dans
             // la grille.
@@ -11554,6 +11631,42 @@ impl Studio {
             }
             if c.committed {
                 self.commit(tr("Retouche").into());
+            }
+        } else if let Some((_, reference, [rw, rh])) = self
+            .reference_texture
+            .as_ref()
+            .filter(|(p, _, _)| self.reference_view && self.reference.as_ref() == Some(p))
+        {
+            // La référence à gauche, la photo retouchée à droite, chacune entière.
+            let inner = rect.shrink(18.0);
+            let half = vec2((inner.width() - 12.0) / 2.0, inner.height());
+            let left = fit(Rect::from_min_size(inner.min, half), *rw, *rh);
+            let right = fit(
+                Rect::from_min_size(inner.min + vec2(half.x + 12.0, 0.0), half),
+                iw,
+                ih,
+            );
+            painter.image(reference.id(), left, uv, Color32::WHITE);
+            painter.image(t.id(), right, uv, Color32::WHITE);
+            let font = egui::FontId::proportional(12.0);
+            for (at, text) in [
+                (left.left_top(), tr("Référence")),
+                (right.left_top(), tr("Photo")),
+            ] {
+                painter.text(
+                    at + vec2(9.0, 9.0),
+                    egui::Align2::LEFT_TOP,
+                    text,
+                    font.clone(),
+                    Color32::from_black_alpha(160),
+                );
+                painter.text(
+                    at + vec2(8.0, 8.0),
+                    egui::Align2::LEFT_TOP,
+                    text,
+                    font.clone(),
+                    Color32::WHITE,
+                );
             }
         } else {
             let target = fit(rect.shrink(18.0), iw, ih);

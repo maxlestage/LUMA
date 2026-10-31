@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **Foto de referencia**: clic derecho en una miniatura, «Usar como referencia»: se
+  muestra entera a la izquierda, con sus propios ajustes, y la foto que se ajusta a la
+  derecha; para igualar una serie con una foto lograda. Mayús+Y (o «Referencia») la
+  oculta y la vuelve a mostrar.
 - **Antes / después lado a lado** (Y, o «Lado a lado» en la barra superior): la foto
   sin sus ajustes a la izquierda de una separación, la foto ajustada a la derecha; se
   desliza la separación. El «antes» conserva la geometría (recorte, Transformación,
