@@ -64,7 +64,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Grano (cantidad, tamaño, aspereza), idéntico en todos los tamaños | ✅ |
 | Calibración | Matiz de las sombras, tono y saturación de los primarios | ✅ |
 | Herramientas | Recorte y enderezado (ángulo libre), herramienta en pantalla con proporciones bloqueadas (R) | ✅ |
-| | Guías de recorte: tercios, proporción áurea, diagonales, triángulos áureos, espiral áurea, cuadrícula (O para cambiar, Mayús+O para girar) | ✅ |
+| | Guías de recorte: tercios, proporción áurea, diagonales, triángulos áureos, espiral áurea, cuadrícula (O para cambiar, Mayús+O para girar); las mismas sobre la foto fuera del recorte (H: ninguna, tercios… cuadrícula) | ✅ |
 | | Enderezado automático (Mayús+R): horizonte y verticales leídos con una transformada de Hough; nada en caso de duda (primer plano, líneas de fuga) | ✅ |
 | | Verticales automáticas (Mayús+V): se mide el punto de fuga de las verticales y se ajusta la Vertical de la Transformación para volverlas paralelas | ✅ |
 | | Máscaras: degradado lineal (M), degradado radial (Mayús+M), pincel con borrador (K); invertir, cantidad, mostrar superposición (O); exposición, contraste, altas luces, sombras, blancos, negros, temperatura, matiz, saturación, claridad, textura, nitidez (realzada o suavizada), reducción de ruido, neblina | ✅ |

@@ -64,7 +64,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Grain (gain, taille, rugosité), identique à toutes les tailles | ✅ |
 | Étalonnage de l'appareil photo | Teinte des ombres, teinte et saturation des primaires | ✅ |
 | Outils | Recadrage et redressement (angle libre), outil à l'écran avec proportions verrouillées (R) | ✅ |
-| | Guides de recadrage : tiers, nombre d'or, diagonales, triangles d'or, spirale d'or, grille (O pour changer, Maj+O pour tourner) | ✅ |
+| | Guides de recadrage : tiers, nombre d'or, diagonales, triangles d'or, spirale d'or, grille (O pour changer, Maj+O pour tourner) ; les mêmes sur la photo hors recadrage (H : aucun, tiers… grille) | ✅ |
 | | Redressement automatique (Maj+R) : l'horizon et les verticales lus par une transformée de Hough ; rien dans le doute (photo de près, lignes de fuite) | ✅ |
 | | Verticales automatiques (Maj+V) : le point de fuite des verticales mesuré, la Verticale de la Transformation réglée pour les rendre parallèles | ✅ |
 | | Masques : dégradé linéaire (M), dégradé radial (Maj+M), pinceau avec gomme (K) ; inverser, intensité, affichage de la zone (O) ; exposition, contraste, hautes lumières, ombres, blancs, noirs, température, teinte, saturation, clarté, texture, netteté (relevée ou adoucie), réduction du bruit, correction du voile | ✅ |

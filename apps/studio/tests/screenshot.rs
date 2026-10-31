@@ -3939,3 +3939,21 @@ fn a_reference_photo_alongside() {
     s.keys(&[(Modifiers::SHIFT, Key::Y)]);
     assert!(s.studio().showing_reference());
 }
+
+/// La grille de composition sur la photo (H) : les tiers d'abord (la capture les
+/// montre) ; sept fois H revient à « aucun guide ».
+#[test]
+fn a_composition_grid_on_the_photo() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("grille-photo") else {
+        return;
+    };
+    s.keys(&[(NONE, Key::H)]);
+    assert_eq!(s.studio().photo_guide, luma_studio::crop::Guide::Thirds);
+    assert_eq!(s.studio().status(), "Grille sur la photo : Tiers");
+    s.capture("grille-photo");
+    for _ in 0..6 {
+        s.keys(&[(NONE, Key::H)]);
+    }
+    assert_eq!(s.studio().photo_guide, luma_studio::crop::Guide::None);
+}

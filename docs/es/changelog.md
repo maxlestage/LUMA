@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **Cuadrícula de composición sobre la foto** (H): las guías del recorte (tercios,
+  proporción áurea, diagonales, triángulos y espiral áureos, cuadrícula) sobre la foto
+  mientras se ajusta, para juzgar un encuadre, un horizonte, las verticales; Mayús+O
+  las gira.
 - **Miniaturas más rápidas**: las vistas previas integradas en los RAW se decodifican
   en varios núcleos, con los mismos píxeles: de un cuarto a un tercio menos de tiempo
   por miniatura (ORF 37 → 26 ms, ARW 27 → 18 ms, CR3 20 → 13 ms).

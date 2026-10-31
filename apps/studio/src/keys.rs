@@ -256,6 +256,11 @@ pub const ACTIONS: &[Action] = &[
         &[Combo::shift(Key::V)],
     ),
     a(
+        "photo_guide",
+        "Grille de composition sur la photo",
+        &[Combo::new(Key::H)],
+    ),
+    a(
         "guide_turn",
         "Tourner la grille de composition",
         &[Combo::shift(Key::O)],
