@@ -3791,27 +3791,31 @@ fn the_camera_look_becomes_a_film() {
     s.capture("rendu-boitier");
 }
 
-/// « Corrections d'après le JPEG du boîtier » sur le NEF (aucune correction enregistrée
-/// que LÜMA lise) : la Distorsion et le Vignetage réglés d'après le JPEG, les bords
-/// vides retirés par un recadrage.
+/// « Corrections d'après le JPEG du boîtier », en arrière‑plan, sur trois photos
+/// choisies : le NEF ouvert et sa copie (aucune correction enregistrée que LÜMA lise)
+/// reçoivent chacun la Distorsion et le Vignetage mesurés et un recadrage sans bords
+/// vides (l'ouvert dans son historique, la copie dans son XMP) ; l'ARW, qui porte les
+/// corrections de son boîtier, est laissé de côté.
 #[test]
 fn the_lens_distortion_is_read_from_the_camera_jpeg() {
     let _gpu = one_at_a_time();
-    let Some(mut s) = Session::open("distorsion-boitier") else {
+    let Some(mut s) = Session::open_prepared("distorsion-boitier", [1440.0, 900.0], 1.0, |dir| {
+        std::fs::copy(dir.join("DSC_0750.NEF"), dir.join("DSC_0750-b.NEF")).unwrap();
+    }) else {
         return;
     };
     let photos = s.studio().photos().to_vec();
-    let nef = photos
-        .iter()
-        .position(|p| p.extension().is_some_and(|e| e == "NEF"))
-        .unwrap();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let (nef, copy, arw) = (at("DSC_0750.NEF"), at("DSC_0750-b.NEF"), at("_DSC0009.ARW"));
     s.studio().set_current(nef);
     s.wait();
-    let label = s.studio().distortion_from_camera().expect("la mesure");
+    s.studio().selected = [nef, copy, arw].into_iter().collect();
+    s.studio().lens_from_camera_selected();
     s.wait();
-    assert!(
-        label.starts_with("Corrections d'après le JPEG du boîtier"),
-        "{label}"
+    let status = s.studio().status().to_owned();
+    assert_eq!(
+        status,
+        "Corrections d'après le JPEG du boîtier : 2 photo(s) corrigée(s), 1 laissée(s) de côté."
     );
     let d = s.studio().settings.lens.distortion;
     assert!(d < -15.0, "{d}");
@@ -3821,6 +3825,17 @@ fn the_lens_distortion_is_read_from_the_camera_jpeg() {
         !s.studio().settings.crop.is_identity(),
         "les bords vides retirés"
     );
+    let other = luma_studio::worker::read_sidecar(&photos[copy]).expect("le XMP de la copie");
+    // La même prise, les mêmes corrections, au point près (l'ouverte passe par son
+    // doublon de travail, la copie par son RAW).
+    assert!(
+        (other.lens.distortion - d).abs() <= 2.0 && (other.lens.vignetting - v).abs() <= 2.0,
+        "{:?} et {:?}",
+        (other.lens.distortion, other.lens.vignetting),
+        (d, v)
+    );
+    assert!(!other.crop.is_identity());
+    assert!(luma_studio::worker::read_sidecar(&photos[arw]).is_none());
     assert!(s.studio().has_image());
     s.capture("distorsion-boitier");
 }

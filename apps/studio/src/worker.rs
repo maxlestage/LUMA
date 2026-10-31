@@ -36,6 +36,15 @@ pub struct Frame {
     pub clean: Option<Vec<u8>>,
 }
 
+/// Les corrections d'objectif mesurées sur le JPEG du boîtier.
+#[derive(Clone, Copy, Debug)]
+pub struct LensMeasure {
+    pub distortion: f32,
+    pub vignetting: f32,
+    /// Le recadrage qui retire les bords vides (avec la Transformation de la photo).
+    pub crop: luma_project::Crop,
+}
+
 /// Ce qu'on mesure contre le rendu neutre d'une photo.
 pub enum FilmSource {
     /// Le scan de la même scène sur pellicule.
@@ -81,6 +90,12 @@ pub enum Event {
     /// La fusion est enregistrée (son DNG) ou a échoué.
     Merged {
         result: Result<PathBuf, String>,
+    },
+    /// Les corrections d'objectif d'une photo d'un lot, mesurées sur le JPEG du boîtier :
+    /// distorsion, vignetage et le recadrage sans bords vides ; ou pourquoi pas.
+    LensMeasured {
+        path: PathBuf,
+        result: Result<LensMeasure, String>,
     },
     /// La balance automatique d'une photo d'un lot.
     AutoBalanced {
@@ -567,6 +582,51 @@ impl Worker {
                 }
             })
             .expect("fil de la balance automatique");
+    }
+
+    /// Les corrections d'objectif de chaque photo d'après le JPEG que son boîtier a rangé
+    /// dans le RAW, l'une après l'autre (chacune la sienne : la focale change tout) ; une
+    /// photo dont le fichier porte déjà ses corrections est laissée de côté.
+    pub fn lens_from_camera(&self, paths: Vec<PathBuf>) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-objectif-boitier".into())
+            .spawn(move || {
+                for path in paths {
+                    let result = caught(|| -> Result<LensMeasure, String> {
+                        use luma_merge::camera_lens;
+                        let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
+                        if photo.has_camera_corrections() {
+                            return Err("corrections du boîtier déjà dans le fichier".into());
+                        }
+                        let mut s = Settings::default();
+                        s.lens.distortion = camera_lens::distortion(&photo, &path, &s)
+                            .map_err(|e| e.to_string())?
+                            .round();
+                        let vignetting = camera_lens::vignetting(&photo, &path, &s)
+                            .map_err(|e| e.to_string())?
+                            .round();
+                        s.lens.vignetting = vignetting;
+                        s.lens.vignetting_midpoint = camera_lens::MIDPOINT;
+                        let own = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());
+                        let (w, h) = photo.full_size();
+                        Ok(LensMeasure {
+                            distortion: s.lens.distortion,
+                            vignetting,
+                            crop: luma_image::lens::filled_crop(
+                                &s.lens,
+                                &own.transform,
+                                w.max(1),
+                                h.max(1),
+                                own.crop.angle,
+                            ),
+                        })
+                    });
+                    let _ = sender.send(Event::LensMeasured { path, result });
+                    repaint();
+                }
+            })
+            .expect("fil des corrections d'objectif");
     }
 
     /// Développe les photos à comparer, chacune avec ses réglages, au grand côté `side`,

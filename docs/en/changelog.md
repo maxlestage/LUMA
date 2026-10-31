@@ -12,7 +12,9 @@ The professional photo library, step by step.
   its lens, and sets Distortion and Vignetting for the same geometry and the same
   edges; empty borders are removed if the photo isn't cropped. No AI: the same details
   found on both sides, fitted by least squares; for vignetting, the camera's tone curve
-  is learned in the centre, then undone towards the edges.
+  is learned in the centre, then undone towards the edges. On all selected photos at
+  once (selection button), in the background, each measured on its own (focal length
+  changes everything).
 - **The glimpse when a photo opens is two to three times faster**: the preview the
   camera stored in the RAW is shrunk on every core, with the same pixels. At 2048 px:
   RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms; measuring the

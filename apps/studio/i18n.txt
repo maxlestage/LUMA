@@ -1841,6 +1841,18 @@ fr = Corrections d'après le JPEG du boîtier : distorsion {distortion}, vigneta
 en = Corrections from the camera's JPEG: distortion {distortion}, vignetting {vignetting}
 es = Correcciones según el JPEG de la cámara: distorsión {distortion}, viñeteado {vignetting}
 
+fr = Corrections d'après le JPEG du boîtier : {n} photo(s)…
+en = Corrections from the camera's JPEG: {n} photo(s)…
+es = Correcciones según el JPEG de la cámara: {n} foto(s)…
+
+fr = Corrections d'après le JPEG du boîtier : {done} photo(s) corrigée(s), {skipped} laissée(s) de côté.
+en = Corrections from the camera's JPEG: {done} photo(s) corrected, {skipped} left aside.
+es = Correcciones según el JPEG de la cámara: {done} foto(s) corregida(s), {skipped} dejada(s) de lado.
+
+fr = Chaque RAW choisi reçoit la Distorsion et le Vignetage mesurés sur le JPEG de son boîtier (ceux dont le fichier porte déjà ses corrections sont laissés de côté)
+en = Each selected RAW file gets the Distortion and Vignetting measured on its camera's JPEG (those whose file already carries its corrections are left aside)
+es = Cada RAW elegido recibe la Distorsión y el Viñeteado medidos en el JPEG de su cámara (los que ya llevan sus correcciones en el archivo se dejan de lado)
+
 fr = Supprime ses réglages ; l'original ne change pas
 en = Deletes its settings; the original does not change
 es = Elimina sus ajustes; el original no cambia

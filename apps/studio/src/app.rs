@@ -836,6 +836,9 @@ pub struct Studio {
     syncing: bool,
     /// Les photos du lot dont la balance automatique est attendue.
     auto_pending: usize,
+    /// Le lot des corrections d'objectif d'après le JPEG du boîtier : photos demandées,
+    /// corrigées, laissées de côté.
+    lens_batch: (usize, usize, usize),
     paste_groups: Vec<luma_project::paste::Group>,
     texture: Option<TextureHandle>,
     image_size: [usize; 2],
@@ -1259,6 +1262,7 @@ impl Studio {
             defaults_path: None,
             syncing: false,
             auto_pending: 0,
+            lens_batch: (0, 0, 0),
             paste_groups: luma_project::paste::default_groups(),
             texture: None,
             image_size: [0, 0],
@@ -4583,6 +4587,15 @@ impl Studio {
                 self.auto_balance_selected();
             }
             if ui
+                .small_button(tr("Corrections d'après le JPEG du boîtier"))
+                .on_hover_text(tr(
+                    "Chaque RAW choisi reçoit la Distorsion et le Vignetage mesurés sur le JPEG de son boîtier (ceux dont le fichier porte déjà ses corrections sont laissés de côté)",
+                ))
+                .clicked()
+            {
+                self.lens_from_camera_selected();
+            }
+            if ui
                 .small_button(tr("Renommer…"))
                 .on_hover_text(tr("Renommer les photos choisies d'après un modèle"))
                 .clicked()
@@ -4855,6 +4868,7 @@ impl Studio {
             && !self.tiles.is_loading()
             && self.printing.is_none()
             && !self.measuring
+            && self.lens_batch.0 == 0
     }
 
     fn select(&mut self, index: usize) {
@@ -5059,6 +5073,7 @@ impl Studio {
                     }
                 }
                 Event::AutoBalanced { path, balance } => self.apply_auto_balance(path, balance),
+                Event::LensMeasured { path, result } => self.apply_lens_measure(path, result),
                 Event::Compared {
                     tag,
                     index,
@@ -8742,47 +8757,86 @@ impl Studio {
         Some(label)
     }
 
-    /// La Distorsion puis le Vignetage mesurés sur le JPEG que le boîtier a rangé dans le
-    /// RAW ouvert (déjà corrigé de son objectif) ; sans recadrage, les bords vides sont
-    /// retirés. Rend le libellé de l'historique, ou `None` (message dans la barre d'état)
-    /// si la mesure échoue.
-    pub fn distortion_from_camera(&mut self) -> Option<String> {
-        use luma_merge::camera_lens;
-        let photo = self.photo.clone()?;
-        let raw = self
-            .current_path()
-            .filter(|p| luma_raw::is_raw(p))?
-            .to_path_buf();
-        let measured = camera_lens::distortion(&photo, &raw, &Settings::default()).and_then(|d| {
-            let mut s = Settings::default();
-            s.lens.distortion = d.round();
-            Ok((
-                d.round(),
-                camera_lens::vignetting(&photo, &raw, &s)?.round(),
-            ))
-        });
-        match measured {
-            Ok((d, v)) => {
-                self.settings.lens.distortion = d;
-                self.settings.lens.vignetting = v;
-                self.settings.lens.vignetting_midpoint = camera_lens::MIDPOINT;
-                if self.settings.crop.is_identity() {
-                    self.fill_crop();
-                }
-                let label = trf(
+    /// Les corrections d'objectif (Distorsion, Vignetage, bords vides retirés) mesurées
+    /// en arrière‑plan sur le JPEG que le boîtier a rangé dans chaque RAW choisi (dans la
+    /// photo ouverte sinon) ; chaque photo la sienne.
+    pub fn lens_from_camera_selected(&mut self) {
+        let paths: Vec<PathBuf> = self
+            .keyword_targets()
+            .into_iter()
+            .filter(|p| luma_raw::is_raw(p))
+            .collect();
+        if paths.is_empty() {
+            return;
+        }
+        self.lens_batch = (paths.len(), 0, 0);
+        self.status = trf(
+            "Corrections d'après le JPEG du boîtier : {n} photo(s)…",
+            &[("n", &paths.len())],
+        );
+        self.worker.lens_from_camera(paths);
+    }
+
+    /// Les corrections d'objectif mesurées pour une photo du lot : la photo ouverte les
+    /// reçoit dans son historique, les autres dans leur XMP ; le recadrage seulement là
+    /// où il n'y en avait pas.
+    fn apply_lens_measure(
+        &mut self,
+        path: PathBuf,
+        result: Result<crate::worker::LensMeasure, String>,
+    ) {
+        let (total, done, skipped) = self.lens_batch;
+        let apply = |s: &mut Settings, m: &crate::worker::LensMeasure| {
+            s.lens.distortion = m.distortion;
+            s.lens.vignetting = m.vignetting;
+            s.lens.vignetting_midpoint = luma_merge::camera_lens::MIDPOINT;
+            if s.crop.is_identity() {
+                s.crop = m.crop;
+            }
+        };
+        let ok = match result {
+            Ok(m) if self.current_path() == Some(path.as_path()) => {
+                apply(&mut self.settings, &m);
+                self.commit(trf(
                     "Corrections d'après le JPEG du boîtier : distorsion {distortion}, vignetage {vignetting}",
                     &[
-                        ("distortion", &format_value(d, 0, true)),
-                        ("vignetting", &format_value(v, 0, true)),
+                        ("distortion", &format_value(m.distortion, 0, true)),
+                        ("vignetting", &format_value(m.vignetting, 0, true)),
                     ],
-                );
-                self.status = label.clone();
-                Some(label)
+                ));
+                self.touch();
+                true
             }
-            Err(e) => {
-                self.status = trf("Mesure impossible : {error}", &[("error", &e.to_string())]);
-                None
+            Ok(m) => {
+                let mut s = read_sidecar(&path).unwrap_or_default();
+                apply(&mut s, &m);
+                let meta = read_meta(&path);
+                match write_sidecar(&path, &s, &meta) {
+                    Ok(()) => {
+                        self.edits.insert(path.clone(), presets::summary(&s));
+                        self.worker.thumbnail(path);
+                        true
+                    }
+                    Err(e) => {
+                        self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
+                        false
+                    }
+                }
             }
+            Err(_) => false,
+        };
+        let (done, skipped) = if ok {
+            (done + 1, skipped)
+        } else {
+            (done, skipped + 1)
+        };
+        self.lens_batch = (total, done, skipped);
+        if done + skipped >= total {
+            self.lens_batch = (0, 0, 0);
+            self.status = trf(
+                "Corrections d'après le JPEG du boîtier : {done} photo(s) corrigée(s), {skipped} laissée(s) de côté.",
+                &[("done", &done), ("skipped", &skipped)],
+            );
         }
     }
 
@@ -12953,9 +13007,8 @@ impl Studio {
                                     "Compare la photo au JPEG que le boîtier a rangé dans le RAW, déjà corrigé de son objectif, et règle la Distorsion et le Vignetage pour qu'elle ait la même géométrie et les mêmes bords ; les bords vides sont retirés si la photo n'est pas recadrée.",
                                 ))
                                 .clicked()
-                            && let Some(label) = self.distortion_from_camera()
                         {
-                            commits.push(label);
+                            self.lens_from_camera_selected();
                         }
                     }
                     if ui
