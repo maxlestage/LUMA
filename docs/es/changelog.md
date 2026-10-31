@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **El primer vistazo al abrir una foto, de dos a tres veces más rápido**: la vista
+  previa que la cámara guardó en el RAW se reduce en todos los núcleos, con los mismos
+  píxeles. A 2048 px: RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 →
+  61 ms; la medición del aspecto de la cámara también se beneficia.
 - **El aspecto de la cámara, medido**: «Medir el aspecto de la cámara» (Películas ›
   Mis películas) compara el RAW abierto con el JPEG que la cámara guardó en él y lo
   convierte en una película con el nombre de la cámara («Sony ILCE-7M3 JPEG»): sus RAW
