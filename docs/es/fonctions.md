@@ -25,7 +25,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 |---|---|---|
 | Perfil | Color, Neutro, Vivo, Monocromo; lectura de `crs:CameraProfile` | ✅ |
 | | LUT 3D `.cube` (como los perfiles creativos), con cantidad ajustable, también en la GPU | ✅ |
-| | Perfiles del fabricante medidos en la propia cámara: «Medir el aspecto de la cámara» compara el RAW abierto con el JPEG que la cámara guardó en él (su estilo de imagen en la toma) y lo convierte en una película reutilizable, con el nombre de la cámara; `luma film-lut --camera` sobre uno o varios RAW | ✅ |
+| | Perfiles del fabricante medidos en la propia cámara: «Medir el aspecto de la cámara» compara el RAW abierto con el JPEG que la cámara guardó en él (su estilo de imagen en la toma) y lo convierte en una película reutilizable, con el nombre de la cámara; con los demás RAW elegidos de la misma cámara (doce como máximo), se miden más colores; `luma film-lut --camera` sobre uno o varios RAW | ✅ |
 | Básicos | Balance de blancos «Como se tomó», temperatura y matiz (escala DNG) | ✅ |
 | | Balance de blancos automático, ajustes preestablecidos (luz de día, nublado, sombra, tungsteno, fluorescente, flash), cuentagotas (W) | ✅ |
 | | Tonos automáticos («Tonos automáticos», `--auto-tone`): exposición, contraste, altas luces y sombras leídos en el histograma de la foto, sin IA | ✅ |
