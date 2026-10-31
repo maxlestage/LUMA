@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **Faster thumbnails**: the previews embedded in RAW files are decoded on several
+  cores, with the same pixels: a quarter to a third less time per thumbnail (ORF 37 →
+  26 ms, ARW 27 → 18 ms, CR3 20 → 13 ms).
 - **Reference photo**: right-click a thumbnail, “Use as reference”: it shows whole on
   the left, with its own settings, the photo being edited on the right; to match a
   series to a successful photo. Shift+Y (or “Reference”) hides and shows it again.
