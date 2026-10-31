@@ -18,6 +18,7 @@ La photothèque professionnelle, étape par étape.
   carrés ; pour le vignetage, la courbe de tons du boîtier apprise au centre, puis
   défaite vers les bords. Sur toutes les photos choisies d'un coup (bouton de la
   sélection), en arrière‑plan, chacune mesurée pour elle‑même (la focale change tout).
+  En ligne de commande : `luma lens <raw|dossier>… [--write]`.
 - **Le coup d'œil à l'ouverture deux à trois fois plus rapide** : l'aperçu que le
   boîtier a rangé dans le RAW, réduit sur tous les cœurs, aux mêmes pixels. À 2048 px :
   RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms ; la mesure du
