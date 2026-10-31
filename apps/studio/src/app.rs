@@ -887,6 +887,8 @@ pub struct Studio {
     /// L'instantané comparé dans la vue côte à côte (son nom, ses réglages), à la place
     /// de la photo sans retouche.
     pub split_against: Option<(String, Settings)>,
+    /// La vue côte à côte coupée de gauche à droite (l'avant en haut ; Alt+Y).
+    pub split_across: bool,
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
     /// son chemin, la vue allumée, son rendu (et sa taille), et le rendu demandé.
     pub reference: Option<PathBuf>,
@@ -1323,6 +1325,7 @@ impl Studio {
             before: false,
             split: None,
             split_against: None,
+            split_across: false,
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -6683,6 +6686,11 @@ impl Studio {
                 self.split_against = None;
                 self.before = false;
             }
+            "split_turn" => {
+                self.split_across = !self.split_across;
+                self.split.get_or_insert(0.5);
+                self.before = false;
+            }
             "prev" | "next" => {
                 let visible = self.visible();
                 let next = match self
@@ -8577,24 +8585,46 @@ impl Studio {
     /// La séparation de la vue côte à côte : un trait et sa poignée, qu'on glisse ; les
     /// mots « Avant » et « Après » de part et d'autre.
     fn split_divider(&mut self, ui: &mut Ui, painter: &egui::Painter, target: Rect, f: f32) {
-        let x = target.min.x + f * target.width();
-        let grip = Rect::from_center_size(pos2(x, target.center().y), vec2(24.0, target.height()));
+        // Coupée de haut en bas (l'avant à gauche) ou, Alt+Y, de gauche à droite (l'avant
+        // en haut).
+        let across = self.split_across;
+        let (a, b, grip) = if across {
+            let y = target.min.y + f * target.height();
+            (
+                pos2(target.min.x, y),
+                pos2(target.max.x, y),
+                Rect::from_center_size(pos2(target.center().x, y), vec2(target.width(), 24.0)),
+            )
+        } else {
+            let x = target.min.x + f * target.width();
+            (
+                pos2(x, target.min.y),
+                pos2(x, target.max.y),
+                Rect::from_center_size(pos2(x, target.center().y), vec2(24.0, target.height())),
+            )
+        };
         let r = ui
             .interact(grip, ui.scope_id().with("separation"), egui::Sense::drag())
-            .on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
+            .on_hover_cursor(if across {
+                egui::CursorIcon::ResizeVertical
+            } else {
+                egui::CursorIcon::ResizeHorizontal
+            });
         r.widget_info(|| {
             egui::WidgetInfo::labeled(egui::Role::Slider, true, tr("Séparation avant / après"))
         });
         if let Some(p) = r.interact_pointer_pos().filter(|_| r.dragged()) {
-            self.split = Some(((p.x - target.min.x) / target.width()).clamp(0.02, 0.98));
+            let f = if across {
+                (p.y - target.min.y) / target.height()
+            } else {
+                (p.x - target.min.x) / target.width()
+            };
+            self.split = Some(f.clamp(0.02, 0.98));
         }
         let line = Color32::from_white_alpha(220);
-        painter.line_segment(
-            [pos2(x, target.min.y), pos2(x, target.max.y)],
-            egui::Stroke::new(1.5, line),
-        );
+        painter.line_segment([a, b], egui::Stroke::new(1.5, line));
         painter.circle(
-            pos2(x, target.center().y),
+            pos2((a.x + b.x) / 2.0, (a.y + b.y) / 2.0),
             9.0,
             Color32::from_black_alpha(140),
             egui::Stroke::new(1.5, line),
@@ -8610,20 +8640,17 @@ impl Studio {
             );
             painter.text(at, align, text, font, Color32::WHITE);
         };
-        let left = self
+        let first = self
             .split_against
             .as_ref()
             .map_or_else(|| tr("Avant").to_owned(), |(n, _)| n.clone());
-        label(
-            pos2(x - 10.0, target.min.y + 8.0),
-            egui::Align2::RIGHT_TOP,
-            &left,
-        );
-        label(
-            pos2(x + 10.0, target.min.y + 8.0),
-            egui::Align2::LEFT_TOP,
-            tr("Après"),
-        );
+        if across {
+            label(a + vec2(8.0, -8.0), egui::Align2::LEFT_BOTTOM, &first);
+            label(a + vec2(8.0, 8.0), egui::Align2::LEFT_TOP, tr("Après"));
+        } else {
+            label(a + vec2(-10.0, 8.0), egui::Align2::RIGHT_TOP, &first);
+            label(a + vec2(10.0, 8.0), egui::Align2::LEFT_TOP, tr("Après"));
+        }
     }
 
     /// Le rail des outils (vertical ; horizontal sur iPhone).
@@ -11899,21 +11926,27 @@ impl Studio {
             let split = self.split.filter(|_| !self.before);
             match (split, before_texture) {
                 (Some(f), Some(before)) => {
-                    // L'« avant » à gauche de la séparation, la photo retouchée à droite :
-                    // les mêmes coordonnées de part et d'autre (même géométrie).
-                    let x = target.min.x + f * target.width();
-                    painter.image(
-                        before,
-                        Rect::from_min_max(target.min, pos2(x, target.max.y)),
-                        Rect::from_min_max(pos2(0.0, 0.0), pos2(f, 1.0)),
-                        Color32::WHITE,
-                    );
-                    painter.image(
-                        t.id(),
-                        Rect::from_min_max(pos2(x, target.min.y), target.max),
-                        Rect::from_min_max(pos2(f, 0.0), pos2(1.0, 1.0)),
-                        Color32::WHITE,
-                    );
+                    // L'« avant » à gauche (ou en haut) de la séparation, la photo retouchée
+                    // de l'autre côté : les mêmes coordonnées des deux (même géométrie).
+                    let (first, second, uv_first, uv_second) = if self.split_across {
+                        let y = target.min.y + f * target.height();
+                        (
+                            Rect::from_min_max(target.min, pos2(target.max.x, y)),
+                            Rect::from_min_max(pos2(target.min.x, y), target.max),
+                            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, f)),
+                            Rect::from_min_max(pos2(0.0, f), pos2(1.0, 1.0)),
+                        )
+                    } else {
+                        let x = target.min.x + f * target.width();
+                        (
+                            Rect::from_min_max(target.min, pos2(x, target.max.y)),
+                            Rect::from_min_max(pos2(x, target.min.y), target.max),
+                            Rect::from_min_max(pos2(0.0, 0.0), pos2(f, 1.0)),
+                            Rect::from_min_max(pos2(f, 0.0), pos2(1.0, 1.0)),
+                        )
+                    };
+                    painter.image(before, first, uv_first, Color32::WHITE);
+                    painter.image(t.id(), second, uv_second, Color32::WHITE);
                 }
                 _ => {
                     painter.image(t.id(), target, uv, Color32::WHITE);

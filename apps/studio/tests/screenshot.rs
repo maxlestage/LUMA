@@ -4058,3 +4058,39 @@ fn before_and_after_are_exported() {
         again.display()
     );
 }
+
+/// La séparation tournée (Alt+Y) : l'avant en haut, l'après en bas ; une même ligne
+/// de la photo plus claire côté après (+1 IL) ; Alt+Y la remet debout.
+#[test]
+fn the_before_and_after_divider_turns() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("separation-tournee") else {
+        return;
+    };
+    s.studio().settings.exposure = 1.0;
+    s.keys(&[(Modifiers::ALT, Key::Y)]);
+    assert!(s.studio().split_across);
+    assert_eq!(s.studio().split, Some(0.5));
+    s.wait();
+    s.capture("separation-tournee");
+    let divider = s.harness.get_by_label("Séparation avant / après").rect();
+    assert!(divider.width() > divider.height(), "{divider:?}");
+    let row = |s: &mut Session, f: f32| {
+        s.studio().split = Some(f);
+        s.harness.run_steps(3);
+        let image = s.harness.render().expect("rendu de l'interface");
+        let (mut sum, mut n) = (0.0f64, 0.0f64);
+        for x in (divider.min.x as u32 + 40..divider.max.x as u32 - 40).step_by(4) {
+            for dy in 0..20u32 {
+                let p = image.get_pixel(x, divider.center().y as u32 + dy);
+                sum += f64::from(p[0]) + f64::from(p[1]) + f64::from(p[2]);
+                n += 3.0;
+            }
+        }
+        sum / n
+    };
+    let (before, after) = (row(&mut s, 0.9), row(&mut s, 0.1));
+    assert!(after > before + 15.0, "avant {before:.1}, après {after:.1}");
+    s.keys(&[(Modifiers::ALT, Key::Y)]);
+    assert!(!s.studio().split_across);
+}

@@ -238,6 +238,14 @@ pub const ACTIONS: &[Action] = &[
     a("before", "Avant / après", &[Combo::new(Key::Backslash)]),
     a("split", "Avant / après côte à côte", &[Combo::new(Key::Y)]),
     a(
+        "split_turn",
+        "Tourner la séparation avant / après",
+        &[Combo {
+            alt: true,
+            ..Combo::new(Key::Y)
+        }],
+    ),
+    a(
         "reference",
         "Photo de référence à côté",
         &[Combo {

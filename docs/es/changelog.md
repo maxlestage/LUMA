@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Separación antes / después girada** (Alt+Y): el antes arriba, el después abajo, la
+  separación se desliza de arriba abajo; para las fotos verticales.
 - **El antes / después en una imagen**: «Exportar antes / después» (en la vista lado a
   lado) escribe un JPEG junto a la foto, la foto sin sus ajustes a la izquierda (con su
   geometría) y ajustada a la derecha, para compartir. En línea de comandos:
