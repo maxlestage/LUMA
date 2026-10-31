@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Vignettes plus rapides** : les aperçus intégrés aux RAW décodés sur plusieurs
+  cœurs, aux mêmes pixels : un quart à un tiers de temps en moins par vignette (ORF 37 →
+  26 ms, ARW 27 → 18 ms, CR3 20 → 13 ms).
 - **Photo de référence** : clic droit sur une vignette, « Utiliser comme référence » :
   elle s'affiche entière à gauche, avec ses propres réglages, la photo qu'on règle à
   droite ; pour accorder une série sur une photo réussie. Maj+Y (ou « Référence ») la

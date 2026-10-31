@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Miniaturas más rápidas**: las vistas previas integradas en los RAW se decodifican
+  en varios núcleos, con los mismos píxeles: de un cuarto a un tercio menos de tiempo
+  por miniatura (ORF 37 → 26 ms, ARW 27 → 18 ms, CR3 20 → 13 ms).
 - **Foto de referencia**: clic derecho en una miniatura, «Usar como referencia»: se
   muestra entera a la izquierda, con sus propios ajustes, y la foto que se ajusta a la
   derecha; para igualar una serie con una foto lograda. Mayús+Y (o «Referencia») la

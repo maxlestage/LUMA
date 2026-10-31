@@ -12,7 +12,8 @@ luma-color.workspace = true
 rawler.workspace = true
 image.workspace = true
 # Aperçus intégrés aux RAW, décodés directement à taille réduite (1/2 à 1/8).
-jpeg-decoder = { version = "0.3", default-features = false }
+# « rayon » : les composantes décodées sur plusieurs cœurs (les mêmes pixels).
+jpeg-decoder = { version = "0.3", default-features = false, features = ["rayon"] }
 # Les autres formats d'images, en Rust pur.
 jxl-oxide = { version = "0.12", default-features = false, features = ["image"] }
 psd = "0.3"
