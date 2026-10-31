@@ -1983,9 +1983,9 @@ fr = Mesurer le rendu du boîtier
 en = Measure the camera's look
 es = Medir el aspecto de la cámara
 
-fr = Compare cette photo au JPEG que le boîtier a rangé dans le RAW et en fait un film : les RAW de ce boîtier rendus comme il le fait.
-en = Compares this photo with the JPEG the camera stored in the RAW and turns it into a film: RAW files from this camera rendered the way it does.
-es = Compara esta foto con el JPEG que la cámara guardó en el RAW y lo convierte en una película: los RAW de esta cámara revelados como ella lo hace.
+fr = Compare cette photo (et les autres RAW choisis du même boîtier, douze au plus) au JPEG que le boîtier a rangé dans chacun et en fait un film : les RAW de ce boîtier rendus comme il le fait.
+en = Compares this photo (and the other selected RAW files from the same camera, up to twelve) with the JPEG the camera stored in each one and turns it into a film: RAW files from this camera rendered the way it does.
+es = Compara esta foto (y los demás RAW elegidos de la misma cámara, doce como máximo) con el JPEG que la cámara guardó en cada uno y lo convierte en una película: los RAW de esta cámara revelados como ella lo hace.
 
 fr = Ouvrez d'abord un RAW.
 en = Open a RAW file first.
@@ -1995,9 +1995,9 @@ fr = Mesure du rendu du boîtier : {camera}…
 en = Measuring the camera's look: {camera}…
 es = Midiendo el aspecto de la cámara: {camera}…
 
-fr = Rendu du boîtier mesuré : « {name} » (écart du numérique au JPEG du boîtier {before}, avec ce film {after})
-en = Camera look measured: “{name}” (digital-to-camera-JPEG difference {before}, with this film {after})
-es = Aspecto de la cámara medido: «{name}» (diferencia de lo digital al JPEG de la cámara {before}, con esta película {after})
+fr = Rendu du boîtier mesuré sur {n} photo(s) : « {name} » (écart du numérique au JPEG du boîtier {before}, avec ce film {after})
+en = Camera look measured on {n} photo(s): “{name}” (digital-to-camera-JPEG difference {before}, with this film {after})
+es = Aspecto de la cámara medido en {n} foto(s): «{name}» (diferencia de lo digital al JPEG de la cámara {before}, con esta película {after})
 
 fr = Mesure de la pellicule : {file}…
 en = Measuring the film: {file}…

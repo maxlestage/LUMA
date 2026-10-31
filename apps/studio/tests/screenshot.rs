@@ -3758,19 +3758,27 @@ fn everything_is_reset_after_a_confirmation() {
 }
 
 /// « Mesurer le rendu du boîtier » : le JPEG rangé dans le RAW ouvert devient un film,
-/// nommé d'après le boîtier, enregistré et choisi.
+/// nommé d'après le boîtier, enregistré et choisi ; toutes les photos choisies, une
+/// seconde du même boîtier est mesurée avec, celles des autres boîtiers non.
 #[test]
 fn the_camera_look_becomes_a_film() {
     let _gpu = one_at_a_time();
-    let Some(mut s) = Session::open("rendu-boitier") else {
+    let Some(mut s) = Session::open_prepared("rendu-boitier", [1440.0, 900.0], 1.0, |dir| {
+        std::fs::copy(dir.join("_DSC0009.ARW"), dir.join("_DSC0009-b.ARW")).unwrap();
+    }) else {
         return;
     };
     let films = s.dir.join("Films");
     std::fs::create_dir_all(&films).unwrap();
+    let all = s.studio().photos().len();
+    s.studio().selected = (0..all).collect();
     s.studio().measure_camera(films.clone());
     s.wait();
     let status = s.studio().status().to_owned();
-    assert!(status.starts_with("Rendu du boîtier mesuré"), "{status}");
+    assert!(
+        status.starts_with("Rendu du boîtier mesuré sur 2 photo(s)"),
+        "{status}"
+    );
     let cubes: Vec<_> = std::fs::read_dir(&films)
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())

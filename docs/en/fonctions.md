@@ -24,7 +24,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 |---|---|---|
 | Profile | Color, Neutral, Vivid, Monochrome; reads `crs:CameraProfile` | ✅ |
 | | 3D `.cube` LUTs (like creative profiles), with adjustable amount, on the GPU too | ✅ |
-| | Manufacturer profiles measured on the camera itself: “Measure the camera's look” compares the open RAW with the JPEG the camera stored in it (its picture style at capture) and turns it into a reusable film named after the camera; `luma film-lut --camera` on one or more RAW files | ✅ |
+| | Manufacturer profiles measured on the camera itself: “Measure the camera's look” compares the open RAW with the JPEG the camera stored in it (its picture style at capture) and turns it into a reusable film named after the camera; with the other selected RAW files from the same camera (up to twelve), more colours are measured; `luma film-lut --camera` on one or more RAW files | ✅ |
 | Basic | As Shot white balance, temperature and tint (DNG scale) | ✅ |
 | | Auto white balance, presets (Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash), eyedropper (W) | ✅ |
 | | Auto tone (“Auto tone”, `--auto-tone`): exposure, contrast, highlights and shadows read from the photo's histogram, no AI | ✅ |

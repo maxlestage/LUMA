@@ -40,8 +40,13 @@ pub struct Frame {
 pub enum FilmSource {
     /// Le scan de la même scène sur pellicule.
     Scan(PathBuf),
-    /// Le JPEG que le boîtier a rangé dans le RAW `raw` ; `camera` nomme le film.
-    Camera { raw: PathBuf, camera: String },
+    /// Le JPEG que le boîtier a rangé dans le RAW `raw` (et dans `others`, d'autres RAW
+    /// choisis : ceux d'un autre boîtier sont laissés de côté) ; `camera` nomme le film.
+    Camera {
+        raw: PathBuf,
+        others: Vec<PathBuf>,
+        camera: String,
+    },
 }
 
 pub enum Event {
@@ -96,10 +101,11 @@ pub enum Event {
         size: [usize; 2],
         rgba: Vec<u8>,
     },
-    /// Une pellicule (ou le rendu du boîtier, `camera`) est mesurée : le nom du film, et
-    /// l'écart (OKLab × 100) entre le numérique et la pellicule, avant et après.
+    /// Une pellicule (ou le rendu du boîtier, `camera`) est mesurée : le nom du film,
+    /// l'écart (OKLab × 100) entre le numérique et la pellicule, avant et après, et le
+    /// nombre de photos mesurées.
     Measured {
-        result: Result<(String, f32, f32), String>,
+        result: Result<(String, f32, f32, usize), String>,
         camera: bool,
     },
     /// Une photo de l'export est écrite (ou a échoué) : `done` sur `total`.
@@ -395,24 +401,44 @@ impl Worker {
         std::thread::Builder::new()
             .name("luma-mesure".into())
             .spawn(move || {
-                let result = caught(|| -> Result<(String, f32, f32), String> {
+                let result = caught(|| -> Result<(String, f32, f32, usize), String> {
                     use luma_merge::film;
-                    let (pair, stem) = match &source {
+                    use rayon::prelude::*;
+                    let (pairs, stem) = match &source {
                         FilmSource::Scan(scan) => (
-                            film::Pair {
+                            vec![film::Pair {
                                 digital: film::reference(&photo).map_err(|e| e.to_string())?,
                                 film: film::load_scan(scan).map_err(|e| e.to_string())?,
                                 aligned: false,
-                            },
+                            }],
                             scan.file_stem().map_or_else(
                                 || "Pellicule".to_owned(),
                                 |s| s.to_string_lossy().into_owned(),
                             ),
                         ),
-                        FilmSource::Camera { raw, camera } => (
-                            film::camera_pair(&photo, raw).map_err(|e| e.to_string())?,
-                            format!("{camera} JPEG"),
-                        ),
+                        FilmSource::Camera {
+                            raw,
+                            others,
+                            camera,
+                        } => {
+                            let mut pairs =
+                                vec![film::camera_pair(&photo, raw).map_err(|e| e.to_string())?];
+                            // Les autres photos choisies du même boîtier, ouvertes ensemble.
+                            let (make, model) = (&photo.raw().make, &photo.raw().model);
+                            pairs.extend(
+                                others
+                                    .par_iter()
+                                    .filter_map(|p| {
+                                        let other = Photo::open(p).ok()?;
+                                        let r = other.raw();
+                                        (r.make == *make && r.model == *model)
+                                            .then(|| film::camera_pair(&other, p).ok())
+                                            .flatten()
+                                    })
+                                    .collect::<Vec<_>>(),
+                            );
+                            (pairs, format!("{camera} JPEG"))
+                        }
                     };
                     // Un nom libre : « Portra », « Portra 2 »…
                     let mut name = stem.clone();
@@ -423,12 +449,20 @@ impl Worker {
                         name = format!("{stem} {k}");
                         k += 1;
                     }
-                    let m = film::measure(&[pair], 33, &name).map_err(|e| e.to_string())?;
+                    let (m, kept) = match &source {
+                        FilmSource::Scan(_) => (
+                            film::measure(&pairs, 33, &name).map_err(|e| e.to_string())?,
+                            1,
+                        ),
+                        FilmSource::Camera { .. } => {
+                            film::measure_tolerant(&pairs, 33, &name).map_err(|e| e.to_string())?
+                        }
+                    };
                     let path = dir.join(format!("{name}.cube"));
                     luma_core::save(&path, m.cube.to_text())
                         .map_err(|e| format!("{} : {e}", path.display()))?;
                     luma_image::cube::register(&name, m.cube);
-                    Ok((name, m.before, m.after))
+                    Ok((name, m.before, m.after, kept))
                 });
                 let camera = matches!(source, FilmSource::Camera { .. });
                 let _ = sender.send(Event::Measured { result, camera });

@@ -13,8 +13,10 @@ The professional photo library, step by step.
   named after the camera (“Sony ILCE-7M3 JPEG”): its RAW files rendered the way it
   does, at an adjustable strength. No AI: the film measurement, applied to the same
   shot. On the seven brands of the test corpus, the difference from the camera's JPEG
-  drops from 8–29 to under 2, in half a second. From the command line:
-  `luma film-lut --camera`.
+  drops from 8–29 to under 2, in half a second. With other RAW files from the same
+  camera selected (up to twelve), the measurement uses them all: more colours, a more
+  faithful film on later photos; those from another camera are left aside. From the
+  command line: `luma film-lut --camera`.
 - **Reset everything**: in the language menu (“•••” on iPhone), after a confirmation
   that says what changes and what stays: the edits of the selected photos and of the
   open photo are cleared (ratings, keywords and files kept; Undo brings back the open

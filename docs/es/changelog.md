@@ -13,8 +13,10 @@ La fototeca profesional, paso a paso.
   convierte en una película con el nombre de la cámara («Sony ILCE-7M3 JPEG»): sus RAW
   revelados como ella lo hace, con intensidad ajustable. Sin IA: la medición de
   películas, aplicada a la misma toma. En las siete marcas del corpus de prueba, la
-  diferencia con el JPEG de la cámara baja de 8–29 a menos de 2, en medio segundo. En
-  línea de comandos: `luma film-lut --camera`.
+  diferencia con el JPEG de la cámara baja de 8–29 a menos de 2, en medio segundo. Con
+  otros RAW de la misma cámara elegidos (doce como máximo), la medición los usa todos:
+  más colores, una película más fiel en las fotos siguientes; los de otra cámara se
+  dejan de lado. En línea de comandos: `luma film-lut --camera`.
 - **Restablecer todo**: en el menú del idioma («•••» en iPhone), tras una confirmación
   que dice qué cambia y qué se queda: se borran los ajustes de las fotos elegidas y de
   la foto abierta (valoraciones, palabras clave y archivos se conservan; Deshacer
