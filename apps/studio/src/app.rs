@@ -8439,6 +8439,16 @@ impl Studio {
                     && self.reference_view
                     && self.reference.is_some()
                     && ui
+                        .button(tr("Exporter la paire"))
+                        .on_hover_text(tr("La référence et la photo côte à côte en une image JPEG, à côté de la photo"))
+                        .clicked()
+                {
+                    self.export_reference_pair();
+                }
+                if !compact
+                    && self.reference_view
+                    && self.reference.is_some()
+                    && ui
                         .add_enabled(!self.measuring, egui::Button::new(tr("Accorder")))
                         .on_hover_text(tr(
                             "Donne à la photo la répartition des couleurs de la référence (clarté, teintes, saturation), en un film à l'intensité réglable",
@@ -8467,6 +8477,59 @@ impl Studio {
                 }
             });
         });
+    }
+
+    /// La référence (avec ses réglages) et la photo (telle qu'elle est réglée) côte à
+    /// côte en un JPEG, chaque moitié à 1600 px, à côté de la photo :
+    /// « nom-et-reference.jpg » (numéroté s'il existe). Rend le fichier.
+    pub fn export_reference_pair(&mut self) -> Option<PathBuf> {
+        let (photo, path, reference) = (
+            self.photo.clone()?,
+            self.current_path()?.to_path_buf(),
+            self.reference.clone()?,
+        );
+        let stem = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let mut out = path.with_file_name(format!("{stem}-et-reference.jpg"));
+        let mut k = 2;
+        while out.exists() {
+            out = path.with_file_name(format!("{stem}-et-reference-{k}.jpg"));
+            k += 1;
+        }
+        let side = 1600;
+        let written = (|| -> Result<(), String> {
+            let other = crate::dialogs::open_photo(&reference).map_err(|e| e.to_string())?;
+            let own = read_sidecar(&reference).unwrap_or_else(|| other.default_settings());
+            let cancel = luma_core::Cancel::new();
+            let left = other
+                .render(&own, Size::Fit(side), &cancel)
+                .map_err(|e| e.to_string())?
+                .image;
+            let right = photo
+                .render(&self.settings, Size::Fit(side), &cancel)
+                .map_err(|e| e.to_string())?
+                .image;
+            luma_render::export::write(
+                &out,
+                &luma_render::side_by_side(&left, &right, side),
+                luma_color::OutputSpace::Srgb,
+                92,
+                8,
+            )
+        })();
+        match written {
+            Ok(()) => {
+                self.status = trf("Paire exportée : {file}", &[("file", &file_name(&out))]);
+                self.last_output = Some(out.clone());
+                Some(out)
+            }
+            Err(e) => {
+                self.status = trf("Export impossible : {error}", &[("error", &e)]);
+                None
+            }
+        }
     }
 
     /// L'avant / après côte à côte en un JPEG (chaque moitié à 1600 px), à côté de la

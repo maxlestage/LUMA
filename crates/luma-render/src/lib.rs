@@ -482,17 +482,7 @@ impl Photo {
             .render(&self.before_settings(settings), Size::Fit(side), &cancel)?
             .image;
         let after = self.render(settings, Size::Fit(side), &cancel)?.image;
-        let gap = (side / 64).max(8);
-        let (w, h) = (before.width + gap + after.width, before.height.max(after.height));
-        let mut out = RgbImage::from_fn(w, h, |_, _| [0.02; 3]);
-        for (img, x0) in [(&before, 0), (&after, before.width + gap)] {
-            let y0 = (h - img.height) / 2;
-            for y in 0..img.height {
-                let row = &img.data[y * img.width..(y + 1) * img.width];
-                out.data[(y0 + y) * w + x0..(y0 + y) * w + x0 + img.width].copy_from_slice(row);
-            }
-        }
-        Ok(out)
+        Ok(side_by_side(&before, &after, side))
     }
 
     /// Les étapes de voisinage, en cache tant que [`luma_image::base_key`] ne change pas.
@@ -942,6 +932,22 @@ mod defringe_tests {
             assert_eq!(got, (0.0, 0.0), "{}", p.display());
         }
     }
+}
+
+/// Deux images côte à côte, centrées en hauteur, séparées par une bande sombre (à la
+/// mesure de `side`, le grand côté de chacune).
+pub fn side_by_side(left: &RgbImage, right: &RgbImage, side: usize) -> RgbImage {
+    let gap = (side / 64).max(8);
+    let (w, h) = (left.width + gap + right.width, left.height.max(right.height));
+    let mut out = RgbImage::from_fn(w, h, |_, _| [0.02; 3]);
+    for (img, x0) in [(left, 0), (right, left.width + gap)] {
+        let y0 = (h - img.height) / 2;
+        for y in 0..img.height {
+            let row = &img.data[y * img.width..(y + 1) * img.width];
+            out.data[(y0 + y) * w + x0..(y0 + y) * w + x0 + img.width].copy_from_slice(row);
+        }
+    }
+    out
 }
 
 #[cfg(test)]

@@ -6346,3 +6346,15 @@ es = Antes / después exportado: {file}
 fr = Tourner la séparation avant / après
 en = Turn the before / after divider
 es = Girar la separación antes / después
+
+fr = Exporter la paire
+en = Export the pair
+es = Exportar el par
+
+fr = La référence et la photo côte à côte en une image JPEG, à côté de la photo
+en = The reference and the photo side by side in one JPEG image, next to the photo
+es = La referencia y la foto lado a lado en una imagen JPEG, junto a la foto
+
+fr = Paire exportée : {file}
+en = Pair exported: {file}
+es = Par exportado: {file}

@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **The photo and its reference in one image**: “Export the pair” (reference view)
+  writes a JPEG next to the photo, the reference on the left, the edited photo on the
+  right.
 - **Turned before / after divider** (Alt+Y): before on top, after below, the divider
   drags up and down; for portrait photos.
 - **Before / after in one image**: “Export before / after” (in the side-by-side view)
