@@ -4,6 +4,10 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Exposition plus réactive** : la réduction du bruit de couleur (active par défaut,
+  refaite à chaque mouvement de l'Exposition) écrite en boucles que le processeur mène
+  par colonnes, aux mêmes pixels : de 18 à 23 % plus rapide, un rendu d'aperçu
+  d'environ 7 %.
 - **Export en WebP sans perte** : les mêmes pixels qu'un PNG 8 bits, de 20 à 45 %
   plus léger, avec le profil de couleur, l'EXIF et le XMP (app, préréglages,
   `luma develop -o photo.webp`).

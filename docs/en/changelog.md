@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **More responsive Exposure**: colour noise reduction (on by default, redone each
+  time Exposure moves) written as loops the processor runs by columns, with the same
+  pixels: 18 to 23% faster, a preview render about 7%.
 - **Lossless WebP export**: the same pixels as an 8-bit PNG, 20 to 45% lighter,
   with the colour profile, EXIF and XMP (app, presets, `luma develop -o photo.webp`).
 - **The before / after of a whole selection**: “Before / after” in the selection bar
