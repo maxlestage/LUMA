@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Controles más ágiles**: el búfer de trabajo de los desenfoques se conserva de uno a
+  otro, con los mismos píxeles: el enfoque de la vista previa baja de unos 80 a 60 ms,
+  un renderizado de ajuste a 3072 px es un 14 % más rápido.
 - **Una instantánea comparada con ahora**: «Comparar» junto a una instantánea abre la
   vista lado a lado con ella a la izquierda (su nombre encima) y la foto tal como está
   ajustada a la derecha: para elegir entre dos versiones de un ajuste. Y la cierra.
