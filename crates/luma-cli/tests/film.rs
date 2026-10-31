@@ -40,3 +40,56 @@ fn the_camera_look_is_measured_into_a_lut() {
     assert!(!png.with_extension("cube").exists());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `luma film-lut --reference` : une photo accordée sur une autre, en LUT ; il faut une
+/// photo et une seule.
+#[test]
+fn a_photo_is_matched_to_a_reference_into_a_lut() {
+    let corpus = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus");
+    let (photo, reference) = (corpus.join("_DSC0009.ARW"), corpus.join("AFXT2720.RAF"));
+    if !photo.exists() || !reference.exists() {
+        eprintln!("corpus absent (scripts/fetch-corpus.sh) : essai ignoré");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("luma-cli-accord-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("accord.cube");
+    let luma = |args: &[&str]| {
+        let o = Command::new(env!("CARGO_BIN_EXE_luma"))
+            .arg("film-lut")
+            .args(args)
+            .output()
+            .unwrap();
+        let text = String::from_utf8_lossy(&o.stdout).into_owned() + &String::from_utf8_lossy(&o.stderr);
+        (o.status.success(), text)
+    };
+    let (ok, text) = luma(&[
+        "--reference",
+        reference.to_str().unwrap(),
+        photo.to_str().unwrap(),
+        "-o",
+        out.to_str().unwrap(),
+        "--size",
+        "17",
+    ]);
+    assert!(ok, "{text}");
+    assert!(
+        text.contains("accord sur") && text.contains("écart des couleurs moyennes"),
+        "{text}"
+    );
+    let cube = luma_image::cube::Cube::parse(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    assert_eq!(cube.size, 17);
+    // Sans photo, ou deux : refusé.
+    assert!(!luma(&["--reference", reference.to_str().unwrap()]).0);
+    assert!(
+        !luma(&[
+            "--reference",
+            reference.to_str().unwrap(),
+            photo.to_str().unwrap(),
+            photo.to_str().unwrap()
+        ])
+        .0
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -10,7 +10,7 @@ The professional photo library, step by step.
 - **Match to the reference**: with a reference photo shown, “Match” gives the photo the
   reference's colour distribution (lightness, hues, saturation: means and spreads in
   OKLab, no AI), as an “Accord …” film with adjustable strength, saved for later
-  photos.
+  photos. From the command line: `luma film-lut --reference <ref> <photo>`.
 - **Composition grid on the photo** (H): the crop overlays (thirds, golden ratio,
   diagonals, golden triangles and spiral, grid) laid over the photo while editing, to
   judge framing, a horizon, verticals; Shift+O rotates them.
