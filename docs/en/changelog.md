@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **More responsive sliders**: the blur work buffer is kept from one blur to the next,
+  with the same pixels: preview sharpening drops from about 80 to 60 ms, a 3072 px
+  adjustment render is 14% faster.
 - **A snapshot compared with now**: “Compare” next to a snapshot opens the side-by-side
   view with it on the left (its name above), the photo as currently edited on the
   right: to choose between two versions of an edit. Y closes it.
