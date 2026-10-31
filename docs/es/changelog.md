@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Una instantánea comparada con ahora**: «Comparar» junto a una instantánea abre la
+  vista lado a lado con ella a la izquierda (su nombre encima) y la foto tal como está
+  ajustada a la derecha: para elegir entre dos versiones de un ajuste. Y la cierra.
 - **Igualar con la referencia**: con una foto de referencia a la vista, «Igualar» da a
   la foto la distribución de colores de la referencia (claridad, tonos, saturación:
   medias y extensiones en OKLab, sin IA), como una película «Accord …» de intensidad
