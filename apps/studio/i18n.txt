@@ -6254,3 +6254,19 @@ es = Las subcarpetas
 fr = Toutes ses photos
 en = All its photos
 es = Todas sus fotos
+
+fr = Avant / après côte à côte
+en = Before / after side by side
+es = Antes / después lado a lado
+
+fr = Côte à côte
+en = Side by side
+es = Lado a lado
+
+fr = Y : l'avant et l'après de part et d'autre d'une séparation qu'on glisse
+en = Y: before and after on either side of a divider you drag
+es = Y: el antes y el después a cada lado de una separación que se desliza
+
+fr = Séparation avant / après
+en = Before / after divider
+es = Separación antes / después
