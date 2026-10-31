@@ -1,5 +1,5 @@
 //! L'export des plus petites images (un pixel, une ligne) avec toutes ses options :
-//! agrandissement, accentuation de sortie, filigrane, poids maximal, trois formats.
+//! agrandissement, accentuation de sortie, filigrane, poids maximal, quatre formats.
 
 use luma_render::Photo;
 use luma_render::export::{self, Format, Medium, Options, OutputSharpen, Resize, Strength, Watermark};
@@ -15,7 +15,7 @@ fn the_tiniest_photos_export_with_every_option() {
             .unwrap();
         let photo = Photo::open(&src).unwrap();
         let settings = photo.default_settings();
-        for format in [Format::Jpeg, Format::Png, Format::Tiff] {
+        for format in [Format::Jpeg, Format::Png, Format::Tiff, Format::WebP] {
             for resize in [None, Some(Resize::LongEdge(9)), Some(Resize::Megapixels(0.0001))] {
                 let options = Options {
                     format,

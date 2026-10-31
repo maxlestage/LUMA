@@ -43,7 +43,7 @@ luma — le moteur de LÜMA
 
 USAGE
   luma info <raw>…
-  luma develop <raw> [-o sortie.jpg|.png|.tif] [--size N] [--space srgb|p3|rec2020|prophoto]
+  luma develop <raw> [-o sortie.jpg|.png|.tif|.webp] [--size N] [--space srgb|p3|rec2020|prophoto]
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille] [--enlarge] [--web]
@@ -89,7 +89,7 @@ USAGE
       Exporte chaque photo vers chacun des préréglages donnés (à défaut, les réglages
       d'export par défaut), en une fois : chaque RAW n'est ouvert qu'une fois, deux
       fichiers du même nom sont numérotés (-2, -3…), {séquence} compte les photos.
-  luma export-preset [nom] [--format jpg|png|tif] [--quality 1-100] [--bits 8|16]
+  luma export-preset [nom] [--format jpg|png|tif|webp] [--quality 1-100] [--bits 8|16]
                      [--space srgb|p3|rec2020|prophoto] [--size taille|0] [--folder d]
                      [--next-to-original] [--name modèle] [--output-sharpen s|none]
                      [--watermark texte …|--no-watermark] [--logo f.png …|--no-logo]
@@ -1177,7 +1177,7 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
         match arg.as_str() {
             "--format" => {
                 let v = value()?;
-                o.format = Format::parse(&v).ok_or_else(|| format!("format inconnu « {v} » (jpg, png, tif)"))?;
+                o.format = Format::parse(&v).ok_or_else(|| format!("format inconnu « {v} » (jpg, png, tif, webp)"))?;
             }
             "--quality" => o.quality = value()?.parse().map_err(|_| "--quality : 1 à 100")?,
             "--web" => o.web = true,

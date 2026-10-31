@@ -80,7 +80,7 @@ fn write_at(
     let (w, h) = (img.width as u32, img.height as u32);
     let profile = icc::profile(space);
     let err = |e: image::ImageError| e.to_string();
-    let sixteen = bits == 16 && ext != "jpg" && ext != "jpeg";
+    let sixteen = bits == 16 && matches!(ext.as_str(), "png" | "tif" | "tiff");
     let jpeg = matches!(ext.as_str(), "jpg" | "jpeg");
     // L'image en octets, sauf pour le JPEG ordinaire, converti bande par bande ; s'il a
     // un poids maximal, converti une fois pour tous ses codages.
@@ -198,7 +198,23 @@ fn write_at(
             std::io::Write::write_all(&mut f, &header).map_err(io)?;
             std::io::Write::write_all(&mut f, &pixels).map_err(io)
         }
-        other => Err(format!("format de sortie inconnu « {other} » (jpg, png, tif)")),
+        "webp" => {
+            // Sans perte, 8 bits, avec le profil ICC, l'EXIF et le paquet XMP. La
+            // résolution d'impression n'a pas de place dans un WebP.
+            let mut out = Vec::new();
+            let mut enc = image_webp::WebPEncoder::new(&mut out);
+            enc.set_icc_profile(profile);
+            if !meta.exif.is_empty() {
+                enc.set_exif_metadata(meta.exif.clone());
+            }
+            if let Some(x) = &meta.xmp {
+                enc.set_xmp_metadata(x.as_bytes().to_vec());
+            }
+            enc.encode(&bytes, w, h, image_webp::ColorType::Rgb8)
+                .map_err(|e| format!("{} : {e}", path.display()))?;
+            std::fs::write(path, out).map_err(|e| format!("{} : {e}", path.display()))
+        }
+        other => Err(format!("format de sortie inconnu « {other} » (jpg, png, tif, webp)")),
     }
 }
 
@@ -311,6 +327,8 @@ pub enum Format {
     Jpeg,
     Png,
     Tiff,
+    /// WebP sans perte, 8 bits (le codeur WebP avec perte manque en Rust pur).
+    WebP,
 }
 
 impl Format {
@@ -319,6 +337,7 @@ impl Format {
             Format::Jpeg => "jpg",
             Format::Png => "png",
             Format::Tiff => "tif",
+            Format::WebP => "webp",
         }
     }
 
@@ -327,6 +346,7 @@ impl Format {
             "jpg" | "jpeg" => Some(Format::Jpeg),
             "png" => Some(Format::Png),
             "tif" | "tiff" => Some(Format::Tiff),
+            "webp" => Some(Format::WebP),
             _ => None,
         }
     }
@@ -1018,7 +1038,7 @@ pub fn develop(
     if let Some(w) = &options.watermark {
         w.apply(&mut image);
     }
-    let bits = if options.format == Format::Jpeg {
+    let bits = if matches!(options.format, Format::Jpeg | Format::WebP) {
         8
     } else {
         options.bits
@@ -1413,6 +1433,7 @@ pub fn describe(o: &Options) -> String {
         },
         Format::Png => format!("PNG {} bits", o.bits),
         Format::Tiff => format!("TIFF {} bits", o.bits),
+        Format::WebP => "WebP".to_owned(),
     };
     let space = match o.space {
         OutputSpace::Srgb => "sRGB",
@@ -2091,11 +2112,42 @@ mod tests {
         ] {
             assert_eq!(OutputSpace::parse(space_id(s)), Some(s));
         }
-        for f in [Format::Jpeg, Format::Png, Format::Tiff] {
+        for f in [Format::Jpeg, Format::Png, Format::Tiff, Format::WebP] {
             assert_eq!(Format::parse(f.extension()), Some(f));
         }
         assert_eq!(Format::parse("JPEG"), Some(Format::Jpeg));
         assert_eq!(Format::parse("gif"), None);
+    }
+
+    /// Le WebP sans perte : relu, les octets exacts de l'image en 8 bits ; avec le
+    /// profil ICC (Display P3 ici), l'EXIF et le paquet XMP ; 16 bits demandés : 8.
+    #[test]
+    fn webp_is_lossless_with_its_profile_and_metadata() {
+        let img = RgbImage::from_fn(97, 61, |x, y| {
+            [x as f32 / 97.0, y as f32 / 61.0, ((x * y) % 13) as f32 / 13.0]
+        });
+        let dir = std::env::temp_dir().join(format!("luma-webp-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let out = dir.join("sortie.webp");
+        let meta = Embedded {
+            // Un bloc TIFF vide, gros‑boutiste.
+            exif: b"MM\0*\0\0\0\x08\0\0\0\0\0\0".to_vec(),
+            xmp: Some("<x:xmpmeta>essai</x:xmpmeta>".into()),
+            ..Embedded::default()
+        };
+        write_with(&out, &img, OutputSpace::DisplayP3, 90, 16, &meta).unwrap();
+        let file = std::fs::read(&out).unwrap();
+        assert_eq!(&file[..4], b"RIFF");
+        assert_eq!(&file[8..12], b"WEBP");
+        let back = image::load_from_memory_with_format(&file, image::ImageFormat::WebP)
+            .unwrap()
+            .to_rgb8();
+        assert_eq!(back.into_raw(), luma_image::encode8(&img, OutputSpace::DisplayP3));
+        let has = |tag: &[u8]| file.windows(4).any(|w| w == tag);
+        assert!(has(b"ICCP") && has(b"EXIF") && has(b"XMP "));
+        let icc = icc::profile(OutputSpace::DisplayP3);
+        assert!(file.windows(icc.len()).any(|w| w == icc.as_slice()));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

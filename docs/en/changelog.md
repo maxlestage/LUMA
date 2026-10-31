@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Lossless WebP export**: the same pixels as an 8-bit PNG, 20 to 45% lighter,
+  with the colour profile, EXIF and XMP (app, presets, `luma develop -o photo.webp`).
 - **The before / after of a whole selection**: “Before / after” in the selection bar
   writes, in the background, a JPEG next to each selected photo, each with its own
   settings.

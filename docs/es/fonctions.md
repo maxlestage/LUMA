@@ -132,7 +132,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 
 | Función | Estado |
 |---|---|
-| JPEG (calidad), PNG y TIFF de 8 o 16 bits | ✅ |
+| JPEG (calidad), PNG y TIFF de 8 o 16 bits, WebP sin pérdida (de un 20 a un 45 % más ligero que el PNG, los mismos píxeles) | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, con perfil ICC incrustado | ✅ |
 | Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar por defecto (`--resize`) | ✅ |
 | Ampliación si es necesario («Ampliar si es necesario», `--enlarge`): Lanczos sin halos, hasta cuatro veces cada lado y 200 MP, para copias grandes; sin IA | ✅ |
