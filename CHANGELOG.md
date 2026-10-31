@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Défrangeage automatique plus rapide** : violet et vert mesurés ensemble, les
+  réglages essayés plusieurs à la fois, aux mêmes choix : 356 → 201 ms sur la photo où
+  il faut tout essayer, 287 → 159 ms sur de vraies franges de synthèse.
 - **Défrangeage automatique** (Corrections de l'objectif) : les franges violettes et
   vertes de l'aberration chromatique longitudinale cherchées le long des contours, là
   où ils sont plus colorés que leurs alentours, et le plus petit défrangeage qui les
