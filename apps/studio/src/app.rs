@@ -7733,6 +7733,19 @@ impl Studio {
         use crate::licence::{FEATURES, open_url};
         use luma_licence::Access;
         let access = self.licence.access();
+        // Sur un écran étroit (iPhone), « Fermer » a sa propre ligne : à côté du titre,
+        // il le recouvrirait.
+        let narrow = ui.available_width() < 400.0;
+        let close = |ui: &mut Ui, open: &mut bool| {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                if ui.button(tr("Fermer")).clicked() {
+                    *open = false;
+                }
+            });
+        };
+        if narrow && !locked {
+            close(ui, &mut self.premium_open);
+        }
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(vec2(54.0, 54.0), egui::Sense::hover());
             if let Some(b) = &self.brand {
@@ -7773,14 +7786,10 @@ impl Studio {
                     ),
                     Access::Expired { .. } => tr("Votre essai est terminé : abonnez-vous pour continuer à développer vos photos.").into(),
                 };
-                ui.label(RichText::new(line).size(13.5).color(theme::DIM));
+                ui.add(egui::Label::new(RichText::new(line).size(13.5).color(theme::DIM)).wrap());
             });
-            if !locked {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    if ui.button(tr("Fermer")).clicked() {
-                        self.premium_open = false;
-                    }
-                });
+            if !locked && !narrow {
+                close(ui, &mut self.premium_open);
             }
         });
         ui.add_space(14.0);
