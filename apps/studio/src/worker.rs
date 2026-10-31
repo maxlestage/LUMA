@@ -132,6 +132,11 @@ pub enum Event {
         rgba: Vec<u8>,
     },
     /// La photo de référence, développée avec ses réglages.
+    /// La photo de référence n'a pas pu être développée : pourquoi.
+    ReferenceFailed {
+        path: PathBuf,
+        error: String,
+    },
     Reference {
         path: PathBuf,
         size: [usize; 2],
@@ -742,20 +747,24 @@ impl Worker {
         std::thread::Builder::new()
             .name("luma-reference".into())
             .spawn(move || {
-                let Ok(r) = caught(|| {
+                let rendered = caught(|| {
                     let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
                     let settings = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());
                     photo
                         .render(&settings, Size::Fit(side), &Cancel::new())
                         .map_err(|e| e.to_string())
-                }) else {
-                    return;
-                };
-                let _ = sender.send(Event::Reference {
-                    path,
-                    size: [r.image.width, r.image.height],
-                    rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
                 });
+                // Une référence illisible le dit : sans réponse, l'app l'attendrait
+                // toujours.
+                let event = match rendered {
+                    Ok(r) => Event::Reference {
+                        path,
+                        size: [r.image.width, r.image.height],
+                        rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
+                    },
+                    Err(error) => Event::ReferenceFailed { path, error },
+                };
+                let _ = sender.send(event);
                 repaint();
             })
             .expect("fil de la référence");

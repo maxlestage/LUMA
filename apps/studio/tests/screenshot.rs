@@ -2743,10 +2743,12 @@ fn print_layout_and_pdf() {
             .is_some(),
         "le bouton Ouvrir"
     );
-    if std::process::Command::new("xdg-open")
-        .arg("--version")
-        .output()
-        .is_err()
+    // Sur Linux seulement : le Mac a toujours `open`, qui réussit.
+    if cfg!(target_os = "linux")
+        && std::process::Command::new("xdg-open")
+            .arg("--version")
+            .output()
+            .is_err()
     {
         assert!(!s.studio().open_last_output());
     }
@@ -3398,7 +3400,7 @@ fn library_by_year_and_month() {
     harness.run_steps(2);
     assert_eq!(
         harness.state().as_ref().unwrap().view,
-        View::Search("boîtier:\"SONY ILCE-7M3\"".into())
+        View::Search("boîtier:\"=SONY ILCE-7M3\"".into())
     );
     harness.get_by_label("Objectifs (1)").click();
     harness.run_steps(2);
@@ -3406,7 +3408,7 @@ fn library_by_year_and_month() {
     harness.run_steps(2);
     assert_eq!(
         harness.state().as_ref().unwrap().view,
-        View::Search("objectif:\"FE 24-70mm F2.8 GM\"".into())
+        View::Search("objectif:\"=FE 24-70mm F2.8 GM\"".into())
     );
     // Les notes (seule la note 3 est donnée) et les libellés.
     harness.get_by_label("Notes").click();
@@ -3671,7 +3673,7 @@ fn library_folders_as_a_tree() {
     let s = harness.state().as_ref().unwrap();
     assert_eq!(
         s.view,
-        View::Search(luma_library::query::filter(
+        View::Search(luma_library::query::exact_filter(
             "dossier",
             &top.display().to_string()
         ))
