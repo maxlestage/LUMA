@@ -240,6 +240,10 @@ et blanc, vignetage après recadrage et grain existent).
   puissances `powf` par pixel, qu'on ne remplace pas sans changer les bits), le codage
   JPEG ≈ 400 ms, la conversion 8 bits ≈ 160 ms ; la source dématricée reste en cache
   (288 Mo) pendant le rendu, utile au zoom 1:1.
+- L'essai de l'app `photos_in_a_manual_collection` a dépassé deux fois son attente de
+  180 s (une fois ici, une fois sur la CI) lors de séries chargées (396 et 534 s au lieu
+  d'environ 210 s), jamais seul ni dans les séries ordinaires : l'attente dit désormais ce
+  qui retient l'app (`Studio::busy_reason`), pour trouver la cause au prochain échec.
 - Le test GPU `same_as_cpu` a planté une fois (SIGSEGV) sur le Vulkan logiciel de la CI,
   sans changement de `luma-gpu` : à surveiller.
 - La suppression d'une branche distante par `git push --delete` est refusée par le
