@@ -434,6 +434,7 @@ struct Request {
     settings: Settings,
     size: Size,
     clipping: bool,
+    focus: bool,
     /// La version de la table d'épreuvage, la simulation et l'alerte de gamut.
     proof: Option<(u64, bool, bool)>,
     scene: bool,
@@ -907,6 +908,10 @@ pub struct Studio {
     before_view: Option<(BeforeKey, TextureHandle)>,
     before_asked: Option<(u64, BeforeKey)>,
     clipping: bool,
+    /// Les zones nettes de la photo, en vert (Maj+F).
+    pub focus_peaking: bool,
+    /// La part de l'aperçu au point (0 à 1), lue avec les zones nettes.
+    pub sharp_share: Option<f32>,
     proofing: Proofing,
     pub zoom: bool,
     compare: Option<Compare>,
@@ -1347,6 +1352,8 @@ impl Studio {
             before_view: None,
             before_asked: None,
             clipping: false,
+            focus_peaking: false,
+            sharp_share: None,
             proofing: Proofing::default(),
             zoom: false,
             compare: None,
@@ -5111,6 +5118,7 @@ impl Studio {
                         None => self.scope_texture = None,
                     }
                     self.image_size = frame.size;
+                    self.sharp_share = frame.sharp;
                     self.pick_map = pick_map(frame.size, &frame.rgba);
                     // Une nouvelle base : la zone d'un masque à plage est à relire.
                     if frame.scene.is_some() {
@@ -5930,6 +5938,7 @@ impl Studio {
             settings,
             size,
             clipping: self.clipping,
+            focus: self.focus_peaking,
             proof: self
                 .proofing
                 .active()
@@ -5963,6 +5972,7 @@ impl Studio {
             self.generation,
             crate::worker::Extras {
                 clipping: self.clipping,
+                focus: self.focus_peaking,
                 scene: request.scene,
                 dust_view: request.dust_view,
                 find_dust: request.find_dust,
@@ -6745,6 +6755,7 @@ impl Studio {
                 }
             }
             "clipping" => self.clipping = !self.clipping,
+            "focus_peaking" => self.focus_peaking = !self.focus_peaking && self.photo.is_some(),
             "scope" => {
                 self.scope = self.scope.next();
                 self.scope_texture = None;
@@ -8498,6 +8509,13 @@ impl Studio {
                     && let Some(dir) = crate::dialogs::films_dir()
                 {
                     self.match_to_reference(dir);
+                }
+                if ui
+                    .selectable_label(self.focus_peaking, tr("Zones nettes"))
+                    .on_hover_text(tr("Maj+F : les détails au point, en vert (une photo floue n'en a pas)"))
+                    .clicked()
+                {
+                    self.act("focus_peaking");
                 }
                 if !compact
                     && ui
@@ -12230,6 +12248,13 @@ impl Studio {
                 }
             }
         }
+        // La part au point, pour comparer deux photos d'une rafale.
+        let sharp_badge = self.sharp_share.map(|f| {
+            trf(
+                "Zones nettes : {percent} %",
+                &[("percent", &format!("{:.1}", f * 100.0))],
+            )
+        });
         let mut badges = Vec::new();
         if self.before {
             badges.push(tr("Avant"));
@@ -12245,6 +12270,13 @@ impl Studio {
                 tr("Écrêtage")
             } else {
                 tr("Écrêtage (J)")
+            });
+        }
+        if self.focus_peaking {
+            badges.push(match &sharp_badge {
+                Some(b) => b.as_str(),
+                None if crate::touch() => tr("Zones nettes"),
+                None => tr("Zones nettes (Maj+F)"),
             });
         }
         if self.proofing.active().is_some_and(|p| p.simulate) {

@@ -6378,3 +6378,19 @@ es = Antes / después de {n} foto(s)…
 fr = WebP sans perte, 8 bits : plus léger qu'un PNG
 en = Lossless WebP, 8 bits: lighter than a PNG
 es = WebP sin pérdida, 8 bits: más ligero que un PNG
+
+fr = Zones nettes
+en = In-focus areas
+es = Zonas nítidas
+
+fr = Zones nettes (Maj+F)
+en = In-focus areas (Shift+F)
+es = Zonas nítidas (Mayús+F)
+
+fr = Maj+F : les détails au point, en vert (une photo floue n'en a pas)
+en = Shift+F: the details in focus, in green (a blurred photo has none)
+es = Mayús+F: los detalles enfocados, en verde (una foto desenfocada no tiene)
+
+fr = Zones nettes : {percent} %
+en = In-focus areas: {percent}%
+es = Zonas nítidas: {percent} %
