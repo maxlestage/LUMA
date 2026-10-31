@@ -8840,6 +8840,35 @@ impl Studio {
         }
     }
 
+    /// Le défrangeage violet et vert mesuré sur la photo ouverte (voir
+    /// [`luma_image::lens::auto_defringe`]) ; rend le libellé de l'historique.
+    pub fn auto_defringe(&mut self) -> Option<String> {
+        let photo = self.photo.clone()?;
+        match photo.auto_defringe(&self.settings) {
+            Ok((purple, green)) => {
+                self.settings.lens.defringe_purple = purple;
+                self.settings.lens.defringe_green = green;
+                let label = if purple == 0.0 && green == 0.0 {
+                    tr("Défrangeage auto : pas de franges").to_owned()
+                } else {
+                    trf(
+                        "Défrangeage auto : violet {purple}, vert {green}",
+                        &[
+                            ("purple", &format_value(purple, 0, false)),
+                            ("green", &format_value(green, 0, false)),
+                        ],
+                    )
+                };
+                self.status = label.clone();
+                Some(label)
+            }
+            Err(e) => {
+                self.status = trf("Mesure impossible : {error}", &[("error", &e.to_string())]);
+                None
+            }
+        }
+    }
+
     /// Le recadrage qui retire les bords vides de la Transformation, aux dimensions de la
     /// photo entière (celles du rendu en cours si la photo n'est pas recadrée).
     pub fn fill_crop(&mut self) {
@@ -13026,6 +13055,16 @@ impl Studio {
                     }
                     let l = self.fields(ui, &LENS);
                     keep(l, &mut commits);
+                    if ui
+                        .small_button(tr("Défrangeage auto"))
+                        .on_hover_text(tr(
+                            "Cherche les franges violettes et vertes le long des contours (plus colorés que leurs alentours) et règle le plus petit défrangeage qui les retire ; une vraie couleur d'objet au bord n'est pas touchée.",
+                        ))
+                        .clicked()
+                        && let Some(label) = self.auto_defringe()
+                    {
+                        commits.push(label);
+                    }
                 });
         }
 

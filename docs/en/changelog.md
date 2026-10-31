@@ -4,6 +4,10 @@
 
 The professional photo library, step by step.
 
+- **Auto defringe** (Lens corrections): the purple and green fringes of longitudinal
+  chromatic aberration are looked for along edges, where they are more colourful than
+  their surroundings, and the smallest defringe that removes them is set; a real object
+  colour at the edge, leaves against the sky, is left alone.
 - **Faster corrections from the camera's JPEG**: a third less time per photo
   (≈ 860 → 580 ms), with the same values: the JPEG is decoded and its details searched
   once for all three measurements.

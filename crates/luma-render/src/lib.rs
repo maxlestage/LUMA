@@ -449,6 +449,17 @@ impl Photo {
         ca
     }
 
+    /// Les réglages Défrangeage violet et vert qui retirent les franges de la photo
+    /// développée avec `settings` (sans son défrangeage), mesurés sur une base de
+    /// 1200 px (voir [`luma_image::lens::auto_defringe`]).
+    pub fn auto_defringe(&self, settings: &Settings) -> Result<(f32, f32)> {
+        let mut s = settings.clone();
+        s.lens.defringe_purple = 0.0;
+        s.lens.defringe_green = 0.0;
+        let base = self.base(&s, Size::Fit(1200), &Cancel::new(), &mut Timings::default())?;
+        Ok(luma_image::lens::auto_defringe(&base.image, base.scale))
+    }
+
     /// Les étapes de voisinage, en cache tant que [`luma_image::base_key`] ne change pas.
     pub fn base(&self, settings: &Settings, size: Size, cancel: &Cancel, timings: &mut Timings) -> Result<Base> {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
@@ -874,5 +885,26 @@ mod tests {
             .image
             .pixel(10, 10);
         assert!(px[0] > px[2] + 0.02, "plus chaud : {px:?}");
+    }
+}
+#[cfg(test)]
+mod defringe_tests {
+    /// Les photos du corpus n'ont pas de franges visibles : le défrangeage automatique
+    /// n'y touche pas (ni aux feuilles vertes sur le ciel de l'ORF).
+    #[test]
+    fn no_fringes_no_defringing() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus");
+        let raws: Vec<_> = std::fs::read_dir(&dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| luma_raw::is_raw(p))
+            .collect();
+        for p in raws {
+            let photo = super::Photo::open(&p).unwrap();
+            let got = photo.auto_defringe(&luma_project::Settings::default()).unwrap();
+            assert_eq!(got, (0.0, 0.0), "{}", p.display());
+        }
     }
 }

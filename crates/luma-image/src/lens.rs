@@ -391,9 +391,121 @@ pub fn defringe(img: &mut RgbImage, lens: &Lens, scale: f32) {
         });
 }
 
+/// Les réglages Défrangeage violet et vert (0 à 20) qui retirent les franges de `img`
+/// (l'image de travail, linéaire, `scale` pixels par pixel de la pleine définition) :
+/// pour chaque teinte, ce que les contours en ont de plus que leurs alentours (une fleur
+/// violette n'a pas de franges : ses alentours le sont autant que ses bords), puis le
+/// plus petit réglage, essayé par pas de 2 avec [`defringe`] lui‑même, qui en retire
+/// les trois quarts. 0 quand il n'y a pas de franges, ou quand même le plus fort n'y
+/// suffit pas (une vraie couleur d'objet au bord, pas une frange).
+pub fn auto_defringe(img: &RgbImage, scale: f32) -> (f32, f32) {
+    let stops = Plane::from_rgb(img, |p| luminance(p).max(1e-6).log2());
+    let blurred = stops.blur((2.0 * scale).max(0.6));
+    // Le défrangeage garde la luminance : les contours restent les mêmes à chaque essai.
+    let edges: Vec<f32> = stops
+        .data
+        .iter()
+        .zip(&blurred.data)
+        .map(|(&s, &b)| smoothstep(0.15, 0.7, (s - b).abs()))
+        .collect();
+    // La couleur des alentours (une teinte qui n'est pas qu'au bord : celle d'un objet).
+    let around = |img: &RgbImage| -> [Plane; 3] {
+        std::array::from_fn(|c| Plane::from_rgb(img, |p| p[c]).blur((6.0 * scale).max(2.0)))
+    };
+    let score = |p: [f32; 3], violet: bool| -> f32 {
+        let [r, g, b] = p;
+        let top = r.max(g).max(b).max(1e-6);
+        if violet {
+            smoothstep(0.05, 0.35, (r.min(b) - g) / top)
+        } else {
+            smoothstep(0.05, 0.35, (g - r.max(b)) / top)
+        }
+    };
+    let excess = |img: &RgbImage, violet: bool| -> f32 {
+        let local = around(img);
+        let (mut on, mut weight) = (0.0f64, 0.0f64);
+        for (k, (p, &e)) in img.data.iter().zip(&edges).enumerate() {
+            if e <= 0.0 || p[0].max(p[1]).max(p[2]) < 0.01 {
+                continue;
+            }
+            let near = [local[0].data[k], local[1].data[k], local[2].data[k]];
+            on += f64::from(e * (score(*p, violet) - score(near, violet)).max(0.0));
+            weight += f64::from(e);
+        }
+        if weight < 1.0 { 0.0 } else { (on / weight) as f32 }
+    };
+    let amount = |violet: bool| -> f32 {
+        let start = excess(img, violet);
+        if start < 0.01 {
+            return 0.0;
+        }
+        for step in (2..=20).step_by(2) {
+            let mut tried = img.clone();
+            let lens = Lens {
+                defringe_purple: if violet { step as f32 } else { 0.0 },
+                defringe_green: if violet { 0.0 } else { step as f32 },
+                ..Lens::default()
+            };
+            defringe(&mut tried, &lens, scale);
+            if excess(&tried, violet) <= 0.25 * start {
+                return step as f32;
+            }
+        }
+        // Même au plus fort, la couleur reste : ce n'est pas une frange (des feuilles
+        // vertes sur le ciel), et le défrangeage la ternirait.
+        0.0
+    };
+    (amount(true), amount(false))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Des contours noir sur blanc, bordés de franges violettes (ou non) ; ailleurs, une
+    /// grande plage violette sans contour.
+    fn edges_with(fringe: Option<[f32; 3]>, lavender: bool) -> RgbImage {
+        RgbImage::from_fn(240, 160, |x, y| {
+            if lavender && y >= 120 {
+                return [0.45, 0.2, 0.55];
+            }
+            let band = x % 40;
+            if band < 18 {
+                [0.02, 0.02, 0.02]
+            } else if band < 20 {
+                fringe.unwrap_or([0.3, 0.3, 0.3])
+            } else {
+                [0.85, 0.85, 0.85]
+            }
+        })
+    }
+
+    #[test]
+    fn fringes_are_measured_and_removed() {
+        // Des franges violettes : un réglage violet, pas de vert ; une fois appliqué,
+        // les franges sont grises.
+        let img = edges_with(Some([0.4, 0.1, 0.5]), true);
+        let (purple, green) = auto_defringe(&img, 1.0);
+        assert!(purple >= 2.0, "{purple}");
+        assert_eq!(green, 0.0);
+        let mut fixed = img.clone();
+        defringe(
+            &mut fixed,
+            &Lens {
+                defringe_purple: purple,
+                ..Lens::default()
+            },
+            1.0,
+        );
+        let p = fixed.pixel(18, 40);
+        assert!((p[0] - p[1]).abs() < 0.12 && (p[2] - p[1]).abs() < 0.15, "{p:?}");
+        // Des franges vertes : l'inverse.
+        let (purple, green) = auto_defringe(&edges_with(Some([0.1, 0.45, 0.12]), false), 1.0);
+        assert_eq!(purple, 0.0);
+        assert!(green >= 2.0, "{green}");
+        // Des contours propres, et une plage violette sans contour : rien à faire.
+        assert_eq!(auto_defringe(&edges_with(None, true), 1.0), (0.0, 0.0));
+    }
 
     /// Des lignes droites photographiées à travers une Transformation connue : leurs
     /// extrémités dans la photo d'origine (là où [`Mapping`] va les chercher).
