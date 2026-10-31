@@ -2743,10 +2743,12 @@ fn print_layout_and_pdf() {
             .is_some(),
         "le bouton Ouvrir"
     );
-    if std::process::Command::new("xdg-open")
-        .arg("--version")
-        .output()
-        .is_err()
+    // Sur Linux seulement : le Mac a toujours `open`, qui réussit.
+    if cfg!(target_os = "linux")
+        && std::process::Command::new("xdg-open")
+            .arg("--version")
+            .output()
+            .is_err()
     {
         assert!(!s.studio().open_last_output());
     }
