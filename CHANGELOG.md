@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Grille de composition sur la photo** (H) : les guides du recadrage (tiers, nombre
+  d'or, diagonales, triangles et spirale d'or, grille) posés sur la photo pendant le
+  réglage, pour juger un cadrage, un horizon, des verticales ; Maj+O les tourne.
 - **Vignettes plus rapides** : les aperçus intégrés aux RAW décodés sur plusieurs
   cœurs, aux mêmes pixels : un quart à un tiers de temps en moins par vignette (ORF 37 →
   26 ms, ARW 27 → 18 ms, CR3 20 → 13 ms).
