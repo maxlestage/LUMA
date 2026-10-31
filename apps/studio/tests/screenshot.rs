@@ -105,10 +105,10 @@ impl Session {
                 }
                 return;
             }
-            assert!(
-                start.elapsed() < Duration::from_secs(180),
-                "le rendu n'arrive pas"
-            );
+            if start.elapsed() >= Duration::from_secs(180) {
+                let reason = self.harness.state().as_ref().map(Studio::busy_reason);
+                panic!("le rendu n'arrive pas : {reason:?}");
+            }
             std::thread::sleep(Duration::from_millis(20));
         }
     }
