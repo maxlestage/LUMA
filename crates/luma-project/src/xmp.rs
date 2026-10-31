@@ -449,15 +449,9 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                     values.lists.entry(name.clone()).or_default().push(String::new());
                 }
             }
-            // Un texte arrive en morceaux, coupé à chaque entité (`&amp;`, `&#233;`…).
-            Event::Text(ref t) if open_meta.is_some() => {
-                if let Some(name) = &open_meta {
-                    let piece = t.xml_content(XmlVersion::Implicit1_0).into_owned();
-                    values.meta.entry(name.clone()).or_default().push_str(piece.trim());
-                }
-            }
+            // Un texte arrive en morceaux, coupé à chaque entité (`&amp;`, `&#233;`…) :
+            // les morceaux sont mis bout à bout, les espaces autour retirés à la fin.
             Event::Text(_) | Event::GeneralRef(_) => {
-                let Some(name) = &open else { continue };
                 let piece = match &event {
                     Event::Text(t) => t.xml_content(XmlVersion::Implicit1_0).into_owned(),
                     Event::GeneralRef(r) => match r.resolve_char_ref() {
@@ -471,6 +465,11 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                     },
                     _ => unreachable!(),
                 };
+                if let Some(name) = &open_meta {
+                    values.meta.entry(name.clone()).or_default().push_str(&piece);
+                    continue;
+                }
+                let Some(name) = &open else { continue };
                 if in_li {
                     if let Some(item) = values.lists.get_mut(name).and_then(|l| l.last_mut()) {
                         item.push_str(&piece);
@@ -483,6 +482,9 @@ fn parse_values(text: &str) -> luma_core::Result<Values> {
                 let qname = e.name();
                 let tag: &str = qname.as_ref();
                 if open_meta.as_deref() == Some(tag) {
+                    if let Some(v) = values.meta.get_mut(tag) {
+                        *v = v.trim().to_owned();
+                    }
                     open_meta = None;
                     continue;
                 }
@@ -1448,6 +1450,23 @@ mod tests {
             </rdf:Description></rdf:RDF></x:xmpmeta>"#;
         let m = read_meta(text);
         assert_eq!((m.rating, m.label.as_str()), (3, "Vert"));
+    }
+
+    /// Un libellé en élément garde ses entités et ses espaces intérieurs.
+    #[test]
+    fn a_label_element_keeps_its_entities() {
+        for (xml, label) in [
+            ("Rouge &amp; vert", "Rouge & vert"),
+            ("&#201;t&#233;", "Été"),
+            ("  À revoir  ", "À revoir"),
+        ] {
+            let text = format!(
+                r#"<x:xmpmeta xmlns:x="x"><rdf:RDF xmlns:rdf="r"><rdf:Description xmlns:xmp="m">
+                <xmp:Label>{xml}</xmp:Label>
+                </rdf:Description></rdf:RDF></x:xmpmeta>"#
+            );
+            assert_eq!(read_meta(&text).label, label, "{xml}");
+        }
     }
 
     #[test]
