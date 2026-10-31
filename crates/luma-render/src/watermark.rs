@@ -446,27 +446,31 @@ impl Logo {
         ))
     }
 
-    /// Le logo lu une seule fois pour tout un export par lot : le dernier fichier lu
-    /// est gardé, tant que sa taille et sa date ne changent pas.
+    /// Le logo lu une seule fois pour tout un export par lot : chaque fichier lu est
+    /// gardé (les derniers, quelques‑uns), tant que sa taille et sa date ne changent
+    /// pas. Deux exports à la fois, avec chacun son logo, ne se le reprennent pas.
     pub fn load_cached(&self) -> Result<std::sync::Arc<LogoImage>, String> {
-        type Kept = Option<(
-            (std::path::PathBuf, u64, std::time::SystemTime),
-            std::sync::Arc<LogoImage>,
-        )>;
-        static LAST: std::sync::Mutex<Kept> = std::sync::Mutex::new(None);
+        type Version = (u64, std::time::SystemTime);
+        type Kept = Vec<(std::path::PathBuf, Version, std::sync::Arc<LogoImage>)>;
+        const KEEP: usize = 8;
+        static KEPT: std::sync::Mutex<Kept> = std::sync::Mutex::new(Vec::new());
         let meta = std::fs::metadata(&self.path).map_err(|e| format!("logo {} : {e}", self.path.display()))?;
-        let key = (
-            self.path.clone(),
-            meta.len(),
-            meta.modified().unwrap_or(std::time::UNIX_EPOCH),
-        );
-        if let Some((k, logo)) = LAST.lock().expect("logo").as_ref()
-            && *k == key
+        let version = (meta.len(), meta.modified().unwrap_or(std::time::UNIX_EPOCH));
+        if let Some((_, _, logo)) = KEPT
+            .lock()
+            .expect("logo")
+            .iter()
+            .find(|(p, v, _)| *p == self.path && *v == version)
         {
             return Ok(logo.clone());
         }
         let logo = std::sync::Arc::new(self.load()?);
-        *LAST.lock().expect("logo") = Some((key, logo.clone()));
+        let mut kept = KEPT.lock().expect("logo");
+        kept.retain(|(p, _, _)| *p != self.path);
+        if kept.len() >= KEEP {
+            kept.remove(0);
+        }
+        kept.push((self.path.clone(), version, logo.clone()));
         Ok(logo)
     }
 
