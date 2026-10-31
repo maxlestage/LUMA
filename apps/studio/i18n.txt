@@ -1829,6 +1829,22 @@ fr = Aucune correction enregistrée dans ce fichier
 en = No correction recorded in this file
 es = Ninguna corrección registrada en este archivo
 
+fr = Défrangeage auto
+en = Auto defringe
+es = Desflecado automático
+
+fr = Cherche les franges violettes et vertes le long des contours (plus colorés que leurs alentours) et règle le plus petit défrangeage qui les retire ; une vraie couleur d'objet au bord n'est pas touchée.
+en = Looks for purple and green fringes along edges (more colourful than their surroundings) and sets the smallest defringe that removes them; a real object colour at the edge is left alone.
+es = Busca los flecos violetas y verdes a lo largo de los contornos (más coloreados que su entorno) y ajusta el menor desflecado que los quita; un color real del objeto en el borde no se toca.
+
+fr = Défrangeage auto : pas de franges
+en = Auto defringe: no fringes
+es = Desflecado automático: sin flecos
+
+fr = Défrangeage auto : violet {purple}, vert {green}
+en = Auto defringe: purple {purple}, green {green}
+es = Desflecado automático: violeta {purple}, verde {green}
+
 fr = Corrections d'après le JPEG du boîtier
 en = Corrections from the camera's JPEG
 es = Correcciones según el JPEG de la cámara

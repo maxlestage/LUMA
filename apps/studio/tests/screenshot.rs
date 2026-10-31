@@ -3839,3 +3839,23 @@ fn the_lens_distortion_is_read_from_the_camera_jpeg() {
     assert!(s.studio().has_image());
     s.capture("distorsion-boitier");
 }
+
+/// « Défrangeage auto » sur une photo sans franges : rien de réglé, et la barre d'état
+/// le dit ; un défrangeage posé à la main est remis à zéro.
+#[test]
+fn auto_defringe_leaves_a_clean_photo_alone() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("defrangeage-auto") else {
+        return;
+    };
+    s.studio().settings.lens.defringe_purple = 8.0;
+    let label = s.studio().auto_defringe().expect("la mesure");
+    assert_eq!(label, "Défrangeage auto : pas de franges");
+    assert_eq!(
+        (
+            s.studio().settings.lens.defringe_purple,
+            s.studio().settings.lens.defringe_green
+        ),
+        (0.0, 0.0)
+    );
+}
