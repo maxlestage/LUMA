@@ -4,6 +4,10 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Photo de référence** : clic droit sur une vignette, « Utiliser comme référence » :
+  elle s'affiche entière à gauche, avec ses propres réglages, la photo qu'on règle à
+  droite ; pour accorder une série sur une photo réussie. Maj+Y (ou « Référence ») la
+  cache et la remontre.
 - **Avant / après côte à côte** (Y, ou « Côte à côte » dans la barre du haut) : la
   photo sans ses retouches à gauche d'une séparation, la photo retouchée à droite ; on
   glisse la séparation. L'« avant » garde la géométrie (recadrage, Transformation,

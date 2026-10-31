@@ -90,7 +90,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Ajustes predeterminados por cámara y a partir de un ISO (gana el más preciso), punto de partida de las fotos sin XMP; película de importación para las fotos que llegan (carpeta vigilada, cámara conectada) | ✅ |
 | | Instantáneas con nombre, guardadas en el XMP, recuperadas con un clic (un paso del historial); sincronización en varias fotos | ✅ |
 | | iPhone y iPad: vista previa reducida durante un gesto (12 veces más rápida), memoria vigilada, cachés liberadas antes de que el sistema cierre la app | ✅ |
-| | Histograma, indicador de recorte (J), antes/después (`\`), antes/después lado a lado (Y, «Lado a lado»: el antes a la izquierda de una separación que se desliza, con la misma geometría), zoom 1:1 | ✅ |
+| | Histograma, indicador de recorte (J), antes/después (`\`), antes/después lado a lado (Y, «Lado a lado»: el antes a la izquierda de una separación que se desliza, con la misma geometría), una foto de referencia entera junto a la foto que se ajusta (clic derecho en una miniatura, «Usar como referencia», Mayús+Y), zoom 1:1 | ✅ |
 | | Forma de onda, desfile RGB, vectorscopio (Mayús+J) | ✅ |
 | | Medición puntual (RGB, Lab), recorte por canal | ✅ |
 | | Panorámica (perspectiva, cilíndrica, esférica), recorte automático reversible, DNG | ✅ |
