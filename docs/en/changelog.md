@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **The before / after of a whole selection**: “Before / after” in the selection bar
+  writes, in the background, a JPEG next to each selected photo, each with its own
+  settings.
 - **1:1 zoom on the clicked point**: a click on the photo opens the zoom centred where
   you clicked, no longer on the top-left corner.
 - **1:1 zoom navigator**: the whole photo in small in a corner, with the frame of what

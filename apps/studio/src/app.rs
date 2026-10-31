@@ -896,6 +896,8 @@ pub struct Studio {
     /// Le point de la photo (0 à 1) sur lequel centrer le zoom 1:1 qui s'ouvre.
     zoom_target: Option<egui::Vec2>,
     zoom_retries: u8,
+    /// Le lot des avant / après : photos demandées, écrites, en échec.
+    before_after_batch: (usize, usize, usize),
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
     /// son chemin, la vue allumée, son rendu (et sa taille), et le rendu demandé.
     pub reference: Option<PathBuf>,
@@ -1337,6 +1339,7 @@ impl Studio {
             zoom_jump: None,
             zoom_target: None,
             zoom_retries: 0,
+            before_after_batch: (0, 0, 0),
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -4682,6 +4685,15 @@ impl Studio {
                 self.auto_balance_selected();
             }
             if ui
+                .small_button(tr("Avant / après"))
+                .on_hover_text(tr(
+                    "L'avant / après de chaque photo choisie, en un JPEG à côté d'elle",
+                ))
+                .clicked()
+            {
+                self.before_after_selected();
+            }
+            if ui
                 .small_button(tr("Corrections d'après le JPEG du boîtier"))
                 .on_hover_text(tr(
                     "Chaque RAW choisi reçoit la Distorsion et le Vignetage mesurés sur le JPEG de son boîtier (ceux dont le fichier porte déjà ses corrections sont laissés de côté)",
@@ -4964,6 +4976,7 @@ impl Studio {
             && self.printing.is_none()
             && !self.measuring
             && self.lens_batch.0 == 0
+            && self.before_after_batch.0 == 0
             && (self.split.is_none() || self.before_asked.is_none())
             && self.reference_asked.is_none()
     }
@@ -5185,6 +5198,21 @@ impl Studio {
                         self.status = trf(
                             "Impossible d'ouvrir {file} : {error}",
                             &[("file", &file_name(&path)), ("error", &error)],
+                        );
+                    }
+                }
+                Event::BeforeAfterWritten { result } => {
+                    let (total, mut done, mut failed) = self.before_after_batch;
+                    match result {
+                        Ok(_) => done += 1,
+                        Err(_) => failed += 1,
+                    }
+                    self.before_after_batch = (total, done, failed);
+                    if done + failed >= total {
+                        self.before_after_batch = (0, 0, 0);
+                        self.status = trf(
+                            "Avant / après : {done} photo(s) exportée(s), {failed} en échec.",
+                            &[("done", &done), ("failed", &failed)],
                         );
                     }
                 }
@@ -8488,6 +8516,30 @@ impl Studio {
                 }
             });
         });
+    }
+
+    /// L'avant / après de chaque photo choisie (de la photo ouverte sinon), en arrière‑
+    /// plan, chacune avec ses réglages ; le compte à la fin. La photo ouverte prend ses
+    /// réglages du moment.
+    pub fn before_after_selected(&mut self) {
+        let paths = self.keyword_targets();
+        if paths.is_empty() {
+            return;
+        }
+        let open = (self.loading.is_none() && self.photo.is_some())
+            .then(|| self.current_path().map(Path::to_path_buf))
+            .flatten();
+        let n = paths.len();
+        let paths = paths
+            .into_iter()
+            .map(|p| {
+                let given = (open.as_ref() == Some(&p)).then(|| self.settings.clone());
+                (p, given)
+            })
+            .collect();
+        self.before_after_batch = (n, 0, 0);
+        self.status = trf("Avant / après de {n} photo(s)…", &[("n", &n)]);
+        self.worker.before_after(paths, 1600);
     }
 
     /// La référence (avec ses réglages) et la photo (telle qu'elle est réglée) côte à

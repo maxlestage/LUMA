@@ -6362,3 +6362,15 @@ es = Par exportado: {file}
 fr = Navigateur
 en = Navigator
 es = Navegador
+
+fr = L'avant / après de chaque photo choisie, en un JPEG à côté d'elle
+en = The before / after of each selected photo, as a JPEG next to it
+es = El antes / después de cada foto elegida, en un JPEG junto a ella
+
+fr = Avant / après : {done} photo(s) exportée(s), {failed} en échec.
+en = Before / after: {done} photo(s) exported, {failed} failed.
+es = Antes / después: {done} foto(s) exportada(s), {failed} con error.
+
+fr = Avant / après de {n} photo(s)…
+en = Before / after of {n} photo(s)…
+es = Antes / después de {n} foto(s)…

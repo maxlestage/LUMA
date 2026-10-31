@@ -108,6 +108,10 @@ pub enum Event {
     },
     /// Les corrections d'objectif d'une photo d'un lot, mesurées sur le JPEG du boîtier :
     /// distorsion, vignetage et le recadrage sans bords vides ; ou pourquoi pas.
+    /// L'avant / après d'une photo d'un lot, écrit (son fichier) ou pas (pourquoi).
+    BeforeAfterWritten {
+        result: Result<PathBuf, String>,
+    },
     LensMeasured {
         path: PathBuf,
         result: Result<LensMeasure, String>,
@@ -647,6 +651,43 @@ impl Worker {
     /// Les corrections d'objectif de chaque photo d'après le JPEG que son boîtier a rangé
     /// dans le RAW, l'une après l'autre (chacune la sienne : la focale change tout) ; une
     /// photo dont le fichier porte déjà ses corrections est laissée de côté.
+    /// L'avant / après de chaque photo (avec ses réglages, son XMP), en un JPEG à côté
+    /// d'elle (« nom-avant-apres.jpg », numéroté s'il existe), l'une après l'autre ; des
+    /// réglages donnés (ceux de la photo ouverte) passent avant le XMP.
+    pub fn before_after(&self, paths: Vec<(PathBuf, Option<Settings>)>, side: usize) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-avant-apres".into())
+            .spawn(move || {
+                for (path, given) in paths {
+                    let result = caught(|| -> Result<PathBuf, String> {
+                        let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
+                        let settings = given
+                            .or_else(|| read_sidecar(&path))
+                            .unwrap_or_else(|| photo.default_settings());
+                        let stem = path
+                            .file_stem()
+                            .map(|s| s.to_string_lossy().into_owned())
+                            .unwrap_or_default();
+                        let mut out = path.with_file_name(format!("{stem}-avant-apres.jpg"));
+                        let mut k = 2;
+                        while out.exists() {
+                            out = path.with_file_name(format!("{stem}-avant-apres-{k}.jpg"));
+                            k += 1;
+                        }
+                        let img = photo
+                            .before_after(&settings, side)
+                            .map_err(|e| e.to_string())?;
+                        luma_render::export::write(&out, &img, OutputSpace::Srgb, 92, 8)?;
+                        Ok(out)
+                    });
+                    let _ = sender.send(Event::BeforeAfterWritten { result });
+                    repaint();
+                }
+            })
+            .expect("fil des avant / après");
+    }
+
     pub fn lens_from_camera(&self, paths: Vec<PathBuf>) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         std::thread::Builder::new()
