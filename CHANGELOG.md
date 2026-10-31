@@ -13,7 +13,10 @@ La photothèque professionnelle, étape par étape.
   nommé d'après le boîtier (« Sony ILCE-7M3 JPEG ») : ses RAW rendus comme il le fait,
   à intensité réglable. Sans IA : la mesure des pellicules, appliquée à la même prise.
   Sur les sept marques du corpus, l'écart au JPEG du boîtier passe de 8 à 29 à moins
-  de 2, en une demi‑seconde. En ligne de commande : `luma film-lut --camera`.
+  de 2, en une demi‑seconde. Avec d'autres RAW du même boîtier choisis (douze au
+  plus), la mesure les prend tous : plus de couleurs, un film plus juste sur les photos
+  suivantes ; ceux d'un autre boîtier sont laissés de côté. En ligne de commande :
+  `luma film-lut --camera`.
 - **Tout remettre à zéro** : dans le menu de la langue (« ••• » sur iPhone), après une
   confirmation qui dit ce qui change et ce qui reste : les réglages des photos choisies
   et de la photo ouverte sont effacés (notes, mots‑clés et fichiers gardés ; Annuler

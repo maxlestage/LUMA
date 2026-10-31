@@ -235,11 +235,40 @@ fn affine(m: &[[f64; 4]; 3], p: [f32; 3]) -> [f32; 3] {
 
 /// Mesure la pellicule sur une ou plusieurs paires ; LUT de `size`³ couleurs.
 pub fn measure(pairs: &[Pair], size: usize, title: &str) -> Result<Measured> {
-    let n = size.clamp(9, 65);
     let mut data = Vec::new();
     for pair in pairs {
         data.extend(samples(pair)?);
     }
+    fit(data, size, title)
+}
+
+/// Comme [`measure`], mais une paire qui ne se compare pas (images qui ne se
+/// superposent pas, trop peu de pixels) est laissée de côté au lieu d'arrêter la
+/// mesure : le rendu d'un boîtier sur plusieurs de ses photos. Rend aussi le nombre de
+/// paires gardées ; l'erreur de la première paire si aucune ne se compare.
+pub fn measure_tolerant(pairs: &[Pair], size: usize, title: &str) -> Result<(Measured, usize)> {
+    let mut data = Vec::new();
+    let (mut kept, mut first_error) = (0, None);
+    for pair in pairs {
+        match samples(pair) {
+            Ok(s) => {
+                data.extend(s);
+                kept += 1;
+            }
+            Err(e) => {
+                first_error.get_or_insert(e);
+            }
+        }
+    }
+    match first_error {
+        Some(e) if kept == 0 => Err(e),
+        _ => Ok((fit(data, size, title)?, kept)),
+    }
+}
+
+/// La LUT ajustée sur les couleurs appariées `data`.
+fn fit(data: Vec<([f32; 3], [f32; 3])>, size: usize, title: &str) -> Result<Measured> {
+    let n = size.clamp(9, 65);
     if data.is_empty() {
         return Err(Error::Decode("aucune paire à mesurer".into()));
     }
@@ -464,6 +493,24 @@ mod tests {
                 m.after
             );
         }
+        // Toutes ensemble, avec une paire qui ne se superpose pas (le JPEG d'une autre
+        // photo) : laissée de côté, les autres mesurées.
+        let photos: Vec<_> = raws.iter().map(|p| luma_render::Photo::open(p).unwrap()).collect();
+        let mut pairs: Vec<Pair> = photos
+            .iter()
+            .zip(&raws)
+            .map(|(ph, p)| camera_pair(ph, p).unwrap())
+            .collect();
+        let stray = camera_pair(&photos[0], &raws[1]).unwrap();
+        pairs.push(stray);
+        let (m, kept) = measure_tolerant(&pairs, 17, "tous").unwrap();
+        assert_eq!(kept, raws.len());
+        assert!(m.after < m.before, "{} -> {}", m.before, m.after);
+        assert!(
+            measure(&pairs, 17, "tous").is_err(),
+            "la mesure stricte refuse la paire"
+        );
+        assert!(measure_tolerant(&pairs[raws.len()..], 17, "seule").is_err());
         let png = std::env::temp_dir().join(format!("luma-sans-jpeg-{}.png", std::process::id()));
         image::RgbImage::from_pixel(64, 48, image::Rgb([90, 120, 150]))
             .save(&png)

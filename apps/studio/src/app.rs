@@ -5095,16 +5095,16 @@ impl Studio {
                 Event::Measured { result, camera } => {
                     self.measuring = false;
                     match result {
-                        Ok((name, before, after)) => {
+                        Ok((name, before, after, n)) => {
                             let (b, a) = (
                                 format_value(before, 1, false),
                                 format_value(after, 1, false),
                             );
-                            let values: [(&str, &dyn std::fmt::Display); 3] =
-                                [("name", &name), ("before", &b), ("after", &a)];
+                            let values: [(&str, &dyn std::fmt::Display); 4] =
+                                [("name", &name), ("before", &b), ("after", &a), ("n", &n)];
                             self.status = if camera {
                                 trf(
-                                    "Rendu du boîtier mesuré : « {name} » (écart du numérique au JPEG du boîtier {before}, avec ce film {after})",
+                                    "Rendu du boîtier mesuré sur {n} photo(s) : « {name} » (écart du numérique au JPEG du boîtier {before}, avec ce film {after})",
                                     &values,
                                 )
                             } else {
@@ -9294,6 +9294,13 @@ impl Studio {
         };
         let r = photo.raw();
         let camera = camera_name(&r.make, &r.model);
+        // Les autres RAW choisis (douze au plus) : plus de couleurs mesurées.
+        let others: Vec<PathBuf> = self
+            .sync_targets()
+            .into_iter()
+            .filter(|p| luma_raw::is_raw(p))
+            .take(12)
+            .collect();
         self.measuring = true;
         self.status = trf(
             "Mesure du rendu du boîtier : {camera}…",
@@ -9301,7 +9308,11 @@ impl Studio {
         );
         self.worker.measure_film(
             photo,
-            crate::worker::FilmSource::Camera { raw, camera },
+            crate::worker::FilmSource::Camera {
+                raw,
+                others,
+                camera,
+            },
             dir,
         );
     }
@@ -9351,7 +9362,7 @@ impl Studio {
                     egui::Button::new(tr("Mesurer le rendu du boîtier")),
                 )
                 .on_hover_text(tr(
-                    "Compare cette photo au JPEG que le boîtier a rangé dans le RAW et en fait un film : les RAW de ce boîtier rendus comme il le fait.",
+                    "Compare cette photo (et les autres RAW choisis du même boîtier, douze au plus) au JPEG que le boîtier a rangé dans chacun et en fait un film : les RAW de ce boîtier rendus comme il le fait.",
                 ))
                 .on_disabled_hover_text(tr("Ouvrez d'abord un RAW."));
             if camera.clicked()

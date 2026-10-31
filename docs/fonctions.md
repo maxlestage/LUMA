@@ -25,7 +25,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 |---|---|---|
 | Profil | Couleur, Neutre, Vif, Monochrome ; lecture de `crs:CameraProfile` | ✅ |
 | | LUT 3D `.cube` (comme les profils créatifs), à intensité réglable, sur le GPU aussi | ✅ |
-| | Profils fabricant mesurés sur le boîtier lui‑même : « Mesurer le rendu du boîtier » compare le RAW ouvert au JPEG que le boîtier y a rangé (son style d'image de la prise) et en fait un film réutilisable, nommé d'après le boîtier ; `luma film-lut --camera` sur un ou plusieurs RAW | ✅ |
+| | Profils fabricant mesurés sur le boîtier lui‑même : « Mesurer le rendu du boîtier » compare le RAW ouvert au JPEG que le boîtier y a rangé (son style d'image de la prise) et en fait un film réutilisable, nommé d'après le boîtier ; avec les autres RAW choisis du même boîtier (douze au plus), plus de couleurs mesurées ; `luma film-lut --camera` sur un ou plusieurs RAW | ✅ |
 | Base | Balance des blancs telle quelle, température et teinte (échelle DNG) | ✅ |
 | | Balance automatique, préréglages (lumière du jour, nuageux, ombre, tungstène, fluorescent, flash), pipette (W) | ✅ |
 | | Tons automatiques (« Tons auto », `--auto-tone`) : exposition, contraste, hautes lumières et ombres lus sur l'histogramme de la photo, sans IA | ✅ |
