@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Zoom 1:1 en el punto pulsado**: un clic en la foto abre el zoom centrado donde se
+  pulsó, y ya no en la esquina superior izquierda.
 - **Navegador del zoom 1:1**: la foto entera en pequeño en una esquina, con el marco de
   lo que se ve; un clic o un arrastre lleva allí la vista.
 - **La foto y su referencia en una imagen**: «Exportar el par» (vista de referencia)

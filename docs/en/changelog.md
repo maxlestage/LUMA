@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **1:1 zoom on the clicked point**: a click on the photo opens the zoom centred where
+  you clicked, no longer on the top-left corner.
 - **1:1 zoom navigator**: the whole photo in small in a corner, with the frame of what
   you see; a click or a drag moves the view there.
 - **The photo and its reference in one image**: “Export the pair” (reference view)
