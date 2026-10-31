@@ -285,7 +285,13 @@ pub fn write(dir: &Path, show: &Slideshow, photos: &[(Vec<u8>, String)]) -> Resu
         });
     }
     if let (Some(from), Some(file)) = (&show.music, music_file(show)) {
-        std::fs::copy(from, dir.join(file)).map_err(|e| format!("{} : {e}", from.display()))?;
+        let to = dir.join(file);
+        // La musique déjà dans le dossier (un diaporama refait) : la copier sur elle‑même
+        // la viderait.
+        let same = matches!((from.canonicalize(), to.canonicalize()), (Ok(a), Ok(b)) if a == b);
+        if !same {
+            std::fs::copy(from, &to).map_err(|e| format!("{} : {e}", from.display()))?;
+        }
     }
     std::fs::write(dir.join("index.html"), html(show, &slides)).map_err(|e| e.to_string())
 }
