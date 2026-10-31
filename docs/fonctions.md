@@ -56,7 +56,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Corrections d'objectif des ORF d'Olympus et d'OM System (distorsion, aberration chromatique latérale) et des RW2 de Panasonic (distorsion), enregistrées par le boîtier, appliquées automatiquement | ✅ |
 | | Case « Corrections du boîtier » : cochée par défaut, enregistrée dans le XMP (`crs:LensProfileEnable`) ; décochée, la photo revient telle que l'objectif l'a donnée, et les curseurs de distorsion et de vignetage prennent le relais | ✅ |
 | | Distorsion et vignetage des objectifs des autres marques (Canon, Nikon, Pentax…) mesurés sur le JPEG que le boîtier a rangé dans le RAW, déjà corrigé (« Corrections d'après le JPEG du boîtier ») : les curseurs Distorsion et Vignetage réglés, les bords vides retirés ; sur toutes les photos choisies à la fois, en arrière‑plan, chacune la sienne ; `luma lens` (`--write` dans le XMP) | ✅ |
-| | Aberration chromatique longitudinale | ⏳ |
+| | Aberration chromatique longitudinale : « Défrangeage auto » cherche les franges violettes et vertes le long des contours (plus colorées que leurs alentours) et règle le plus petit défrangeage qui les retire ; une vraie couleur d'objet au bord (feuilles sur le ciel) n'est pas touchée | ✅ |
 | Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
 | | Redressement automatique (Maj+R, Maj+V) et guidé : deux à quatre lignes tracées sur la photo règlent la perspective et la rotation | ✅ |
 | | Bords vides rognés : le plus grand cadre centré, aux proportions de la photo, sans bord vide après la Transformation ou la Distorsion | ✅ |

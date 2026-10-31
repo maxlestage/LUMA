@@ -56,7 +56,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Correcciones de objetivo de los ORF de Olympus y OM System (distorsión, aberración cromática lateral) y de los RW2 de Panasonic (distorsión), registradas por la cámara, aplicadas automáticamente | ✅ |
 | | Casilla «Correcciones de la cámara»: marcada por defecto, guardada en el XMP (`crs:LensProfileEnable`); desmarcada, la foto vuelve a ser la que dio el objetivo, y los controles de distorsión y viñeteo toman el relevo | ✅ |
 | | Distorsión y viñeteado de los objetivos de otras marcas (Canon, Nikon, Pentax…) medidos en el JPEG que la cámara guardó en el RAW, ya corregido («Correcciones según el JPEG de la cámara»): se ajustan los controles Distorsión y Viñeteado y se quitan los bordes vacíos; en todas las fotos elegidas a la vez, en segundo plano, cada una la suya; `luma lens` (`--write` en el XMP) | ✅ |
-| | Aberración cromática longitudinal | ⏳ |
+| | Aberración cromática longitudinal: «Desflecado automático» busca los flecos violetas y verdes a lo largo de los contornos (más coloreados que su entorno) y ajusta el menor desflecado que los quita; un color real del objeto en el borde (hojas sobre el cielo) no se toca | ✅ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
 | | Enderezamiento automático (Mayús+R, Mayús+V) y guiado: de dos a cuatro líneas trazadas en la foto ajustan la perspectiva y la rotación | ✅ |
 | | Bordes vacíos recortados: el mayor encuadre centrado, con las proporciones de la foto, sin bordes vacíos tras la Transformación o la Distorsión | ✅ |

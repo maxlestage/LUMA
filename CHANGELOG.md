@@ -4,6 +4,11 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Défrangeage automatique** (Corrections de l'objectif) : les franges violettes et
+  vertes de l'aberration chromatique longitudinale cherchées le long des contours, là
+  où ils sont plus colorés que leurs alentours, et le plus petit défrangeage qui les
+  retire réglé ; une vraie couleur d'objet au bord, des feuilles sur le ciel, n'est
+  pas touchée.
 - **Corrections d'après le JPEG du boîtier plus rapides** : un tiers de temps en moins
   par photo (≈ 860 → 580 ms), aux mêmes valeurs : le JPEG décodé et ses détails
   cherchés une fois pour les trois mesures.

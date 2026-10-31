@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **Desflecado automático** (Correcciones del objetivo): los flecos violetas y verdes
+  de la aberración cromática longitudinal se buscan a lo largo de los contornos, donde
+  son más coloreados que su entorno, y se ajusta el menor desflecado que los quita; un
+  color real del objeto en el borde, hojas sobre el cielo, no se toca.
 - **Correcciones según el JPEG de la cámara más rápidas**: un tercio menos de tiempo
   por foto (≈ 860 → 580 ms), con los mismos valores: el JPEG se decodifica y sus
   detalles se buscan una sola vez para las tres mediciones.
