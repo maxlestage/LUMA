@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Turned before / after divider** (Alt+Y): before on top, after below, the divider
+  drags up and down; for portrait photos.
 - **Before / after in one image**: “Export before / after” (in the side-by-side view)
   writes a JPEG next to the photo, the photo without its edits on the left (its
   geometry kept), edited on the right, to share. From the command line:
