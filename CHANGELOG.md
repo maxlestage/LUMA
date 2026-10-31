@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Curseurs plus réactifs** : le tampon de travail des flous gardé d'un flou à
+  l'autre, aux mêmes pixels : l'accentuation de l'aperçu passe d'environ 80 à 60 ms,
+  un rendu de réglage à 3072 px de 14 % plus rapide.
 - **Un instantané comparé à maintenant** : « Comparer » à côté d'un instantané ouvre la
   vue côte à côte avec lui à gauche (son nom au‑dessus), la photo telle qu'elle est
   réglée à droite : pour choisir entre deux versions d'une retouche. Y referme.

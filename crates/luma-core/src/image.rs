@@ -147,6 +147,37 @@ fn spans(input: usize, output: usize) -> Vec<Vec<(usize, f32)>> {
         .collect()
 }
 
+/// Le tampon de travail des flous, gardé d'un flou à l'autre (voir `Plane::box_blur`) :
+/// au plus un, d'une place d'au plus [`SPARE_LIMIT`] valeurs (un aperçu, pas un export pleine
+/// définition qui garderait 100 Mo pour rien).
+static SPARE: std::sync::Mutex<Vec<f32>> = std::sync::Mutex::new(Vec::new());
+const SPARE_LIMIT: usize = 12_000_000;
+
+/// Un tampon de `n` valeurs au contenu quelconque : celui qu'on garde s'il est assez
+/// grand (et libre : deux flous en même temps, le second en prend un neuf).
+fn spare_plane(n: usize) -> Vec<f32> {
+    let kept = SPARE.try_lock().ok().map(|mut s| std::mem::take(&mut *s));
+    match kept {
+        // Sa place suffit : ramené (ou porté, sur de la mémoire déjà là) à `n` valeurs.
+        Some(mut v) if v.capacity() >= n => {
+            v.truncate(n);
+            v.resize(n, 0.0);
+            v
+        }
+        _ => vec![0.0; n],
+    }
+}
+
+/// Garde `v` pour le prochain flou, s'il n'est pas trop grand.
+fn keep_spare_plane(v: Vec<f32>) {
+    if v.capacity() <= SPARE_LIMIT
+        && let Ok(mut s) = SPARE.try_lock()
+        && s.capacity() <= v.capacity()
+    {
+        *s = v;
+    }
+}
+
 impl Plane {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
@@ -313,13 +344,23 @@ impl Plane {
     /// Trois flous boîte en ligne puis trois en colonne, de rayon `r`, sur `f(v)`. Six
     /// passes, deux tampons qui alternent.
     fn box_blur(&self, r: usize, f: impl Fn(f32) -> f32 + Sync) -> Plane {
-        let (mut a, mut b) = (Plane::new(self.width, self.height), Plane::new(self.width, self.height));
+        // Le tampon de travail repris du flou d'avant quand il y en a un : chaque passe
+        // écrit toutes les valeurs avant qu'on les lise, l'ancien contenu ne compte pas
+        // (les mêmes pixels), et l'on évite les fautes de pages d'un plan neuf.
+        let n = self.width * self.height;
+        let mut a = Plane {
+            width: self.width,
+            height: self.height,
+            data: spare_plane(n),
+        };
+        let mut b = Plane::new(self.width, self.height);
         self.box_rows_map_into(r, &mut a, f);
         a.box_rows_into(r, &mut b);
         b.box_rows_into(r, &mut a);
         a.box_cols_into(r, &mut b);
         b.box_cols_into(r, &mut a);
         a.box_cols_into(r, &mut b);
+        keep_spare_plane(a.data);
         b
     }
 
@@ -529,6 +570,48 @@ impl Plane {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Un flou après d'autres, plus grands ou plus petits, sur d'autres images : le
+    /// tampon gardé de l'un ne déteint pas sur l'autre ; les mêmes bits qu'avec des
+    /// tampons neufs (le calcul d'avant).
+    #[test]
+    fn blurs_in_a_row_give_the_same_bits_as_fresh_ones() {
+        let fresh = |p: &Plane, sigma: f32| {
+            let r = Plane::box_radius(sigma);
+            let (mut a, mut b) = (Plane::new(p.width, p.height), Plane::new(p.width, p.height));
+            p.box_rows_map_into(r, &mut a, |v| v);
+            a.box_rows_into(r, &mut b);
+            b.box_rows_into(r, &mut a);
+            a.box_cols_into(r, &mut b);
+            b.box_cols_into(r, &mut a);
+            a.box_cols_into(r, &mut b);
+            b
+        };
+        for (k, (w, h, sigma)) in [
+            (640, 480, 1.0f32),
+            (200, 150, 0.6),
+            (1024, 768, 2.5),
+            (37, 23, 1.3),
+            (640, 480, 1.0),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let p = Plane {
+                width: w,
+                height: h,
+                data: (0..w * h)
+                    .map(|i| ((i * (7919 + k * 13)) % 1000) as f32 / 1000.0)
+                    .collect(),
+            };
+            let got = p.blur(sigma);
+            let want = fresh(&p, sigma);
+            assert!(
+                got.data.iter().zip(&want.data).all(|(a, b)| a.to_bits() == b.to_bits()),
+                "{w}×{h}, {sigma}"
+            );
+        }
+    }
 
     // L'ancien filtre guidé (un plan neuf par étape), pour vérifier que la version
     // fusionnée donne exactement les mêmes valeurs.
