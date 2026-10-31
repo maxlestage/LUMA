@@ -6306,3 +6306,19 @@ es = Cuadrícula de composición sobre la foto
 fr = Grille sur la photo : {guide}
 en = Grid on the photo: {guide}
 es = Cuadrícula sobre la foto: {guide}
+
+fr = Accordée sur la référence : « {name} » (écart des couleurs moyennes {before}, avec ce film {after})
+en = Matched to the reference: “{name}” (average colour difference {before}, with this film {after})
+es = Igualada con la referencia: «{name}» (diferencia de los colores medios {before}, con esta película {after})
+
+fr = Accord sur {file}…
+en = Matching to {file}…
+es = Igualando con {file}…
+
+fr = Accorder
+en = Match
+es = Igualar
+
+fr = Donne à la photo la répartition des couleurs de la référence (clarté, teintes, saturation), en un film à l'intensité réglable
+en = Gives the photo the colour distribution of the reference (lightness, hues, saturation), as a film with adjustable strength
+es = Da a la foto la distribución de colores de la referencia (claridad, tonos, saturación), como una película de intensidad ajustable

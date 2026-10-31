@@ -3957,3 +3957,30 @@ fn a_composition_grid_on_the_photo() {
     }
     assert_eq!(s.studio().photo_guide, luma_studio::crop::Guide::None);
 }
+
+/// « Accorder » sur la photo de référence : un film « Accord … » (la répartition des
+/// couleurs de la référence) enregistré dans Films et choisi pour la photo ouverte.
+#[test]
+fn a_photo_is_matched_to_the_reference() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("accord-reference") else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let other = photos.iter().find(|p| **p != open).unwrap().clone();
+    s.studio().set_reference(other.clone());
+    s.wait();
+    let films = s.dir.join("Films");
+    std::fs::create_dir_all(&films).unwrap();
+    s.studio().match_to_reference(films.clone());
+    s.wait();
+    let status = s.studio().status().to_owned();
+    assert!(status.starts_with("Accordée sur la référence"), "{status}");
+    let stem = other.file_stem().unwrap().to_string_lossy().into_owned();
+    let cube = films.join(format!("Accord {stem}.cube"));
+    assert!(cube.exists(), "{}", cube.display());
+    let film = s.studio().settings.lut.clone().expect("le film choisi");
+    assert_eq!(film.name, format!("Accord {stem}"));
+    s.capture("accord-reference");
+}
