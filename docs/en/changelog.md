@@ -4,6 +4,10 @@
 
 The professional photo library, step by step.
 
+- **Before / after in one image**: “Export before / after” (in the side-by-side view)
+  writes a JPEG next to the photo, the photo without its edits on the left (its
+  geometry kept), edited on the right, to share. From the command line:
+  `luma develop --before-after`.
 - **More responsive sliders**: the blur work buffer is kept from one blur to the next,
   with the same pixels: preview sharpening drops from about 80 to 60 ms, a 3072 px
   adjustment render is 14% faster.

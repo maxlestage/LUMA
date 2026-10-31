@@ -460,6 +460,41 @@ impl Photo {
         Ok(luma_image::lens::auto_defringe(&base.image, base.scale))
     }
 
+    /// Les réglages de l'« avant » d'une photo réglée avec `settings` : ceux de LÜMA,
+    /// mais avec sa géométrie (recadrage, Transformation, Distorsion, corrections du
+    /// boîtier, fluidité), pour que l'avant et l'après se superposent.
+    pub fn before_settings(&self, settings: &Settings) -> Settings {
+        let mut before = self.default_settings();
+        before.crop = settings.crop;
+        before.transform = settings.transform.clone();
+        before.lens.distortion = settings.lens.distortion;
+        before.lens.camera = settings.lens.camera;
+        before.liquify = settings.liquify.clone();
+        before
+    }
+
+    /// L'avant / après en une seule image, à partager : la photo sans ses retouches
+    /// (sa géométrie gardée) à gauche, retouchée à droite, chacune au grand côté
+    /// `side`, séparées par une bande sombre.
+    pub fn before_after(&self, settings: &Settings, side: usize) -> Result<RgbImage> {
+        let cancel = Cancel::new();
+        let before = self
+            .render(&self.before_settings(settings), Size::Fit(side), &cancel)?
+            .image;
+        let after = self.render(settings, Size::Fit(side), &cancel)?.image;
+        let gap = (side / 64).max(8);
+        let (w, h) = (before.width + gap + after.width, before.height.max(after.height));
+        let mut out = RgbImage::from_fn(w, h, |_, _| [0.02; 3]);
+        for (img, x0) in [(&before, 0), (&after, before.width + gap)] {
+            let y0 = (h - img.height) / 2;
+            for y in 0..img.height {
+                let row = &img.data[y * img.width..(y + 1) * img.width];
+                out.data[(y0 + y) * w + x0..(y0 + y) * w + x0 + img.width].copy_from_slice(row);
+            }
+        }
+        Ok(out)
+    }
+
     /// Les étapes de voisinage, en cache tant que [`luma_image::base_key`] ne change pas.
     pub fn base(&self, settings: &Settings, size: Size, cancel: &Cancel, timings: &mut Timings) -> Result<Base> {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
@@ -906,5 +941,40 @@ mod defringe_tests {
             let got = photo.auto_defringe(&luma_project::Settings::default()).unwrap();
             assert_eq!(got, (0.0, 0.0), "{}", p.display());
         }
+    }
+}
+
+#[cfg(test)]
+mod before_after_tests {
+    /// L'avant / après d'une photo à +1 IL : deux images côte à côte et la bande entre
+    /// elles ; l'après plus clair que l'avant.
+    #[test]
+    fn before_and_after_in_one_image() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/raw-corpus/_DSC0009.ARW");
+        if !p.exists() {
+            eprintln!("corpus absent (scripts/fetch-corpus.sh) : essai ignoré");
+            return;
+        }
+        let photo = super::Photo::open(&p).unwrap();
+        let mut s = photo.default_settings();
+        s.exposure = 1.0;
+        let img = photo.before_after(&s, 640).unwrap();
+        let half = (img.width - 10) / 2;
+        assert!(img.width > 2 * 600 && img.width <= 2 * 640 + 10, "{}", img.width);
+        let mean = |x0: usize, x1: usize| {
+            let mut sum = 0.0f64;
+            let mut n = 0.0f64;
+            for y in 0..img.height {
+                for x in x0..x1 {
+                    sum += f64::from(img.pixel(x, y).iter().sum::<f32>());
+                    n += 1.0;
+                }
+            }
+            sum / n
+        };
+        let (before, after) = (mean(0, half - 20), mean(img.width - half + 20, img.width));
+        assert!(after > before * 1.3, "avant {before}, après {after}");
+        // La bande du milieu : sombre.
+        assert!(img.pixel(img.width / 2, img.height / 2).iter().all(|&v| v < 0.05));
     }
 }
