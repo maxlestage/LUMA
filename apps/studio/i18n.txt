@@ -1829,17 +1829,17 @@ fr = Aucune correction enregistrée dans ce fichier
 en = No correction recorded in this file
 es = Ninguna corrección registrada en este archivo
 
-fr = Distorsion d'après le JPEG du boîtier
-en = Distortion from the camera's JPEG
-es = Distorsión según el JPEG de la cámara
+fr = Corrections d'après le JPEG du boîtier
+en = Corrections from the camera's JPEG
+es = Correcciones según el JPEG de la cámara
 
-fr = Compare la photo au JPEG que le boîtier a rangé dans le RAW, déjà corrigé de son objectif, et règle la Distorsion pour qu'elle ait la même géométrie ; les bords vides sont retirés si la photo n'est pas recadrée.
-en = Compares the photo with the JPEG the camera stored in the RAW, already corrected for its lens, and sets Distortion so it has the same geometry; empty borders are removed if the photo isn't cropped.
-es = Compara la foto con el JPEG que la cámara guardó en el RAW, ya corregido de su objetivo, y ajusta la Distorsión para que tenga la misma geometría; los bordes vacíos se quitan si la foto no está recortada.
+fr = Compare la photo au JPEG que le boîtier a rangé dans le RAW, déjà corrigé de son objectif, et règle la Distorsion et le Vignetage pour qu'elle ait la même géométrie et les mêmes bords ; les bords vides sont retirés si la photo n'est pas recadrée.
+en = Compares the photo with the JPEG the camera stored in the RAW, already corrected for its lens, and sets Distortion and Vignetting so it has the same geometry and the same edges; empty borders are removed if the photo isn't cropped.
+es = Compara la foto con el JPEG que la cámara guardó en el RAW, ya corregido de su objetivo, y ajusta la Distorsión y el Viñeteado para que tenga la misma geometría y los mismos bordes; los bordes vacíos se quitan si la foto no está recortada.
 
-fr = Distorsion d'après le JPEG du boîtier : {value}
-en = Distortion from the camera's JPEG: {value}
-es = Distorsión según el JPEG de la cámara: {value}
+fr = Corrections d'après le JPEG du boîtier : distorsion {distortion}, vignetage {vignetting}
+en = Corrections from the camera's JPEG: distortion {distortion}, vignetting {vignetting}
+es = Correcciones según el JPEG de la cámara: distorsión {distortion}, viñeteado {vignetting}
 
 fr = Supprime ses réglages ; l'original ne change pas
 en = Deletes its settings; the original does not change

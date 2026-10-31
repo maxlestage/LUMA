@@ -6,11 +6,13 @@ The professional photo library, step by step.
 
 - **Faster film and camera-look measurement**: smoothing the LUT (400 passes over
   35,937 nodes) drops from 75 to 41 ms, with the same bits.
-- **Lens distortion for Canon, Nikon, Pentax…**: “Distortion from the camera's JPEG”
-  (Lens corrections, when the file carries none that LÜMA reads) compares the photo
-  with the JPEG the camera stored in the RAW, already corrected for its lens, and sets
-  Distortion for the same geometry; empty borders are removed if the photo isn't
-  cropped. No AI: the same details found on both sides, fitted by least squares.
+- **Lens distortion and vignetting for Canon, Nikon, Pentax…**: “Corrections from the
+  camera's JPEG” (Lens corrections, when the file carries none that LÜMA reads)
+  compares the photo with the JPEG the camera stored in the RAW, already corrected for
+  its lens, and sets Distortion and Vignetting for the same geometry and the same
+  edges; empty borders are removed if the photo isn't cropped. No AI: the same details
+  found on both sides, fitted by least squares; for vignetting, the camera's tone curve
+  is learned in the centre, then undone towards the edges.
 - **The glimpse when a photo opens is two to three times faster**: the preview the
   camera stored in the RAW is shrunk on every core, with the same pixels. At 2048 px:
   RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms; measuring the

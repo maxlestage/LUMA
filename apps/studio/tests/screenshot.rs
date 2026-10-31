@@ -3791,9 +3791,9 @@ fn the_camera_look_becomes_a_film() {
     s.capture("rendu-boitier");
 }
 
-/// « Distorsion d'après le JPEG du boîtier » sur le NEF (aucune correction enregistrée
-/// que LÜMA lise) : la Distorsion réglée d'après le JPEG, les bords vides retirés par
-/// un recadrage, annulable.
+/// « Corrections d'après le JPEG du boîtier » sur le NEF (aucune correction enregistrée
+/// que LÜMA lise) : la Distorsion et le Vignetage réglés d'après le JPEG, les bords
+/// vides retirés par un recadrage.
 #[test]
 fn the_lens_distortion_is_read_from_the_camera_jpeg() {
     let _gpu = one_at_a_time();
@@ -3810,11 +3810,13 @@ fn the_lens_distortion_is_read_from_the_camera_jpeg() {
     let label = s.studio().distortion_from_camera().expect("la mesure");
     s.wait();
     assert!(
-        label.starts_with("Distorsion d'après le JPEG du boîtier"),
+        label.starts_with("Corrections d'après le JPEG du boîtier"),
         "{label}"
     );
     let d = s.studio().settings.lens.distortion;
     assert!(d < -15.0, "{d}");
+    let v = s.studio().settings.lens.vignetting;
+    assert!(v > 15.0, "{v}");
     assert!(
         !s.studio().settings.crop.is_identity(),
         "les bords vides retirés"
