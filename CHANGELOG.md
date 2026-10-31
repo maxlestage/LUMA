@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Zoom 1:1 sur le point cliqué** : un clic sur la photo ouvre le zoom centré là où
+  l'on a cliqué, et non plus sur le coin haut gauche.
 - **Navigateur du zoom 1:1** : la photo entière en petit dans un coin, avec le cadre de
   ce qu'on voit ; un clic ou un glissement y mène la vue.
 - **La photo et sa référence en une image** : « Exporter la paire » (vue de référence)
