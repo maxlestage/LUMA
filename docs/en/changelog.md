@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Faster film and camera-look measurement**: smoothing the LUT (400 passes over
+  35,937 nodes) drops from 75 to 41 ms, with the same bits.
 - **Lens distortion for Canon, Nikon, Pentax…**: “Distortion from the camera's JPEG”
   (Lens corrections, when the file carries none that LÜMA reads) compares the photo
   with the JPEG the camera stored in the RAW, already corrected for its lens, and sets

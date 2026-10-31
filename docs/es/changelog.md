@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Medición de películas y del aspecto de la cámara más rápida**: el suavizado de la
+  LUT (400 pasadas sobre 35 937 nodos) baja de 75 a 41 ms, con los mismos bits.
 - **La distorsión de los objetivos Canon, Nikon, Pentax…**: «Distorsión según el JPEG
   de la cámara» (Correcciones del objetivo, cuando el archivo no lleva ninguna que LÜMA
   lea) compara la foto con el JPEG que la cámara guardó en el RAW, ya corregido de su
