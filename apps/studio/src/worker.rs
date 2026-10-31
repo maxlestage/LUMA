@@ -109,6 +109,13 @@ pub enum Event {
         size: [usize; 2],
         rgba: Vec<u8>,
     },
+    /// La photo sans ses retouches (sa géométrie gardée), pour l'avant / après côte à
+    /// côte.
+    Before {
+        tag: u64,
+        size: [usize; 2],
+        rgba: Vec<u8>,
+    },
     /// L'aperçu d'un préréglage sur la photo affichée.
     Preview {
         tag: u64,
@@ -655,6 +662,29 @@ impl Worker {
                 }
             })
             .expect("fil de la comparaison");
+    }
+
+    /// Développe `photo` avec `settings` (l'« avant » de la vue côte à côte), à `size`.
+    pub fn render_before(&self, photo: Arc<Photo>, settings: Settings, size: Size, tag: u64) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-avant".into())
+            .spawn(move || {
+                let Ok(r) = caught(|| {
+                    photo
+                        .render(&settings, size, &Cancel::new())
+                        .map_err(|e| e.to_string())
+                }) else {
+                    return;
+                };
+                let _ = sender.send(Event::Before {
+                    tag,
+                    size: [r.image.width, r.image.height],
+                    rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
+                });
+                repaint();
+            })
+            .expect("fil de l'avant");
     }
 
     pub fn previews(&self, photo: Arc<Photo>, settings: Vec<Settings>, tag: u64) {

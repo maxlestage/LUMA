@@ -236,6 +236,7 @@ pub const ACTIONS: &[Action] = &[
     a("label3", "Libellé bleu", &[Combo::new(Key::Num9)]),
     a("label4", "Libellé violet", &[]),
     a("before", "Avant / après", &[Combo::new(Key::Backslash)]),
+    a("split", "Avant / après côte à côte", &[Combo::new(Key::Y)]),
     a("zoom", "Zoom 100 %", &[Combo::new(Key::Z)]),
     a("clipping", "Écrêtage", &[Combo::new(Key::J)]),
     a("scope", "Instruments de mesure", &[Combo::shift(Key::J)]),

@@ -425,6 +425,9 @@ struct CropTool {
 }
 
 /// Ce qui a été demandé au rendu, pour ne pas redemander la même chose.
+/// Ce dont dépend l'« avant » de la vue côte à côte : la photo, ses réglages, la taille.
+type BeforeKey = (PathBuf, Settings, Size);
+
 #[derive(PartialEq)]
 struct Request {
     path: PathBuf,
@@ -861,6 +864,11 @@ pub struct Studio {
     /// Les aperçus notés dans le journal (iPhone et iPad).
     renders_logged: u32,
     pub before: bool,
+    /// L'avant / après côte à côte (Y) : la place de la séparation (0 à 1 sur la largeur
+    /// de la photo), l'« avant » rendu (ce qui l'a donné, sa texture) et celui demandé.
+    pub split: Option<f32>,
+    before_view: Option<(BeforeKey, TextureHandle)>,
+    before_asked: Option<(u64, BeforeKey)>,
     clipping: bool,
     proofing: Proofing,
     zoom: bool,
@@ -1279,6 +1287,9 @@ impl Studio {
             render_gpu: false,
             renders_logged: 0,
             before: false,
+            split: None,
+            before_view: None,
+            before_asked: None,
             clipping: false,
             proofing: Proofing::default(),
             zoom: false,
@@ -4869,6 +4880,7 @@ impl Studio {
             && self.printing.is_none()
             && !self.measuring
             && self.lens_batch.0 == 0
+            && (self.split.is_none() || self.before_asked.is_none())
     }
 
     fn select(&mut self, index: usize) {
@@ -5074,6 +5086,22 @@ impl Studio {
                 }
                 Event::AutoBalanced { path, balance } => self.apply_auto_balance(path, balance),
                 Event::LensMeasured { path, result } => self.apply_lens_measure(path, result),
+                Event::Before { tag, size, rgba } => {
+                    if let Some((_, key)) = self.before_asked.take_if(|(t, _)| *t == tag) {
+                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        match &mut self.before_view {
+                            Some((k, texture)) => {
+                                texture.set(image, TextureOptions::LINEAR);
+                                *k = key;
+                            }
+                            None => {
+                                let texture =
+                                    ctx.load_texture("avant", image, TextureOptions::LINEAR);
+                                self.before_view = Some((key, texture));
+                            }
+                        }
+                    }
+                }
                 Event::Compared {
                     tag,
                     index,
@@ -6520,6 +6548,14 @@ impl Studio {
                 }
             }
             "before" => self.before = !self.before,
+            "split" => {
+                self.split = if self.split.is_some() {
+                    None
+                } else {
+                    Some(0.5)
+                };
+                self.before = false;
+            }
             "prev" | "next" => {
                 let visible = self.visible();
                 let next = match self
@@ -8246,8 +8282,94 @@ impl Studio {
                 {
                     self.act("before");
                 }
+                if !compact
+                    && ui
+                        .selectable_label(self.split.is_some(), tr("Côte à côte"))
+                        .on_hover_text(tr("Y : l'avant et l'après de part et d'autre d'une séparation qu'on glisse"))
+                        .clicked()
+                {
+                    self.act("split");
+                }
             });
         });
+    }
+
+    /// La texture de l'« avant » de la vue côte à côte, si elle est à jour ; sinon elle
+    /// est demandée (la photo sans ses retouches, mais avec sa géométrie : recadrage,
+    /// Transformation, Distorsion, corrections du boîtier, fluidité), à la taille de
+    /// l'aperçu, et l'ancienne sert en attendant.
+    fn split_before(&mut self) -> Option<egui::TextureId> {
+        let photo = self.photo.clone()?;
+        let request = self.last_request.as_ref()?;
+        let mut settings = photo.default_settings();
+        settings.crop = self.settings.crop;
+        settings.transform = self.settings.transform.clone();
+        settings.lens.distortion = self.settings.lens.distortion;
+        settings.lens.camera = self.settings.lens.camera;
+        settings.liquify = self.settings.liquify.clone();
+        let key: BeforeKey = (request.path.clone(), settings, request.size);
+        let fresh = self.before_view.as_ref().is_some_and(|(k, _)| *k == key);
+        let asked = self.before_asked.as_ref().is_some_and(|(_, k)| *k == key);
+        if !fresh && !asked {
+            // Un numéro à part : celui des aperçus (`generation`) dit quand l'aperçu est à jour.
+            static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+            let tag = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            self.worker.render_before(photo, key.1.clone(), key.2, tag);
+            self.before_asked = Some((tag, key));
+        }
+        // Une autre photo : son ancien « avant » n'a rien à faire là.
+        self.before_view
+            .as_ref()
+            .filter(|(k, _)| k.0 == request.path)
+            .map(|(_, t)| t.id())
+    }
+
+    /// La séparation de la vue côte à côte : un trait et sa poignée, qu'on glisse ; les
+    /// mots « Avant » et « Après » de part et d'autre.
+    fn split_divider(&mut self, ui: &mut Ui, painter: &egui::Painter, target: Rect, f: f32) {
+        let x = target.min.x + f * target.width();
+        let grip = Rect::from_center_size(pos2(x, target.center().y), vec2(24.0, target.height()));
+        let r = ui
+            .interact(grip, ui.scope_id().with("separation"), egui::Sense::drag())
+            .on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
+        r.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::Role::Slider, true, tr("Séparation avant / après"))
+        });
+        if let Some(p) = r.interact_pointer_pos().filter(|_| r.dragged()) {
+            self.split = Some(((p.x - target.min.x) / target.width()).clamp(0.02, 0.98));
+        }
+        let line = Color32::from_white_alpha(220);
+        painter.line_segment(
+            [pos2(x, target.min.y), pos2(x, target.max.y)],
+            egui::Stroke::new(1.5, line),
+        );
+        painter.circle(
+            pos2(x, target.center().y),
+            9.0,
+            Color32::from_black_alpha(140),
+            egui::Stroke::new(1.5, line),
+        );
+        let label = |at: egui::Pos2, align: egui::Align2, text: &str| {
+            let font = egui::FontId::proportional(12.0);
+            painter.text(
+                at + vec2(1.0, 1.0),
+                align,
+                text,
+                font.clone(),
+                Color32::from_black_alpha(160),
+            );
+            painter.text(at, align, text, font, Color32::WHITE);
+        };
+        label(
+            pos2(x - 10.0, target.min.y + 8.0),
+            egui::Align2::RIGHT_TOP,
+            tr("Avant"),
+        );
+        label(
+            pos2(x + 10.0, target.min.y + 8.0),
+            egui::Align2::LEFT_TOP,
+            tr("Après"),
+        );
     }
 
     /// Le rail des outils (vertical ; horizontal sur iPhone).
@@ -11282,6 +11404,11 @@ impl Studio {
         self.request_render(rect.width().max(rect.height()) * ppp, pressed);
         self.probe = None;
         let painter = ui.painter_at(rect);
+        // L'« avant » de la vue côte à côte, demandé s'il le faut.
+        let before_texture = self
+            .split
+            .filter(|_| !self.before && !self.zoom && self.crop_tool.is_none())
+            .and_then(|_| self.split_before());
         let Some(t) = &self.texture else {
             // L'accueil : le logo, et ce qu'on peut faire.
             let side = (rect.width().min(rect.height()) * 0.5).clamp(120.0, 420.0);
@@ -11430,7 +11557,29 @@ impl Studio {
             }
         } else {
             let target = fit(rect.shrink(18.0), iw, ih);
-            painter.image(t.id(), target, uv, Color32::WHITE);
+            let split = self.split.filter(|_| !self.before);
+            match (split, before_texture) {
+                (Some(f), Some(before)) => {
+                    // L'« avant » à gauche de la séparation, la photo retouchée à droite :
+                    // les mêmes coordonnées de part et d'autre (même géométrie).
+                    let x = target.min.x + f * target.width();
+                    painter.image(
+                        before,
+                        Rect::from_min_max(target.min, pos2(x, target.max.y)),
+                        Rect::from_min_max(pos2(0.0, 0.0), pos2(f, 1.0)),
+                        Color32::WHITE,
+                    );
+                    painter.image(
+                        t.id(),
+                        Rect::from_min_max(pos2(x, target.min.y), target.max),
+                        Rect::from_min_max(pos2(f, 0.0), pos2(1.0, 1.0)),
+                        Color32::WHITE,
+                    );
+                }
+                _ => {
+                    painter.image(t.id(), target, uv, Color32::WHITE);
+                }
+            }
             self.edit_label(&painter, target);
             let sense = if self.targeting || crate::touch() {
                 egui::Sense::click_and_drag()
@@ -11438,6 +11587,9 @@ impl Studio {
                 egui::Sense::click()
             };
             let r = ui.interact(target, ui.scope_id().with("photo"), sense);
+            if let Some(f) = split {
+                self.split_divider(ui, &painter, target, f);
+            }
             self.probe = r.hover_pos().map(|p| {
                 [
                     (p.x - target.min.x) / target.width(),
