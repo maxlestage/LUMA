@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Navegador del zoom 1:1**: la foto entera en pequeño en una esquina, con el marco de
+  lo que se ve; un clic o un arrastre lleva allí la vista.
 - **La foto y su referencia en una imagen**: «Exportar el par» (vista de referencia)
   escribe un JPEG junto a la foto, la referencia a la izquierda y la foto ajustada a la
   derecha.

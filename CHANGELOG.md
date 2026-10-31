@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Navigateur du zoom 1:1** : la photo entière en petit dans un coin, avec le cadre de
+  ce qu'on voit ; un clic ou un glissement y mène la vue.
 - **La photo et sa référence en une image** : « Exporter la paire » (vue de référence)
   écrit un JPEG à côté de la photo, la référence à gauche, la photo réglée à droite.
 - **Séparation avant / après tournée** (Alt+Y) : l'avant en haut, l'après en bas, la

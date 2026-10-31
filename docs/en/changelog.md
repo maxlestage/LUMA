@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **1:1 zoom navigator**: the whole photo in small in a corner, with the frame of what
+  you see; a click or a drag moves the view there.
 - **The photo and its reference in one image**: “Export the pair” (reference view)
   writes a JPEG next to the photo, the reference on the left, the edited photo on the
   right.
