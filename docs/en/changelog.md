@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **A snapshot compared with now**: “Compare” next to a snapshot opens the side-by-side
+  view with it on the left (its name above), the photo as currently edited on the
+  right: to choose between two versions of an edit. Y closes it.
 - **Match to the reference**: with a reference photo shown, “Match” gives the photo the
   reference's colour distribution (lightness, hues, saturation: means and spreads in
   OKLab, no AI), as an “Accord …” film with adjustable strength, saved for later

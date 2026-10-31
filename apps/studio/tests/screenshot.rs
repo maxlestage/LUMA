@@ -3984,3 +3984,48 @@ fn a_photo_is_matched_to_the_reference() {
     assert_eq!(film.name, format!("Accord {stem}"));
     s.capture("accord-reference");
 }
+
+/// Un instantané comparé à la photo telle qu'elle est (« Comparer ») : la vue côte à
+/// côte s'ouvre, l'instantané à gauche (plus sombre ici), la photo d'aujourd'hui à
+/// droite ; Y la referme et revient à l'avant / après ordinaire.
+#[test]
+fn a_snapshot_side_by_side_with_now() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("instantane-cote") else {
+        return;
+    };
+    s.studio().take_snapshot(Some("Sombre"));
+    s.studio().settings.exposure = 1.0;
+    s.wait();
+    s.studio().compare_snapshot(0);
+    assert_eq!(s.studio().split, Some(0.5));
+    assert_eq!(
+        s.studio().split_against.as_ref().map(|(n, _)| n.as_str()),
+        Some("Sombre")
+    );
+    s.wait();
+    s.capture("instantane-cote");
+    let divider = s.harness.get_by_label("Séparation avant / après").rect();
+    let column = |s: &mut Session, f: f32| {
+        s.studio().split = Some(f);
+        s.harness.run_steps(3);
+        let image = s.harness.render().expect("rendu de l'interface");
+        let (mut sum, mut n) = (0.0f64, 0.0f64);
+        for y in (divider.min.y as u32 + 40..divider.max.y as u32 - 40).step_by(4) {
+            for dx in 0..20u32 {
+                let p = image.get_pixel(divider.center().x as u32 + dx, y);
+                sum += f64::from(p[0]) + f64::from(p[1]) + f64::from(p[2]);
+                n += 3.0;
+            }
+        }
+        sum / n
+    };
+    let (snapshot, now) = (column(&mut s, 0.9), column(&mut s, 0.1));
+    assert!(
+        now > snapshot + 15.0,
+        "instantané {snapshot:.1}, maintenant {now:.1}"
+    );
+    s.keys(&[(NONE, Key::Y)]);
+    assert_eq!(s.studio().split, None);
+    assert!(s.studio().split_against.is_none());
+}
