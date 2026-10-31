@@ -641,7 +641,10 @@ impl RawPhoto {
             }
         };
         let mut img = if img.width().max(img.height()) > max_side {
-            img.thumbnail(max_side, max_side)
+            match img {
+                image::DynamicImage::ImageRgb8(rgb) => image::DynamicImage::ImageRgb8(shrink(&rgb, max_side)),
+                other => other.thumbnail(max_side, max_side),
+            }
         } else {
             img
         };
@@ -992,6 +995,79 @@ fn decode_scaled(jpeg: &[u8], side: u32) -> Option<image::DynamicImage> {
     image::RgbImage::from_raw(sw, sh, rgb).map(image::DynamicImage::ImageRgb8)
 }
 
+/// `img` réduite pour tenir dans `side` × `side` : exactement les pixels de la
+/// réduction du codeur d'images (`thumbnail` : chaque pixel d'arrivée, la moyenne
+/// arrondie des pixels de départ qu'il couvre, bornes calculées de même), mais les
+/// sommes faites colonne par colonne puis sur la ligne, une bande de lignes par cœur,
+/// sans passer par l'accès générique pixel à pixel (lui coûtait 46 à 60 ms pour
+/// 1600 px). Un agrandissement (jamais demandé ici) passe par le codeur lui‑même.
+fn shrink(img: &image::RgbImage, side: u32) -> image::RgbImage {
+    let (width, height) = img.dimensions();
+    // Les dimensions d'arrivée, comme le codeur les calcule.
+    let ratio = (f64::from(side) / f64::from(width)).min(f64::from(side) / f64::from(height));
+    let nw = ((f64::from(width) * ratio).round() as u32).max(1);
+    let nh = ((f64::from(height) * ratio).round() as u32).max(1);
+    if width == 0 || height == 0 || nw > width || nh > height {
+        return image::DynamicImage::ImageRgb8(img.clone())
+            .thumbnail(side, side)
+            .to_rgb8();
+    }
+    let x_ratio = width as f32 / nw as f32;
+    let y_ratio = height as f32 / nh as f32;
+    // Les colonnes de départ de chaque colonne d'arrivée : [left, right).
+    let cols: Vec<(usize, usize)> = (0..nw)
+        .map(|x| {
+            let leftf = x as f32 * x_ratio;
+            let rightf = leftf + x_ratio;
+            let left = (leftf.ceil() as u32).clamp(0, width - 1);
+            let right = (rightf.ceil() as u32).clamp(left, width);
+            (left as usize, right as usize)
+        })
+        .collect();
+    // Une réduction : chaque pixel d'arrivée couvre au moins un pixel entier (le seul
+    // cas du codeur où l'on moyenne un bloc). Sinon, le codeur lui‑même.
+    let rows: Vec<(usize, usize)> = (0..nh)
+        .map(|y| {
+            let bottomf = y as f32 * y_ratio;
+            let topf = bottomf + y_ratio;
+            let bottom = (bottomf.ceil() as u32).clamp(0, height - 1);
+            let top = (topf.ceil() as u32).clamp(bottom, height);
+            (bottom as usize, top as usize)
+        })
+        .collect();
+    if cols.iter().any(|(l, r)| l == r) || rows.iter().any(|(b, t)| b == t) {
+        return image::DynamicImage::ImageRgb8(img.clone())
+            .thumbnail(side, side)
+            .to_rgb8();
+    }
+    let src = img.as_raw();
+    let stride = width as usize * 3;
+    let mut out = vec![0u8; nw as usize * nh as usize * 3];
+    out.par_chunks_mut(nw as usize * 3).zip(rows.par_iter()).for_each_init(
+        || vec![0u32; stride],
+        |column, (line, &(bottom, top))| {
+            column.fill(0);
+            for y in bottom..top {
+                for (c, &v) in column.iter_mut().zip(&src[y * stride..(y + 1) * stride]) {
+                    *c += u32::from(v);
+                }
+            }
+            for (o, &(left, right)) in line.as_chunks_mut::<3>().0.iter_mut().zip(&cols) {
+                let n = ((right - left) * (top - bottom)) as u32;
+                let round = n / 2;
+                let mut sum = [0u32; 3];
+                for px in column[left * 3..right * 3].as_chunks::<3>().0 {
+                    for c in 0..3 {
+                        sum[c] += px[c];
+                    }
+                }
+                *o = sum.map(|v| ((v + round) / n).min(255) as u8);
+            }
+        },
+    );
+    image::RgbImage::from_raw(nw, nh, out).expect("taille de la réduction")
+}
+
 /// Les `n` premiers octets d'un fichier (moins s'il est plus court).
 fn read_head(path: &Path, n: usize) -> Option<Vec<u8>> {
     use std::io::Read;
@@ -1097,6 +1173,40 @@ fn embedded_jpegs(bytes: &[u8]) -> Vec<EmbeddedJpeg> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_shrunk_preview_is_the_same_as_the_image_coders() {
+        // Des tailles et des rapports qui ne tombent pas juste (de presque 1 à 30), des
+        // pixels sans motif ; et un agrandissement, rendu par le codeur lui‑même.
+        let mut seed = 0x9E37_79B9u32;
+        for (w, h, side) in [
+            (1616, 1080, 1600),
+            (1620, 1080, 1600),
+            (2208, 1472, 1600),
+            (1920, 1440, 1600),
+            (4032, 3024, 256),
+            (8192, 5464, 1600),
+            (8192, 5464, 160),
+            (101, 37, 50),
+            (37, 101, 9),
+            (640, 424, 639),
+            (33, 31, 32),
+            (20, 10, 64),
+        ] {
+            let img = image::RgbImage::from_fn(w, h, |_, _| {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                image::Rgb([seed as u8, (seed >> 8) as u8, (seed >> 16) as u8])
+            });
+            let reference = image::DynamicImage::ImageRgb8(img.clone())
+                .thumbnail(side, side)
+                .to_rgb8();
+            let got = shrink(&img, side);
+            assert_eq!(got.dimensions(), reference.dimensions(), "{w} × {h} → {side}");
+            assert!(got == reference, "{w} × {h} → {side}");
+        }
+    }
 
     #[test]
     fn embedded_jpegs_are_found_with_their_size() {

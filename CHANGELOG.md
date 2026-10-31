@@ -4,6 +4,10 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Le coup d'œil à l'ouverture deux à trois fois plus rapide** : l'aperçu que le
+  boîtier a rangé dans le RAW, réduit sur tous les cœurs, aux mêmes pixels. À 2048 px :
+  RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms ; la mesure du
+  rendu du boîtier en profite aussi.
 - **Le rendu du boîtier, mesuré** : « Mesurer le rendu du boîtier » (Films › Mes
   pellicules) compare le RAW ouvert au JPEG que le boîtier y a rangé et en fait un film,
   nommé d'après le boîtier (« Sony ILCE-7M3 JPEG ») : ses RAW rendus comme il le fait,

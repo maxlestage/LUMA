@@ -4,6 +4,10 @@
 
 The professional photo library, step by step.
 
+- **The glimpse when a photo opens is two to three times faster**: the preview the
+  camera stored in the RAW is shrunk on every core, with the same pixels. At 2048 px:
+  RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms; measuring the
+  camera's look benefits too.
 - **The camera's look, measured**: “Measure the camera's look” (Films › My film stocks)
   compares the open RAW with the JPEG the camera stored in it and turns it into a film
   named after the camera (“Sony ILCE-7M3 JPEG”): its RAW files rendered the way it
