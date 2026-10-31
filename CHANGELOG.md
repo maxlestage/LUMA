@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Mesure des pellicules et du rendu du boîtier plus rapide** : le lissage de la LUT
+  (400 tours sur 35 937 nœuds) passe de 75 à 41 ms, aux mêmes bits.
 - **La distorsion des objectifs Canon, Nikon, Pentax…** : « Distorsion d'après le JPEG
   du boîtier » (Corrections de l'objectif, quand le fichier n'en porte pas que LÜMA
   lise) compare la photo au JPEG que le boîtier a rangé dans le RAW, déjà corrigé de
