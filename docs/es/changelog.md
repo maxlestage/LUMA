@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **Igualar con la referencia**: con una foto de referencia a la vista, «Igualar» da a
+  la foto la distribución de colores de la referencia (claridad, tonos, saturación:
+  medias y extensiones en OKLab, sin IA), como una película «Accord …» de intensidad
+  ajustable, guardada para las fotos siguientes.
 - **Cuadrícula de composición sobre la foto** (H): las guías del recorte (tercios,
   proporción áurea, diagonales, triángulos y espiral áureos, cuadrícula) sobre la foto
   mientras se ajusta, para juzgar un encuadre, un horizonte, las verticales; Mayús+O

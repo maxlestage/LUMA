@@ -45,6 +45,15 @@ pub struct LensMeasure {
     pub crop: luma_project::Crop,
 }
 
+/// Ce qu'une mesure de film a mesuré : une pellicule, le rendu du boîtier, ou l'accord
+/// sur une photo de référence.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MeasureKind {
+    Film,
+    Camera,
+    Reference,
+}
+
 /// Ce qu'on mesure contre le rendu neutre d'une photo.
 pub enum FilmSource {
     /// Le scan de la même scène sur pellicule.
@@ -55,6 +64,12 @@ pub enum FilmSource {
         raw: PathBuf,
         others: Vec<PathBuf>,
         camera: String,
+    },
+    /// La photo de référence `path` (développée avec ses réglages), à laquelle on
+    /// accorde la photo développée avec `settings`.
+    Reference {
+        path: PathBuf,
+        settings: Box<Settings>,
     },
 }
 
@@ -134,7 +149,7 @@ pub enum Event {
     /// nombre de photos mesurées.
     Measured {
         result: Result<(String, f32, f32, usize), String>,
-        camera: bool,
+        kind: MeasureKind,
     },
     /// Une photo de l'export est écrite (ou a échoué) : `done` sur `total`.
     Exported {
@@ -467,6 +482,14 @@ impl Worker {
                             );
                             (pairs, format!("{camera} JPEG"))
                         }
+                        FilmSource::Reference { path, .. } => (
+                            Vec::new(),
+                            format!(
+                                "Accord {}",
+                                path.file_stem()
+                                    .map_or_else(String::new, |s| s.to_string_lossy().into_owned())
+                            ),
+                        ),
                     };
                     // Un nom libre : « Portra », « Portra 2 »…
                     let mut name = stem.clone();
@@ -485,6 +508,21 @@ impl Worker {
                         FilmSource::Camera { .. } => {
                             film::measure_tolerant(&pairs, 33, &name).map_err(|e| e.to_string())?
                         }
+                        FilmSource::Reference { path, settings } => {
+                            let source = film::reference_with(&photo, settings)
+                                .map_err(|e| e.to_string())?;
+                            let other =
+                                crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+                            let own =
+                                read_sidecar(path).unwrap_or_else(|| other.default_settings());
+                            let reference =
+                                film::reference_with(&other, &own).map_err(|e| e.to_string())?;
+                            (
+                                film::transfer(&source, &reference, 33, &name)
+                                    .map_err(|e| e.to_string())?,
+                                1,
+                            )
+                        }
                     };
                     let path = dir.join(format!("{name}.cube"));
                     luma_core::save(&path, m.cube.to_text())
@@ -492,8 +530,12 @@ impl Worker {
                     luma_image::cube::register(&name, m.cube);
                     Ok((name, m.before, m.after, kept))
                 });
-                let camera = matches!(source, FilmSource::Camera { .. });
-                let _ = sender.send(Event::Measured { result, camera });
+                let kind = match source {
+                    FilmSource::Scan(_) => MeasureKind::Film,
+                    FilmSource::Camera { .. } => MeasureKind::Camera,
+                    FilmSource::Reference { .. } => MeasureKind::Reference,
+                };
+                let _ = sender.send(Event::Measured { result, kind });
                 repaint();
             })
             .expect("fil de mesure");

@@ -5167,7 +5167,7 @@ impl Studio {
                         ));
                     }
                 }
-                Event::Measured { result, camera } => {
+                Event::Measured { result, kind } => {
                     self.measuring = false;
                     match result {
                         Ok((name, before, after, n)) => {
@@ -5177,16 +5177,19 @@ impl Studio {
                             );
                             let values: [(&str, &dyn std::fmt::Display); 4] =
                                 [("name", &name), ("before", &b), ("after", &a), ("n", &n)];
-                            self.status = if camera {
-                                trf(
+                            self.status = match kind {
+                                crate::worker::MeasureKind::Camera => trf(
                                     "Rendu du boîtier mesuré sur {n} photo(s) : « {name} » (écart du numérique au JPEG du boîtier {before}, avec ce film {after})",
                                     &values,
-                                )
-                            } else {
-                                trf(
+                                ),
+                                crate::worker::MeasureKind::Film => trf(
                                     "Pellicule mesurée : « {name} » (écart du numérique au film {before}, avec le film {after})",
                                     &values,
-                                )
+                                ),
+                                crate::worker::MeasureKind::Reference => trf(
+                                    "Accordée sur la référence : « {name} » (écart des couleurs moyennes {before}, avec ce film {after})",
+                                    &values,
+                                ),
                             };
                             self.refresh_luts();
                             if let Some(k) = self.luts.iter().position(|n| *n == name) {
@@ -8341,6 +8344,19 @@ impl Studio {
                     self.act("reference");
                 }
                 if !compact
+                    && self.reference_view
+                    && self.reference.is_some()
+                    && ui
+                        .add_enabled(!self.measuring, egui::Button::new(tr("Accorder")))
+                        .on_hover_text(tr(
+                            "Donne à la photo la répartition des couleurs de la référence (clarté, teintes, saturation), en un film à l'intensité réglable",
+                        ))
+                        .clicked()
+                    && let Some(dir) = crate::dialogs::films_dir()
+                {
+                    self.match_to_reference(dir);
+                }
+                if !compact
                     && ui
                         .selectable_label(self.split.is_some(), tr("Côte à côte"))
                         .on_hover_text(tr("Y : l'avant et l'après de part et d'autre d'une séparation qu'on glisse"))
@@ -8380,6 +8396,31 @@ impl Studio {
             .as_ref()
             .filter(|(k, _)| k.0 == request.path)
             .map(|(_, t)| t.id())
+    }
+
+    /// Accorde la photo ouverte sur la photo de référence (sa répartition de couleurs) :
+    /// un film « Accord … », enregistré dans `dir` (le dossier Films) et choisi.
+    pub fn match_to_reference(&mut self, dir: PathBuf) {
+        let (Some(photo), Some(reference)) = (self.photo.clone(), self.reference.clone()) else {
+            return;
+        };
+        // La photo telle qu'elle est réglée, sans film : celui‑ci viendra de l'accord.
+        let mut settings = self
+            .preset
+            .as_ref()
+            .map_or_else(|| self.settings.clone(), |p| p.2.clone());
+        settings.film = None;
+        settings.lut = None;
+        self.measuring = true;
+        self.status = trf("Accord sur {file}…", &[("file", &file_name(&reference))]);
+        self.worker.measure_film(
+            photo,
+            crate::worker::FilmSource::Reference {
+                path: reference,
+                settings: Box::new(settings),
+            },
+            dir,
+        );
     }
 
     /// Choisit la photo de référence et l'affiche à côté de la photo retouchée ; son
