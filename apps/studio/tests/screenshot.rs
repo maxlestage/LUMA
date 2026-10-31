@@ -4118,3 +4118,26 @@ fn the_reference_pair_is_exported() {
     assert!(img.width() > 2400, "{} × {}", img.width(), img.height());
     assert!(s.studio().status().starts_with("Paire exportée"));
 }
+
+/// Le navigateur du zoom 1:1 : la photo entière en petit dans un coin ; un clic vers son
+/// coin bas droit y mène la vue.
+#[test]
+fn the_zoom_navigator_moves_the_view() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("navigateur") else {
+        return;
+    };
+    s.keys(&[(NONE, Key::Z)]);
+    s.wait();
+    s.harness.run_steps(3);
+    assert_eq!(s.studio().zoom_offset, egui::Vec2::ZERO);
+    let nav = s.harness.get_by_label("Navigateur").rect();
+    let corner = nav.max - egui::vec2(3.0, 3.0);
+    s.harness.drag_at(corner);
+    s.harness.run_steps(2);
+    s.harness.drop_at(corner);
+    s.harness.run_steps(4);
+    s.capture("navigateur");
+    let o = s.studio().zoom_offset;
+    assert!(o.x > 1000.0 && o.y > 500.0, "{o:?}");
+}

@@ -6358,3 +6358,7 @@ es = La referencia y la foto lado a lado en una imagen JPEG, junto a la foto
 fr = Paire exportée : {file}
 en = Pair exported: {file}
 es = Par exportado: {file}
+
+fr = Navigateur
+en = Navigator
+es = Navegador
