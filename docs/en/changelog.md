@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **Faster auto defringe**: purple and green measured together, settings tried several
+  at a time, with the same choices: 356 → 201 ms on the photo where everything must be
+  tried, 287 → 159 ms on synthetic fringes.
 - **Auto defringe** (Lens corrections): the purple and green fringes of longitudinal
   chromatic aberration are looked for along edges, where they are more colourful than
   their surroundings, and the smallest defringe that removes them is set; a real object

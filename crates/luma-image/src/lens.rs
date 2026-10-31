@@ -439,7 +439,7 @@ pub fn auto_defringe(img: &RgbImage, scale: f32) -> (f32, f32) {
         if start < 0.01 {
             return 0.0;
         }
-        for step in (2..=20).step_by(2) {
+        let works = |step: usize| {
             let mut tried = img.clone();
             let lens = Lens {
                 defringe_purple: if violet { step as f32 } else { 0.0 },
@@ -447,15 +447,23 @@ pub fn auto_defringe(img: &RgbImage, scale: f32) -> (f32, f32) {
                 ..Lens::default()
             };
             defringe(&mut tried, &lens, scale);
-            if excess(&tried, violet) <= 0.25 * start {
-                return step as f32;
+            excess(&tried, violet) <= 0.25 * start
+        };
+        // Les réglages essayés par paquets, un par cœur ; le premier qui suffit, dans
+        // l'ordre croissant : le même choix qu'un à un.
+        let steps: Vec<usize> = (2..=20).step_by(2).collect();
+        for batch in steps.chunks(rayon::current_num_threads().max(1)) {
+            let ok: Vec<bool> = batch.par_iter().map(|&step| works(step)).collect();
+            if let Some(i) = ok.iter().position(|&w| w) {
+                return batch[i] as f32;
             }
         }
         // Même au plus fort, la couleur reste : ce n'est pas une frange (des feuilles
         // vertes sur le ciel), et le défrangeage la ternirait.
         0.0
     };
-    (amount(true), amount(false))
+    // Le violet et le vert, chacun de son côté.
+    rayon::join(|| amount(true), || amount(false))
 }
 
 #[cfg(test)]
@@ -478,6 +486,41 @@ mod tests {
                 [0.85, 0.85, 0.85]
             }
         })
+    }
+
+    /// Les réglages choisis sur quinze images de franges (teintes, largeurs, pentes) :
+    /// ceux que donnait l'essai un à un, avant les essais par paquets en parallèle.
+    #[test]
+    fn auto_defringe_chooses_as_before() {
+        let fringes = [
+            [0.4f32, 0.1, 0.5],
+            [0.3, 0.2, 0.35],
+            [0.5, 0.3, 0.6],
+            [0.1, 0.45, 0.12],
+            [0.2, 0.3, 0.2],
+        ];
+        let expected = [
+            [(0.0, 0.0), (18.0, 0.0), (20.0, 0.0)],
+            [(16.0, 0.0), (16.0, 0.0), (16.0, 0.0)],
+            [(14.0, 0.0), (14.0, 0.0), (16.0, 0.0)],
+            [(0.0, 18.0), (0.0, 18.0), (0.0, 20.0)],
+            [(0.0, 12.0), (0.0, 14.0), (0.0, 14.0)],
+        ];
+        for (k, fringe) in fringes.iter().enumerate() {
+            for (w, width) in [1usize, 2, 4].into_iter().enumerate() {
+                let img = RgbImage::from_fn(300, 200, |x, y| {
+                    let band = (x + y * k / 3) % 40;
+                    if band < 18 {
+                        [0.02; 3]
+                    } else if band < 18 + width {
+                        *fringe
+                    } else {
+                        [0.85; 3]
+                    }
+                });
+                assert_eq!(auto_defringe(&img, 1.0), expected[k][w], "teinte {k}, largeur {width}");
+            }
+        }
     }
 
     #[test]

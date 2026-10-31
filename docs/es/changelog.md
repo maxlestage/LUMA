@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Desflecado automático más rápido**: violeta y verde medidos a la vez, los ajustes
+  probados varios a la vez, con las mismas elecciones: 356 → 201 ms en la foto donde
+  hay que probarlo todo, 287 → 159 ms en flecos sintéticos.
 - **Desflecado automático** (Correcciones del objetivo): los flecos violetas y verdes
   de la aberración cromática longitudinal se buscan a lo largo de los contornos, donde
   son más coloreados que su entorno, y se ajusta el menor desflecado que los quita; un
