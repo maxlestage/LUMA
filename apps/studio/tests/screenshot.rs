@@ -4162,3 +4162,46 @@ fn the_zoom_opens_on_the_clicked_point() {
     let o = s.studio().zoom_offset;
     assert!(o.x > 1500.0 && o.y > 1000.0, "{o:?}");
 }
+
+/// « Avant / après » sur deux photos choisies, en arrière‑plan : chacune son JPEG à côté
+/// d'elle, avec ses propres réglages (la photo ouverte, éclaircie, ceux du moment).
+#[test]
+fn the_before_and_after_of_a_selection_are_exported() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("avant-apres-lot") else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let (arw, nef) = (at("_DSC0009.ARW"), at("DSC_0750.NEF"));
+    s.studio().set_current(arw);
+    s.wait();
+    s.studio().settings.exposure = 1.0;
+    s.studio().selected = [arw, nef].into_iter().collect();
+    s.studio().before_after_selected();
+    s.wait();
+    assert_eq!(
+        s.studio().status(),
+        "Avant / après : 2 photo(s) exportée(s), 0 en échec."
+    );
+    for (i, stem) in [(arw, "_DSC0009"), (nef, "DSC_0750")] {
+        let out = photos[i].with_file_name(format!("{stem}-avant-apres.jpg"));
+        let img = image::open(&out).expect("le JPEG").to_rgb8();
+        assert!(img.width() > 3000 && img.width() < 3300, "{}", img.width());
+        if i == arw {
+            // L'après (à droite) plus clair que l'avant : +1 IL de la photo ouverte.
+            let mean = |x0: u32| {
+                let (w, h) = (img.width() / 4, img.height());
+                let mut sum = 0u64;
+                for y in 0..h {
+                    for x in x0..x0 + w {
+                        sum += img.get_pixel(x, y).0.iter().map(|&c| c as u64).sum::<u64>();
+                    }
+                }
+                sum as f64 / (w * h) as f64
+            };
+            let (before, after) = (mean(img.width() / 8), mean(img.width() * 5 / 8));
+            assert!(after > before * 1.2, "{before} {after}");
+        }
+    }
+}
