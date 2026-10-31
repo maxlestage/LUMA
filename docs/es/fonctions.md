@@ -55,7 +55,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Correcciones de objetivo de los RAF de Fujifilm (distorsión, aberración cromática lateral, viñeteo, registradas por la cámara, modo recortado incluido), aplicadas automáticamente | ✅ |
 | | Correcciones de objetivo de los ORF de Olympus y OM System (distorsión, aberración cromática lateral) y de los RW2 de Panasonic (distorsión), registradas por la cámara, aplicadas automáticamente | ✅ |
 | | Casilla «Correcciones de la cámara»: marcada por defecto, guardada en el XMP (`crs:LensProfileEnable`); desmarcada, la foto vuelve a ser la que dio el objetivo, y los controles de distorsión y viñeteo toman el relevo | ✅ |
-| | Distorsión y viñeteado de los objetivos de otras marcas (Canon, Nikon, Pentax…) medidos en el JPEG que la cámara guardó en el RAW, ya corregido («Correcciones según el JPEG de la cámara»): se ajustan los controles Distorsión y Viñeteado y se quitan los bordes vacíos; en todas las fotos elegidas a la vez, en segundo plano, cada una la suya | ✅ |
+| | Distorsión y viñeteado de los objetivos de otras marcas (Canon, Nikon, Pentax…) medidos en el JPEG que la cámara guardó en el RAW, ya corregido («Correcciones según el JPEG de la cámara»): se ajustan los controles Distorsión y Viñeteado y se quitan los bordes vacíos; en todas las fotos elegidas a la vez, en segundo plano, cada una la suya; `luma lens` (`--write` en el XMP) | ✅ |
 | | Aberración cromática longitudinal | ⏳ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
 | | Enderezamiento automático (Mayús+R, Mayús+V) y guiado: de dos a cuatro líneas trazadas en la foto ajustan la perspectiva y la rotación | ✅ |

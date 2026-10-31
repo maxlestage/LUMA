@@ -41,6 +41,7 @@ target/release/luma bench photo.RAF                                   # réactiv
 target/release/luma merge ciel_*.ARW --stack stars                     # empilement d'étoiles → DNG
 target/release/luma merge pano_*.CR3 --pano cylindrical --no-crop      # panorama sans rognage
 target/release/luma film-lut photo.ARW scan.tif -o MaPortra.cube       # mesure une vraie pellicule
+target/release/luma lens ~/Photos/Nikon --write                         # distorsion et vignetage d'après le JPEG du boîtier
 target/release/luma develop photo.ARW --lut MaPortra.cube:80 -o p.jpg   # ce film, à 80 %
 target/release/luma catalog ~/Photos --list                             # la photothèque, par date de prise de vue
 target/release/luma rename ~/Photos/*.ARW --name "{date}_{séquence}" -n  # renommage par lot (aperçu)

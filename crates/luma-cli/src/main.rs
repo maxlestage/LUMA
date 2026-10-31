@@ -15,6 +15,7 @@
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
 //! luma geotag <photo>… --gpx t.gpx  place les photos d'après une trace GPX (dans le XMP)
+//! luma lens <raw>… [--write]       distorsion et vignetage d'après le JPEG du boîtier
 //! luma import [carte] --to dossier  importe une carte (rangement, renommage, 2nd disque)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
@@ -166,6 +167,12 @@ USAGE
       préréglage XMP ou des réglages à chaque image d'une vidéo AVI en Motion JPEG
       (celle de nombreux appareils photo), puis l'enregistre au même format : même
       taille, même rythme, le son recopié tel quel. Pour une vidéo courte (1 Go au plus).
+  luma lens <raw|dossier>… [--write]
+      La distorsion et le vignetage de l'objectif, mesurés sur le JPEG que le boîtier a
+      rangé dans chaque RAW (déjà corrigé) : pour les objectifs dont LÜMA ne lit pas
+      les corrections (Canon, Nikon, Pentax…) ; un RAW qui porte les siennes est laissé
+      de côté. --write les enregistre dans le XMP (réglages, note et mots‑clés gardés ;
+      un recadrage sans bords vides si la photo n'en avait pas).
   luma geotag <photo|dossier>… --gpx trace.gpx [--offset +02:00] [--max-gap 3600]
               [--replace] [--dry-run]
       Place les photos d'après une trace GPX (téléphone, montre, GPS) : chacune prend la
@@ -1772,6 +1779,75 @@ fn bounded<T: std::str::FromStr + PartialOrd>(option: &str, v: Option<String>, l
 }
 
 /// `luma geotag` : les photos placées d'après une trace GPX.
+/// `luma lens` : les corrections d'objectif d'après le JPEG du boîtier.
+fn lens(args: Vec<String>) -> Result<(), String> {
+    use luma_merge::camera_lens;
+    let mut write = false;
+    let mut photos = Vec::new();
+    for a in args {
+        match a.as_str() {
+            "--write" => write = true,
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => {
+                let p = PathBuf::from(a);
+                if p.is_dir() {
+                    let mut found: Vec<PathBuf> = std::fs::read_dir(&p)
+                        .map_err(|e| format!("{} : {e}", p.display()))?
+                        .flatten()
+                        .map(|e| e.path())
+                        .filter(|f| f.is_file() && luma_raw::is_raw(f))
+                        .collect();
+                    found.sort();
+                    photos.extend(found);
+                } else {
+                    photos.push(p);
+                }
+            }
+        }
+    }
+    if photos.is_empty() {
+        return Err("il faut des RAW (ou un dossier)".into());
+    }
+    let (mut done, mut skipped) = (0, 0);
+    for path in &photos {
+        let name = path.display();
+        let photo = Photo::open(path).map_err(|e| format!("{name} : {e}"))?;
+        if photo.has_camera_corrections() {
+            println!("{name} : corrections du boîtier déjà dans le fichier, laissée de côté");
+            skipped += 1;
+            continue;
+        }
+        let (distortion, vignetting) = match camera_lens::corrections(&photo, path) {
+            Ok((d, v)) => (d.round(), v.round()),
+            Err(e) => {
+                println!("{name} : {e}, laissée de côté");
+                skipped += 1;
+                continue;
+            }
+        };
+        println!("{name} : distorsion {distortion:+}, vignetage {vignetting:+}");
+        if write {
+            let mut s = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
+            s.lens.distortion = distortion;
+            s.lens.vignetting = vignetting;
+            s.lens.vignetting_midpoint = camera_lens::MIDPOINT;
+            if s.crop.is_identity() {
+                let (w, h) = photo.full_size();
+                s.crop = luma_image::lens::filled_crop(&s.lens, &s.transform, w.max(1), h.max(1), s.crop.angle);
+            }
+            let target = xmp::sidecar_path(path);
+            xmp::save(&target, &xmp::write_with_meta(&s, &luma_library::photo_meta(path)))
+                .map_err(|e| format!("{} : {e}", target.display()))?;
+        }
+        done += 1;
+    }
+    println!(
+        "{done} photo(s) {}, {skipped} laissée(s) de côté",
+        if write { "corrigée(s)" } else { "mesurée(s)" }
+    );
+    Ok(())
+}
+
 fn geotag(args: Vec<String>) -> Result<(), String> {
     use luma_library::geotag::{self, Outcome};
     let (mut gpx, mut offset, mut max_gap, mut replace, mut dry) = (None, Some(0), 3600, false, false);
@@ -2582,6 +2658,15 @@ fn main() -> ExitCode {
             _ => gallery(args.collect()),
         };
         return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "lens" {
+        return match lens(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");
