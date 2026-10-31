@@ -247,6 +247,8 @@ et blanc, vignetage après recadrage et grain existent).
 
 - Corrections Sony (ARW) : la distorsion mesurée sur le JPEG du boîtier après les corrections de LÜMA reste à +12,8 (curseur) sur `_DSC0009.ARW`, quand DNG, ORF et RW2 tombent sous 1 : vérifier le modèle de distorsion des makernotes Sony contre leur JPEG, sur d'autres objectifs De même son vignetage : −19 (les corrections Sony de LÜMA éclaircissent les coins plus que le boîtier) ; ORF −9 et RW2 −12 aussi, mais LÜMA ne lit pas leur vignetage.
 
+- Ouverture et premier aperçu, mesurés le 31 octobre (sans gain trouvé) : l'ouverture d'un RAW, c'est surtout le décodage de rawler (CR3 386 ms, ORF 365 ms, les autres 40 à 110 ms ; les relectures du fichier pour l'EXIF, les opcodes et les corrections du boîtier ne coûtent presque rien), puis `from_rawler` (27 à 54 ms : l'image de 100 à 180 Mo à remplir, déjà sur tous les cœurs) ; le premier aperçu à 2048 px, surtout la « réduction capteur » (34 à 94 ms, dont la correction d'objectif des boîtiers qui en ont), puis la mise à l'échelle (14 à 24 ms) et l'entrée (≈ 8 ms à chaud, 11 à 24 ms au premier appel : l'allocation). Essayé sans gain, mêmes bits : la réduction par aires avec les parts des colonnes d'un seul tenant et leur somme faite une fois (limitée par la mémoire) ; l'étape d'entrée en colonnes de huit pixels (8,2 contre 7,4 à 9,3 ms : le bruit). Pistes qui restent : décoder les plans d'un CR3 en parallèle (dans rawler), une image d'entrée réutilisée d'un aperçu à l'autre.
+
 ## Fait
 
 | Date | Quoi | Mesures |
