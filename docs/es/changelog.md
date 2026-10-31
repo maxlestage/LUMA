@@ -18,7 +18,7 @@ La fototeca profesional, paso a paso.
   mínimos cuadrados; para el viñeteado, la curva de tonos de la cámara se aprende en el
   centro y se deshace hacia los bordes. En todas las fotos elegidas a la vez (botón de
   la selección), en segundo plano, cada una medida por sí misma (la focal lo cambia
-  todo).
+  todo). En línea de comandos: `luma lens <raw|carpeta>… [--write]`.
 - **El primer vistazo al abrir una foto, de dos a tres veces más rápido**: la vista
   previa que la cámara guardó en el RAW se reduce en todos los núcleos, con los mismos
   píxeles. A 2048 px: RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 →

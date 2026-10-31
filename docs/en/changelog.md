@@ -17,7 +17,7 @@ The professional photo library, step by step.
   found on both sides, fitted by least squares; for vignetting, the camera's tone curve
   is learned in the centre, then undone towards the edges. On all selected photos at
   once (selection button), in the background, each measured on its own (focal length
-  changes everything).
+  changes everything). From the command line: `luma lens <raw|folder>… [--write]`.
 - **The glimpse when a photo opens is two to three times faster**: the preview the
   camera stored in the RAW is shrunk on every core, with the same pixels. At 2048 px:
   RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms; measuring the
