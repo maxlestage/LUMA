@@ -599,13 +599,12 @@ impl Worker {
                         if photo.has_camera_corrections() {
                             return Err("corrections du boîtier déjà dans le fichier".into());
                         }
+                        // Le JPEG décodé une fois, ses détails cherchés une fois.
+                        let (distortion, vignetting) =
+                            camera_lens::corrections(&photo, &path).map_err(|e| e.to_string())?;
+                        let (distortion, vignetting) = (distortion.round(), vignetting.round());
                         let mut s = Settings::default();
-                        s.lens.distortion = camera_lens::distortion(&photo, &path, &s)
-                            .map_err(|e| e.to_string())?
-                            .round();
-                        let vignetting = camera_lens::vignetting(&photo, &path, &s)
-                            .map_err(|e| e.to_string())?
-                            .round();
+                        s.lens.distortion = distortion;
                         s.lens.vignetting = vignetting;
                         s.lens.vignetting_midpoint = camera_lens::MIDPOINT;
                         let own = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());

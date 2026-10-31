@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Corrections d'après le JPEG du boîtier plus rapides** : un tiers de temps en moins
+  par photo (≈ 860 → 580 ms), aux mêmes valeurs : le JPEG décodé et ses détails
+  cherchés une fois pour les trois mesures.
 - **Mesure des pellicules et du rendu du boîtier plus rapide** : le lissage de la LUT
   (400 tours sur 35 937 nœuds) passe de 75 à 41 ms, aux mêmes bits.
 - **La distorsion et le vignetage des objectifs Canon, Nikon, Pentax…** : « Corrections

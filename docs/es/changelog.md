@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Correcciones según el JPEG de la cámara más rápidas**: un tercio menos de tiempo
+  por foto (≈ 860 → 580 ms), con los mismos valores: el JPEG se decodifica y sus
+  detalles se buscan una sola vez para las tres mediciones.
 - **Medición de películas y del aspecto de la cámara más rápida**: el suavizado de la
   LUT (400 pasadas sobre 35 937 nodos) baja de 75 a 41 ms, con los mismos bits.
 - **La distorsión y el viñeteado de los objetivos Canon, Nikon, Pentax…**:
