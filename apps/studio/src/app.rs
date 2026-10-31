@@ -889,6 +889,10 @@ pub struct Studio {
     pub split_against: Option<(String, Settings)>,
     /// La vue côte à côte coupée de gauche à droite (l'avant en haut ; Alt+Y).
     pub split_across: bool,
+    /// Le zoom 1:1 : là où l'on en est (le décalage de la vue, en points), et où le
+    /// navigateur demande d'aller.
+    pub zoom_offset: egui::Vec2,
+    zoom_jump: Option<egui::Vec2>,
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
     /// son chemin, la vue allumée, son rendu (et sa taille), et le rendu demandé.
     pub reference: Option<PathBuf>,
@@ -1326,6 +1330,8 @@ impl Studio {
             split: None,
             split_against: None,
             split_across: false,
+            zoom_offset: egui::Vec2::ZERO,
+            zoom_jump: None,
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -11829,13 +11835,61 @@ impl Studio {
         if self.zoom && matches!(self.last_request.as_ref().map(|r| r.size), Some(Size::Full)) {
             // 1:1 : un pixel de l'image par pixel de l'écran, on se déplace en glissant.
             let size = vec2(iw as f32, ih as f32) / ppp;
-            egui::ScrollArea::both().id_salt("zoom").show(ui, |ui| {
+            let mut area = egui::ScrollArea::both().id_salt("zoom");
+            if let Some(o) = self.zoom_jump.take() {
+                area = area.scroll_offset(o);
+            }
+            let shown = area.show(ui, |ui| {
                 let (r, resp) = ui.allocate_exact_size(size, egui::Sense::click());
                 ui.painter().image(t.id(), r, uv, Color32::WHITE);
-                if resp.clicked() {
-                    self.zoom = false;
-                }
+                resp.clicked()
             });
+            if shown.inner {
+                self.zoom = false;
+            }
+            self.zoom_offset = shown.state.clamped_offset();
+            // Le navigateur : la photo entière en petit, le cadre de ce qu'on voit ; un
+            // clic (ou un glissement) y mène.
+            let view = shown.inner_rect.size();
+            if size.x > view.x || size.y > view.y {
+                let scale = 180.0 / size.x.max(size.y);
+                let small = size * scale;
+                let nav =
+                    Rect::from_min_size(rect.right_bottom() - small - vec2(16.0, 16.0), small);
+                let painter = ui.painter_at(rect);
+                painter.rect_filled(nav.expand(3.0), 4.0, Color32::from_black_alpha(160));
+                painter.image(t.id(), nav, uv, Color32::WHITE);
+                let frame = Rect::from_min_size(
+                    nav.min + shown.state.clamped_offset() * scale,
+                    view * scale,
+                )
+                .intersect(nav);
+                painter.rect_stroke(
+                    frame,
+                    0.0,
+                    egui::Stroke::new(1.5, Color32::WHITE),
+                    egui::StrokeKind::Middle,
+                );
+                let r = ui.interact(
+                    nav,
+                    ui.scope_id().with("navigateur"),
+                    egui::Sense::click_and_drag(),
+                );
+                r.widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::Role::Image, true, tr("Navigateur"))
+                });
+                if let Some(p) = r
+                    .interact_pointer_pos()
+                    .filter(|_| r.clicked() || r.dragged())
+                {
+                    let center = (p - nav.min) / scale;
+                    let offset = (center - view / 2.0)
+                        .max(vec2(0.0, 0.0))
+                        .min((size - view).max(vec2(0.0, 0.0)));
+                    self.zoom_jump = Some(offset);
+                    ui.ctx().request_repaint();
+                }
+            }
         } else if let Some(tool) = &self.crop_tool {
             let target = fit(rect.shrink(36.0), iw, ih);
             painter.image(t.id(), target, uv, Color32::WHITE);
