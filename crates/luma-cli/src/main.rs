@@ -10,6 +10,7 @@
 //! luma merge <raw>… [options]       empilement, HDR ou panorama, en DNG
 //! luma film-lut <raw> <scan>… [opt]  mesure une vraie pellicule, en LUT 3D (.cube)
 //! luma film-lut --camera <raw>… [opt] mesure le rendu du boîtier (son JPEG), en LUT 3D
+//! luma film-lut --reference <réf> <photo> accorde une photo sur une référence, en LUT 3D
 //! luma presets [dossier]            exporte les 275 films en préréglages XMP
 //! luma cameras [--markdown]         les boîtiers pris en charge (docs/boitiers.md)
 //! luma catalog [dossier]… [opt]     la photothèque : ajoute des dossiers, liste par date
@@ -106,6 +107,10 @@ USAGE
   luma film-lut --camera <raw> [<raw>]… [-o boîtier.cube] [--size 17-65] [--title nom]
       Le rendu du boîtier : chaque RAW comparé au JPEG que le boîtier y a rangé (la
       même prise, ses couleurs à lui) ; la LUT rend les RAW comme le boîtier.
+  luma film-lut --reference <réf> <photo> [-o accord.cube] [--size 17-65] [--title nom]
+      L'accord sur une photo de référence : la répartition des couleurs de la photo
+      (clarté, teintes, saturation) amenée sur celle de la référence, chacune développée
+      avec son XMP s'il y en a un.
   luma watch <dossier> [--catalog f.lumacat] [--interval secondes]
       Surveille un dossier (prise de vue en connexion, carte copiée) : chaque photo
       arrivée, une fois complète, entre dans la photothèque et s'affiche (boîtier,
@@ -1574,6 +1579,7 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
     use luma_merge::film;
     let (mut out, mut size, mut aligned, mut title) = (None, 33, false, None);
     let mut camera = false;
+    let mut reference: Option<PathBuf> = None;
     let mut paths = Vec::new();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -1583,10 +1589,42 @@ fn film_lut(args: Vec<String>) -> Result<(), String> {
             "--size" => size = value()?.parse().map_err(|_| "--size : 17 à 65")?,
             "--aligned" => aligned = true,
             "--camera" => camera = true,
+            "--reference" => reference = Some(PathBuf::from(value()?)),
             "--title" => title = Some(value()?),
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => paths.push(PathBuf::from(a)),
         }
+    }
+    if let Some(reference) = reference {
+        let [photo] = paths.as_slice() else {
+            return Err("--reference : il faut une photo, et une seule".into());
+        };
+        // Chacune développée avec ses réglages (son XMP), sinon ceux de LÜMA.
+        let developed = |p: &Path| -> Result<luma_core::RgbImage, String> {
+            let opened = luma_render::Photo::open(p).map_err(|e| format!("{} : {e}", p.display()))?;
+            let settings = luma_library::photo_settings(p).unwrap_or_else(|| opened.default_settings());
+            film::reference_with(&opened, &settings).map_err(|e| e.to_string())
+        };
+        let started = Instant::now();
+        let out = out.unwrap_or_else(|| photo.with_extension("cube"));
+        let title = title.unwrap_or_else(|| {
+            out.file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        });
+        let m = film::transfer(&developed(photo)?, &developed(&reference)?, size, &title).map_err(|e| e.to_string())?;
+        luma_core::save(&out, m.cube.to_text()).map_err(|e| format!("{} : {e}", out.display()))?;
+        println!(
+            "{} : accord sur {} en {:.1} s",
+            out.display(),
+            reference.display(),
+            started.elapsed().as_secs_f32()
+        );
+        println!(
+            "  écart des couleurs moyennes : {:.2} ; avec la LUT : {:.2} (OKLab ×100)",
+            m.before, m.after
+        );
+        return Ok(());
     }
     if camera && paths.is_empty() {
         return Err("--camera : il faut un RAW au moins".into());

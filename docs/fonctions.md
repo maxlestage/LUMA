@@ -90,7 +90,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Réglages par défaut par boîtier et à partir d'un ISO (le plus précis l'emporte), point de départ des photos sans XMP ; film d'import donné aux photos qui arrivent (dossier surveillé, boîtier relié) | ✅ |
 | | Instantanés nommés, rangés dans le XMP, retrouvés d'un clic (une étape de l'historique) ; synchronisation sur plusieurs photos | ✅ |
 | | iPhone et iPad : aperçu réduit pendant un geste (12 fois plus rapide), mémoire surveillée, caches libérés avant que le système ne ferme l'app | ✅ |
-| | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), avant/après côte à côte (Y, « Côte à côte » : l'avant à gauche d'une séparation qu'on glisse, avec la même géométrie ; ou un instantané, « Comparer »), photo de référence entière à côté de la photo qu'on règle (clic droit sur une vignette, « Utiliser comme référence », Maj+Y) et « Accorder » sur elle (sa répartition de couleurs, en film « Accord … »), zoom 1:1 | ✅ |
+| | Histogramme, indicateur d'écrêtage (J), avant/après (`\`), avant/après côte à côte (Y, « Côte à côte » : l'avant à gauche d'une séparation qu'on glisse, avec la même géométrie ; ou un instantané, « Comparer »), photo de référence entière à côté de la photo qu'on règle (clic droit sur une vignette, « Utiliser comme référence », Maj+Y) et « Accorder » sur elle (sa répartition de couleurs, en film « Accord … » ; `luma film-lut --reference`), zoom 1:1 | ✅ |
 | | Forme d'onde, parade RVB, vectorscope (Maj+J) | ✅ |
 | | Mesure au point (RVB, Lab), écrêtage couche par couche | ✅ |
 | | Panorama (perspective, cylindrique, sphérique), rognage automatique réversible, DNG | ✅ |
