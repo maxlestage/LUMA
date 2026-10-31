@@ -6330,3 +6330,15 @@ es = Lado a lado: «{name}» y ahora
 fr = Cet instantané et la photo telle qu'elle est, côte à côte (Y pour sortir)
 en = This snapshot and the photo as it is now, side by side (Y to leave)
 es = Esta instantánea y la foto tal como está, lado a lado (Y para salir)
+
+fr = Exporter l'avant / après
+en = Export before / after
+es = Exportar antes / después
+
+fr = L'avant et l'après côte à côte en une image JPEG, à côté de la photo
+en = Before and after side by side in one JPEG image, next to the photo
+es = El antes y el después lado a lado en una imagen JPEG, junto a la foto
+
+fr = Avant / après exporté : {file}
+en = Before / after exported: {file}
+es = Antes / después exportado: {file}

@@ -4,6 +4,10 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **L'avant / après en une image** : « Exporter l'avant / après » (dans la vue côte à
+  côte) écrit un JPEG à côté de la photo, la photo sans ses retouches à gauche (sa
+  géométrie gardée), retouchée à droite, à partager. En ligne de commande :
+  `luma develop --before-after`.
 - **Curseurs plus réactifs** : le tampon de travail des flous gardé d'un flou à
   l'autre, aux mêmes pixels : l'accentuation de l'aperçu passe d'environ 80 à 60 ms,
   un rendu de réglage à 3072 px de 14 % plus rapide.
