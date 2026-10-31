@@ -893,6 +893,9 @@ pub struct Studio {
     /// navigateur demande d'aller.
     pub zoom_offset: egui::Vec2,
     zoom_jump: Option<egui::Vec2>,
+    /// Le point de la photo (0 à 1) sur lequel centrer le zoom 1:1 qui s'ouvre.
+    zoom_target: Option<egui::Vec2>,
+    zoom_retries: u8,
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
     /// son chemin, la vue allumée, son rendu (et sa taille), et le rendu demandé.
     pub reference: Option<PathBuf>,
@@ -903,7 +906,7 @@ pub struct Studio {
     before_asked: Option<(u64, BeforeKey)>,
     clipping: bool,
     proofing: Proofing,
-    zoom: bool,
+    pub zoom: bool,
     compare: Option<Compare>,
     /// Les rafales et séries d'exposition du film, repliées derrière leur première photo.
     stacking: bool,
@@ -1332,6 +1335,8 @@ impl Studio {
             split_across: false,
             zoom_offset: egui::Vec2::ZERO,
             zoom_jump: None,
+            zoom_target: None,
+            zoom_retries: 0,
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -11836,7 +11841,20 @@ impl Studio {
             // 1:1 : un pixel de l'image par pixel de l'écran, on se déplace en glissant.
             let size = vec2(iw as f32, ih as f32) / ppp;
             let mut area = egui::ScrollArea::both().id_salt("zoom");
-            if let Some(o) = self.zoom_jump.take() {
+            // Ouvert d'un clic : centré sur le point cliqué (la vue fait à peu près la
+            // place de la photo).
+            // (Attendu que l'image affichée soit bien la pleine définition demandée.)
+            if let Some(f) = self.zoom_target.filter(|_| self.shown == self.generation) {
+                self.zoom_target = None;
+                let view = rect.size();
+                let at = vec2(f.x * size.x, f.y * size.y) - view / 2.0;
+                self.zoom_jump = Some(
+                    at.max(vec2(0.0, 0.0))
+                        .min((size - view).max(vec2(0.0, 0.0))),
+                );
+            }
+            let jump = self.zoom_jump.take();
+            if let Some(o) = jump {
                 area = area.scroll_offset(o);
             }
             let shown = area.show(ui, |ui| {
@@ -11848,6 +11866,18 @@ impl Studio {
                 self.zoom = false;
             }
             self.zoom_offset = shown.state.clamped_offset();
+            // La zone ne connaît sa nouvelle taille qu'une image plus tard : le décalage
+            // demandé est redonné tant qu'il n'est pas atteint (quelques images au plus).
+            if let Some(o) = jump
+                && (self.zoom_offset - o).length() > 1.0
+                && self.zoom_retries < 4
+            {
+                self.zoom_retries += 1;
+                self.zoom_jump = Some(o);
+                ui.ctx().request_repaint();
+            } else if jump.is_some() {
+                self.zoom_retries = 0;
+            }
             // Le navigateur : la photo entière en petit, le cadre de ce qu'on voit ; un
             // clic (ou un glissement) y mène.
             let view = shown.inner_rect.size();
@@ -12134,8 +12164,16 @@ impl Studio {
                 {
                     self.act(if d.x < 0.0 { "next" } else { "prev" });
                 }
-            } else if r.on_hover_text(tr("Clic ou Z : zoom 1:1")).clicked() {
-                self.zoom = true;
+            } else {
+                // Le point cliqué : le zoom 1:1 s'ouvre centré sur lui.
+                let at = r.interact_pointer_pos().map(|p| {
+                    let f = (p - target.min) / target.size();
+                    vec2(f.x.clamp(0.0, 1.0), f.y.clamp(0.0, 1.0))
+                });
+                if r.on_hover_text(tr("Clic ou Z : zoom 1:1")).clicked() {
+                    self.zoom = true;
+                    self.zoom_target = at;
+                }
             }
         }
         let mut badges = Vec::new();

@@ -4141,3 +4141,24 @@ fn the_zoom_navigator_moves_the_view() {
     let o = s.studio().zoom_offset;
     assert!(o.x > 1000.0 && o.y > 500.0, "{o:?}");
 }
+
+/// Un clic sur la photo ouvre le zoom 1:1 centré sur le point cliqué (ici vers le coin
+/// bas droit), et non sur le coin haut gauche.
+#[test]
+fn the_zoom_opens_on_the_clicked_point() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("zoom-point") else {
+        return;
+    };
+    // La photo occupe le milieu de la fenêtre (environ 120 à 1020 sur 120 à 720).
+    let at = egui::pos2(990.0, 700.0);
+    s.harness.drag_at(at);
+    s.harness.run_steps(1);
+    s.harness.drop_at(at);
+    s.harness.run_steps(2);
+    assert!(s.studio().zoom);
+    s.wait();
+    s.harness.run_steps(4);
+    let o = s.studio().zoom_offset;
+    assert!(o.x > 1500.0 && o.y > 1000.0, "{o:?}");
+}
