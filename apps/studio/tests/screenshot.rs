@@ -3859,3 +3859,53 @@ fn auto_defringe_leaves_a_clean_photo_alone() {
         (0.0, 0.0)
     );
 }
+
+/// L'avant / après côte à côte (Y) : la photo à +1 IL, l'« avant » à gauche de la
+/// séparation (plus sombre), l'« après » à droite ; la séparation se glisse ; Y la
+/// referme.
+#[test]
+fn before_and_after_side_by_side() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("cote-a-cote") else {
+        return;
+    };
+    s.studio().settings.exposure = 1.0;
+    s.studio().settings.crop.left = 0.1;
+    s.keys(&[(NONE, Key::Y)]);
+    assert_eq!(s.studio().split, Some(0.5));
+    s.wait();
+    s.capture("cote-a-cote");
+    // Une même colonne de la photo, vue du côté « avant » (séparation à droite), puis
+    // du côté « après » (séparation à gauche) : plus claire après (+1 IL).
+    let divider = s.harness.get_by_label("Séparation avant / après").rect();
+    let column = |s: &mut Session, f: f32| {
+        s.studio().split = Some(f);
+        s.harness.run_steps(3);
+        let image = s.harness.render().expect("rendu de l'interface");
+        let (mut sum, mut n) = (0.0f64, 0.0f64);
+        for y in (divider.min.y as u32 + 40..divider.max.y as u32 - 40).step_by(4) {
+            for dx in 0..20u32 {
+                let p = image.get_pixel(divider.center().x as u32 + dx, y);
+                sum += f64::from(p[0]) + f64::from(p[1]) + f64::from(p[2]);
+                n += 3.0;
+            }
+        }
+        sum / n
+    };
+    let (before, after) = (column(&mut s, 0.9), column(&mut s, 0.1));
+    assert!(after > before + 15.0, "avant {before:.1}, après {after:.1}");
+    s.studio().split = Some(0.5);
+    s.harness.run_steps(3);
+    // Glissée vers la gauche, la séparation suit.
+    let start = divider.center();
+    s.harness.drag_at(start);
+    s.harness.run_steps(2);
+    s.harness.hover_at(start - egui::vec2(200.0, 0.0));
+    s.harness.run_steps(2);
+    s.harness.drop_at(start - egui::vec2(200.0, 0.0));
+    s.harness.run_steps(2);
+    let f = s.studio().split.unwrap();
+    assert!(f < 0.45, "{f}");
+    s.keys(&[(NONE, Key::Y)]);
+    assert_eq!(s.studio().split, None);
+}

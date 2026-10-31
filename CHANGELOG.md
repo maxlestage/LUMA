@@ -4,6 +4,10 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Avant / après côte à côte** (Y, ou « Côte à côte » dans la barre du haut) : la
+  photo sans ses retouches à gauche d'une séparation, la photo retouchée à droite ; on
+  glisse la séparation. L'« avant » garde la géométrie (recadrage, Transformation,
+  Distorsion) : les deux moitiés se raccordent exactement.
 - **Défrangeage automatique plus rapide** : violet et vert mesurés ensemble, les
   réglages essayés plusieurs à la fois, aux mêmes choix : 356 → 201 ms sur la photo où
   il faut tout essayer, 287 → 159 ms sur de vraies franges de synthèse.

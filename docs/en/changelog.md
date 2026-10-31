@@ -4,6 +4,10 @@
 
 The professional photo library, step by step.
 
+- **Before / after side by side** (Y, or “Side by side” in the top bar): the photo
+  without its edits on the left of a divider, the edited photo on the right; drag the
+  divider. The “before” keeps the geometry (crop, Transform, Distortion): both halves
+  line up exactly.
 - **Faster auto defringe**: purple and green measured together, settings tried several
   at a time, with the same choices: 356 → 201 ms on the photo where everything must be
   tried, 287 → 159 ms on synthetic fringes.

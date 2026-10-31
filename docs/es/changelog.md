@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **Antes / después lado a lado** (Y, o «Lado a lado» en la barra superior): la foto
+  sin sus ajustes a la izquierda de una separación, la foto ajustada a la derecha; se
+  desliza la separación. El «antes» conserva la geometría (recorte, Transformación,
+  Distorsión): las dos mitades encajan exactamente.
 - **Desflecado automático más rápido**: violeta y verde medidos a la vez, los ajustes
   probados varios a la vez, con las mismas elecciones: 356 → 201 ms en la foto donde
   hay que probarlo todo, 287 → 159 ms en flecos sintéticos.
