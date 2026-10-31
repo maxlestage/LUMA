@@ -3909,3 +3909,33 @@ fn before_and_after_side_by_side() {
     s.keys(&[(NONE, Key::Y)]);
     assert_eq!(s.studio().split, None);
 }
+
+/// La photo de référence (clic droit sur une vignette, « Utiliser comme référence ») :
+/// entière à gauche, la photo retouchée à droite, qu'on continue de régler ; Maj+Y la
+/// cache et la remontre.
+#[test]
+fn a_reference_photo_alongside() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("reference") else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let other = photos.iter().find(|p| **p != open).unwrap().clone();
+    // Sans référence, Maj+Y le dit.
+    s.keys(&[(Modifiers::SHIFT, Key::Y)]);
+    assert!(s.studio().status().contains("photo de référence"));
+    s.studio().set_reference(other.clone());
+    s.wait();
+    assert!(s.studio().showing_reference());
+    assert_eq!(s.studio().current_path(), Some(open.as_path()));
+    // La photo se règle toujours, la référence reste.
+    s.studio().settings.exposure = 0.7;
+    s.wait();
+    assert!(s.studio().showing_reference());
+    s.capture("reference");
+    s.keys(&[(Modifiers::SHIFT, Key::Y)]);
+    assert!(!s.studio().showing_reference());
+    s.keys(&[(Modifiers::SHIFT, Key::Y)]);
+    assert!(s.studio().showing_reference());
+}

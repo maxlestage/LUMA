@@ -89,7 +89,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Default adjustments per camera and from an ISO (the most precise wins), starting point for photos without XMP; import film given to arriving photos (watched folder, tethered camera) | ✅ |
 | | Named snapshots, stored in the XMP, restored in one click (a history step); sync across multiple photos | ✅ |
 | | iPhone and iPad: smaller preview during a gesture (12 times faster), memory watched, caches freed before the system closes the app | ✅ |
-| | Histogram, clipping indicator (J), before/after (`\`), before/after side by side (Y, “Side by side”: before on the left of a divider you drag, with the same geometry), 1:1 zoom | ✅ |
+| | Histogram, clipping indicator (J), before/after (`\`), before/after side by side (Y, “Side by side”: before on the left of a divider you drag, with the same geometry), a whole reference photo next to the photo being edited (right-click a thumbnail, “Use as reference”, Shift+Y), 1:1 zoom | ✅ |
 | | Waveform, RGB parade, vectorscope (Shift+J) | ✅ |
 | | Point measurement (RGB, Lab), per‑channel clipping | ✅ |
 | | Panorama (perspective, cylindrical, spherical), reversible auto crop, DNG | ✅ |
