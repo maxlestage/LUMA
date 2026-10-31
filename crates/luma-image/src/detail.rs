@@ -79,27 +79,44 @@ pub fn noise_reduction(img: &mut RgbImage, d: &Detail, scale: f32) {
         (smooth(cr), smooth(cb))
     });
     let columns = chroma.as_ref().map(|c| c.0.upsample_columns(w)).unwrap_or_default();
-    img.data.par_chunks_mut(w).enumerate().for_each(|(row_y, row)| {
-        let (mut up_r, mut up_b) = (Vec::new(), Vec::new());
-        if let Some((cr, cb)) = &chroma {
-            up_r.resize(w, 0.0);
-            up_b.resize(w, 0.0);
-            cr.upsample_row(row_y, h, &columns, &mut up_r);
-            cb.upsample_row(row_y, h, &columns, &mut up_b);
-        }
-        for (x, p) in row.iter_mut().enumerate() {
-            let (y0, cr0, cb0) = ycc(*p);
-            let y = luma.as_ref().map_or(y0, |l| l.data[row_y * w + x]);
-            let (cr, cb) = if chroma.is_some() {
-                (up_r[x], up_b[x])
-            } else {
-                (cr0, cb0)
-            };
-            let (r, b) = (y + cr, y + cb);
-            let g = (y - WR * r - WB * b) / WG;
-            *p = [r.max(0.0).powi(2), g.max(0.0).powi(2), b.max(0.0).powi(2)];
-        }
-    });
+    let Some((cr, cb)) = &chroma else {
+        // La luminance seule : chaque pixel garde sa couleur.
+        let Some(l) = &luma else { return };
+        img.data.par_chunks_mut(w).enumerate().for_each(|(row_y, row)| {
+            for (p, &y) in row.iter_mut().zip(&l.data[row_y * w..(row_y + 1) * w]) {
+                let (_, cr, cb) = ycc(*p);
+                let (r, b) = (y + cr, y + cb);
+                let g = (y - WR * r - WB * b) / WG;
+                *p = [r.max(0.0).powi(2), g.max(0.0).powi(2), b.max(0.0).powi(2)];
+            }
+        });
+        return;
+    };
+    // La couleur lissée : par ligne, la luminance (lissée, ou celle du pixel) puis le
+    // retour, chacun en une boucle simple que le processeur mène par colonnes ; trois
+    // tampons par fil, repris de ligne en ligne. Les mêmes calculs, dans le même ordre,
+    // que pixel par pixel : les mêmes bits.
+    img.data.par_chunks_mut(w).enumerate().for_each_init(
+        || (vec![0.0f32; w], vec![0.0f32; w], vec![0.0f32; w]),
+        |(ys, up_r, up_b), (row_y, row)| {
+            cr.upsample_row(row_y, h, &columns, up_r);
+            cb.upsample_row(row_y, h, &columns, up_b);
+            match &luma {
+                Some(l) => ys.copy_from_slice(&l.data[row_y * w..(row_y + 1) * w]),
+                None => {
+                    for (y, p) in ys.iter_mut().zip(row.iter()) {
+                        let e = p.map(|v| v.max(0.0).sqrt());
+                        *y = WR * e[0] + WG * e[1] + WB * e[2];
+                    }
+                }
+            }
+            for (((p, &y), &cr), &cb) in row.iter_mut().zip(ys.iter()).zip(up_r.iter()).zip(up_b.iter()) {
+                let (r, b) = (y + cr, y + cb);
+                let g = (y - WR * r - WB * b) / WG;
+                *p = [r.max(0.0).powi(2), g.max(0.0).powi(2), b.max(0.0).powi(2)];
+            }
+        },
+    );
 }
 
 /// Bruit blanc d'écart type 1 : son écart type dans chaque échelle d'ondelettes
@@ -239,38 +256,49 @@ fn half_chroma(img: &RgbImage, ycc: &(impl Fn([f32; 3]) -> (f32, f32, f32) + Syn
     let (ow, oh) = (w.div_ceil(2), h.div_ceil(2));
     let mut cr = Plane::new(ow, oh);
     let mut cb = Plane::new(ow, oh);
+    // Par ligne de la source : les différences de couleur de chaque pixel dans deux
+    // tampons, puis les paires additionnées, chaque boucle sans condition (le processeur
+    // les mène par colonnes) ; les mêmes sommes dans le même ordre que pixel par pixel.
+    let pairs = w / 2;
     cr.data
         .par_chunks_mut(ow)
         .zip(cb.data.par_chunks_mut(ow))
         .enumerate()
-        .for_each(|(oy, (row_r, row_b))| {
-            let (y0, y1) = (oy * 2, (oy * 2 + 2).min(h));
-            for y in y0..y1 {
-                let src = &img.data[y * w..(y + 1) * w];
-                for (ox, (r, b)) in row_r.iter_mut().zip(row_b.iter_mut()).enumerate() {
-                    // La somme du bloc, dans l'ordre de `downscale` : la ligne d'abord.
-                    let (_, r0, b0) = ycc(src[ox * 2]);
-                    let (sr, sb) = match src.get(ox * 2 + 1) {
-                        Some(&p) => {
-                            let (_, r1, b1) = ycc(p);
-                            (r0 + r1, b0 + b1)
-                        }
-                        None => (r0, b0),
-                    };
+        .for_each_init(
+            || (vec![0.0f32; w], vec![0.0f32; w]),
+            |(er, eb), (oy, (row_r, row_b))| {
+                let (y0, y1) = (oy * 2, (oy * 2 + 2).min(h));
+                for y in y0..y1 {
+                    let src = &img.data[y * w..(y + 1) * w];
+                    for ((r, b), p) in er.iter_mut().zip(eb.iter_mut()).zip(src) {
+                        let (_, r0, b0) = ycc(*p);
+                        (*r, *b) = (r0, b0);
+                    }
+                    let (sr, sb) = (er.as_chunks::<2>().0, eb.as_chunks::<2>().0);
                     // Écrire sans lire sur la première ligne (voir `Plane::downscale`).
                     if y == y0 {
-                        (*r, *b) = (0.0 + sr, 0.0 + sb);
+                        for ((r, b), (pr, pb)) in row_r.iter_mut().zip(row_b.iter_mut()).zip(sr.iter().zip(sb)) {
+                            (*r, *b) = (0.0 + (pr[0] + pr[1]), 0.0 + (pb[0] + pb[1]));
+                        }
+                        if w % 2 == 1 {
+                            (row_r[pairs], row_b[pairs]) = (0.0 + er[w - 1], 0.0 + eb[w - 1]);
+                        }
                     } else {
-                        (*r, *b) = (*r + sr, *b + sb);
+                        for ((r, b), (pr, pb)) in row_r.iter_mut().zip(row_b.iter_mut()).zip(sr.iter().zip(sb)) {
+                            (*r, *b) = (*r + (pr[0] + pr[1]), *b + (pb[0] + pb[1]));
+                        }
+                        if w % 2 == 1 {
+                            (row_r[pairs], row_b[pairs]) = (row_r[pairs] + er[w - 1], row_b[pairs] + eb[w - 1]);
+                        }
                     }
                 }
-            }
-            for (ox, (r, b)) in row_r.iter_mut().zip(row_b.iter_mut()).enumerate() {
-                let n = ((ox * 2 + 2).min(w) - ox * 2) * (y1 - y0);
-                *r /= n as f32;
-                *b /= n as f32;
-            }
-        });
+                for (ox, (r, b)) in row_r.iter_mut().zip(row_b.iter_mut()).enumerate() {
+                    let n = ((ox * 2 + 2).min(w) - ox * 2) * (y1 - y0);
+                    *r /= n as f32;
+                    *b /= n as f32;
+                }
+            },
+        );
     (cr, cb)
 }
 

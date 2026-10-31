@@ -4,6 +4,10 @@
 
 La fototeca profesional, paso a paso.
 
+- **Exposición más ágil**: la reducción del ruido de color (activa por defecto,
+  rehecha con cada movimiento de la Exposición) escrita en bucles que el procesador
+  lleva por columnas, con los mismos píxeles: de un 18 a un 23 % más rápida, un
+  renderizado de vista previa cerca de un 7 %.
 - **Exportación en WebP sin pérdida**: los mismos píxeles que un PNG de 8 bits, de un
   20 a un 45 % más ligero, con el perfil de color, el EXIF y el XMP (app, ajustes
   preestablecidos, `luma develop -o foto.webp`).
