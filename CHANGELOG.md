@@ -10,7 +10,8 @@ La photothèque professionnelle, étape par étape.
 - **Accorder sur la référence** : avec une photo de référence affichée, « Accorder »
   donne à la photo la répartition de couleurs de la référence (clarté, teintes,
   saturation : moyennes et étendues en OKLab, sans IA), en un film « Accord … » à
-  l'intensité réglable, enregistré pour les photos suivantes.
+  l'intensité réglable, enregistré pour les photos suivantes. En ligne de commande :
+  `luma film-lut --reference <réf> <photo>`.
 - **Grille de composition sur la photo** (H) : les guides du recadrage (tiers, nombre
   d'or, diagonales, triangles et spirale d'or, grille) posés sur la photo pendant le
   réglage, pour juger un cadrage, un horizon, des verticales ; Maj+O les tourne.
