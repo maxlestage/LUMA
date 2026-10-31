@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **El antes / después de toda una selección**: «Antes / después» en la barra de
+  selección escribe, en segundo plano, un JPEG junto a cada foto elegida, cada una con
+  sus ajustes.
 - **Zoom 1:1 en el punto pulsado**: un clic en la foto abre el zoom centrado donde se
   pulsó, y ya no en la esquina superior izquierda.
 - **Navegador del zoom 1:1**: la foto entera en pequeño en una esquina, con el marco de
