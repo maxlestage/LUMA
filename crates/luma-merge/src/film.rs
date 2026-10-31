@@ -58,11 +58,12 @@ pub fn load_reference(path: &std::path::Path) -> Result<RgbImage> {
 
 /// Le rendu neutre d'une photo ouverte, en sRGB encodé : la référence numérique.
 pub fn reference(photo: &luma_render::Photo) -> Result<RgbImage> {
-    let r = photo.render(
-        &luma_project::Settings::default(),
-        luma_render::Size::Fit(1600),
-        &luma_core::Cancel::new(),
-    )?;
+    reference_with(photo, &luma_project::Settings::default())
+}
+
+/// Le rendu d'une photo ouverte avec `settings`, en sRGB encodé, à 1600 px.
+pub fn reference_with(photo: &luma_render::Photo, settings: &luma_project::Settings) -> Result<RgbImage> {
+    let r = photo.render(settings, luma_render::Size::Fit(1600), &luma_core::Cancel::new())?;
     let px = luma_image::encode8(&r.image, luma_color::OutputSpace::Srgb);
     Ok(RgbImage {
         width: r.image.width,

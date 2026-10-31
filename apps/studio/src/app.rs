@@ -8742,6 +8742,36 @@ impl Studio {
         Some(label)
     }
 
+    /// La Distorsion mesurée sur le JPEG que le boîtier a rangé dans le RAW ouvert (déjà
+    /// corrigé de son objectif) ; sans recadrage, les bords vides sont retirés. Rend le
+    /// libellé de l'historique, ou `None` (message dans la barre d'état) si la mesure
+    /// échoue.
+    pub fn distortion_from_camera(&mut self) -> Option<String> {
+        let photo = self.photo.clone()?;
+        let raw = self
+            .current_path()
+            .filter(|p| luma_raw::is_raw(p))?
+            .to_path_buf();
+        match luma_merge::camera_lens::distortion(&photo, &raw, &Settings::default()) {
+            Ok(d) => {
+                self.settings.lens.distortion = d.round();
+                if self.settings.crop.is_identity() {
+                    self.fill_crop();
+                }
+                let label = trf(
+                    "Distorsion d'après le JPEG du boîtier : {value}",
+                    &[("value", &format_value(d.round(), 0, true))],
+                );
+                self.status = label.clone();
+                Some(label)
+            }
+            Err(e) => {
+                self.status = trf("Mesure impossible : {error}", &[("error", &e.to_string())]);
+                None
+            }
+        }
+    }
+
     /// Le recadrage qui retire les bords vides de la Transformation, aux dimensions de la
     /// photo entière (celles du rendu en cours si la photo n'est pas recadrée).
     pub fn fill_crop(&mut self) {
@@ -12901,6 +12931,18 @@ impl Studio {
                                 .size(11.5)
                                 .color(theme::DIM),
                         );
+                        // Le boîtier a corrigé son JPEG, lui : la distorsion s'y mesure.
+                        if self.current_path().is_some_and(luma_raw::is_raw)
+                            && ui
+                                .button(tr("Distorsion d'après le JPEG du boîtier"))
+                                .on_hover_text(tr(
+                                    "Compare la photo au JPEG que le boîtier a rangé dans le RAW, déjà corrigé de son objectif, et règle la Distorsion pour qu'elle ait la même géométrie ; les bords vides sont retirés si la photo n'est pas recadrée.",
+                                ))
+                                .clicked()
+                            && let Some(label) = self.distortion_from_camera()
+                        {
+                            commits.push(label);
+                        }
                     }
                     if ui
                         .checkbox(
