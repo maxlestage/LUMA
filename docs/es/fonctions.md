@@ -55,7 +55,8 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Correcciones de objetivo de los RAF de Fujifilm (distorsión, aberración cromática lateral, viñeteo, registradas por la cámara, modo recortado incluido), aplicadas automáticamente | ✅ |
 | | Correcciones de objetivo de los ORF de Olympus y OM System (distorsión, aberración cromática lateral) y de los RW2 de Panasonic (distorsión), registradas por la cámara, aplicadas automáticamente | ✅ |
 | | Casilla «Correcciones de la cámara»: marcada por defecto, guardada en el XMP (`crs:LensProfileEnable`); desmarcada, la foto vuelve a ser la que dio el objetivo, y los controles de distorsión y viñeteo toman el relevo | ✅ |
-| | Aberración cromática longitudinal, correcciones de otras marcas (Canon, Nikon, Pentax…) | ⏳ |
+| | Distorsión de los objetivos de otras marcas (Canon, Nikon, Pentax…) medida en el JPEG que la cámara guardó en el RAW, ya corregido («Distorsión según el JPEG de la cámara»): se ajusta el control Distorsión y se quitan los bordes vacíos | ✅ |
+| | Aberración cromática longitudinal; viñeteado de otras marcas | ⏳ |
 | Transformar | Perspectiva vertical y horizontal, rotación, aspecto, escala (homografía, centro fijo) | ✅ |
 | | Enderezamiento automático (Mayús+R, Mayús+V) y guiado: de dos a cuatro líneas trazadas en la foto ajustan la perspectiva y la rotación | ✅ |
 | | Bordes vacíos recortados: el mayor encuadre centrado, con las proporciones de la foto, sin bordes vacíos tras la Transformación o la Distorsión | ✅ |

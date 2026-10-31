@@ -4,6 +4,12 @@
 
 La fototeca profesional, paso a paso.
 
+- **La distorsión de los objetivos Canon, Nikon, Pentax…**: «Distorsión según el JPEG
+  de la cámara» (Correcciones del objetivo, cuando el archivo no lleva ninguna que LÜMA
+  lea) compara la foto con el JPEG que la cámara guardó en el RAW, ya corregido de su
+  objetivo, y ajusta la Distorsión para la misma geometría; los bordes vacíos se quitan
+  si la foto no está recortada. Sin IA: los mismos detalles hallados en ambos lados,
+  ajustados por mínimos cuadrados.
 - **El primer vistazo al abrir una foto, de dos a tres veces más rápido**: la vista
   previa que la cámara guardó en el RAW se reduce en todos los núcleos, con los mismos
   píxeles. A 2048 px: RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 →
