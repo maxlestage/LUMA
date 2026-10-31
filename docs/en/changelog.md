@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **In-focus areas** (Shift+F, “In-focus areas” button): the details in focus in
+  green, without AI, and their share of the photo in a badge, to pick the best of a
+  burst; a blurred photo has none.
 - **More responsive Exposure**: colour noise reduction (on by default, redone each
   time Exposure moves) written as loops the processor runs by columns, with the same
   pixels: 18 to 23% faster, a preview render about 7%.

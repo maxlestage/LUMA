@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Zones nettes** (Maj+F, bouton « Zones nettes ») : les détails au point de la photo
+  en vert, sans IA, et leur part de la photo dans un badge, pour départager les
+  photos d'une rafale ; une photo floue n'en a pas.
 - **Exposition plus réactive** : la réduction du bruit de couleur (active par défaut,
   refaite à chaque mouvement de l'Exposition) écrite en boucles que le processeur mène
   par colonnes, aux mêmes pixels : de 18 à 23 % plus rapide, un rendu d'aperçu

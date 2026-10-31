@@ -4205,3 +4205,35 @@ fn the_before_and_after_of_a_selection_are_exported() {
         }
     }
 }
+
+/// Maj+F : les zones nettes en vert sur la photo, et leur part dans le badge ; la même
+/// photo adoucie (bruit lissé, clarté et texture au plus bas, sans accentuation) en a
+/// bien moins ; Maj+F de nouveau : plus rien.
+#[test]
+fn focus_peaking_shows_the_sharp_areas() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("zones-nettes") else {
+        return;
+    };
+    assert_eq!(s.studio().sharp_share, None);
+    s.keys(&[(Modifiers::SHIFT, Key::F)]);
+    assert!(s.studio().focus_peaking);
+    s.wait();
+    let sharp = s.studio().sharp_share.expect("la part au point");
+    assert!(sharp > 0.002 && sharp < 0.6, "{sharp}");
+    s.capture("zones-nettes");
+    {
+        let st = s.studio();
+        st.settings.detail.luminance_nr = 100.0;
+        st.settings.detail.sharpen_amount = 0.0;
+        st.settings.clarity = -100.0;
+        st.settings.texture = -100.0;
+    }
+    s.wait();
+    let soft = s.studio().sharp_share.expect("la part au point");
+    assert!(soft < sharp * 0.7, "{soft} contre {sharp}");
+    s.keys(&[(Modifiers::SHIFT, Key::F)]);
+    assert!(!s.studio().focus_peaking);
+    s.wait();
+    assert_eq!(s.studio().sharp_share, None);
+}
