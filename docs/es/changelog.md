@@ -6,12 +6,14 @@ La fototeca profesional, paso a paso.
 
 - **Medición de películas y del aspecto de la cámara más rápida**: el suavizado de la
   LUT (400 pasadas sobre 35 937 nodos) baja de 75 a 41 ms, con los mismos bits.
-- **La distorsión de los objetivos Canon, Nikon, Pentax…**: «Distorsión según el JPEG
-  de la cámara» (Correcciones del objetivo, cuando el archivo no lleva ninguna que LÜMA
-  lea) compara la foto con el JPEG que la cámara guardó en el RAW, ya corregido de su
-  objetivo, y ajusta la Distorsión para la misma geometría; los bordes vacíos se quitan
-  si la foto no está recortada. Sin IA: los mismos detalles hallados en ambos lados,
-  ajustados por mínimos cuadrados.
+- **La distorsión y el viñeteado de los objetivos Canon, Nikon, Pentax…**:
+  «Correcciones según el JPEG de la cámara» (Correcciones del objetivo, cuando el
+  archivo no lleva ninguna que LÜMA lea) compara la foto con el JPEG que la cámara
+  guardó en el RAW, ya corregido de su objetivo, y ajusta la Distorsión y el Viñeteado
+  para la misma geometría y los mismos bordes; los bordes vacíos se quitan si la foto
+  no está recortada. Sin IA: los mismos detalles hallados en ambos lados, ajustados por
+  mínimos cuadrados; para el viñeteado, la curva de tonos de la cámara se aprende en el
+  centro y se deshace hacia los bordes.
 - **El primer vistazo al abrir una foto, de dos a tres veces más rápido**: la vista
   previa que la cámara guardó en el RAW se reduce en todos los núcleos, con los mismos
   píxeles. A 2048 px: RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 →

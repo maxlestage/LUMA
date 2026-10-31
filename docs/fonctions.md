@@ -55,8 +55,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Corrections d'objectif des RAF de Fujifilm (distorsion, aberration chromatique latérale, vignetage, enregistrées par le boîtier, mode recadré compris), appliquées automatiquement | ✅ |
 | | Corrections d'objectif des ORF d'Olympus et d'OM System (distorsion, aberration chromatique latérale) et des RW2 de Panasonic (distorsion), enregistrées par le boîtier, appliquées automatiquement | ✅ |
 | | Case « Corrections du boîtier » : cochée par défaut, enregistrée dans le XMP (`crs:LensProfileEnable`) ; décochée, la photo revient telle que l'objectif l'a donnée, et les curseurs de distorsion et de vignetage prennent le relais | ✅ |
-| | Distorsion des objectifs des autres marques (Canon, Nikon, Pentax…) mesurée sur le JPEG que le boîtier a rangé dans le RAW, déjà corrigé (« Distorsion d'après le JPEG du boîtier ») : le curseur Distorsion réglé, les bords vides retirés | ✅ |
-| | Aberration chromatique longitudinale ; vignetage des autres marques | ⏳ |
+| | Distorsion et vignetage des objectifs des autres marques (Canon, Nikon, Pentax…) mesurés sur le JPEG que le boîtier a rangé dans le RAW, déjà corrigé (« Corrections d'après le JPEG du boîtier ») : les curseurs Distorsion et Vignetage réglés, les bords vides retirés | ✅ |
+| | Aberration chromatique longitudinale | ⏳ |
 | Transformation | Perspective verticale et horizontale, rotation, proportions, échelle (homographie, centre fixe) | ✅ |
 | | Redressement automatique (Maj+R, Maj+V) et guidé : deux à quatre lignes tracées sur la photo règlent la perspective et la rotation | ✅ |
 | | Bords vides rognés : le plus grand cadre centré, aux proportions de la photo, sans bord vide après la Transformation ou la Distorsion | ✅ |

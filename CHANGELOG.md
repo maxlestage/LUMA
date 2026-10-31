@@ -6,12 +6,14 @@ La photothèque professionnelle, étape par étape.
 
 - **Mesure des pellicules et du rendu du boîtier plus rapide** : le lissage de la LUT
   (400 tours sur 35 937 nœuds) passe de 75 à 41 ms, aux mêmes bits.
-- **La distorsion des objectifs Canon, Nikon, Pentax…** : « Distorsion d'après le JPEG
-  du boîtier » (Corrections de l'objectif, quand le fichier n'en porte pas que LÜMA
-  lise) compare la photo au JPEG que le boîtier a rangé dans le RAW, déjà corrigé de
-  son objectif, et règle la Distorsion pour la même géométrie ; les bords vides sont
-  retirés si la photo n'est pas recadrée. Sans IA : les mêmes détails trouvés des deux
-  côtés, ajustés par moindres carrés.
+- **La distorsion et le vignetage des objectifs Canon, Nikon, Pentax…** : « Corrections
+  d'après le JPEG du boîtier » (Corrections de l'objectif, quand le fichier n'en porte
+  pas que LÜMA lise) compare la photo au JPEG que le boîtier a rangé dans le RAW, déjà
+  corrigé de son objectif, et règle la Distorsion et le Vignetage pour la même
+  géométrie et les mêmes bords ; les bords vides sont retirés si la photo n'est pas
+  recadrée. Sans IA : les mêmes détails trouvés des deux côtés, ajustés par moindres
+  carrés ; pour le vignetage, la courbe de tons du boîtier apprise au centre, puis
+  défaite vers les bords.
 - **Le coup d'œil à l'ouverture deux à trois fois plus rapide** : l'aperçu que le
   boîtier a rangé dans le RAW, réduit sur tous les cœurs, aux mêmes pixels. À 2048 px :
   RAF 177 → 77 ms, NEF 165 → 77 ms, DNG 284 → 140 ms, ORF 201 → 61 ms ; la mesure du
