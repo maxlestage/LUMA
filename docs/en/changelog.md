@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **Composition grid on the photo** (H): the crop overlays (thirds, golden ratio,
+  diagonals, golden triangles and spiral, grid) laid over the photo while editing, to
+  judge framing, a horizon, verticals; Shift+O rotates them.
 - **Faster thumbnails**: the previews embedded in RAW files are decoded on several
   cores, with the same pixels: a quarter to a third less time per thumbnail (ORF 37 →
   26 ms, ARW 27 → 18 ms, CR3 20 → 13 ms).

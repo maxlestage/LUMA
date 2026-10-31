@@ -1019,6 +1019,8 @@ pub struct Studio {
     pub selected_part: Option<(usize, usize)>,
     /// Le guide de composition du recadrage, et son quart de tour (0 à 3).
     pub crop_guide: crop::Guide,
+    /// Le guide de composition posé sur la photo hors recadrage (H : aucun, tiers…).
+    pub photo_guide: crop::Guide,
     pub crop_turn: u8,
     /// Le redressement guidé : actif, les lignes tracées (coordonnées de la photo avant
     /// la Transformation), et le point de départ de celle qu'on trace.
@@ -1390,6 +1392,7 @@ impl Studio {
             selected_mask: None,
             selected_part: None,
             crop_guide: crop::Guide::default(),
+            photo_guide: crop::Guide::None,
             crop_turn: 0,
             guiding: false,
             guides: Vec::new(),
@@ -6473,6 +6476,13 @@ impl Studio {
             // Pendant le recadrage, O change de guide de composition.
             "mask_overlay" if self.crop_tool.is_some() => self.crop_guide = self.crop_guide.next(),
             "guide_turn" => self.crop_turn = (self.crop_turn + 1) % 4,
+            "photo_guide" => {
+                self.photo_guide = self.photo_guide.next();
+                self.status = trf(
+                    "Grille sur la photo : {guide}",
+                    &[("guide", &tr(self.photo_guide.name()))],
+                );
+            }
             "auto_level" => self.auto_level(),
             "auto_vertical" => self.auto_vertical(),
             "mask_overlay" => self.show_mask = !self.show_mask,
@@ -11691,6 +11701,13 @@ impl Studio {
                 }
                 _ => {
                     painter.image(t.id(), target, uv, Color32::WHITE);
+                }
+            }
+            // La grille de composition (H), fine, sur toute la photo.
+            if self.photo_guide != crop::Guide::None {
+                let thin = egui::Stroke::new(1.0, Color32::from_white_alpha(120));
+                for line in crop::guide_lines(self.photo_guide, target, self.crop_turn) {
+                    painter.line_segment(line, thin);
                 }
             }
             self.edit_label(&painter, target);

@@ -6298,3 +6298,11 @@ es = Foto
 fr = Maj+Y : la photo de référence entière à côté de la photo retouchée
 en = Shift+Y: the whole reference photo next to the photo being edited
 es = Mayús+Y: la foto de referencia entera junto a la foto que se ajusta
+
+fr = Grille de composition sur la photo
+en = Composition grid on the photo
+es = Cuadrícula de composición sobre la foto
+
+fr = Grille sur la photo : {guide}
+en = Grid on the photo: {guide}
+es = Cuadrícula sobre la foto: {guide}
