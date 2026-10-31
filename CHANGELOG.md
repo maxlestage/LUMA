@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Séparation avant / après tournée** (Alt+Y) : l'avant en haut, l'après en bas, la
+  séparation se glisse de haut en bas ; pour les photos en hauteur.
 - **L'avant / après en une image** : « Exporter l'avant / après » (dans la vue côte à
   côte) écrit un JPEG à côté de la photo, la photo sans ses retouches à gauche (sa
   géométrie gardée), retouchée à droite, à partager. En ligne de commande :

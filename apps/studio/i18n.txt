@@ -6342,3 +6342,7 @@ es = El antes y el después lado a lado en una imagen JPEG, junto a la foto
 fr = Avant / après exporté : {file}
 en = Before / after exported: {file}
 es = Antes / después exportado: {file}
+
+fr = Tourner la séparation avant / après
+en = Turn the before / after divider
+es = Girar la separación antes / después
