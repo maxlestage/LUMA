@@ -4971,6 +4971,30 @@ impl Studio {
         self.edit_meta(&paths, f);
     }
 
+    /// Ce qui retient encore l'app (le premier trouvé), `None` si elle est prête : pour
+    /// dire ce qui manque quand une attente n'aboutit pas.
+    pub fn busy_reason(&self) -> Option<&'static str> {
+        let reasons = [
+            (self.loading.is_some(), "ouverture"),
+            (self.is_indexing(), "photothèque"),
+            (self.photo.is_none(), "aucune photo"),
+            (
+                !self.folder.iter().all(|p| self.thumbs.contains_key(p)),
+                "vignettes",
+            ),
+            (self.shown != self.generation, "rendu"),
+            (self.texture.is_none(), "texture"),
+            (self.tiles.is_loading(), "tuiles"),
+            (self.printing.is_some(), "impression"),
+            (self.measuring, "mesure"),
+            (self.lens_batch.0 != 0, "corrections par lot"),
+            (self.before_after_batch.0 != 0, "avant / après par lot"),
+            (self.split.is_some() && self.before_asked.is_some(), "avant"),
+            (self.reference_asked.is_some(), "référence"),
+        ];
+        reasons.into_iter().find(|r| r.0).map(|r| r.1)
+    }
+
     /// Prête : photo chargée et dernier rendu affiché.
     pub fn is_idle(&self) -> bool {
         self.loading.is_none()
