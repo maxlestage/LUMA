@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Zonas nítidas** (Mayús+F, botón «Zonas nítidas»): los detalles enfocados de la
+  foto en verde, sin IA, y su parte de la foto en una etiqueta, para elegir la mejor
+  de una ráfaga; una foto desenfocada no tiene.
 - **Exposición más ágil**: la reducción del ruido de color (activa por defecto,
   rehecha con cada movimiento de la Exposición) escrita en bucles que el procesador
   lleva por columnas, con los mismos píxeles: de un 18 a un 23 % más rápida, un

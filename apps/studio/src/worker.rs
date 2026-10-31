@@ -34,6 +34,8 @@ pub struct Frame {
     /// L'aperçu sans ce qu'on a peint dessus (écrêtage, alerte de gamut), quand on y a
     /// peint quelque chose : la mesure au point y lit les vraies couleurs.
     pub clean: Option<Vec<u8>>,
+    /// La part de l'aperçu au point (0 à 1), quand les zones nettes sont demandées.
+    pub sharp: Option<f32>,
 }
 
 /// Les corrections d'objectif mesurées sur le JPEG du boîtier.
@@ -214,6 +216,8 @@ struct RenderJob {
     size: Size,
     generation: u64,
     clipping: bool,
+    /// Les zones nettes peintes par‑dessus.
+    focus: bool,
     /// L'épreuvage à l'écran, s'il est actif.
     proof: Option<Proofed>,
     /// Joindre une copie réduite de la base (la retouche y cherche ses sources).
@@ -230,6 +234,8 @@ struct RenderJob {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Extras {
     pub clipping: bool,
+    /// Les zones nettes (`luma_image::focus`) peintes par‑dessus.
+    pub focus: bool,
     pub scene: bool,
     /// La vue des taches (les poussières du capteur en points sombres).
     pub dust_view: bool,
@@ -432,6 +438,7 @@ impl Worker {
             size,
             generation,
             clipping: extras.clipping,
+            focus: extras.focus,
             proof,
             scene: extras.scene,
             dust_view: extras.dust_view,
@@ -1010,13 +1017,26 @@ fn render_job(
         }
         let histogram = histogram_rgba(&rgba);
         let scope = luma_image::scopes::render(job.scope, &rgba, w, h);
-        let clean = (gamut.is_some() || job.clipping || job.dust_view).then(|| rgba.clone());
+        let clean =
+            (gamut.is_some() || job.clipping || job.focus || job.dust_view).then(|| rgba.clone());
         if let Some(mask) = &gamut {
             luma_color::proof::paint_alert(&mut rgba, mask);
         }
         if job.clipping {
             clip_overlay(&mut rgba);
         }
+        // Sur l'aperçu tel qu'il s'affiche (avant l'écrêtage, qui ne crée pas de détail).
+        let sharp = job.focus.then(|| {
+            let mask = luma_image::focus::sharp(clean.as_deref().unwrap_or(&rgba), w, h);
+            let mut n = 0usize;
+            for (p, &m) in rgba.as_chunks_mut::<4>().0.iter_mut().zip(&mask) {
+                if m {
+                    p[..3].copy_from_slice(&luma_image::focus::COLOR);
+                    n += 1;
+                }
+            }
+            n as f32 / (w * h).max(1) as f32
+        });
         if job.dust_view {
             rgba = luma_image::dust::view(&base.image);
         }
@@ -1044,6 +1064,7 @@ fn render_job(
             dust,
             scope,
             clean,
+            sharp,
         };
         let _ = sender.send(Event::Rendered(Box::new(frame)));
         repaint();
