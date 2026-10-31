@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **Faster corrections from the camera's JPEG**: a third less time per photo
+  (≈ 860 → 580 ms), with the same values: the JPEG is decoded and its details searched
+  once for all three measurements.
 - **Faster film and camera-look measurement**: smoothing the LUT (400 passes over
   35,937 nodes) drops from 75 to 41 ms, with the same bits.
 - **Lens distortion and vignetting for Canon, Nikon, Pentax…**: “Corrections from the

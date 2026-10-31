@@ -7,6 +7,7 @@
 //! défaite partout, laisse le gain des bords.
 
 use luma_core::{Error, Result, RgbImage};
+use rayon::prelude::*;
 
 use crate::features;
 
@@ -15,6 +16,36 @@ type Match = ((f64, f64), (f64, f64));
 
 /// Côté des images comparées : assez pour placer les détails au pixel près.
 const SIDE: usize = 1600;
+
+/// Le JPEG du boîtier, préparé une fois pour toutes les mesures : à la taille
+/// d'analyse, avec ses détails.
+pub struct CameraJpeg {
+    analysis: RgbImage,
+    features: Vec<features::Feature>,
+}
+
+impl CameraJpeg {
+    pub fn new(jpeg: &RgbImage) -> CameraJpeg {
+        let analysis = crate::analysis(jpeg, SIDE);
+        let features = features::detect(&features::luminance(&analysis), 4000);
+        CameraJpeg { analysis, features }
+    }
+}
+
+/// La Distorsion puis le Vignetage (mesuré avec cette Distorsion arrondie) qui rendent
+/// `photo` comme le JPEG que le boîtier a rangé dans son RAW `path` : les mêmes valeurs
+/// que [`distortion`] puis [`vignetting`], mais le JPEG décodé une fois et ses détails
+/// cherchés une fois pour les trois ajustements.
+pub fn corrections(photo: &luma_render::Photo, path: &std::path::Path) -> Result<(f32, f32)> {
+    let pair = crate::film::camera_pair(photo, path)?;
+    let jpeg = CameraJpeg::new(&pair.film);
+    let k = radial_k_with(&pair.digital, &jpeg)?;
+    let d = (-k / 0.15 * 100.0).clamp(-100.0, 100.0);
+    let mut settings = luma_project::Settings::default();
+    settings.lens.distortion = d.round();
+    let render = crate::film::reference_with(photo, &settings)?;
+    Ok((d, vignetting_from(photo, &settings, &render, &jpeg)?))
+}
 
 /// Le réglage Distorsion (−100 à 100) qui rend `photo`, développée avec `settings`,
 /// comme le JPEG que le boîtier a rangé dans son RAW `path`. Proche de 0 quand les
@@ -40,25 +71,27 @@ pub fn distortion(
 /// appariements trop loin du modèle ; `a` absorbe le léger recadrage du boîtier, d'où
 /// `k = b / a³`.
 pub fn radial_k(render: &RgbImage, jpeg: &RgbImage) -> Result<f32> {
-    let r = crate::analysis(render, SIDE);
-    let j = crate::analysis(jpeg, SIDE);
-    let sol = fit(&r, &j)?;
+    radial_k_with(render, &CameraJpeg::new(jpeg))
+}
+
+fn radial_k_with(render: &RgbImage, jpeg: &CameraJpeg) -> Result<f32> {
+    let sol = fit(&crate::analysis(render, SIDE), jpeg)?;
     Ok((sol[1] / sol[0].powi(3)) as f32)
 }
 
 /// Le modèle `source = a·j + b·j·r² + t` (a, b, tx, ty) qui amène le JPEG `j` sur le
 /// rendu `r` (déjà ramenés à la taille d'analyse), coordonnées normalisées par la
 /// demi‑diagonale de chacun.
-fn fit(r: &RgbImage, j: &RgbImage) -> Result<[f64; 4]> {
+fn fit(r: &RgbImage, jpeg: &CameraJpeg) -> Result<[f64; 4]> {
+    let (j, fj) = (&jpeg.analysis, &jpeg.features);
     let fr = features::detect(&features::luminance(r), 4000);
-    let fj = features::detect(&features::luminance(j), 4000);
     let norm = |img: &RgbImage| {
         let (cx, cy) = (img.width as f64 / 2.0, img.height as f64 / 2.0);
         let hd = (cx * cx + cy * cy).sqrt();
         move |(x, y): (f64, f64)| ((x - cx) / hd, (y - cy) / hd)
     };
     let (nj, nr) = (norm(j), norm(r));
-    let pts: Vec<Match> = features::matches(&fj, &fr)
+    let pts: Vec<Match> = features::matches(fj, &fr)
         .into_iter()
         .map(|(a, b)| (nj(a), nr(b)))
         .collect();
@@ -113,15 +146,26 @@ pub fn vignetting(
     } else {
         crate::film::reference_with(photo, settings)?
     };
+    vignetting_from(photo, settings, &render, &CameraJpeg::new(&pair.film))
+}
+
+/// [`vignetting`] sur `render` (la photo développée avec `settings`) et le JPEG déjà
+/// préparé.
+fn vignetting_from(
+    photo: &luma_render::Photo,
+    settings: &luma_project::Settings,
+    render: &RgbImage,
+    jpeg: &CameraJpeg,
+) -> Result<f32> {
     let start = settings.lens.vignetting;
-    let first = vignetting_of(&render, &pair.film)?;
+    let first = vignetting_with(render, jpeg)?;
     // Le gain se mesure après la courbe de tons de LÜMA, le curseur agit avant : un
     // second rendu avec la valeur trouvée dit de combien elle porte vraiment, et la
     // droite entre les deux mesures donne celle qui ne laisse plus rien.
     let mut tried = settings.clone();
     tried.lens.vignetting = (start + first).clamp(-100.0, 100.0);
     tried.lens.vignetting_midpoint = MIDPOINT;
-    let rest = vignetting_of(&crate::film::reference_with(photo, &tried)?, &pair.film)?;
+    let rest = vignetting_with(&crate::film::reference_with(photo, &tried)?, jpeg)?;
     let reach = (first - rest) / first;
     let step = if first.abs() > 2.0 && (0.3..3.0).contains(&reach) {
         first / reach
@@ -141,47 +185,56 @@ pub const MIDPOINT: f32 = 50.0;
 /// sur le modèle de LÜMA (`gain = 2^(1,6 · v · smoothstep(milieu, 1,25, r))`, Milieu à
 /// [`MIDPOINT`]), par moindres carrés.
 pub fn vignetting_of(render: &RgbImage, jpeg: &RgbImage) -> Result<f32> {
+    vignetting_with(render, &CameraJpeg::new(jpeg))
+}
+
+fn vignetting_with(render: &RgbImage, jpeg: &CameraJpeg) -> Result<f32> {
     let r = crate::analysis(render, SIDE);
-    let j = crate::analysis(jpeg, SIDE);
-    let sol = fit(&r, &j)?;
+    let sol = fit(&r, jpeg)?;
+    let j = &jpeg.analysis;
     let half = |img: &RgbImage| {
         let (cx, cy) = (img.width as f64 / 2.0, img.height as f64 / 2.0);
         (cx, cy, (cx * cx + cy * cy).sqrt())
     };
-    let ((jcx, jcy, jhd), (rcx, rcy, rhd)) = (half(&j), half(&r));
+    let ((jcx, jcy, jhd), (rcx, rcy, rhd)) = (half(j), half(&r));
     let lum = |p: [f32; 3]| p.iter().map(|&v| luma_color::srgb_decode(v)).sum::<f32>() / 3.0;
     // Les paires (rayon dans le rendu, log2 luminance du rendu, log2 luminance du JPEG),
     // loin des contours (un décalage d'un pixel y changerait tout) et des extrêmes.
-    let mut samples: Vec<(f64, f64, f64)> = Vec::new();
-    for y in (2..j.height - 2).step_by(3) {
-        for x in (2..j.width - 2).step_by(3) {
-            let p = j.pixel(x, y);
-            let gx = lum(j.pixel(x + 2, y)) - lum(j.pixel(x - 2, y));
-            let gy = lum(j.pixel(x, y + 2)) - lum(j.pixel(x, y - 2));
-            let lj = lum(p);
-            if gx.abs() + gy.abs() > 0.08 * lj.max(0.02) || p.iter().any(|&v| v > 0.97) || lj < 0.01 {
-                continue;
-            }
-            let (nx, ny) = ((x as f64 - jcx) / jhd, (y as f64 - jcy) / jhd);
-            let r2 = nx * nx + ny * ny;
-            let (sx, sy) = (
-                sol[0] * nx + sol[1] * nx * r2 + sol[2],
-                sol[0] * ny + sol[1] * ny * r2 + sol[3],
-            );
-            let Some(q) =
-                crate::frames::sample_with(r.width, r.height, sx * rhd + rcx - 0.5, sy * rhd + rcy - 0.5, |x, y| {
-                    r.pixel(x, y)
-                })
-            else {
-                continue;
-            };
-            let lr = lum(q);
-            if lr < 0.002 || q.iter().any(|&v| v > 0.97) {
-                continue;
-            }
-            samples.push(((sx * sx + sy * sy).sqrt(), f64::from(lr).log2(), f64::from(lj).log2()));
-        }
-    }
+    // Ligne par ligne sur tous les cœurs, dans l'ordre des lignes (comme avant).
+    let r = &r;
+    let samples: Vec<(f64, f64, f64)> = (2..j.height - 2)
+        .into_par_iter()
+        .step_by(3)
+        .flat_map_iter(|y| {
+            (2..j.width - 2).step_by(3).filter_map(move |x| {
+                let p = j.pixel(x, y);
+                let gx = lum(j.pixel(x + 2, y)) - lum(j.pixel(x - 2, y));
+                let gy = lum(j.pixel(x, y + 2)) - lum(j.pixel(x, y - 2));
+                let lj = lum(p);
+                if gx.abs() + gy.abs() > 0.08 * lj.max(0.02) || p.iter().any(|&v| v > 0.97) || lj < 0.01 {
+                    return None;
+                }
+                let (nx, ny) = ((x as f64 - jcx) / jhd, (y as f64 - jcy) / jhd);
+                let r2 = nx * nx + ny * ny;
+                let (sx, sy) = (
+                    sol[0] * nx + sol[1] * nx * r2 + sol[2],
+                    sol[0] * ny + sol[1] * ny * r2 + sol[3],
+                );
+                let q = crate::frames::sample_with(
+                    r.width,
+                    r.height,
+                    sx * rhd + rcx - 0.5,
+                    sy * rhd + rcy - 0.5,
+                    |x, y| r.pixel(x, y),
+                )?;
+                let lr = lum(q);
+                if lr < 0.002 || q.iter().any(|&v| v > 0.97) {
+                    return None;
+                }
+                Some(((sx * sx + sy * sy).sqrt(), f64::from(lr).log2(), f64::from(lj).log2()))
+            })
+        })
+        .collect();
     // La courbe de tons au centre : la médiane du JPEG par tranche de luminance du rendu,
     // rendue croissante.
     const BINS: usize = 60;
@@ -410,6 +463,12 @@ mod tests {
             },
             ..luma_project::Settings::default()
         };
+        // Tout d'un coup : les mêmes valeurs qu'une à une.
+        let (cd, cv) = corrections(&photo, &nef).unwrap();
+        let mut rounded = luma_project::Settings::default();
+        rounded.lens.distortion = d.round();
+        assert_eq!(cd.to_bits(), d.to_bits());
+        assert_eq!(cv.to_bits(), vignetting(&photo, &nef, &rounded).unwrap().to_bits());
         let rest = distortion(&photo, &nef, &corrected).unwrap();
         assert!(rest.abs() < 4.0, "{d} puis {rest}");
         // Son vignetage : net, et une fois corrigé de la valeur mesurée (après un
