@@ -631,7 +631,8 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     }
     let found = if let Some(name) = &shown {
         Some(cat.collection_photos(name)?)
-    } else if show || query.is_some() {
+    } else if show || query.is_some() || csv.is_some() {
+        // --csv seul : toute la photothèque, comme --list.
         let query = query.unwrap_or_default();
         let t = Instant::now();
         let found = cat.search(&query);
@@ -2468,11 +2469,31 @@ fn import(args: Vec<String>) -> Result<(), String> {
         plan.bytes() as f64 / 1e6,
         plan.skipped.len()
     );
-    if dry || plan.items.is_empty() {
+    if dry {
         return Ok(());
     }
+    // Rien de neuf : pas de copie, mais la carte s'éjecte quand même si on l'a demandé.
+    if !plan.items.is_empty() {
+        copy_and_catalog(&plan, &o, file)?;
+    }
+    if eject {
+        match import::eject(&source) {
+            Ok(()) => eprintln!("{} : carte éjectée", source.display()),
+            Err(e) => return Err(format!("{} : la carte n'a pas pu être éjectée : {e}", source.display())),
+        }
+    }
+    Ok(())
+}
+
+/// Copie les photos du plan (vérifiées), puis ajoute leurs dossiers à la photothèque.
+fn copy_and_catalog(
+    plan: &luma_library::import::Plan,
+    o: &luma_library::import::Options,
+    file: Option<PathBuf>,
+) -> Result<(), String> {
+    use luma_library::import;
     let start = Instant::now();
-    let report = import::run(&plan, |n| eprint!("\r{n} / {}", plan.items.len()))?;
+    let report = import::run(plan, |n| eprint!("\r{n} / {}", plan.items.len()))?;
     eprintln!(
         "\r{} photo(s) importée(s) et vérifiée(s), {:.1} Mo, en {:.1} s{}",
         report.copied,
@@ -2498,12 +2519,6 @@ fn import(args: Vec<String>) -> Result<(), String> {
             catalog.add_folder(d, false);
         }
         catalog.save(&file).map_err(|e| e.to_string())?;
-    }
-    if eject {
-        match import::eject(&source) {
-            Ok(()) => eprintln!("{} : carte éjectée", source.display()),
-            Err(e) => return Err(format!("{} : la carte n'a pas pu être éjectée : {e}", source.display())),
-        }
     }
     Ok(())
 }

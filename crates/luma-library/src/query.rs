@@ -8,7 +8,10 @@
 //! ```
 //!
 //! `dossier:` garde les photos dont le chemin du dossier contient ce texte
-//! (`dossier:mariage`, `dossier:"Clients/2026"`), majuscules et accents mis à part.
+//! (`dossier:mariage`, `dossier:"Clients/2026"`), majuscules et accents mis à part ;
+//! `dossier:=/Photos/2024` garde ce dossier et ses sous‑dossiers, pas `/Photos/2024-bis`.
+//! De même, `boîtier:=` et `objectif:=` veulent le nom entier (`objectif:="EF50mm
+//! f/1.8"` ne trouve pas « EF50mm f/1.8 STM »).
 //!
 //! La note se donne en minimum (`note:3`), en plage (`note:..2`, `note:2..4`) ou
 //! exactement (`note:=0`, les photos pas encore notées) ; `sans:` trouve ce qui
@@ -79,8 +82,14 @@ pub struct Query {
     pub camera: Option<String>,
     pub lens: Option<String>,
     pub keyword: Option<String>,
-    /// Un morceau du chemin du dossier (`dossier:mariage`), replié.
+    /// Un morceau du chemin du dossier (`dossier:mariage`), replié, avec `/` pour
+    /// séparateur.
     pub folder: Option<String>,
+    /// `boîtier:=`, `objectif:=`, `dossier:=` : le nom entier, le dossier et ses
+    /// sous‑dossiers.
+    pub camera_exact: bool,
+    pub lens_exact: bool,
+    pub folder_exact: bool,
 }
 
 /// Minuscules et sans accents, pour comparer des textes comme on les tape.
@@ -150,6 +159,9 @@ impl Query {
                 q.words.push(fold(token));
                 continue;
             };
+            // Les espaces autour de la valeur (« coucher de soleil », guillemets
+            // français et leurs espaces insécables) ne comptent pas.
+            let value = value.trim();
             let bad = || format!("filtre « {token} » mal écrit");
             match fold(key).as_str() {
                 "note" | "rating" => {
@@ -167,15 +179,19 @@ impl Query {
                         q.min_rating = n(value.trim_end_matches('+'))?;
                     }
                 }
-                "sans" | "without" => q
-                    .missing
-                    .push(match fold(value).replace(['-', '‑'], "").trim_end_matches('s') {
-                        "note" | "rating" => Missing::Rating,
-                        "mot" | "motcle" | "motscle" | "keyword" => Missing::Keywords,
-                        "lieu" | "gps" | "position" | "location" => Missing::Location,
-                        "libelle" | "label" => Missing::Label,
-                        _ => return Err(bad()),
-                    }),
+                "sans" | "without" => {
+                    let kind = |v: &str| match v {
+                        "note" | "rating" => Some(Missing::Rating),
+                        "mot" | "motcle" | "motscle" | "keyword" => Some(Missing::Keywords),
+                        "lieu" | "lieux" | "gps" | "position" | "location" => Some(Missing::Location),
+                        "libelle" | "label" => Some(Missing::Label),
+                        _ => None,
+                    };
+                    // Le nom tel quel (`gps`), puis sans son pluriel (`notes`, `mots-clés`).
+                    let v = fold(value).replace(['-', '‑'], "");
+                    let k = kind(&v).or_else(|| v.strip_suffix('s').and_then(kind));
+                    q.missing.push(k.ok_or_else(bad)?);
+                }
                 "drapeau" | "flag" => {
                     q.flag = Some(match fold(value).as_str() {
                         "retenue" | "retenues" | "pick" | "picked" => Flag::Pick,
@@ -206,10 +222,21 @@ impl Query {
                 }
                 "iso" => q.iso = range(value).ok_or_else(bad)?,
                 "focale" | "focal" => q.focal_length = range(value).ok_or_else(bad)?,
-                "boitier" | "camera" => q.camera = Some(fold(value)),
-                "objectif" | "lens" => q.lens = Some(fold(value)),
+                "boitier" | "camera" => {
+                    let (v, exact) = exact(value);
+                    (q.camera, q.camera_exact) = (Some(fold(v)), exact);
+                }
+                "objectif" | "lens" => {
+                    let (v, exact) = exact(value);
+                    (q.lens, q.lens_exact) = (Some(fold(v)), exact);
+                }
                 "mot" | "keyword" => q.keyword = Some(fold(value)),
-                "dossier" | "folder" => q.folder = Some(fold(value)),
+                "dossier" | "folder" => {
+                    let (v, exact) = exact(value);
+                    let v = slashes(&fold(v));
+                    let v = if exact { v.trim_end_matches('/').to_owned() } else { v };
+                    (q.folder, q.folder_exact) = (Some(v), exact);
+                }
                 _ => return Err(format!("filtre inconnu « {key} »")),
             }
         }
@@ -258,10 +285,22 @@ impl Query {
         if !self.iso.contains(e.iso) || !self.focal_length.contains(e.focal_length) {
             return false;
         }
-        if self.camera.as_ref().is_some_and(|c| !e.camera_contains(c)) {
+        if self.camera.as_ref().is_some_and(|c| {
+            if self.camera_exact {
+                fold(&e.camera()) != *c
+            } else {
+                !e.camera_contains(c)
+            }
+        }) {
             return false;
         }
-        if self.lens.as_ref().is_some_and(|l| !contains(&e.lens, l)) {
+        if self.lens.as_ref().is_some_and(|l| {
+            if self.lens_exact {
+                fold(&e.lens) != *l
+            } else {
+                !contains(&e.lens, l)
+            }
+        }) {
             return false;
         }
         if self
@@ -271,11 +310,17 @@ impl Query {
         {
             return false;
         }
-        if self
-            .folder
-            .as_ref()
-            .is_some_and(|f| !e.path.parent().is_some_and(|d| contains(&d.to_string_lossy(), f)))
-        {
+        if self.folder.as_ref().is_some_and(|f| {
+            !e.path.parent().is_some_and(|d| {
+                // Le même séparateur partout : `dossier:"Clients/2026"` sur Windows aussi.
+                let d = slashes(&fold(&d.to_string_lossy()));
+                if self.folder_exact {
+                    d == *f || d.strip_prefix(f.as_str()).is_some_and(|rest| rest.starts_with('/'))
+                } else {
+                    d.contains(f.as_str())
+                }
+            })
+        }) {
             return false;
         }
         let name = e.path.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
@@ -311,6 +356,29 @@ fn tokens(text: &str) -> Vec<String> {
         out.push(cur);
     }
     out
+}
+
+/// Une valeur `=…` (le nom entier) : la valeur sans `=`, et si elle l'avait.
+fn exact(value: &str) -> (&str, bool) {
+    match value.strip_prefix('=') {
+        Some(v) => (v, true),
+        None => (value, false),
+    }
+}
+
+/// Le chemin avec `/` pour séparateur (ceux de Windows compris).
+fn slashes(path: &str) -> String {
+    path.replace('\\', "/")
+}
+
+/// Le filtre `key:=value` pour un boîtier, un objectif ou un dossier (le nom entier,
+/// le dossier et ses sous‑dossiers), `key:value` pour le reste : ce que montrent les
+/// listes de la photothèque.
+pub fn exact_filter(key: &str, value: &str) -> String {
+    match fold(key).as_str() {
+        "boitier" | "camera" | "objectif" | "lens" | "dossier" | "folder" => filter(key, &format!("={value}")),
+        _ => filter(key, value),
+    }
 }
 
 /// Un mot‑clé en filtre de recherche : entre guillemets s'il a des espaces.
@@ -563,6 +631,42 @@ mod tests {
 
     /// Entre guillemets, un filtre garde ses espaces : un mot‑clé de plusieurs mots se
     /// retrouve, et un mot libre de même.
+    #[test]
+    fn exact_names_folders_and_french_quotes() {
+        let mut e = photo("IMG_1.ARW", "2024-06-01T10:00:00");
+        e.path = "/Photos/2024/IMG_1.ARW".into();
+        e.lens = "EF50mm f/1.8 STM".into();
+        e.keywords = vec!["Coucher de soleil".into()];
+        let found = |q: &str| Query::parse(q).unwrap().matches(&e);
+        // Le nom entier : « EF50mm f/1.8 » ne trouve pas la version STM.
+        assert!(found("objectif:EF50mm"));
+        assert!(!found(&exact_filter("objectif", "EF50mm f/1.8")));
+        assert!(found(&exact_filter("objectif", "EF50mm f/1.8 STM")));
+        // Le dossier et ses sous‑dossiers, pas un voisin au nom plus long.
+        assert!(found(&exact_filter("dossier", "/Photos/2024")));
+        assert!(found(&exact_filter("dossier", "/Photos")));
+        assert!(!found(&exact_filter("dossier", "/Photos/202")));
+        let mut bis = e.clone();
+        bis.path = "/Photos/2024-bis/IMG_2.ARW".into();
+        assert!(
+            !Query::parse(&exact_filter("dossier", "/Photos/2024"))
+                .unwrap()
+                .matches(&bis)
+        );
+        // Le séparateur de Windows vaut `/`.
+        #[cfg(windows)]
+        {
+            let mut win = e.clone();
+            win.path = r"C:\Photos\Clients\2026\IMG_1.ARW".into();
+            assert!(Query::parse(r#"dossier:"Clients/2026""#).unwrap().matches(&win));
+        }
+        // Guillemets français et leurs espaces ; `sans:gps`, `sans:lieux`.
+        assert!(found("mot:« coucher de soleil »"));
+        assert_eq!(Query::parse("sans:gps").unwrap().missing, [Missing::Location]);
+        assert_eq!(Query::parse("sans:lieux").unwrap().missing, [Missing::Location]);
+        assert_eq!(Query::parse("sans:notes").unwrap().missing, [Missing::Rating]);
+    }
+
     #[test]
     fn quoted_values_keep_their_spaces() {
         let photo = Entry {

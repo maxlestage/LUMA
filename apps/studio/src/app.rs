@@ -509,6 +509,8 @@ pub struct Import {
     /// Les aperçus des prises, lus en arrière‑plan à l'ouverture du choix.
     previews: HashMap<PathBuf, TextureHandle>,
     previews_job: Option<std::sync::mpsc::Receiver<Preview>>,
+    /// Les aperçus de cette source ont été lus (même si aucun n'a pu l'être).
+    previews_done: bool,
 }
 
 /// L'aperçu d'une prise de la source : son fichier, sa taille et ses pixels RGB.
@@ -641,6 +643,7 @@ impl Default for Import {
             cards_job: None,
             previews: HashMap::new(),
             previews_job: None,
+            previews_done: false,
         }
     }
 }
@@ -659,6 +662,17 @@ struct Playing {
     /// L'ordre tiré au hasard (« Ordre aléatoire ») : chaque photo une fois avant un
     /// nouveau tirage ; vide, l'ordre du film.
     order: Vec<usize>,
+}
+
+/// Les corrections d'objectif mesurées, posées sur des réglages ; le recadrage seulement
+/// là où il n'y en avait pas.
+fn apply_lens(s: &mut Settings, m: &crate::worker::LensMeasure) {
+    s.lens.distortion = m.distortion;
+    s.lens.vignetting = m.vignetting;
+    s.lens.vignetting_midpoint = luma_merge::camera_lens::MIDPOINT;
+    if s.crop.is_identity() {
+        s.crop = m.crop;
+    }
 }
 
 /// Un tirage au hasard de `items` (Fisher–Yates, une graine tirée de l'heure) : pour le
@@ -842,6 +856,9 @@ pub struct Studio {
     /// Le lot des corrections d'objectif d'après le JPEG du boîtier : photos demandées,
     /// corrigées, laissées de côté.
     lens_batch: (usize, usize, usize),
+    /// Les corrections d'objectif arrivées pour la photo en cours d'ouverture : posées
+    /// sur ses réglages quand elle est là.
+    lens_on_load: Option<(PathBuf, crate::worker::LensMeasure)>,
     paste_groups: Vec<luma_project::paste::Group>,
     texture: Option<TextureHandle>,
     image_size: [usize; 2],
@@ -960,7 +977,12 @@ pub struct Studio {
     /// à jour en cours (un dossier relu dans un fil à part, sans bloquer l'interface).
     catalog: luma_library::Catalog,
     catalog_path: Option<PathBuf>,
-    indexing: Option<std::sync::mpsc::Receiver<luma_library::Catalog>>,
+    /// La mise à jour en cours : le catalogue de départ, le dossier, et le résultat.
+    indexing: Option<(
+        luma_library::Catalog,
+        PathBuf,
+        std::sync::mpsc::Receiver<luma_library::Catalog>,
+    )>,
     pending_index: Vec<PathBuf>,
     /// Le dossier surveillé, et quand le relever.
     watch: Option<luma_library::watch::Watch>,
@@ -1282,6 +1304,7 @@ impl Studio {
             syncing: false,
             auto_pending: 0,
             lens_batch: (0, 0, 0),
+            lens_on_load: None,
             paste_groups: luma_project::paste::default_groups(),
             texture: None,
             image_size: [0, 0],
@@ -1574,15 +1597,17 @@ impl Studio {
             }
             return;
         }
-        let mut catalog = self.catalog.clone();
+        let start = self.catalog.clone();
+        let mut catalog = start.clone();
         let (tx, rx) = std::sync::mpsc::channel();
+        let folder = dir.clone();
         std::thread::spawn(move || {
-            catalog.add_folder(&dir, false);
+            catalog.add_folder(&folder, false);
             let _ = catalog.save(&file);
             let _ = tx.send(catalog);
             crate::wake();
         });
-        self.indexing = Some(rx);
+        self.indexing = Some((start, dir, rx));
     }
 
     /// Surveille un dossier : il s'ouvre, et les photos qui y arriveront entreront dans
@@ -1677,9 +1702,21 @@ impl Studio {
 
     /// Reprend le catalogue mis à jour, s'il est prêt.
     fn poll_catalog(&mut self) {
-        let Some(rx) = &self.indexing else { return };
+        let Some((start, dir, rx)) = &self.indexing else {
+            return;
+        };
         match rx.try_recv() {
             Ok(catalog) => {
+                // Le catalogue a changé pendant la mise à jour (une collection créée, un
+                // dossier retiré, une sauvegarde restaurée…) : le résultat, parti de
+                // l'ancien, l'effacerait. Le dossier est remis à jour sur le nouveau
+                // (qui est enregistré à la fin, par‑dessus l'ancien).
+                if *start != self.catalog {
+                    let dir = dir.clone();
+                    self.indexing = None;
+                    self.index_folder(dir);
+                    return;
+                }
                 self.catalog = catalog;
                 self.indexing = None;
                 self.refresh_catalog_lists();
@@ -2889,6 +2926,15 @@ impl Studio {
                 _ => visible.first().copied().unwrap_or(0),
             }
         };
+        // Une seule photo : elle reste à l'écran (la prendre comme image qui part
+        // laisserait l'écran noir, aucune nouvelle image n'arrivant pour elle).
+        if Some(next) == self.current {
+            if let Some(p) = &mut self.playing {
+                p.since = std::time::Instant::now();
+            }
+            ctx.request_repaint_after(wait);
+            return;
+        }
         // L'image de la photo qui part est gardée pour la transition ; la suivante
         // arrive dans une image neuve.
         let leaving = self
@@ -3175,6 +3221,7 @@ impl Studio {
         self.import.shots.clear();
         self.import.previews.clear();
         self.import.previews_job = None;
+        self.import.previews_done = false;
         let (send, receive) = std::sync::mpsc::channel();
         self.import.days_job = Some(receive);
         std::thread::spawn(move || {
@@ -3198,9 +3245,15 @@ impl Studio {
     /// Lit en arrière‑plan l'aperçu de chaque prise de la source : celui qui est intégré
     /// au RAW, sinon l'image réduite. S'arrête quand la source change.
     fn start_import_previews(&mut self) {
-        if self.import.previews_job.is_some() || !self.import.previews.is_empty() {
+        // Une fois par source : quand aucun aperçu ne se lit, ne pas relire la carte
+        // à chaque image.
+        if self.import.previews_job.is_some()
+            || self.import.previews_done
+            || self.import.days_job.is_some()
+        {
             return;
         }
+        self.import.previews_done = true;
         let paths: Vec<PathBuf> = self
             .import
             .shots
@@ -4962,6 +5015,12 @@ impl Studio {
                             self.photo = Some(photo);
                             self.original_asked = None;
                             self.zoom = false;
+                            // Des corrections d'objectif arrivées pendant l'ouverture.
+                            if let Some((p, m)) = self.lens_on_load.take()
+                                && p == path
+                            {
+                                self.apply_lens_to_current(&m);
+                            }
                         }
                         Err(e) => {
                             self.status = trf(
@@ -5104,6 +5163,17 @@ impl Studio {
                 }
                 Event::AutoBalanced { path, balance } => self.apply_auto_balance(path, balance),
                 Event::LensMeasured { path, result } => self.apply_lens_measure(path, result),
+                Event::ReferenceFailed { path, error } => {
+                    if self.reference_asked.as_ref() == Some(&path) {
+                        self.reference_asked = None;
+                        self.reference = None;
+                        self.reference_view = false;
+                        self.status = trf(
+                            "Impossible d'ouvrir {file} : {error}",
+                            &[("file", &file_name(&path)), ("error", &error)],
+                        );
+                    }
+                }
                 Event::Reference { path, size, rgba } => {
                     if self.reference_asked.as_ref() == Some(&path) {
                         self.reference_asked = None;
@@ -7733,6 +7803,19 @@ impl Studio {
         use crate::licence::{FEATURES, open_url};
         use luma_licence::Access;
         let access = self.licence.access();
+        // Sur un écran étroit (iPhone), « Fermer » a sa propre ligne : à côté du titre,
+        // il le recouvrirait.
+        let narrow = ui.available_width() < 400.0;
+        let close = |ui: &mut Ui, open: &mut bool| {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                if ui.button(tr("Fermer")).clicked() {
+                    *open = false;
+                }
+            });
+        };
+        if narrow && !locked {
+            close(ui, &mut self.premium_open);
+        }
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(vec2(54.0, 54.0), egui::Sense::hover());
             if let Some(b) = &self.brand {
@@ -7773,14 +7856,10 @@ impl Studio {
                     ),
                     Access::Expired { .. } => tr("Votre essai est terminé : abonnez-vous pour continuer à développer vos photos.").into(),
                 };
-                ui.label(RichText::new(line).size(13.5).color(theme::DIM));
+                ui.add(egui::Label::new(RichText::new(line).size(13.5).color(theme::DIM)).wrap());
             });
-            if !locked {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    if ui.button(tr("Fermer")).clicked() {
-                        self.premium_open = false;
-                    }
-                });
+            if !locked && !narrow {
+                close(ui, &mut self.premium_open);
             }
         });
         ui.add_space(14.0);
@@ -9040,6 +9119,11 @@ impl Studio {
     /// en arrière‑plan sur le JPEG que le boîtier a rangé dans chaque RAW choisi (dans la
     /// photo ouverte sinon) ; chaque photo la sienne.
     pub fn lens_from_camera_selected(&mut self) {
+        // Un lot à la fois : un second relancerait le compte pendant que le premier
+        // envoie encore ses résultats.
+        if self.lens_batch.0 > 0 {
+            return;
+        }
         let paths: Vec<PathBuf> = self
             .keyword_targets()
             .into_iter()
@@ -9056,6 +9140,20 @@ impl Studio {
         self.worker.lens_from_camera(paths);
     }
 
+    /// Pose les corrections d'objectif mesurées sur la photo affichée, dans son
+    /// historique.
+    fn apply_lens_to_current(&mut self, m: &crate::worker::LensMeasure) {
+        apply_lens(&mut self.settings, m);
+        self.commit(trf(
+            "Corrections d'après le JPEG du boîtier : distorsion {distortion}, vignetage {vignetting}",
+            &[
+                ("distortion", &format_value(m.distortion, 0, true)),
+                ("vignetting", &format_value(m.vignetting, 0, true)),
+            ],
+        ));
+        self.touch();
+    }
+
     /// Les corrections d'objectif mesurées pour une photo du lot : la photo ouverte les
     /// reçoit dans son historique, les autres dans leur XMP ; le recadrage seulement là
     /// où il n'y en avait pas.
@@ -9065,30 +9163,23 @@ impl Studio {
         result: Result<crate::worker::LensMeasure, String>,
     ) {
         let (total, done, skipped) = self.lens_batch;
-        let apply = |s: &mut Settings, m: &crate::worker::LensMeasure| {
-            s.lens.distortion = m.distortion;
-            s.lens.vignetting = m.vignetting;
-            s.lens.vignetting_midpoint = luma_merge::camera_lens::MIDPOINT;
-            if s.crop.is_identity() {
-                s.crop = m.crop;
-            }
-        };
+        // La photo ouverte et affichée : dans son historique. Pendant qu'elle s'ouvre,
+        // `self.settings` est encore celui de la photo d'avant : la correction va dans
+        // son XMP et sera posée à son arrivée.
+        let shown = self.current_path() == Some(path.as_path())
+            && self.loading.is_none()
+            && self.photo.is_some();
         let ok = match result {
-            Ok(m) if self.current_path() == Some(path.as_path()) => {
-                apply(&mut self.settings, &m);
-                self.commit(trf(
-                    "Corrections d'après le JPEG du boîtier : distorsion {distortion}, vignetage {vignetting}",
-                    &[
-                        ("distortion", &format_value(m.distortion, 0, true)),
-                        ("vignetting", &format_value(m.vignetting, 0, true)),
-                    ],
-                ));
-                self.touch();
+            Ok(m) if shown => {
+                self.apply_lens_to_current(&m);
                 true
             }
             Ok(m) => {
+                if self.loading.as_deref() == Some(path.as_path()) {
+                    self.lens_on_load = Some((path.clone(), m));
+                }
                 let mut s = read_sidecar(&path).unwrap_or_default();
-                apply(&mut s, &m);
+                apply_lens(&mut s, &m);
                 let meta = read_meta(&path);
                 match write_sidecar(&path, &s, &meta) {
                     Ok(()) => {
@@ -13835,7 +13926,7 @@ fn facet_section(
             .max_height(220.0)
             .show(ui, |ui| {
                 for (value, n) in items {
-                    let query = luma_library::query::filter(key, value);
+                    let query = luma_library::query::exact_filter(key, value);
                     let on = *view == View::Search(query.clone());
                     ui.horizontal(|ui| {
                         ui.add_space(22.0);
@@ -13921,7 +14012,9 @@ fn folder_rows(
             // Le dossier et tous ses sous‑dossiers, d'un coup (`dossier:` et son chemin).
             if ui.button(tr("Toutes ses photos")).clicked() {
                 let path = f.path.display().to_string();
-                *whole = Some(View::Search(luma_library::query::filter("dossier", &path)));
+                *whole = Some(View::Search(luma_library::query::exact_filter(
+                    "dossier", &path,
+                )));
                 ui.close();
             }
             if crate::dialogs::system_opener().is_some()
