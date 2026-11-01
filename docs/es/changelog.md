@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Página «Descargar» en el sitio**: todas las versiones de la app (Mac, Windows,
+  Linux, la línea de comandos) y, para cada sistema, cómo instalarla; el botón
+  «Descargar» de la barra lleva allí.
 - **Comparación más rápida**: dos fotos reveladas a la vez, con las mismas imágenes
   (cuatro RAW en 1,57 s en lugar de 2,0 s).
 - **Zonas nítidas en la comparación**: Mayús+F las pinta en todas las fotos comparadas

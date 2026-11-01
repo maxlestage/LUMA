@@ -159,7 +159,14 @@ fn navbar(here: Here) -> Element {
         )
         .child(
             a().class("btn btn-small magnetic")
-                .href(target(lang, "#tarifs"))
+                .href(target(
+                    lang,
+                    if downloads_open() {
+                        DOWNLOADS_PAGE
+                    } else {
+                        "#tarifs"
+                    },
+                ))
                 .child(span().text(if downloads_open() {
                     t(lang, "Télécharger")
                 } else {
@@ -1214,44 +1221,10 @@ fn pricing(lang: Lang) -> Element {
                 "Téléchargez LÜMA : tout est ouvert pendant l'essai. Ensuite, un abonnement au mois ou à l'an. Sur Mac, Linux et Windows, il s'achète uniquement ici, payé par Stripe ; votre clé de licence s'affiche aussitôt, et se saisit dans l'app. Sur iPhone et iPad (iOS et iPadOS), LÜMA Premium s'achète une fois pour toutes, uniquement dans l'App Store.",
             ))),
         ))
+        .children(downloads_open().then(|| download_columns(lang)))
         .children(downloads_open().then(|| {
-            // Une colonne par système : le bouton, puis ce qu'il faut savoir.
-            div()
-                .class("download reveal")
-                .child(
-                    div()
-                        .class("download-option")
-                        .child(
-                            a().class("btn magnetic")
-                                .href(download("LUMA-macos.zip"))
-                                .attr("download", "")
-                                .child(span().html(APPLE_SVG))
-                                .child(span().text(t(lang, "Télécharger pour Mac"))),
-                        )
-                        .child(p().class("download-note").text(download_note(lang))),
-                )
-                .child(
-                    div()
-                        .class("download-option")
-                        .child(
-                            a().class("btn btn-ghost magnetic")
-                                .href(download("LUMA-linux-x86_64.tar.gz"))
-                                .attr("download", "")
-                                .child(span().html(LINUX_SVG))
-                                .child(span().text(t(lang, "Télécharger pour Linux"))),
-                        )
-                        .child(
-                            p().class("download-note")
-                                .text(t(lang, "Linux x86_64 (Ubuntu 22.04, Debian 12, Fedora 36 ou plus récent) : l'archive s'installe sans mot de passe avec install.sh ; il faut un pilote graphique Vulkan."))
-                                .child(text(" "))
-                                .child(
-                                    a().href(download("LUMA-linux-amd64.deb"))
-                                        .attr("download", "")
-                                        .text(t(lang, "Paquet .deb (Debian, Ubuntu)")),
-                                ),
-                        ),
-                )
-                .child(windows_download(lang))
+            p().class("download-more")
+                .child(a().href(page_link(lang, DOWNLOADS_PAGE)).text(t(lang, "Toutes les versions et comment les installer")))
         }))
         .child(
             div()
@@ -1609,6 +1582,167 @@ pub fn doc(site: &Site, origin: &str, lang: Lang, page: &super::docs::Doc) -> Pa
     )
 }
 
+/// Les boutons de téléchargement, une colonne par système : le bouton, puis ce qu'il
+/// faut savoir (l'accueil et la page « Télécharger »).
+fn download_columns(lang: Lang) -> Element {
+    div()
+        .class("download reveal")
+        .child(
+            div()
+                .class("download-option")
+                .child(
+                    a().class("btn magnetic")
+                        .href(download("LUMA-macos.zip"))
+                        .attr("download", "")
+                        .child(span().html(APPLE_SVG))
+                        .child(span().text(t(lang, "Télécharger pour Mac"))),
+                )
+                .child(p().class("download-note").text(download_note(lang))),
+        )
+        .child(
+            div()
+                .class("download-option")
+                .child(
+                    a().class("btn btn-ghost magnetic")
+                        .href(download("LUMA-linux-x86_64.tar.gz"))
+                        .attr("download", "")
+                        .child(span().html(LINUX_SVG))
+                        .child(span().text(t(lang, "Télécharger pour Linux"))),
+                )
+                .child(
+                    p().class("download-note")
+                        .text(t(lang, "Linux x86_64 (Ubuntu 22.04, Debian 12, Fedora 36 ou plus récent) : l'archive s'installe sans mot de passe avec install.sh ; il faut un pilote graphique Vulkan."))
+                        .child(text(" "))
+                        .child(
+                            a().href(download("LUMA-linux-amd64.deb"))
+                                .attr("download", "")
+                                .text(t(lang, "Paquet .deb (Debian, Ubuntu)")),
+                        ),
+                ),
+        )
+        .child(windows_download(lang))
+}
+
+/// La page « Télécharger » : toutes les versions de l'app (Mac, Windows, Linux, la ligne
+/// de commande), et comment les installer ; tant que le téléchargement est fermé, elle
+/// le dit.
+pub fn downloads(site: &Site, origin: &str, lang: Lang) -> Page {
+    let here = Here::new(lang, DOWNLOADS_PAGE);
+    let step = |s: &'static str| li().text(s);
+    let content = if downloads_open() {
+        let mac_steps: [&str; 3] = if mac_notarized() {
+            [
+                t(lang, "Décompressez LUMA-macos.zip."),
+                t(lang, "Glissez LÜMA dans le dossier Applications."),
+                t(lang, "Ouvrez LÜMA d'un double clic."),
+            ]
+        } else {
+            [
+                t(lang, "Décompressez LUMA-macos.zip."),
+                t(lang, "Glissez LÜMA dans le dossier Applications."),
+                t(
+                    lang,
+                    "Au premier lancement, macOS refuse de l'ouvrir : Réglages Système → Confidentialité et sécurité, tout en bas, « Ouvrir quand même », puis confirmez. Ensuite, LÜMA s'ouvre normalement.",
+                ),
+            ]
+        };
+        let windows = windows_open().then(|| {
+            section()
+                .id("windows")
+                .child(h2().text("Windows"))
+                .child(ol().children(
+                    [
+                        t(lang, "Lancez l'installateur : LÜMA s'installe sans mot de passe administrateur, et se retrouve dans le menu Démarrer."),
+                        t(lang, "Si Windows SmartScreen l'arrête : « Informations complémentaires », puis « Exécuter quand même »."),
+                        t(lang, "L'archive .zip, elle, se décompresse n'importe où, sans installation."),
+                    ]
+                    .map(step),
+                ))
+        });
+        div()
+            .child(download_columns(lang))
+            .child(
+                section()
+                    .id("mac")
+                    .child(h2().text("Mac"))
+                    .child(ol().children(mac_steps.map(step))),
+            )
+            .child(windows)
+            .child(
+                section()
+                    .id("linux")
+                    .child(h2().text("Linux"))
+                    .child(ol().children(
+                        [
+                            t(lang, "Archive : décompressez-la, puis lancez ./install.sh, sans mot de passe."),
+                            t(lang, "Paquet .deb (Debian, Ubuntu) : sudo apt install ./LUMA-linux-amd64.deb"),
+                        ]
+                        .map(step),
+                    )),
+            )
+            .child(
+                section()
+                    .id("ligne-de-commande")
+                    .child(h2().text(t(lang, "Ligne de commande")))
+                    .child(
+                        p().text(t(lang, "La ligne de commande luma est fournie avec l'app pour Linux et avec l'archive pour Windows ; pour Mac :"))
+                            .child(text(" "))
+                            .child(a().class("btn btn-ghost btn-small").href(download("luma-cli-macos.zip")).attr("download", "").text("luma-cli-macos.zip")),
+                    ),
+            )
+            .children(release_page().map(|url| {
+                p().child(
+                    a().class("btn btn-ghost btn-small").href(url).attr("target", "_blank")
+                        .attr("rel", "noopener")
+                        .text(t(lang, "Toutes les versions et leurs notes")),
+                )
+            }))
+    } else {
+        div().child(
+            p().class("lede")
+                .text(t(lang, "Le téléchargement ouvre bientôt.")),
+        )
+    };
+    let body = div()
+        .class("site site--plain")
+        .child(navbar(here))
+        .child(
+            html::main().child(
+                article()
+                    .class("legal downloads-page")
+                    .child(kicker("LÜMA"))
+                    .child(h1().text(t(lang, "Télécharger LÜMA")))
+                    .child(p().class("lede").text(t(lang, "LÜMA pour Mac, Windows et Linux : un mois d'essai, tout ouvert, puis LÜMA Premium.")))
+                    .child(content),
+            ),
+        )
+        .child(site_footer(here));
+    layout(
+        site,
+        origin,
+        here,
+        &format!("{} — LÜMA", t(lang, "Télécharger LÜMA")),
+        t(
+            lang,
+            "LÜMA pour Mac, Windows et Linux : un mois d'essai, tout ouvert, puis LÜMA Premium.",
+        ),
+        body,
+    )
+}
+
+/// L'adresse de la page « Télécharger ».
+pub const DOWNLOADS_PAGE: &str = "/telecharger/";
+
+/// L'app Mac est‑elle signée et notariée (`LUMA_MAC_NOTARIZED=1`) ?
+fn mac_notarized() -> bool {
+    std::env::var("LUMA_MAC_NOTARIZED").is_ok_and(|v| v == "1")
+}
+
+/// La page des Releases GitHub (toutes les versions), quand les boutons y mènent.
+fn release_page() -> Option<String> {
+    release_downloads().map(|base| base.trim_end_matches("/latest/download").to_owned())
+}
+
 /// Une page légale (mentions, confidentialité, conditions).
 pub fn legal(site: &Site, origin: &str, lang: Lang, page: &Legal) -> Page {
     let here = Here::new(lang, page.path);
@@ -1794,7 +1928,7 @@ pub fn not_found(site: &Site, origin: &str, lang: Lang) -> Page {
 /// s'ouvre d'un double clic ; sinon, la marche à suivre au premier lancement.
 fn download_note(lang: Lang) -> String {
     let base = t(lang, "Apple Silicon et Intel, macOS 11 ou plus récent.");
-    if std::env::var("LUMA_MAC_NOTARIZED").is_ok_and(|v| v == "1") {
+    if mac_notarized() {
         base.to_owned()
     } else {
         format!(

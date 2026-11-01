@@ -301,6 +301,7 @@ fn percent_decode(s: &str) -> String {
 /// la documentation (pour le plan du site).
 pub fn public_pages() -> Vec<&'static str> {
     std::iter::once("/")
+        .chain(std::iter::once(pages::DOWNLOADS_PAGE))
         .chain(crate::content::LEGAL.iter().map(|l| l.path))
         .chain(docs::DOCS.iter().map(|d| d.path))
         .collect()
@@ -426,6 +427,19 @@ pub fn app(site: Arc<Site>) -> App {
                 }
             });
         }
+        // La page « Télécharger » : toutes les versions de l'app et leur installation.
+        let downloads = site.clone();
+        app.get(
+            &i18n::path(lang, pages::DOWNLOADS_PAGE),
+            move |req: Request| {
+                let site = downloads.clone();
+                async move {
+                    pages::downloads(&site, &site.origin(&req), lang)
+                        .into_response()
+                        .header("cache-control", "no-cache")
+                }
+            },
+        );
         // Les pages légales (le routeur sert la même page avec ou sans la barre finale).
         for page in &crate::content::LEGAL {
             let site = site.clone();
@@ -845,6 +859,35 @@ mod tests {
         let res = client.get("/nulle-part").await;
         assert_eq!(res.status().as_u16(), 404);
         assert!(res.text().contains("Hors "));
+    }
+
+    /// La page « Télécharger », dans les trois langues ; tant que le téléchargement est
+    /// fermé (ni fichiers servis ni Release), elle le dit, sans bouton.
+    #[tokio::test]
+    async fn the_download_page_says_when_downloads_are_closed() {
+        let client = client().await;
+        for (path, title, closed) in [
+            (
+                "/telecharger/",
+                "Télécharger LÜMA",
+                "Le téléchargement ouvre bientôt.",
+            ),
+            ("/en/telecharger/", "Download LÜMA", "Downloads open soon."),
+            (
+                "/es/telecharger/",
+                "Descargar LÜMA",
+                "La descarga abre pronto.",
+            ),
+        ] {
+            let res = client.get(path).await;
+            assert_eq!(res.status().as_u16(), 200, "{path}");
+            let html = res.text();
+            assert!(html.contains(title) && html.contains(closed), "{path}");
+            assert!(
+                !html.contains("LUMA-macos.zip"),
+                "{path} : un lien sans fichier"
+            );
+        }
     }
 
     /// Chaque page publique, sans préfixe de langue, plus la page de la clé.

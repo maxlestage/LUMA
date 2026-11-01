@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **“Download” page on the website**: every build of the app (Mac, Windows, Linux,
+  the command line) and, for each system, how to install it; the “Download” button
+  in the bar leads there.
 - **Faster comparison**: two photos developed at a time, with the same images (four
   RAWs in 1.57 s instead of 2.0 s).
 - **In-focus areas in the comparison**: Shift+F paints them on all the compared photos

@@ -1694,3 +1694,69 @@ es = ¿Una pregunta? *Escríbenos.*
 fr = Un RAW qui s'ouvre mal, une question sur l'abonnement, une idée : écrivez avec la version de LÜMA et, si possible, le fichier concerné.
 en = A RAW file that won't open properly, a question about the subscription, an idea: write to us with your LÜMA version and, if possible, the file in question.
 es = Un RAW que no se abre bien, una pregunta sobre la suscripción, una idea: escríbenos con la versión de LÜMA y, si es posible, el archivo en cuestión.
+
+# ----- La page « Télécharger » --------------------------------------------------------
+
+fr = Télécharger LÜMA
+en = Download LÜMA
+es = Descargar LÜMA
+
+fr = LÜMA pour Mac, Windows et Linux : un mois d'essai, tout ouvert, puis LÜMA Premium.
+en = LÜMA for Mac, Windows and Linux: a one-month trial with everything unlocked, then LÜMA Premium.
+es = LÜMA para Mac, Windows y Linux: un mes de prueba con todo abierto y luego LÜMA Premium.
+
+fr = Toutes les versions et comment les installer
+en = All versions and how to install them
+es = Todas las versiones y cómo instalarlas
+
+fr = Le téléchargement ouvre bientôt.
+en = Downloads open soon.
+es = La descarga abre pronto.
+
+fr = Décompressez LUMA-macos.zip.
+en = Unzip LUMA-macos.zip.
+es = Descomprime LUMA-macos.zip.
+
+fr = Glissez LÜMA dans le dossier Applications.
+en = Drag LÜMA into the Applications folder.
+es = Arrastra LÜMA a la carpeta Aplicaciones.
+
+fr = Ouvrez LÜMA d'un double clic.
+en = Double-click LÜMA to open it.
+es = Abre LÜMA con un doble clic.
+
+fr = Au premier lancement, macOS refuse de l'ouvrir : Réglages Système → Confidentialité et sécurité, tout en bas, « Ouvrir quand même », puis confirmez. Ensuite, LÜMA s'ouvre normalement.
+en = The first time, macOS refuses to open it: System Settings → Privacy & Security, at the very bottom, “Open Anyway”, then confirm. After that, LÜMA opens normally.
+es = La primera vez, macOS se niega a abrirla: Ajustes del Sistema → Privacidad y seguridad, al final, «Abrir igualmente», y confirma. Después, LÜMA se abre con normalidad.
+
+fr = Lancez l'installateur : LÜMA s'installe sans mot de passe administrateur, et se retrouve dans le menu Démarrer.
+en = Run the installer: LÜMA installs without an administrator password and appears in the Start menu.
+es = Ejecuta el instalador: LÜMA se instala sin contraseña de administrador y aparece en el menú Inicio.
+
+fr = Si Windows SmartScreen l'arrête : « Informations complémentaires », puis « Exécuter quand même ».
+en = If Windows SmartScreen stops it: “More info”, then “Run anyway”.
+es = Si Windows SmartScreen la detiene: «Más información» y luego «Ejecutar de todas formas».
+
+fr = L'archive .zip, elle, se décompresse n'importe où, sans installation.
+en = The .zip archive can be unzipped anywhere, with no installation.
+es = El archivo .zip se descomprime en cualquier lugar, sin instalación.
+
+fr = Archive : décompressez-la, puis lancez ./install.sh, sans mot de passe.
+en = Archive: unzip it, then run ./install.sh, no password needed.
+es = Archivo: descomprímelo y ejecuta ./install.sh, sin contraseña.
+
+fr = Paquet .deb (Debian, Ubuntu) : sudo apt install ./LUMA-linux-amd64.deb
+en = .deb package (Debian, Ubuntu): sudo apt install ./LUMA-linux-amd64.deb
+es = Paquete .deb (Debian, Ubuntu): sudo apt install ./LUMA-linux-amd64.deb
+
+fr = Ligne de commande
+en = Command line
+es = Línea de comandos
+
+fr = La ligne de commande luma est fournie avec l'app pour Linux et avec l'archive pour Windows ; pour Mac :
+en = The luma command line comes with the Linux app and the Windows archive; for Mac:
+es = La línea de comandos luma viene con la app para Linux y con el archivo para Windows; para Mac:
+
+fr = Toutes les versions et leurs notes
+en = All versions and their release notes
+es = Todas las versiones y sus notas
