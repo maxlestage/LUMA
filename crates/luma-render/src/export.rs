@@ -416,7 +416,8 @@ pub struct Options {
     /// Un JPEG allégé pour le web (chrominance 4:2:0, tables de Huffman de l'image).
     pub web: bool,
     /// Agrandir l'image quand la taille demandée dépasse la pleine définition (jusqu'à
-    /// quatre fois chaque côté, 200 Mpx au plus), au lieu de s'arrêter à sa taille.
+    /// quatre fois chaque côté, [`MAX_ENLARGED_PIXELS`] au plus), au lieu de s'arrêter
+    /// à sa taille.
     pub enlarge: bool,
     /// Le poids maximal d'un JPEG, en kilo‑octets (1 000 octets) : la qualité descend
     /// jusqu'à ce qu'il tienne ; `None` : la qualité demandée.
@@ -569,6 +570,11 @@ pub enum Resize {
     Print { width_cm: f32, height_cm: f32, dpi: u32 },
 }
 
+/// Le plus grand agrandissement, en pixels : 200 Mpx, 100 Mpx sur iPhone et iPad. Une
+/// image de travail de 200 Mpx pèse 2,4 Go en flottants, plus que la mémoire qu'iOS
+/// laisse à une app ; 100 Mpx gardent le doublement de chaque côté d'un 24 Mpx.
+pub const MAX_ENLARGED_PIXELS: f64 = if cfg!(target_os = "ios") { 100e6 } else { 200e6 };
+
 impl Resize {
     /// Les dimensions d'une image `width × height` après redimensionnement : jamais plus
     /// grandes, proportions gardées.
@@ -577,8 +583,13 @@ impl Resize {
     }
 
     /// Comme [`Resize::apply`] ; avec `enlarge`, une taille demandée plus grande que
-    /// l'image l'agrandit, jusqu'à quatre fois chaque côté et 200 Mpx.
+    /// l'image l'agrandit, jusqu'à quatre fois chaque côté et [`MAX_ENLARGED_PIXELS`].
     pub fn fit(self, width: usize, height: usize, enlarge: bool) -> (usize, usize) {
+        self.fit_within(width, height, enlarge, MAX_ENLARGED_PIXELS)
+    }
+
+    /// [`Resize::fit`], l'agrandissement plafonné à `most_pixels` pixels.
+    fn fit_within(self, width: usize, height: usize, enlarge: bool, most_pixels: f64) -> (usize, usize) {
         let (w, h) = (width.max(1) as f64, height.max(1) as f64);
         let scale = match self {
             Resize::LongEdge(n) => n as f64 / w.max(h),
@@ -594,7 +605,7 @@ impl Resize {
             return (width, height);
         }
         if scale > 1.0 {
-            let most = 4.0f64.min((200e6 / (w * h)).sqrt()).max(1.0);
+            let most = 4.0f64.min((most_pixels / (w * h)).sqrt()).max(1.0);
             if scale > most {
                 // Arrondi vers le bas : le plafond n'est jamais dépassé.
                 return (
@@ -1767,6 +1778,13 @@ mod tests {
         assert_eq!(Resize::LongEdge(10).dpi(), None);
         let (bw, bh) = Resize::Megapixels(500.0).fit(w, h, true);
         assert!(bw * bh <= 200_000_000 && bw * bh > 199_000_000, "{bw} × {bh}");
+        // Sur iPhone et iPad, 100 Mpx au plus : la mémoire d'une app y est comptée. Le
+        // doublement de chaque côté d'un 24 Mpx (96 Mpx) passe encore entier.
+        let (bw, bh) = Resize::Megapixels(500.0).fit_within(w, h, true, 100e6);
+        assert!(bw * bh <= 100_000_000 && bw * bh > 99_000_000, "{bw} × {bh}");
+        assert_eq!(Resize::LongEdge(12000).fit_within(w, h, true, 100e6), (12000, 8000));
+        let ios = if cfg!(target_os = "ios") { 100e6 } else { 200e6 };
+        assert_eq!(MAX_ENLARGED_PIXELS, ios);
     }
 
     #[test]

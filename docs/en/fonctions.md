@@ -134,7 +134,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | JPEG (quality), PNG and TIFF, 8 or 16 bits, lossless WebP (20 to 45% lighter than PNG, the same pixels) | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, with an embedded ICC profile | ✅ |
 | Resizing: long edge, short edge, width × height, megapixels, no enlarging by default (`--resize`) | ✅ |
-| Enlarging if needed (“Enlarge if needed”, `--enlarge`): halo-free Lanczos, up to four times each side and 200 MP, for large prints; no AI | ✅ |
+| Enlarging if needed (“Enlarge if needed”, `--enlarge`): halo-free Lanczos, up to four times each side and 200 MP (100 on iPhone and iPad), for large prints; no AI | ✅ |
 | Print size (“Print (cm)”, `--resize 30x40cm@300`): the frame in centimetres and the resolution in dots per inch, written into the JPEG, the PNG and the TIFF | ✅ |
 | Maximum JPEG size (“Maximum size”, `--max-kb 500`): the best quality that fits in the size, metadata included, for a website or a form that limits file sizes | ✅ |
 | Export dialog: format, quality, bit depth, colour space, size, folder; export every photo in the filter | ✅ |

@@ -2142,7 +2142,9 @@ impl Studio {
         ];
         let text = luma_library::csv(&entries, &columns, [tr("retenue"), tr("rejetée")]);
         let n = entries.len();
-        self.status = match std::fs::write(to, text) {
+        // Remplacée d'un coup : une écriture interrompue ne laisse jamais une liste à
+        // moitié écrite à la place de l'ancienne.
+        self.status = match luma_core::save(to, text) {
             Ok(()) => trf(
                 "{n} photos dans {file}",
                 &[("n", &n), ("file", &file_name(to))],
