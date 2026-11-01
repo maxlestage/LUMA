@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster batch before / after**: two photos at a time, with the same files (seven
+  RAWs in 2.35 s instead of 2.8 s); two photos with the same name (IMG.ARW, IMG.JPG)
+  never overwrite each other.
 - **Download from the website**: the “Download” buttons (Mac, Linux, Windows) lead to
   the files of the latest Release when the site does not serve them itself.
 - **Burst culling from the keyboard**: Shift+P picks the sharpest of the selection,
