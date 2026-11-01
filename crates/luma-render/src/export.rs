@@ -218,6 +218,44 @@ fn write_at(
     }
 }
 
+/// L'avant / après de `photo` (ouverte depuis `path`) avec `settings`, chaque moitié au
+/// grand côté `side`, en un JPEG à côté d'elle : « nom-avant-apres.jpg », numéroté
+/// (« -2 », « -3 »…) s'il existe. Le nom est réservé d'un coup (création exclusive) :
+/// deux photos du même nom menées en même temps (`IMG.ARW` et `IMG.JPG`) n'écrivent
+/// jamais dans le même fichier. Rend le fichier écrit.
+pub fn write_before_after(photo: &Photo, settings: &Settings, path: &Path, side: usize) -> Result<PathBuf, String> {
+    let stem = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut out = None;
+    for k in 1.. {
+        let name = match k {
+            1 => format!("{stem}-avant-apres.jpg"),
+            k => format!("{stem}-avant-apres-{k}.jpg"),
+        };
+        let p = path.with_file_name(name);
+        match std::fs::OpenOptions::new().write(true).create_new(true).open(&p) {
+            Ok(_) => {
+                out = Some(p);
+                break;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(e) => return Err(format!("{} : {e}", p.display())),
+        }
+    }
+    let out = out.expect("un nom libre");
+    let written = photo
+        .before_after(settings, side)
+        .map_err(|e| e.to_string())
+        .and_then(|img| write(&out, &img, OutputSpace::Srgb, 92, 8));
+    if written.is_err() {
+        // Le nom réservé ne reste pas vide.
+        let _ = std::fs::remove_file(&out);
+    }
+    written.map(|()| out)
+}
+
 /// Le JPEG de la plus haute qualité, `quality` au plus, qui tient en `max` octets, et
 /// cette qualité ; si même la qualité 1 est trop lourde, celui de qualité 1.
 ///

@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **`luma before-after`**: the before / after of each photo in a folder (or of the
+  given photos), next to it, with its settings; the same names as in the app.
 - **Sharpness in the comparison**: under each compared photo (C), its in-focus share;
   the sharpest is highlighted in colour.
 - **Faster batch before / after**: two photos at a time, with the same files (seven
