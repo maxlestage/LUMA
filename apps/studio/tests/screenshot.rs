@@ -42,6 +42,26 @@ struct Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
+        // Les doublons de travail de ses photos (nommés d'après leur chemin, donc propres
+        // à cette copie du corpus) partent avec elle : sans quoi chaque essai en laisse
+        // jusqu'à 288 Mo par RAW, et la série remplit le disque d'une machine de CI.
+        if let Some(dups) = luma_studio::dialogs::duplicates_dir() {
+            // Le dossier et ses sous‑dossiers (les imports rangés par date, par exemple).
+            let mut dirs = vec![self.dir.clone()];
+            while let Some(dir) = dirs.pop() {
+                for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+                    let path = e.path();
+                    if path.is_dir() {
+                        dirs.push(path);
+                    } else if let Some(d) = luma_render::duplicate::path_for(&path, &dups) {
+                        let _ = std::fs::remove_file(d);
+                    }
+                }
+            }
+            // Ceux qu'un essai précédent finissait d'écrire après sa fin : le ménage de l'app,
+            // à 2 Go.
+            luma_render::duplicate::trim(&dups, 2 << 30);
+        }
         let _ = std::fs::remove_dir_all(&self.dir);
     }
 }
