@@ -264,6 +264,9 @@ fn raw_files_merge_into_a_dng_that_develops() {
     let diff = rms(&a, &b, 4);
     eprintln!("écart DNG / original : {diff:.4}");
     assert!(diff < 0.02, "{diff}");
+    // Les trois RAW copiés et le DNG (80 Mo) ne restent pas dans le dossier temporaire.
+    drop((dng, original));
+    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 /// L'écart moyen (en IL) à la vérité `truth`, sur les pixels dont la vérité (somme des
