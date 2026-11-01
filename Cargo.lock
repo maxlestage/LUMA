@@ -2174,7 +2174,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "luma-apple"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "block2 0.6.2",
  "luma-color",
@@ -2193,14 +2193,14 @@ dependencies = [
 
 [[package]]
 name = "luma-brand"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "image",
 ]
 
 [[package]]
 name = "luma-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "image",
  "luma-apple",
@@ -2218,11 +2218,11 @@ dependencies = [
 
 [[package]]
 name = "luma-color"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "luma-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "luma-color",
  "rayon",
@@ -2230,7 +2230,7 @@ dependencies = [
 
 [[package]]
 name = "luma-gpu"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bytemuck",
  "luma-color",
@@ -2245,11 +2245,11 @@ dependencies = [
 
 [[package]]
 name = "luma-i18n"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "luma-image"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "image",
  "luma-color",
@@ -2262,7 +2262,7 @@ dependencies = [
 
 [[package]]
 name = "luma-library"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "luma-core",
  "luma-project",
@@ -2275,7 +2275,7 @@ dependencies = [
 
 [[package]]
 name = "luma-licence"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ed25519-dalek",
  "serde",
@@ -2284,7 +2284,7 @@ dependencies = [
 
 [[package]]
 name = "luma-merge"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "image",
  "luma-color",
@@ -2298,7 +2298,7 @@ dependencies = [
 
 [[package]]
 name = "luma-project"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "luma-core",
  "quick-xml 0.42.0",
@@ -2308,7 +2308,7 @@ dependencies = [
 
 [[package]]
 name = "luma-raw"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hayro-jpeg2000",
  "image",
@@ -2325,7 +2325,7 @@ dependencies = [
 
 [[package]]
 name = "luma-render"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "epaint_default_fonts",
  "image",
@@ -2345,7 +2345,7 @@ dependencies = [
 
 [[package]]
 name = "luma-studio"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "eframe",
  "egui",
