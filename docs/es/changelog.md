@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Zonas nítidas en la comparación**: Mayús+F las pinta en todas las fotos comparadas
+  a la vez, con la sensibilidad elegida.
 - **Sensibilidad de las zonas nítidas guardada** de una sesión a otra («Restablecer
   todo» la devuelve a la estándar).
 - **Correcciones según el JPEG de la cámara más rápidas**: dos fotos a la vez, con las
