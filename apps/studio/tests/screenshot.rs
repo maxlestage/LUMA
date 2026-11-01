@@ -4519,3 +4519,48 @@ fn the_filmstrip_is_sorted_by_sharpness() {
     assert_eq!(at("a-floue.png"), n - 1, "{photos:?}");
     assert_eq!(s.studio().current_path(), Some(open.as_path()));
 }
+
+/// Au clavier : Maj+X rejette les floues de la sélection, Maj+P retient la plus nette.
+#[test]
+fn burst_culling_from_the_keyboard() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("tri-clavier", [1440.0, 900.0], 1.0, |dir| {
+        let sharp = image::RgbImage::from_fn(1200, 800, |x, y| {
+            let v = (((x / 3) ^ (y / 5)) % 7) as u8 * 30 + ((x * y) % 17) as u8;
+            image::Rgb([v, v / 2 + 60, 255 - v])
+        });
+        sharp.save(dir.join("rafale-1.png")).unwrap();
+        image::imageops::blur(&sharp, 4.0)
+            .save(dir.join("rafale-2.png"))
+            .unwrap();
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let (sharp, blurred) = (at("rafale-1.png"), at("rafale-2.png"));
+    s.studio().selected = [sharp, blurred].into_iter().collect();
+    s.keys(&[(Modifiers::SHIFT, Key::X)]);
+    s.wait();
+    assert!(
+        s.studio()
+            .status()
+            .starts_with("Floues : 1 photo(s) rejetée(s)"),
+        "{}",
+        s.studio().status()
+    );
+    s.studio().selected = [sharp, blurred].into_iter().collect();
+    s.keys(&[(Modifiers::SHIFT, Key::P)]);
+    s.wait();
+    assert!(
+        s.studio()
+            .status()
+            .starts_with("La plus nette : rafale-1.png"),
+        "{}",
+        s.studio().status()
+    );
+    s.studio().flush_xmp();
+    use luma_project::xmp::Flag;
+    let read = |i: usize| luma_studio::worker::read_meta(&photos[i]).flag;
+    assert_eq!((read(sharp), read(blurred)), (Flag::Pick, Flag::Reject));
+}
