@@ -229,6 +229,16 @@ pub const ACTIONS: &[Action] = &[
     a("rate5", "Cinq étoiles", &[Combo::new(Key::Num5)]),
     a("pick", "Retenue", &[Combo::new(Key::P)]),
     a("reject", "Rejetée", &[Combo::new(Key::X)]),
+    a(
+        "pick_sharpest",
+        "Retenir la plus nette",
+        &[Combo::shift(Key::P)],
+    ),
+    a(
+        "reject_blurred",
+        "Rejeter les floues",
+        &[Combo::shift(Key::X)],
+    ),
     a("unflag", "Sans drapeau", &[Combo::new(Key::U)]),
     a("label0", "Libellé rouge", &[Combo::new(Key::Num6)]),
     a("label1", "Libellé jaune", &[Combo::new(Key::Num7)]),
