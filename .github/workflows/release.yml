@@ -115,7 +115,7 @@ jobs:
           find dist -type f
           notes="LÜMA ${TAG#v} — sur Mac, Linux et Windows, un mois d'essai puis LÜMA Premium (19,99 € par mois ou 239,88 € par an) ; sur iPhone et iPad, un mois d'essai puis 89,99 € une fois pour toutes.
 
-          - **LUMA-macos.zip** : l'app pour Mac (Apple Silicon et Intel, macOS 11+).
+          - **LUMA-macos.zip** : l'app pour Mac (Apple Silicon et Intel, macOS 11+). Décompressez-la et glissez LÜMA dans Applications. Elle n'est pas signée par Apple : au premier lancement, macOS refuse de l'ouvrir ; allez dans Réglages Système → Confidentialité et sécurité, tout en bas, « Ouvrir quand même », puis confirmez (ou, dans le Terminal : \`xattr -dr com.apple.quarantine /Applications/LÜMA.app\`). Ensuite, elle s'ouvre normalement.
           - **LUMA-linux-x86_64.tar.gz** : l'app pour Linux, avec la ligne de commande \`luma\` ; \`./install.sh\` l'installe sans mot de passe.
           - **LUMA-linux-amd64.deb** : la même, pour Debian et Ubuntu (\`sudo apt install ./LUMA-linux-amd64.deb\`).
           - **LUMA-windows-x86_64-setup.exe** : l'app pour Windows 10 et 11 (x64), à installer sans mot de passe administrateur.

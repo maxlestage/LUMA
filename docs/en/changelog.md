@@ -1,6 +1,6 @@
 # What's new
 
-## 0.3.0 — upcoming
+## 0.3.0 — November 2026
 
 The professional photo library, step by step.
 

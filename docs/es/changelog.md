@@ -1,6 +1,6 @@
 # Novedades
 
-## 0.3.0 — próximamente
+## 0.3.0 — noviembre de 2026
 
 La fototeca profesional, paso a paso.
 
