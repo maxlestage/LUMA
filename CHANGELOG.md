@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Correction : « Rendu… » sans fin** quand une collection ou une recherche était
+  montrée pendant le calcul d'un aperçu de la photo ouverte : la photo est rendue de
+  nouveau.
 - **Curseurs plus réactifs** : la mémoire des étapes déjà calculées et chassées du
   cache reprise par l'étape suivante, aux mêmes pixels : l'étape d'entrée passe de
   9,6 à 5,7 ms, un rendu d'aperçu d'environ 9 % plus rapide.
