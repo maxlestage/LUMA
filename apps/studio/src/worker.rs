@@ -318,7 +318,8 @@ pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
     out
 }
 
-/// Les photos menées à la fois par les traitements par lot (netteté, avant / après).
+/// Les photos menées à la fois par les traitements par lot (netteté, avant / après,
+/// corrections d'objectif).
 const BATCH_THREADS: usize = 2;
 
 /// `each` sur chaque élément, [`BATCH_THREADS`] à la fois sur des fils nommés `name` :
@@ -346,6 +347,37 @@ fn two_at_a_time<T: Send + 'static>(
             })
             .expect("fil du lot");
     }
+}
+
+/// Les corrections d'objectif d'une photo, mesurées sur le JPEG que le boîtier a rangé
+/// dans son RAW : distorsion, vignetage et le recadrage sans bords vides.
+fn lens_measure(path: &Path) -> Result<LensMeasure, String> {
+    use luma_merge::camera_lens;
+    let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+    if photo.has_camera_corrections() {
+        return Err("corrections du boîtier déjà dans le fichier".into());
+    }
+    // Le JPEG décodé une fois, ses détails cherchés une fois.
+    let (distortion, vignetting) =
+        camera_lens::corrections(&photo, path).map_err(|e| e.to_string())?;
+    let (distortion, vignetting) = (distortion.round(), vignetting.round());
+    let mut s = Settings::default();
+    s.lens.distortion = distortion;
+    s.lens.vignetting = vignetting;
+    s.lens.vignetting_midpoint = camera_lens::MIDPOINT;
+    let own = read_sidecar(path).unwrap_or_else(|| photo.default_settings());
+    let (w, h) = photo.full_size();
+    Ok(LensMeasure {
+        distortion: s.lens.distortion,
+        vignetting,
+        crop: luma_image::lens::filled_crop(
+            &s.lens,
+            &own.transform,
+            w.max(1),
+            h.max(1),
+            own.crop.angle,
+        ),
+    })
 }
 
 /// L'avant / après d'une photo (ses réglages : ceux donnés, sinon son XMP, sinon ceux
@@ -749,43 +781,11 @@ impl Worker {
 
     pub fn lens_from_camera(&self, paths: Vec<PathBuf>) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
-        std::thread::Builder::new()
-            .name("luma-objectif-boitier".into())
-            .spawn(move || {
-                for path in paths {
-                    let result = caught(|| -> Result<LensMeasure, String> {
-                        use luma_merge::camera_lens;
-                        let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
-                        if photo.has_camera_corrections() {
-                            return Err("corrections du boîtier déjà dans le fichier".into());
-                        }
-                        // Le JPEG décodé une fois, ses détails cherchés une fois.
-                        let (distortion, vignetting) =
-                            camera_lens::corrections(&photo, &path).map_err(|e| e.to_string())?;
-                        let (distortion, vignetting) = (distortion.round(), vignetting.round());
-                        let mut s = Settings::default();
-                        s.lens.distortion = distortion;
-                        s.lens.vignetting = vignetting;
-                        s.lens.vignetting_midpoint = camera_lens::MIDPOINT;
-                        let own = read_sidecar(&path).unwrap_or_else(|| photo.default_settings());
-                        let (w, h) = photo.full_size();
-                        Ok(LensMeasure {
-                            distortion: s.lens.distortion,
-                            vignetting,
-                            crop: luma_image::lens::filled_crop(
-                                &s.lens,
-                                &own.transform,
-                                w.max(1),
-                                h.max(1),
-                                own.crop.angle,
-                            ),
-                        })
-                    });
-                    let _ = sender.send(Event::LensMeasured { path, result });
-                    repaint();
-                }
-            })
-            .expect("fil des corrections d'objectif");
+        two_at_a_time("luma-objectif-boitier", paths, move |path: PathBuf| {
+            let result = caught(|| lens_measure(&path));
+            let _ = sender.send(Event::LensMeasured { path, result });
+            repaint();
+        });
     }
 
     /// Développe les photos à comparer, chacune avec ses réglages, au grand côté `side`,
