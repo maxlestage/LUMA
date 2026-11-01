@@ -649,6 +649,7 @@ html.js.hydrated .footer-wordmark:not(.in) .ch > span { transform: translateY(11
 .download-note a { color: inherit; text-decoration: underline; }
 .download-note { color: var(--muted); font-size: .9rem; max-width: 420px; }
 /* La colonne du système du visiteur, passée en premier par le script des téléchargements. */
+.download-version { color: var(--muted); font-size: .85rem; letter-spacing: .08em; margin: 0 0 -10px; }
 .download-yours::before { content: attr(data-yours); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
 .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
 .plan { position: relative; padding: 30px; border-radius: 26px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 10px; }

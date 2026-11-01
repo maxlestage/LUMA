@@ -1663,6 +1663,10 @@ pub fn downloads(site: &Site, origin: &str, lang: Lang) -> Page {
                 ))
         });
         div()
+            .children(release_version().map(|v| {
+                p().class("download-version")
+                    .text(fill(t(lang, "Version {version}"), &[("version", &v)]))
+            }))
             .child(download_columns(lang))
             .child(
                 section()
@@ -1746,6 +1750,23 @@ pub const DOWNLOADS_PAGE: &str = "/telecharger/";
 /// L'app Mac est‑elle signée et notariée (`LUMA_MAC_NOTARIZED=1`) ?
 fn mac_notarized() -> bool {
     std::env::var("LUMA_MAC_NOTARIZED").is_ok_and(|v| v == "1")
+}
+
+/// Le numéro de la version à télécharger (`LUMA_RELEASE_VERSION`, l'étiquette de la
+/// dernière Release que la CI lit à la publication du site), s'il est connu.
+fn release_version() -> Option<String> {
+    version_label(std::env::var("LUMA_RELEASE_VERSION").ok().as_deref())
+}
+
+/// Un numéro de version lisible (« 0.3.0 ») d'après une étiquette (« v0.3.0 ») ; rien
+/// pour ce qui n'en a pas l'air (une étiquette vide, un message d'erreur…).
+fn version_label(tag: Option<&str>) -> Option<String> {
+    let v = tag?.trim().trim_start_matches('v');
+    let ok = !v.is_empty()
+        && v.len() <= 20
+        && v.starts_with(|c: char| c.is_ascii_digit())
+        && v.chars().all(|c| c.is_ascii_digit() || c == '.');
+    ok.then(|| v.to_owned())
 }
 
 /// La page des Releases GitHub (toutes les versions), quand les boutons y mènent.
@@ -2069,6 +2090,24 @@ fn windows_download(lang: Lang) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Le numéro de version d'après l'étiquette de la Release ; rien pour une étiquette
+    /// vide ou qui n'en est pas une.
+    #[test]
+    fn the_version_comes_from_the_release_tag() {
+        assert_eq!(version_label(Some("v0.3.0")).as_deref(), Some("0.3.0"));
+        assert_eq!(version_label(Some(" 1.10.2\n")).as_deref(), Some("1.10.2"));
+        for bad in [
+            None,
+            Some(""),
+            Some("v"),
+            Some("null"),
+            Some("gh: Not Found (HTTP 404)"),
+            Some("v1.0-beta"),
+        ] {
+            assert_eq!(version_label(bad), None, "{bad:?}");
+        }
+    }
 
     /// Le lien d'un fichier de l'app : sur le site quand il le sert (même s'il y a une
     /// Release), dans la Release sinon.

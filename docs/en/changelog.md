@@ -9,6 +9,8 @@
   half-written list in place of the previous one.
 - **Export enlargement capped at 100 MP on iPhone and iPad** (200 elsewhere): an
   app's memory is limited there; doubling each side of a 24 MP photo still fits.
+- **The version number on the “Download” page** (“Version 0.3.0”), read from the
+  latest Release each time the website is published.
 - **The website offers the build for your system**: on the “Download” page and the
   home page, your system's button (Mac, Windows or Linux) comes first, “For your
   system”; nothing is sent anywhere.

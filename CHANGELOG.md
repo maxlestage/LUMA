@@ -11,6 +11,8 @@
 - **Agrandissement à l'export plafonné à 100 Mpx sur iPhone et iPad** (200 ailleurs) :
   la mémoire d'une app y est comptée ; le doublement de chaque côté d'un 24 Mpx passe
   toujours entier.
+- **Le numéro de version sur la page « Télécharger »** (« Version 0.3.0 »), lu sur la
+  dernière Release à chaque publication du site.
 - **Le site propose la version de votre système** : sur la page « Télécharger » et à
   l'accueil, le bouton de votre système (Mac, Windows ou Linux) passe en premier,
   « Pour votre système » ; rien n'est envoyé.

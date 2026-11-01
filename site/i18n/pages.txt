@@ -1764,3 +1764,7 @@ es = Todas las versiones y sus notas
 fr = Pour votre système
 en = For your system
 es = Para tu sistema
+
+fr = Version {version}
+en = Version {version}
+es = Versión {version}
