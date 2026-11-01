@@ -135,7 +135,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | JPEG (calidad), PNG y TIFF de 8 o 16 bits, WebP sin pérdida (de un 20 a un 45 % más ligero que el PNG, los mismos píxeles) | ✅ |
 | sRGB, Display P3, Rec. 2020, ProPhoto, con perfil ICC incrustado | ✅ |
 | Cambio de tamaño: lado largo, lado corto, ancho × alto, megapíxeles, sin ampliar por defecto (`--resize`) | ✅ |
-| Ampliación si es necesario («Ampliar si es necesario», `--enlarge`): Lanczos sin halos, hasta cuatro veces cada lado y 200 MP, para copias grandes; sin IA | ✅ |
+| Ampliación si es necesario («Ampliar si es necesario», `--enlarge`): Lanczos sin halos, hasta cuatro veces cada lado y 200 MP (100 en iPhone y iPad), para copias grandes; sin IA | ✅ |
 | Tamaño de copia («Copia impresa (cm)», `--resize 30x40cm@300`): el marco en centímetros y la resolución en puntos por pulgada, escrita en el JPEG, el PNG y el TIFF | ✅ |
 | Peso máximo de un JPEG («Peso máximo», `--max-kb 500`): la mejor calidad que cabe en el peso, metadatos incluidos, para un sitio o un formulario que limita el tamaño de los archivos | ✅ |
 | Ventana Exportar: formato, calidad, profundidad de bits, espacio de color, tamaño, carpeta; exportación de todas las fotos del filtro | ✅ |
