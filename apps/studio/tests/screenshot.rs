@@ -4614,6 +4614,29 @@ fn the_comparison_shows_the_in_focus_share() {
         "{shares:?}"
     );
     s.capture("comparaison-nettete");
+    // Maj+F : les zones nettes sur les deux photos comparées, à la sensibilité choisie ;
+    // la nette en a, la floue presque pas ; Maj+F de nouveau, plus rien.
+    use luma_image::focus::Sensitivity;
+    s.keys(&[(Modifiers::SHIFT, Key::F)]);
+    s.harness.run_steps(2);
+    let (painted, marked) = s.studio().compare_focus().unwrap();
+    assert_eq!(painted, Some(Sensitivity::Medium));
+    let at_cell = |name: &str| compared.iter().position(|p| p.ends_with(name)).unwrap();
+    let (nette, floue) = (
+        marked[at_cell("rafale-1.png")],
+        marked[at_cell("rafale-2.png")],
+    );
+    assert!(nette > 1000 && floue * 20 < nette, "{marked:?}");
+    s.capture("comparaison-zones-nettes");
+    s.studio().set_focus_sensitivity(Sensitivity::High);
+    s.harness.run_steps(2);
+    let (painted, high) = s.studio().compare_focus().unwrap();
+    assert_eq!(painted, Some(Sensitivity::High));
+    assert!(high[at_cell("rafale-1.png")] >= nette, "{high:?}");
+    s.keys(&[(Modifiers::SHIFT, Key::F)]);
+    s.harness.run_steps(2);
+    let (painted, marked) = s.studio().compare_focus().unwrap();
+    assert_eq!((painted, marked.iter().sum::<usize>()), (None, 0));
 }
 
 /// La sensibilité des zones nettes gardée dans son fichier (« haute ») et relue ; un

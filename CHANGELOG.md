@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Zones nettes dans la comparaison** : Maj+F les peint sur toutes les photos
+  comparées à la fois, à la sensibilité choisie.
 - **Sensibilité des zones nettes gardée** d'une séance à l'autre (« Tout remettre à
   zéro » la remet à la normale).
 - **Corrections d'après le JPEG du boîtier plus rapides** : deux photos à la fois, aux
