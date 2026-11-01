@@ -532,7 +532,13 @@ impl Photo {
             // Une seule taille d'aperçu à la fois : les bases d'une autre taille partent.
             bases.retain(|(s, _, _)| *s == size);
             bases.insert(0, (size, key, base.clone()));
-            bases.truncate(BASES);
+            // La mémoire d'une base chassée que plus rien ne tient sert à la prochaine.
+            let keep = BASES.min(bases.len());
+            for (_, _, old) in bases.split_off(keep) {
+                if let Ok(image) = Arc::try_unwrap(old.image) {
+                    luma_image::give_back_image(image.data);
+                }
+            }
             drop(bases);
             self.trim(Some(&base.image));
         }

@@ -5004,6 +5004,7 @@ impl Studio {
             (self.measuring, "mesure"),
             (self.lens_batch.0 != 0, "corrections par lot"),
             (self.before_after_batch.0 != 0, "avant / après par lot"),
+            (self.sharp_batch.is_some(), "netteté par lot"),
             (self.split.is_some() && self.before_asked.is_some(), "avant"),
             (self.reference_asked.is_some(), "référence"),
         ];
