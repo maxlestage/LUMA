@@ -5317,8 +5317,7 @@ impl Studio {
                     self.histogram = frame.histogram;
                     match &frame.scope {
                         Some(s) => {
-                            let image =
-                                ColorImage::from_rgba_unmultiplied([s.width, s.height], &s.rgba);
+                            let image = crate::worker::color_image([s.width, s.height], &s.rgba);
                             match &mut self.scope_texture {
                                 Some(t) => t.set(image, TextureOptions::LINEAR),
                                 None => {
@@ -5346,7 +5345,7 @@ impl Studio {
                         self.dust_pending = false;
                         self.add_dust(found);
                     }
-                    let image = ColorImage::from_rgba_unmultiplied(frame.size, &frame.rgba);
+                    let image = crate::worker::color_image(frame.size, &frame.rgba);
                     match &mut self.texture {
                         Some(t) => t.set(image, TextureOptions::LINEAR),
                         None => {
@@ -5366,7 +5365,7 @@ impl Studio {
                     // pas là.
                     if self.loading.as_ref() == Some(&path) {
                         self.image_size = size;
-                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        let image = crate::worker::color_image(size, &rgba);
                         match &mut self.texture {
                             Some(t) => t.set(image, TextureOptions::LINEAR),
                             None => {
@@ -5382,7 +5381,7 @@ impl Studio {
                     {
                         self.prints.insert(path.clone(), print);
                     }
-                    let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    let image = crate::worker::color_image(size, &rgba);
                     let name = format!("vignette {}", path.display());
                     self.thumbs
                         .insert(path, ctx.load_texture(name, image, TextureOptions::LINEAR));
@@ -5455,7 +5454,7 @@ impl Studio {
                 Event::Reference { path, size, rgba } => {
                     if self.reference_asked.as_ref() == Some(&path) {
                         self.reference_asked = None;
-                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        let image = crate::worker::color_image(size, &rgba);
                         match &mut self.reference_texture {
                             Some((p, texture, s)) => {
                                 texture.set(image, TextureOptions::LINEAR);
@@ -5472,7 +5471,7 @@ impl Studio {
                 }
                 Event::Before { tag, size, rgba } => {
                     if let Some((_, key)) = self.before_asked.take_if(|(t, _)| *t == tag) {
-                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        let image = crate::worker::color_image(size, &rgba);
                         match &mut self.before_view {
                             Some((k, texture)) => {
                                 texture.set(image, TextureOptions::LINEAR);
@@ -5496,7 +5495,7 @@ impl Studio {
                         && c.tag == tag
                         && index < c.textures.len()
                     {
-                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        let image = crate::worker::color_image(size, &rgba);
                         c.textures[index] = Some(ctx.load_texture(
                             format!("comparaison {index}"),
                             image,
@@ -5511,7 +5510,7 @@ impl Studio {
                     rgba,
                 } => {
                     if tag == self.previews_tag && index < self.previews.len() {
-                        let image = ColorImage::from_rgba_unmultiplied(size, &rgba);
+                        let image = crate::worker::color_image(size, &rgba);
                         self.previews[index] = Some(ctx.load_texture(
                             format!("préréglage {index}"),
                             image,
@@ -14814,7 +14813,7 @@ impl Brand {
         let tex = |name: &str, w: usize, h: usize, rgba: Vec<u8>| {
             ctx.load_texture(
                 name,
-                ColorImage::from_rgba_unmultiplied([w, h], &rgba),
+                crate::worker::color_image([w, h], &rgba),
                 TextureOptions::LINEAR,
             )
         };
