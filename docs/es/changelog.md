@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Nitidez en la comparación**: bajo cada foto comparada (C), su parte enfocada; la
+  más nítida se destaca en color.
 - **Antes / después por lotes más rápido**: dos fotos a la vez, con los mismos
   archivos (siete RAW en 2,35 s en lugar de 2,8 s); dos fotos con el mismo nombre
   (IMG.ARW, IMG.JPG) nunca se sobrescriben.

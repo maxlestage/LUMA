@@ -6462,3 +6462,11 @@ es = Alta: los detalles finos de un objetivo suave también cuentan; baja: solo 
 fr = Film trié par netteté ({n} photo(s) mesurée(s))
 en = Filmstrip sorted by sharpness ({n} photo(s) measured)
 es = Tira ordenada por nitidez ({n} foto(s) medida(s))
+
+fr = {percent} % au point
+en = {percent}% in focus
+es = {percent} % enfocada
+
+fr = {percent} % au point, la plus nette
+en = {percent}% in focus, the sharpest
+es = {percent} % enfocada, la más nítida

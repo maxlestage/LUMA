@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Sharpness in the comparison**: under each compared photo (C), its in-focus share;
+  the sharpest is highlighted in colour.
 - **Faster batch before / after**: two photos at a time, with the same files (seven
   RAWs in 2.35 s instead of 2.8 s); two photos with the same name (IMG.ARW, IMG.JPG)
   never overwrite each other.

@@ -520,6 +520,8 @@ struct Request {
 struct Compare {
     paths: Vec<PathBuf>,
     textures: Vec<Option<TextureHandle>>,
+    /// La part au point de chaque photo, arrivée avec son rendu.
+    shares: Vec<Option<f32>>,
     tag: u64,
     /// 1 : la photo entière ; au‑delà, agrandie.
     zoom: f32,
@@ -5533,11 +5535,13 @@ impl Studio {
                     index,
                     size,
                     rgba,
+                    sharp,
                 } => {
                     if let Some(c) = &mut self.compare
                         && c.tag == tag
                         && index < c.textures.len()
                     {
+                        c.shares[index] = sharp;
                         let image = crate::worker::color_image(size, &rgba);
                         c.textures[index] = Some(ctx.load_texture(
                             format!("comparaison {index}"),
@@ -7693,6 +7697,7 @@ impl Studio {
         self.worker.compare(paths.clone(), 2048, self.compare_tag);
         self.compare = Some(Compare {
             textures: vec![None; paths.len()],
+            shares: vec![None; paths.len()],
             paths,
             tag: self.compare_tag,
             zoom: 1.0,
@@ -7706,6 +7711,13 @@ impl Studio {
         self.compare
             .as_ref()
             .is_some_and(|c| c.textures.iter().all(Option::is_some))
+    }
+
+    /// La part au point de chaque photo comparée (`None` : pas encore mesurée).
+    pub fn compare_shares(&self) -> Vec<Option<f32>> {
+        self.compare
+            .as_ref()
+            .map_or_else(Vec::new, |c| c.shares.clone())
     }
 
     /// Les photos comparées (vide hors de la comparaison).
@@ -7797,6 +7809,28 @@ impl Studio {
                 }
             };
             let path = c.paths[i].clone();
+            // La part au point sous la photo ; la plus nette (toutes mesurées) en couleur.
+            if let Some(share) = c.shares[i] {
+                let all = c.shares.iter().flatten().count() == c.shares.len();
+                let best =
+                    all && c.shares.len() > 1 && c.shares.iter().flatten().all(|s| *s <= share);
+                let percent = format_value(share * 100.0, 1, false);
+                let text = if best {
+                    trf(
+                        "{percent} % au point, la plus nette",
+                        &[("percent", &percent)],
+                    )
+                } else {
+                    trf("{percent} % au point", &[("percent", &percent)])
+                };
+                painter.text(
+                    pos2(rect.center().x, rect.max.y - 14.0),
+                    egui::Align2::CENTER_CENTER,
+                    text,
+                    egui::FontId::proportional(11.5),
+                    if best { theme::ACCENT } else { theme::DIM },
+                );
+            }
             let meta = self.meta.get(&path).cloned().unwrap_or_default();
             let current = self.current_path() == Some(path.as_path());
             painter.text(

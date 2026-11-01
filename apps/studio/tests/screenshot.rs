@@ -4564,3 +4564,53 @@ fn burst_culling_from_the_keyboard() {
     let read = |i: usize| luma_studio::worker::read_meta(&photos[i]).flag;
     assert_eq!((read(sharp), read(blurred)), (Flag::Pick, Flag::Reject));
 }
+
+/// La comparaison donne la part au point de chaque photo (la mesure de « Retenir la
+/// plus nette ») : une scène détaillée a plus de détails au point que sa copie floutée.
+#[test]
+fn the_comparison_shows_the_in_focus_share() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("comparaison-nettete", [1440.0, 900.0], 1.0, |dir| {
+        let sharp = image::RgbImage::from_fn(1200, 800, |x, y| {
+            let v = (((x / 3) ^ (y / 5)) % 7) as u8 * 30 + ((x * y) % 17) as u8;
+            image::Rgb([v, v / 2 + 60, 255 - v])
+        });
+        sharp.save(dir.join("rafale-1.png")).unwrap();
+        image::imageops::blur(&sharp, 4.0)
+            .save(dir.join("rafale-2.png"))
+            .unwrap();
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let (sharp, blurred) = (at("rafale-1.png"), at("rafale-2.png"));
+    // Faites dans la même seconde, les deux photos s'empileraient en rafale (une seule
+    // visible) : les piles dépliées, les deux se comparent.
+    s.studio().set_stacking(false);
+    s.studio().selected = [sharp, blurred].into_iter().collect();
+    s.studio().start_compare();
+    assert_eq!(s.studio().compared().len(), 2);
+    let start = Instant::now();
+    while !s.studio().compare_ready() {
+        s.harness.step();
+        assert!(
+            start.elapsed() < Duration::from_secs(120),
+            "la comparaison n'arrive pas"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    s.harness.step();
+    let compared = s.studio().compared();
+    let shares = s.studio().compare_shares();
+    let share = |name: &str| {
+        let i = compared.iter().position(|p| p.ends_with(name)).unwrap();
+        shares[i].expect("la part au point")
+    };
+    assert!(share("rafale-1.png") > 0.05, "{shares:?}");
+    assert!(
+        share("rafale-2.png") < share("rafale-1.png") / 3.0,
+        "{shares:?}"
+    );
+    s.capture("comparaison-nettete");
+}

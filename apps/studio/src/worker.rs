@@ -134,6 +134,8 @@ pub enum Event {
         index: usize,
         size: [usize; 2],
         rgba: Vec<u8>,
+        /// Sa part au point (la mesure de « Retenir la plus nette »).
+        sharp: Option<f32>,
     },
     /// La photo sans ses retouches (sa géométrie gardée), pour l'avant / après côte à
     /// côte.
@@ -828,12 +830,15 @@ impl Worker {
             .name("luma-comparaison".into())
             .spawn(move || {
                 for (index, path) in paths.iter().enumerate() {
-                    let Ok(r) = caught(|| {
+                    let Ok((r, sharp)) = caught(|| {
                         let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
                         let settings = read_sidecar(path).unwrap_or_default();
-                        photo
+                        let r = photo
                             .render(&settings, Size::Fit(side), &Cancel::new())
-                            .map_err(|e| e.to_string())
+                            .map_err(|e| e.to_string())?;
+                        // La part au point, à la taille de la mesure (la même pour toutes).
+                        let sharp = photo.in_focus_share(&settings, &Cancel::new()).ok();
+                        Ok((r, sharp))
                     }) else {
                         continue;
                     };
@@ -842,6 +847,7 @@ impl Worker {
                         index,
                         size: [r.image.width, r.image.height],
                         rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
+                        sharp,
                     });
                     repaint();
                 }
