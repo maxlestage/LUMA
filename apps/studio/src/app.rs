@@ -431,6 +431,19 @@ type BeforeKey = (PathBuf, Settings, Size);
 /// La part au point d'une photo d'un lot (`None` : pas mesurée).
 type SharpShare = (PathBuf, Option<f32>);
 
+/// Ce qu'on fait des parts au point d'une sélection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SharpGoal {
+    /// La plus nette retenue.
+    Pick,
+    /// Les floues rejetées (moins du tiers de la part de la plus nette).
+    Reject,
+}
+
+/// Une photo dont la part au point est sous cette fraction de celle de la plus nette
+/// de la sélection compte comme floue.
+pub const BLURRED_FRACTION: f32 = 1.0 / 3.0;
+
 #[derive(PartialEq)]
 struct Request {
     path: PathBuf,
@@ -901,7 +914,7 @@ pub struct Studio {
     zoom_target: Option<egui::Vec2>,
     zoom_retries: u8,
     /// La plus nette d'une sélection, en cours : photos demandées, parts au point reçues.
-    sharp_batch: Option<(usize, Vec<SharpShare>)>,
+    sharp_batch: Option<(usize, Vec<SharpShare>, SharpGoal)>,
     /// Le lot des avant / après : photos demandées, écrites, en échec.
     before_after_batch: (usize, usize, usize),
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
@@ -4707,6 +4720,15 @@ impl Studio {
                 self.sharpest_selected();
             }
             if ui
+                .small_button(tr("Rejeter les floues"))
+                .on_hover_text(tr(
+                    "Donne le drapeau « Rejetée » aux photos choisies qui ont moins du tiers de la part au point de la plus nette",
+                ))
+                .clicked()
+            {
+                self.reject_blurred_selected();
+            }
+            if ui
                 .small_button(tr("Avant / après"))
                 .on_hover_text(tr(
                     "L'avant / après de chaque photo choisie, en un JPEG à côté d'elle",
@@ -5258,9 +5280,13 @@ impl Studio {
                 Event::Sharpness { path, result } => {
                     if let Some(batch) = &mut self.sharp_batch {
                         batch.1.push((path, result.ok()));
-                        if batch.1.len() >= batch.0 {
-                            let done = self.sharp_batch.take().map(|b| b.1).unwrap_or_default();
-                            self.keep_sharpest(done);
+                        if batch.1.len() >= batch.0
+                            && let Some((_, done, goal)) = self.sharp_batch.take()
+                        {
+                            match goal {
+                                SharpGoal::Pick => self.keep_sharpest(done),
+                                SharpGoal::Reject => self.reject_blurred(done),
+                            }
                         }
                     }
                 }
@@ -8597,6 +8623,17 @@ impl Studio {
     /// arrière‑plan (la photo ouverte avec ses réglages du moment) ; la plus nette reçoit
     /// le drapeau « Retenue », les autres restent telles quelles.
     pub fn sharpest_selected(&mut self) {
+        self.measure_sharpness(SharpGoal::Pick);
+    }
+
+    /// « Rejeter les floues » : la part au point de chaque photo choisie, mesurée de
+    /// même ; celles qui ont moins du tiers de la part de la plus nette reçoivent le
+    /// drapeau « Rejetée », les autres restent telles quelles.
+    pub fn reject_blurred_selected(&mut self) {
+        self.measure_sharpness(SharpGoal::Reject);
+    }
+
+    fn measure_sharpness(&mut self, goal: SharpGoal) {
         let paths = self.keyword_targets();
         if paths.len() < 2 || self.sharp_batch.is_some() {
             return;
@@ -8612,7 +8649,7 @@ impl Studio {
                 (p, given)
             })
             .collect();
-        self.sharp_batch = Some((n, Vec::new()));
+        self.sharp_batch = Some((n, Vec::new(), goal));
         self.status = trf("Netteté de {n} photo(s)…", &[("n", &n)]);
         self.worker.sharpness(paths, 1600);
     }
@@ -8637,6 +8674,34 @@ impl Studio {
                 ("file", &file_name(&best)),
                 ("percent", &widgets::format_value(share * 100.0, 1, false)),
                 ("next", &widgets::format_value(next * 100.0, 1, false)),
+            ],
+        );
+    }
+
+    /// Les floues des parts reçues (moins de [`BLURRED_FRACTION`] de la plus nette) :
+    /// leur drapeau « Rejetée » ; la barre d'état dit combien.
+    fn reject_blurred(&mut self, shares: Vec<SharpShare>) {
+        let measured: Vec<(PathBuf, f32)> = shares
+            .into_iter()
+            .filter_map(|(p, s)| Some((p, s?)))
+            .collect();
+        let Some(best) = measured.iter().map(|m| m.1).max_by(f32::total_cmp) else {
+            self.status = tr("Netteté : aucune photo n'a pu être mesurée").into();
+            return;
+        };
+        let blurred: Vec<PathBuf> = measured
+            .into_iter()
+            .filter(|m| m.1 < best * BLURRED_FRACTION)
+            .map(|m| m.0)
+            .collect();
+        if !blurred.is_empty() {
+            self.edit_meta(&blurred, |m| m.flag = Flag::Reject);
+        }
+        self.status = trf(
+            "Floues : {n} photo(s) rejetée(s) (moins du tiers de la plus nette, {percent} % au point)",
+            &[
+                ("n", &blurred.len()),
+                ("percent", &widgets::format_value(best * 100.0, 1, false)),
             ],
         );
     }

@@ -6414,3 +6414,15 @@ es = Nitidez: no se pudo medir ninguna foto
 fr = La plus nette : {file} ({percent} % au point, la suivante {next} %), retenue
 en = The sharpest: {file} ({percent}% in focus, the next {next}%), picked
 es = La más nítida: {file} ({percent} % enfocada, la siguiente {next} %), seleccionada
+
+fr = Rejeter les floues
+en = Reject the blurred
+es = Rechazar las desenfocadas
+
+fr = Donne le drapeau « Rejetée » aux photos choisies qui ont moins du tiers de la part au point de la plus nette
+en = Gives the “Rejected” flag to the selected photos with less than a third of the in-focus share of the sharpest
+es = Da la marca «Rechazada» a las fotos elegidas que tienen menos de un tercio de la parte enfocada de la más nítida
+
+fr = Floues : {n} photo(s) rejetée(s) (moins du tiers de la plus nette, {percent} % au point)
+en = Blurred: {n} photo(s) rejected (less than a third of the sharpest, {percent}% in focus)
+es = Desenfocadas: {n} foto(s) rechazada(s) (menos de un tercio de la más nítida, {percent} % enfocada)

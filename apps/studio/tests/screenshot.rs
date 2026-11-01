@@ -4326,3 +4326,38 @@ fn reopening_the_open_photo_renders_it_again() {
         assert_eq!(s.studio().busy_reason(), None, "essai {k}");
     }
 }
+
+/// « Rejeter les floues » sur deux photos nettes et une floutée : seule la floue reçoit
+/// le drapeau « Rejetée » (dans son XMP), les nettes restent sans drapeau.
+#[test]
+fn the_blurred_photos_of_a_burst_are_rejected() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("floues", [1440.0, 900.0], 1.0, |dir| {
+        let sharp = image::RgbImage::from_fn(1200, 800, |x, y| {
+            let v = (((x / 3) ^ (y / 5)) % 7) as u8 * 30 + ((x * y) % 17) as u8;
+            image::Rgb([v, v / 2 + 60, 255 - v])
+        });
+        sharp.save(dir.join("rafale-1.png")).unwrap();
+        sharp.save(dir.join("rafale-2.png")).unwrap();
+        image::imageops::blur(&sharp, 4.0)
+            .save(dir.join("rafale-3.png"))
+            .unwrap();
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let burst = [at("rafale-1.png"), at("rafale-2.png"), at("rafale-3.png")];
+    s.studio().selected = burst.into_iter().collect();
+    s.studio().reject_blurred_selected();
+    s.wait();
+    let status = s.studio().status().to_owned();
+    assert!(
+        status.starts_with("Floues : 1 photo(s) rejetée(s)"),
+        "{status}"
+    );
+    s.studio().flush_xmp();
+    let read = |i: usize| luma_studio::worker::read_meta(&photos[i]).flag;
+    use luma_project::xmp::Flag;
+    assert_eq!(burst.map(read), [Flag::None, Flag::None, Flag::Reject]);
+}
