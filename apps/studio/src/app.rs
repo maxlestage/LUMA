@@ -97,16 +97,24 @@ pub enum PhotoOrder {
     Date,
     /// Par note, la meilleure d'abord ; à note égale, par nom.
     Rating,
+    /// Par part au point (mesurée en arrière‑plan), la plus nette d'abord.
+    Sharpness,
 }
 
 impl PhotoOrder {
-    pub const ALL: [PhotoOrder; 3] = [PhotoOrder::Name, PhotoOrder::Date, PhotoOrder::Rating];
+    pub const ALL: [PhotoOrder; 4] = [
+        PhotoOrder::Name,
+        PhotoOrder::Date,
+        PhotoOrder::Rating,
+        PhotoOrder::Sharpness,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
             PhotoOrder::Name => "Nom",
             PhotoOrder::Date => "Date de prise de vue",
             PhotoOrder::Rating => "Note",
+            PhotoOrder::Sharpness => "Netteté",
         }
     }
 
@@ -116,6 +124,7 @@ impl PhotoOrder {
             PhotoOrder::Name => "nom",
             PhotoOrder::Date => "date",
             PhotoOrder::Rating => "note",
+            PhotoOrder::Sharpness => "nettete",
         }
     }
 }
@@ -485,6 +494,8 @@ enum SharpGoal {
     Pick,
     /// Les floues rejetées (moins du tiers de la part de la plus nette).
     Reject,
+    /// Le film trié par netteté.
+    Sort,
 }
 
 /// Une photo dont la part au point est sous cette fraction de celle de la plus nette
@@ -962,6 +973,8 @@ pub struct Studio {
     zoom_retries: u8,
     /// La plus nette d'une sélection, en cours : photos demandées, parts au point reçues.
     sharp_batch: Option<(usize, Vec<SharpShare>, SharpGoal)>,
+    /// Les parts au point mesurées pour le tri par netteté.
+    sharp_shares: HashMap<PathBuf, f32>,
     /// Le lot des avant / après : photos demandées, écrites, en échec.
     before_after_batch: (usize, usize, usize),
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
@@ -1419,6 +1432,7 @@ impl Studio {
             zoom_retries: 0,
             before_after_batch: (0, 0, 0),
             sharp_batch: None,
+            sharp_shares: HashMap::new(),
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -1641,6 +1655,10 @@ impl Studio {
         // pour la photothèque et les recherches).
         if self.photo_order != PhotoOrder::Name || self.photo_reverse {
             self.order_folder();
+        }
+        // Trié par netteté : les photos de ce film-ci se mesurent.
+        if self.photo_order == PhotoOrder::Sharpness && self.sharp_batch.is_none() {
+            self.measure_sharpness(SharpGoal::Sort);
         }
         let index = file
             .and_then(|f| self.folder.iter().position(|p| *p == f))
@@ -4927,6 +4945,18 @@ impl Studio {
                     std::cmp::Reverse(self.meta.get(p).map_or(0, |m| m.rating))
                 });
             }
+            PhotoOrder::Sharpness => {
+                // Pas encore mesurées : à la fin, par nom.
+                folder.sort_by(|a, b| {
+                    let (sa, sb) = (self.sharp_shares.get(a), self.sharp_shares.get(b));
+                    match (sa, sb) {
+                        (Some(x), Some(y)) => y.total_cmp(x),
+                        (Some(_), None) => std::cmp::Ordering::Less,
+                        (None, Some(_)) => std::cmp::Ordering::Greater,
+                        (None, None) => std::cmp::Ordering::Equal,
+                    }
+                });
+            }
         }
         if self.photo_reverse {
             folder.reverse();
@@ -5435,6 +5465,18 @@ impl Studio {
                             match goal {
                                 SharpGoal::Pick => self.keep_sharpest(done),
                                 SharpGoal::Reject => self.reject_blurred(done),
+                                SharpGoal::Sort => {
+                                    let n = done.iter().filter(|d| d.1.is_some()).count();
+                                    self.sharp_shares = done
+                                        .into_iter()
+                                        .filter_map(|(p, s)| Some((p, s?)))
+                                        .collect();
+                                    self.set_photo_order(PhotoOrder::Sharpness);
+                                    self.status = trf(
+                                        "Film trié par netteté ({n} photo(s) mesurée(s))",
+                                        &[("n", &n)],
+                                    );
+                                }
                             }
                         }
                     }
@@ -8807,8 +8849,20 @@ impl Studio {
         self.measure_sharpness(SharpGoal::Reject);
     }
 
+    /// Le film trié par netteté : la part au point de chacune de ses photos mesurée en
+    /// arrière‑plan, puis le film rangé, la plus nette d'abord.
+    pub fn sort_by_sharpness(&mut self) {
+        self.set_photo_order(PhotoOrder::Sharpness);
+        self.measure_sharpness(SharpGoal::Sort);
+    }
+
     fn measure_sharpness(&mut self, goal: SharpGoal) {
-        let paths = self.keyword_targets();
+        // Le tri mesure tout le film ; les autres, les photos choisies.
+        let paths = if goal == SharpGoal::Sort {
+            self.folder.clone()
+        } else {
+            self.keyword_targets()
+        };
         if paths.len() < 2 || self.sharp_batch.is_some() {
             return;
         }
@@ -10721,6 +10775,10 @@ impl Studio {
         });
         if order != self.photo_order {
             self.set_photo_order(order);
+            // La netteté se mesure d'abord (en arrière‑plan) ; le film se range ensuite.
+            if order == PhotoOrder::Sharpness {
+                self.measure_sharpness(SharpGoal::Sort);
+            }
         }
         let mut reverse = self.photo_reverse;
         if ui

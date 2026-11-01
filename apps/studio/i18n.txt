@@ -6458,3 +6458,7 @@ es = Sensibilidad
 fr = Haute : les détails fins d'un objectif doux comptent aussi ; basse : seuls les contours les plus francs
 en = High: the fine details of a soft lens count too; low: only the sharpest edges
 es = Alta: los detalles finos de un objetivo suave también cuentan; baja: solo los contornos más nítidos
+
+fr = Film trié par netteté ({n} photo(s) mesurée(s))
+en = Filmstrip sorted by sharpness ({n} photo(s) measured)
+es = Tira ordenada por nitidez ({n} foto(s) medida(s))

@@ -4481,3 +4481,41 @@ fn focus_peaking_sensitivity_changes_the_share() {
     let low = share(&mut s, Sensitivity::Low);
     assert!(low < normal && normal < high, "{low} {normal} {high}");
 }
+
+/// « Trier par » → « Netteté » : la part au point de chaque photo du film mesurée en
+/// arrière‑plan, puis le film rangé, la plus nette d'abord ; une scène détaillée passe
+/// devant sa copie floutée, la photo ouverte reste la même.
+#[test]
+fn the_filmstrip_is_sorted_by_sharpness() {
+    use luma_studio::app::PhotoOrder;
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("ordre-nettete", [1440.0, 900.0], 1.0, |dir| {
+        let sharp = image::RgbImage::from_fn(1200, 800, |x, y| {
+            let v = (((x / 3) ^ (y / 5)) % 7) as u8 * 30 + ((x * y) % 17) as u8;
+            image::Rgb([v, v / 2 + 60, 255 - v])
+        });
+        // Le nom de la floue la met d'abord dans l'ordre des noms.
+        image::imageops::blur(&sharp, 4.0)
+            .save(dir.join("a-floue.png"))
+            .unwrap();
+        sharp.save(dir.join("z-nette.png")).unwrap();
+    }) else {
+        return;
+    };
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let n = s.studio().photos().len();
+    s.studio().sort_by_sharpness();
+    s.wait();
+    assert_eq!(s.studio().photo_order().0, PhotoOrder::Sharpness);
+    let status = s.studio().status().to_owned();
+    assert_eq!(
+        status,
+        format!("Film trié par netteté ({n} photo(s) mesurée(s))")
+    );
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    assert!(at("z-nette.png") < at("a-floue.png"), "{photos:?}");
+    // La floue n'a rien au point : la dernière.
+    assert_eq!(at("a-floue.png"), n - 1, "{photos:?}");
+    assert_eq!(s.studio().current_path(), Some(open.as_path()));
+}

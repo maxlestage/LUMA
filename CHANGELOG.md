@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Trier par netteté** : la part au point de chaque photo du film mesurée en
+  arrière‑plan, puis le film rangé, la plus nette d'abord.
 - **Sensibilité des zones nettes** (basse, normale, haute) : avec un objectif doux,
   la haute marque aussi les détails fins ; la basse ne garde que les contours francs.
 - **Interface plus fluide** : l'image de chaque aperçu mise en texture sur tous les
