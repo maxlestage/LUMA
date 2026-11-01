@@ -103,6 +103,7 @@ impl Session {
                         s.use_licence_dir(licence_dir.clone());
                         // L'ordre du film de l'essai, à lui : ni lu ni écrit chez soi.
                         s.use_order_file(licence_dir.with_file_name("ordre.txt"));
+                        s.use_sensitivity_file(licence_dir.with_file_name("zones-nettes.txt"));
                         s.use_catalog(catalog.clone());
                         s.open_path(&raw);
                         s
@@ -4613,4 +4614,27 @@ fn the_comparison_shows_the_in_focus_share() {
         "{shares:?}"
     );
     s.capture("comparaison-nettete");
+}
+
+/// La sensibilité des zones nettes gardée dans son fichier (« haute ») et relue ; un
+/// fichier illisible donne la normale.
+#[test]
+fn focus_peaking_sensitivity_is_remembered() {
+    use luma_image::focus::Sensitivity;
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("zones-nettes-gardees") else {
+        return;
+    };
+    assert_eq!(s.studio().focus_sensitivity, Sensitivity::Medium);
+    s.studio().set_focus_sensitivity(Sensitivity::High);
+    let file = s.dir.join("zones-nettes.txt");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "haute\n");
+    let other = s.dir.join("zones-nettes-2.txt");
+    std::fs::write(&other, "basse\n").unwrap();
+    s.studio().use_sensitivity_file(other.clone());
+    assert_eq!(s.studio().focus_sensitivity, Sensitivity::Low);
+    std::fs::write(&other, "?").unwrap();
+    s.studio().use_sensitivity_file(other);
+    assert_eq!(s.studio().focus_sensitivity, Sensitivity::Medium);
+    s.wait();
 }

@@ -129,6 +129,27 @@ impl PhotoOrder {
     }
 }
 
+/// Le mot d'une sensibilité des zones nettes dans « Zones nettes.txt ».
+fn sensitivity_id(s: luma_image::focus::Sensitivity) -> &'static str {
+    use luma_image::focus::Sensitivity;
+    match s {
+        Sensitivity::Low => "basse",
+        Sensitivity::Medium => "normale",
+        Sensitivity::High => "haute",
+    }
+}
+
+/// La sensibilité gardée dans un fichier ; rien de lisible : la normale.
+fn read_sensitivity(path: Option<&Path>) -> luma_image::focus::Sensitivity {
+    let text = path
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .unwrap_or_default();
+    luma_image::focus::Sensitivity::ALL
+        .into_iter()
+        .find(|s| sensitivity_id(*s) == text.trim())
+        .unwrap_or_default()
+}
+
 /// L'ordre gardé dans un fichier : « date », « note inverse »… ; rien de lisible : le
 /// nom, dans l'ordre.
 fn read_photo_order(path: Option<&Path>) -> (PhotoOrder, bool) {
@@ -988,8 +1009,11 @@ pub struct Studio {
     clipping: bool,
     /// Les zones nettes de la photo, en vert (Maj+F).
     pub focus_peaking: bool,
-    /// La sensibilité des zones nettes.
+    /// La sensibilité des zones nettes, gardée d'une séance à l'autre.
     pub focus_sensitivity: luma_image::focus::Sensitivity,
+    /// Le fichier où elle est gardée (`None` : « Zones nettes.txt » du dossier de LÜMA ;
+    /// les essais en donnent un à eux).
+    sensitivity_path: Option<PathBuf>,
     /// La part de l'aperçu au point (0 à 1), lue avec les zones nettes.
     pub sharp_share: Option<f32>,
     proofing: Proofing,
@@ -1441,7 +1465,8 @@ impl Studio {
             before_asked: None,
             clipping: false,
             focus_peaking: false,
-            focus_sensitivity: Default::default(),
+            focus_sensitivity: read_sensitivity(Self::default_sensitivity_path().as_deref()),
+            sensitivity_path: None,
             sharp_share: None,
             proofing: Proofing::default(),
             zoom: false,
@@ -4870,6 +4895,29 @@ impl Studio {
     }
 
     /// Les piles du film (rafales et séries d'exposition), d'après la photothèque.
+    /// « Zones nettes.txt », dans le dossier de LÜMA.
+    fn default_sensitivity_path() -> Option<PathBuf> {
+        Some(crate::dialogs::app_dir()?.join("Zones nettes.txt"))
+    }
+
+    /// Garde la sensibilité des zones nettes dans ce fichier (les essais), et la relit.
+    pub fn use_sensitivity_file(&mut self, path: PathBuf) {
+        self.focus_sensitivity = read_sensitivity(Some(&path));
+        self.sensitivity_path = Some(path);
+    }
+
+    /// Change la sensibilité des zones nettes et la garde pour la prochaine fois.
+    pub fn set_focus_sensitivity(&mut self, s: luma_image::focus::Sensitivity) {
+        self.focus_sensitivity = s;
+        if let Some(path) = self
+            .sensitivity_path
+            .clone()
+            .or_else(Self::default_sensitivity_path)
+        {
+            let _ = std::fs::write(path, format!("{}\n", sensitivity_id(s)));
+        }
+    }
+
     /// « Ordre du film.txt », dans le dossier de LÜMA.
     fn default_order_path() -> Option<PathBuf> {
         Some(crate::dialogs::app_dir()?.join("Ordre du film.txt"))
@@ -6358,6 +6406,14 @@ impl Studio {
         self.hide_panels = false;
         self.photo_reverse = false;
         self.set_photo_order(PhotoOrder::Name);
+        self.focus_sensitivity = Default::default();
+        if let Some(path) = self
+            .sensitivity_path
+            .clone()
+            .or_else(Self::default_sensitivity_path)
+        {
+            let _ = std::fs::remove_file(path);
+        }
         if let Some(path) = self.order_file() {
             let _ = std::fs::remove_file(path);
         }
@@ -8836,17 +8892,21 @@ impl Studio {
                         Sensitivity::High => tr("Haute"),
                     };
                     let label = ui.label(RichText::new(tr("Sensibilité")).size(11.0).color(theme::DIM));
+                    let mut level = self.focus_sensitivity;
                     egui::ComboBox::from_id_salt("sensibilite-zones-nettes")
-                        .selected_text(name(self.focus_sensitivity))
+                        .selected_text(name(level))
                         .width(80.0)
                         .show_ui(ui, |ui| {
                             for s in Sensitivity::ALL {
-                                ui.selectable_value(&mut self.focus_sensitivity, s, name(s));
+                                ui.selectable_value(&mut level, s, name(s));
                             }
                         })
                         .response
                         .on_hover_text(tr("Haute : les détails fins d'un objectif doux comptent aussi ; basse : seuls les contours les plus francs"))
                         .labelled_by(label.id);
+                    if level != self.focus_sensitivity {
+                        self.set_focus_sensitivity(level);
+                    }
                 }
                 if !compact
                     && ui
