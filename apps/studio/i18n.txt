@@ -6442,3 +6442,19 @@ es = Orden inverso
 fr = La plus récente, la moins bien notée ou le dernier nom d'abord
 en = The most recent, the lowest rated or the last name first
 es = La más reciente, la peor valorada o el último nombre primero
+
+fr = Basse
+en = Low
+es = Baja
+
+fr = Haute
+en = High
+es = Alta
+
+fr = Sensibilité
+en = Sensitivity
+es = Sensibilidad
+
+fr = Haute : les détails fins d'un objectif doux comptent aussi ; basse : seuls les contours les plus francs
+en = High: the fine details of a soft lens count too; low: only the sharpest edges
+es = Alta: los detalles finos de un objetivo suave también cuentan; baja: solo los contornos más nítidos

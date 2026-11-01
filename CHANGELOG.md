@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Sensibilité des zones nettes** (basse, normale, haute) : avec un objectif doux,
+  la haute marque aussi les détails fins ; la basse ne garde que les contours francs.
 - **Interface plus fluide** : l'image de chaque aperçu mise en texture sur tous les
   cœurs, aux mêmes couleurs : de 2,2 à 1,0 ms par aperçu sur le fil de l'interface.
 - **Ordre inverse**, gardé d'une séance à l'autre : le film à l'envers (la plus récente

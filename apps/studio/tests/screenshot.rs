@@ -4457,3 +4457,27 @@ fn the_filmstrip_order_is_reversed_and_remembered() {
     assert_eq!(s.studio().photo_order(), (PhotoOrder::Name, false));
     s.wait();
 }
+
+/// La sensibilité des zones nettes : haute, plus de la photo au point ; basse, moins ;
+/// le menu n'apparaît qu'avec les zones nettes.
+#[test]
+fn focus_peaking_sensitivity_changes_the_share() {
+    use luma_image::focus::Sensitivity;
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("zones-nettes-sensibilite") else {
+        return;
+    };
+    assert!(s.harness.query_by_label("Sensibilité").is_none());
+    s.keys(&[(Modifiers::SHIFT, Key::F)]);
+    s.wait();
+    assert!(s.harness.query_by_label("Sensibilité").is_some());
+    let share = |s: &mut Session, level| {
+        s.studio().focus_sensitivity = level;
+        s.wait();
+        s.studio().sharp_share.expect("la part au point")
+    };
+    let normal = share(&mut s, Sensitivity::Medium);
+    let high = share(&mut s, Sensitivity::High);
+    let low = share(&mut s, Sensitivity::Low);
+    assert!(low < normal && normal < high, "{low} {normal} {high}");
+}

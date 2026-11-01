@@ -221,8 +221,8 @@ struct RenderJob {
     size: Size,
     generation: u64,
     clipping: bool,
-    /// Les zones nettes peintes par‑dessus.
-    focus: bool,
+    /// Les zones nettes peintes par‑dessus, à cette sensibilité.
+    focus: Option<luma_image::focus::Sensitivity>,
     /// L'épreuvage à l'écran, s'il est actif.
     proof: Option<Proofed>,
     /// Joindre une copie réduite de la base (la retouche y cherche ses sources).
@@ -239,8 +239,8 @@ struct RenderJob {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Extras {
     pub clipping: bool,
-    /// Les zones nettes (`luma_image::focus`) peintes par‑dessus.
-    pub focus: bool,
+    /// Les zones nettes (`luma_image::focus`) peintes par‑dessus, à cette sensibilité.
+    pub focus: Option<luma_image::focus::Sensitivity>,
     pub scene: bool,
     /// La vue des taches (les poussières du capteur en points sombres).
     pub dust_view: bool,
@@ -1051,8 +1051,8 @@ fn render_job(
         }
         let histogram = histogram_rgba(&rgba);
         let scope = luma_image::scopes::render(job.scope, &rgba, w, h);
-        let clean =
-            (gamut.is_some() || job.clipping || job.focus || job.dust_view).then(|| rgba.clone());
+        let clean = (gamut.is_some() || job.clipping || job.focus.is_some() || job.dust_view)
+            .then(|| rgba.clone());
         if let Some(mask) = &gamut {
             luma_color::proof::paint_alert(&mut rgba, mask);
         }
@@ -1060,8 +1060,9 @@ fn render_job(
             clip_overlay(&mut rgba);
         }
         // Sur l'aperçu tel qu'il s'affiche (avant l'écrêtage, qui ne crée pas de détail).
-        let sharp = job.focus.then(|| {
-            let mask = luma_image::focus::sharp(clean.as_deref().unwrap_or(&rgba), w, h);
+        let sharp = job.focus.map(|level| {
+            let source = clean.as_deref().unwrap_or(&rgba);
+            let mask = luma_image::focus::sharp_above(source, w, h, level.threshold());
             let mut n = 0usize;
             for (p, &m) in rgba.as_chunks_mut::<4>().0.iter_mut().zip(&mask) {
                 if m {

@@ -497,7 +497,7 @@ struct Request {
     settings: Settings,
     size: Size,
     clipping: bool,
-    focus: bool,
+    focus: Option<luma_image::focus::Sensitivity>,
     /// La version de la table d'épreuvage, la simulation et l'alerte de gamut.
     proof: Option<(u64, bool, bool)>,
     scene: bool,
@@ -975,6 +975,8 @@ pub struct Studio {
     clipping: bool,
     /// Les zones nettes de la photo, en vert (Maj+F).
     pub focus_peaking: bool,
+    /// La sensibilité des zones nettes.
+    pub focus_sensitivity: luma_image::focus::Sensitivity,
     /// La part de l'aperçu au point (0 à 1), lue avec les zones nettes.
     pub sharp_share: Option<f32>,
     proofing: Proofing,
@@ -1425,6 +1427,7 @@ impl Studio {
             before_asked: None,
             clipping: false,
             focus_peaking: false,
+            focus_sensitivity: Default::default(),
             sharp_share: None,
             proofing: Proofing::default(),
             zoom: false,
@@ -6165,7 +6168,7 @@ impl Studio {
             settings,
             size,
             clipping: self.clipping,
-            focus: self.focus_peaking,
+            focus: self.focus_peaking.then_some(self.focus_sensitivity),
             proof: self
                 .proofing
                 .active()
@@ -6199,7 +6202,7 @@ impl Studio {
             self.generation,
             crate::worker::Extras {
                 clipping: self.clipping,
-                focus: self.focus_peaking,
+                focus: self.focus_peaking.then_some(self.focus_sensitivity),
                 scene: request.scene,
                 dust_view: request.dust_view,
                 find_dust: request.find_dust,
@@ -8748,6 +8751,26 @@ impl Studio {
                     .clicked()
                 {
                     self.act("focus_peaking");
+                }
+                if self.focus_peaking {
+                    use luma_image::focus::Sensitivity;
+                    let name = |s: Sensitivity| match s {
+                        Sensitivity::Low => tr("Basse"),
+                        Sensitivity::Medium => tr("Normale"),
+                        Sensitivity::High => tr("Haute"),
+                    };
+                    let label = ui.label(RichText::new(tr("Sensibilité")).size(11.0).color(theme::DIM));
+                    egui::ComboBox::from_id_salt("sensibilite-zones-nettes")
+                        .selected_text(name(self.focus_sensitivity))
+                        .width(80.0)
+                        .show_ui(ui, |ui| {
+                            for s in Sensitivity::ALL {
+                                ui.selectable_value(&mut self.focus_sensitivity, s, name(s));
+                            }
+                        })
+                        .response
+                        .on_hover_text(tr("Haute : les détails fins d'un objectif doux comptent aussi ; basse : seuls les contours les plus francs"))
+                        .labelled_by(label.id);
                 }
                 if !compact
                     && ui
