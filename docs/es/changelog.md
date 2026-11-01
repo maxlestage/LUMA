@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Comparación más rápida**: dos fotos reveladas a la vez, con las mismas imágenes
+  (cuatro RAW en 1,57 s en lugar de 2,0 s).
 - **Zonas nítidas en la comparación**: Mayús+F las pinta en todas las fotos comparadas
   a la vez, con la sensibilidad elegida.
 - **Sensibilidad de las zonas nítidas guardada** de una sesión a otra («Restablecer
