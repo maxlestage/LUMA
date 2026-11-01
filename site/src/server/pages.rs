@@ -392,14 +392,14 @@ fn desktop(lang: Lang) -> Element {
             .class("desktop-actions")
             .child(
                 a().class("btn magnetic")
-                    .href(link("/download/LUMA-linux-x86_64.tar.gz"))
+                    .href(download("LUMA-linux-x86_64.tar.gz"))
                     .attr("download", "")
                     .child(span().html(LINUX_SVG))
                     .child(span().text(t(lang, "Télécharger pour Linux"))),
             )
             .child(
                 a().class("desktop-alt")
-                    .href(link("/download/LUMA-linux-amd64.deb"))
+                    .href(download("LUMA-linux-amd64.deb"))
                     .attr("download", "")
                     .text(t(lang, "Paquet .deb (Debian, Ubuntu)")),
             )
@@ -416,7 +416,7 @@ fn desktop(lang: Lang) -> Element {
             .class("desktop-actions")
             .child(
                 a().class("btn magnetic")
-                    .href(link(&format!("/download/{file}")))
+                    .href(download(file))
                     .attr("download", "")
                     .child(span().html(WINDOWS_SVG))
                     .child(span().text(t(lang, "Télécharger pour Windows"))),
@@ -424,7 +424,7 @@ fn desktop(lang: Lang) -> Element {
             .children(
                 (file == WINDOWS_SETUP && windows_asset(WINDOWS_ZIP)).then(|| {
                     a().class("desktop-alt")
-                        .href(link(&format!("/download/{WINDOWS_ZIP}")))
+                        .href(download(WINDOWS_ZIP))
                         .attr("download", "")
                         .text(t(lang, "Archive .zip, sans installation"))
                 }),
@@ -1223,7 +1223,7 @@ fn pricing(lang: Lang) -> Element {
                         .class("download-option")
                         .child(
                             a().class("btn magnetic")
-                                .href(link("/download/LUMA-macos.zip"))
+                                .href(download("LUMA-macos.zip"))
                                 .attr("download", "")
                                 .child(span().html(APPLE_SVG))
                                 .child(span().text(t(lang, "Télécharger pour Mac"))),
@@ -1235,7 +1235,7 @@ fn pricing(lang: Lang) -> Element {
                         .class("download-option")
                         .child(
                             a().class("btn btn-ghost magnetic")
-                                .href(link("/download/LUMA-linux-x86_64.tar.gz"))
+                                .href(download("LUMA-linux-x86_64.tar.gz"))
                                 .attr("download", "")
                                 .child(span().html(LINUX_SVG))
                                 .child(span().text(t(lang, "Télécharger pour Linux"))),
@@ -1245,7 +1245,7 @@ fn pricing(lang: Lang) -> Element {
                                 .text(t(lang, "Linux x86_64 (Ubuntu 22.04, Debian 12, Fedora 36 ou plus récent) : l'archive s'installe sans mot de passe avec install.sh ; il faut un pilote graphique Vulkan."))
                                 .child(text(" "))
                                 .child(
-                                    a().href(link("/download/LUMA-linux-amd64.deb"))
+                                    a().href(download("LUMA-linux-amd64.deb"))
                                         .attr("download", "")
                                         .text(t(lang, "Paquet .deb (Debian, Ubuntu)")),
                                 ),
@@ -1317,7 +1317,7 @@ fn site_footer(here: Here) -> Element {
                                 .class("footer-apps")
                                 .child(if downloads_open() {
                                     a().class("store")
-                                        .href(link("/download/LUMA-macos.zip"))
+                                        .href(download("LUMA-macos.zip"))
                                         .attr("download", "")
                                         .child(span().html(APPLE_SVG))
                                         .child(
@@ -1338,7 +1338,7 @@ fn site_footer(here: Here) -> Element {
                                 })
                                 .children(downloads_open().then(|| {
                                     a().class("store")
-                                        .href(link("/download/LUMA-linux-x86_64.tar.gz"))
+                                        .href(download("LUMA-linux-x86_64.tar.gz"))
                                         .attr("download", "")
                                         .child(span().html(LINUX_SVG))
                                         .child(
@@ -1350,7 +1350,7 @@ fn site_footer(here: Here) -> Element {
                                 .child(match windows_primary() {
                                     Some(file) => a()
                                         .class("store")
-                                        .href(link(&format!("/download/{file}")))
+                                        .href(download(file))
                                         .attr("download", "")
                                         .child(span().html(WINDOWS_SVG))
                                         .child(
@@ -1475,9 +1475,9 @@ pub fn licence(
             .child(section()
                 .child(h2().text(t(lang, "Pas encore l'app ?")))
                 .child(div().class("hero-cta")
-                    .children(downloads_open().then(|| a().class("btn").href(link("/download/LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac")))))
-                    .children(downloads_open().then(|| a().class("btn btn-ghost").href(link("/download/LUMA-linux-x86_64.tar.gz")).attr("download", "").child(span().text(t(lang, "Télécharger pour Linux")))))
-                    .children(windows_primary().map(|file| a().class("btn btn-ghost").href(link(&format!("/download/{file}"))).attr("download", "").child(span().text(t(lang, "Télécharger pour Windows")))))
+                    .children(downloads_open().then(|| a().class("btn").href(download("LUMA-macos.zip")).attr("download", "").child(span().text(t(lang, "Télécharger pour Mac")))))
+                    .children(downloads_open().then(|| a().class("btn btn-ghost").href(download("LUMA-linux-x86_64.tar.gz")).attr("download", "").child(span().text(t(lang, "Télécharger pour Linux")))))
+                    .children(windows_primary().map(|file| a().class("btn btn-ghost").href(download(file)).attr("download", "").child(span().text(t(lang, "Télécharger pour Windows")))))
                     .child(portal.map(|u| a().class("btn btn-ghost").href(u).child(span().text(t(lang, "Gérer mon abonnement")))))))
         }
 
@@ -1811,7 +1811,38 @@ fn download_note(lang: Lang) -> String {
 /// les boutons « Télécharger » disparaissent du site (barre, accueil, tarifs, pied de
 /// page, page de la clé, raccourcis de la PWA) jusqu'à l'ouverture.
 pub fn downloads_open() -> bool {
+    hosted_downloads() || release_downloads().is_some()
+}
+
+/// Les fichiers de l'app sont‑ils servis par le site lui‑même (`LUMA_DOWNLOADS=1`,
+/// sous `/download/`) ?
+fn hosted_downloads() -> bool {
     std::env::var("LUMA_DOWNLOADS").is_ok_and(|v| v == "1")
+}
+
+/// L'adresse des fichiers de la dernière Release GitHub
+/// (`LUMA_RELEASE_DOWNLOADS`, par exemple
+/// `https://github.com/<compte>/<dépôt>/releases/latest/download`), quand le site ne
+/// sert pas les fichiers lui‑même : les boutons « Télécharger » y mènent.
+fn release_downloads() -> Option<String> {
+    std::env::var("LUMA_RELEASE_DOWNLOADS")
+        .ok()
+        .map(|v| v.trim().trim_end_matches('/').to_owned())
+        .filter(|v| v.starts_with("https://"))
+}
+
+/// Le lien d'un fichier de l'app : sur le site s'il le sert, sinon dans la Release.
+fn download(file: &str) -> String {
+    download_href(file, hosted_downloads(), release_downloads().as_deref())
+}
+
+/// [`download`], d'après ce qui est servi : le site d'abord, la Release ensuite ;
+/// sans l'un ni l'autre, l'adresse du site (les boutons n'apparaissent alors pas).
+fn download_href(file: &str, hosted: bool, release: Option<&str>) -> String {
+    match release {
+        Some(base) if !hosted => format!("{base}/{file}"),
+        _ => link(&format!("/download/{file}")),
+    }
 }
 
 /// L'archive de LÜMA pour Windows, telle que la Release la publie.
@@ -1823,10 +1854,13 @@ pub const WINDOWS_SETUP: &str = "LUMA-windows-x86_64-setup.exe";
 /// téléchargement soit ouvert (`LUMA_DOWNLOADS=1`) ; il faut en plus que la Release
 /// l'ait apporté sous `public/download/` (Heroku, `heroku-build.sh`), ou, pour un export
 /// statique où les fichiers sont copiés après le rendu, que `LUMA_WINDOWS_DOWNLOADS=1`
-/// l'annonce. Sinon, le site dit « Bientôt » : aucun bouton vers une page introuvable.
+/// l'annonce ; ou que les boutons mènent à la Release GitHub (`LUMA_RELEASE_DOWNLOADS`),
+/// qui a toujours les deux fichiers de Windows. Sinon, le site dit « Bientôt » : aucun
+/// bouton vers une page introuvable.
 pub fn windows_asset(name: &str) -> bool {
     downloads_open()
-        && (std::env::var("LUMA_WINDOWS_DOWNLOADS").is_ok_and(|v| v == "1")
+        && (release_downloads().is_some() && !hosted_downloads()
+            || std::env::var("LUMA_WINDOWS_DOWNLOADS").is_ok_and(|v| v == "1")
             || super::site_dir()
                 .join("public/download")
                 .join(name)
@@ -1858,14 +1892,14 @@ fn windows_download(lang: Lang) -> Element {
             .class("download-option")
             .child(
                 a().class("btn btn-ghost magnetic")
-                    .href(link(&format!("/download/{file}")))
+                    .href(download(file))
                     .attr("download", "")
                     .child(span().html(WINDOWS_SVG))
                     .child(span().text(t(lang, "Télécharger pour Windows"))),
             )
             .child(if file == WINDOWS_SETUP && windows_asset(WINDOWS_ZIP) {
                 note.child(text(" ")).child(
-                    a().href(link(&format!("/download/{WINDOWS_ZIP}")))
+                    a().href(download(WINDOWS_ZIP))
                         .attr("download", "")
                         .text(t(lang, "Archive .zip, sans installation")),
                 )
@@ -1887,6 +1921,27 @@ fn windows_download(lang: Lang) -> Element {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    /// Le lien d'un fichier de l'app : sur le site quand il le sert (même s'il y a une
+    /// Release), dans la Release sinon.
+    #[test]
+    fn downloads_come_from_the_site_or_the_release() {
+        let release = "https://github.com/compte/depot/releases/latest/download";
+        assert_eq!(
+            download_href("LUMA-macos.zip", false, Some(release)),
+            format!("{release}/LUMA-macos.zip")
+        );
+        assert!(
+            download_href("LUMA-macos.zip", true, Some(release))
+                .ends_with("/download/LUMA-macos.zip")
+        );
+        assert!(
+            !download_href("LUMA-macos.zip", true, Some(release)).starts_with("https://github.com")
+        );
+        assert!(download_href("LUMA-macos.zip", false, None).ends_with("/download/LUMA-macos.zip"));
+    }
+
     use super::{WINDOWS_SETUP, WINDOWS_ZIP, plain};
 
     #[test]

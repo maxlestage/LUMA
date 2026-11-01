@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Descargar desde el sitio**: los botones «Descargar» (Mac, Linux, Windows) llevan a
+  los archivos de la última Release cuando el sitio no los sirve él mismo.
 - **Selección de una ráfaga con el teclado**: Mayús+P elige la más nítida de la
   selección, Mayús+X rechaza las desenfocadas (atajos modificables como los demás).
 

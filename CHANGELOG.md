@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Télécharger depuis le site** : les boutons « Télécharger » (Mac, Linux, Windows)
+  mènent aux fichiers de la dernière Release quand le site ne les sert pas lui‑même.
 - **Tri d'une rafale au clavier** : Maj+P retient la plus nette de la sélection, Maj+X
   rejette les floues (raccourcis modifiables comme les autres).
 

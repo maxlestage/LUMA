@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Download from the website**: the “Download” buttons (Mac, Linux, Windows) lead to
+  the files of the latest Release when the site does not serve them itself.
 - **Burst culling from the keyboard**: Shift+P picks the sharpest of the selection,
   Shift+X rejects the blurred (shortcuts customisable like the others).
 

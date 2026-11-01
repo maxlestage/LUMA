@@ -170,6 +170,9 @@ jobs:
           # L'app est notariée quand le certificat et la clé d'API Apple sont là.
           LUMA_MAC_NOTARIZED: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.APPLE_API_KEY_ID != '' && '1' || '' }}
           LUMA_DOWNLOADS: ${{ vars.LUMA_DOWNLOADS }}
+          # Sans fichiers servis par le site, les boutons « Télécharger » mènent à ceux de
+          # la dernière Release GitHub (l'app Mac, Linux et Windows y sont).
+          LUMA_RELEASE_DOWNLOADS: https://github.com/${{ github.repository }}/releases/latest/download
           # Les fichiers Windows arrivent après l'export : la page ne peut pas les voir.
           LUMA_WINDOWS_DOWNLOADS: ${{ vars.LUMA_DOWNLOADS }}
         run: |
