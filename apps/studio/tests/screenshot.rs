@@ -101,6 +101,8 @@ impl Session {
                     let s = studio.get_or_insert_with(|| {
                         let mut s = Studio::new(ui.ctx());
                         s.use_licence_dir(licence_dir.clone());
+                        // L'ordre du film de l'essai, à lui : ni lu ni écrit chez soi.
+                        s.use_order_file(licence_dir.with_file_name("ordre.txt"));
                         s.use_catalog(catalog.clone());
                         s.open_path(&raw);
                         s
@@ -4424,5 +4426,34 @@ fn the_filmstrip_is_sorted_by_rating_date_and_name() {
     assert_eq!(s.studio().current_path(), Some(open.as_path()));
     s.studio().set_photo_order(PhotoOrder::Name);
     assert_eq!(s.studio().photos(), by_name.as_slice());
+    s.wait();
+}
+
+/// « Ordre inverse » : le film à l'envers ; l'ordre choisi gardé dans son fichier
+/// (« nom inverse ») et relu (« note » : par note, à l'endroit) ; un fichier illisible
+/// donne le nom, à l'endroit.
+#[test]
+fn the_filmstrip_order_is_reversed_and_remembered() {
+    use luma_studio::app::PhotoOrder;
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("ordre-inverse") else {
+        return;
+    };
+    let by_name = s.studio().photos().to_vec();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    s.studio().set_photo_reverse(true);
+    let mut reversed = by_name.clone();
+    reversed.reverse();
+    assert_eq!(s.studio().photos(), reversed.as_slice());
+    assert_eq!(s.studio().current_path(), Some(open.as_path()));
+    let file = s.dir.join("ordre.txt");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "nom inverse\n");
+    let other = s.dir.join("ordre-2.txt");
+    std::fs::write(&other, "note\n").unwrap();
+    s.studio().use_order_file(other.clone());
+    assert_eq!(s.studio().photo_order(), (PhotoOrder::Rating, false));
+    std::fs::write(&other, "n'importe quoi").unwrap();
+    s.studio().use_order_file(other);
+    assert_eq!(s.studio().photo_order(), (PhotoOrder::Name, false));
     s.wait();
 }
