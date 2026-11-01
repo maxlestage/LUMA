@@ -4323,7 +4323,10 @@ fn reopening_the_open_photo_renders_it_again() {
         s.harness.step();
         s.studio().show_view(View::Collection("Choix".into()));
         s.wait();
-        assert_eq!(s.studio().busy_reason(), None, "essai {k}");
+        // Le XMP réécrit par l'essai peut être remarqué juste après et relancer un
+        // rendu, légitime : on attend qu'il aboutisse aussi. Un « Rendu… » sans fin
+        // fait échouer l'attente, avec ce qui retient l'app.
+        s.wait();
     }
 }
 
