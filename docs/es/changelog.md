@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Corrección: «Procesando…» sin fin** cuando se mostraba una colección o una
+  búsqueda mientras se calculaba una vista previa de la foto abierta: la foto se
+  renderiza de nuevo.
 - **Controles más ágiles**: la memoria de las etapas ya calculadas y expulsadas de la
   caché se reutiliza en la siguiente, con los mismos píxeles: la etapa de entrada baja
   de 9,6 a 5,7 ms, un renderizado de vista previa cerca de un 9 % más rápido.

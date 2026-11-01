@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Fix: endless “Rendering…”** when a collection or a search was shown while a
+  preview of the open photo was being computed: the photo is rendered again.
 - **More responsive sliders**: the memory of already-computed steps evicted from the
   cache is reused by the next one, with the same pixels: the input step drops from 9.6
   to 5.7 ms, a preview render is about 9% faster.
