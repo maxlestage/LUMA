@@ -2,6 +2,10 @@
 
 ## 0.4.0 — à venir
 
+- **Supprimer les photos importées (iPhone, iPad)** : « Supprimer… » dans Métadonnées
+  (la photo ou celles choisies) et « Tout effacer… » à côté d'« Importer des photos »,
+  pour repartir de zéro ; après confirmation. Les originaux restent dans Photos ou
+  Fichiers.
 - **Liste des photos (CSV) remplacée d'un coup** : une écriture interrompue ne laisse
   jamais une liste à moitié écrite à la place de l'ancienne.
 - **Agrandissement à l'export plafonné à 100 Mpx sur iPhone et iPad** (200 ailleurs) :

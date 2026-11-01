@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Eliminar las fotos importadas (iPhone, iPad)**: «Eliminar…» en Metadatos (la foto
+  o las elegidas) y «Borrar todo…» junto a «Importar fotos», para empezar de cero;
+  tras confirmación. Los originales se quedan en Fotos o Archivos.
 - **Lista de fotos (CSV) sustituida de una vez**: una escritura interrumpida nunca deja
   una lista a medio escribir en lugar de la anterior.
 - **Ampliación al exportar limitada a 100 MP en iPhone y iPad** (200 en los demás): la
