@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **`luma sharpness`**: la parte enfocada de cada foto, la más nítida primero, la
+  misma medida que la app; `--pick` elige la más nítida, `--reject` rechaza las
+  desenfocadas (marcas en los XMP).
 - **Nitidez medida más rápido**: dos fotos a la vez (mientras una se lee, la otra se
   renderiza), con las mismas partes enfocadas: siete RAW en 1,7 s en lugar de 2,3 s.
 - **Ordenar por nitidez**: la parte enfocada de cada foto de la tira medida en segundo

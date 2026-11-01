@@ -485,6 +485,16 @@ impl Photo {
         Ok(side_by_side(&before, &after, side))
     }
 
+    /// La part au point de la photo (0 à 1) avec ces réglages, sur un aperçu de
+    /// [`luma_image::focus::SHARE_SIDE`] pixels en sRGB 8 bits (ce qu'on voit) : la même
+    /// mesure pour l'app et la ligne de commande.
+    pub fn in_focus_share(&self, settings: &Settings, cancel: &Cancel) -> Result<f32> {
+        let r = self.render(settings, Size::Fit(luma_image::focus::SHARE_SIDE), cancel)?;
+        let (w, h) = (r.image.width, r.image.height);
+        let rgba = luma_image::encode8_rgba(&r.image, luma_color::OutputSpace::Srgb);
+        Ok(luma_image::focus::share(&rgba, w, h))
+    }
+
     /// Les étapes de voisinage, en cache tant que [`luma_image::base_key`] ne change pas.
     pub fn base(&self, settings: &Settings, size: Size, cancel: &Cancel, timings: &mut Timings) -> Result<Base> {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);

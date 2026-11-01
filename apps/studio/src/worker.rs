@@ -319,20 +319,16 @@ pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
 /// Les photos mesurées à la fois par [`Worker::sharpness`].
 const SHARPNESS_THREADS: usize = 2;
 
-/// La part au point d'une photo (0 à 1), sur un aperçu de `side` pixels avec ses
-/// réglages (ceux donnés, sinon son XMP, sinon ceux par défaut).
-fn sharp_share(path: &Path, given: Option<Settings>, side: usize) -> Result<f32, String> {
+/// La part au point d'une photo (0 à 1), avec ses réglages (ceux donnés, sinon son
+/// XMP, sinon ceux par défaut) : [`luma_render::Photo::in_focus_share`].
+fn sharp_share(path: &Path, given: Option<Settings>) -> Result<f32, String> {
     let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
     let settings = given
         .or_else(|| read_sidecar(path))
         .unwrap_or_else(|| photo.default_settings());
-    let r = photo
-        .render(&settings, Size::Fit(side), &Cancel::new())
-        .map_err(|e| e.to_string())?;
-    let (w, h) = (r.image.width, r.image.height);
-    let rgba = luma_image::encode8_rgba(&r.image, OutputSpace::Srgb);
-    let sharp = luma_image::focus::sharp(&rgba, w, h);
-    Ok(sharp.iter().filter(|&&m| m).count() as f32 / (w * h).max(1) as f32)
+    photo
+        .in_focus_share(&settings, &Cancel::new())
+        .map_err(|e| e.to_string())
 }
 
 pub struct Worker {
@@ -719,10 +715,10 @@ impl Worker {
             .expect("fil des avant / après");
     }
 
-    /// La part au point de chaque photo (`luma_image::focus`), sur un aperçu de `side`
-    /// pixels avec ses réglages (ceux donnés, sinon son XMP, sinon ceux par défaut) ;
-    /// la même taille pour toutes, pour qu'elles se comparent.
-    pub fn sharpness(&self, paths: Vec<(PathBuf, Option<Settings>)>, side: usize) {
+    /// La part au point de chaque photo (`luma_image::focus`), avec ses réglages (ceux
+    /// donnés, sinon son XMP, sinon ceux par défaut), sur un aperçu de la même taille
+    /// pour toutes, pour qu'elles se comparent.
+    pub fn sharpness(&self, paths: Vec<(PathBuf, Option<Settings>)>) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
         // Deux photos à la fois : la lecture d'un RAW n'occupe qu'en partie les cœurs,
         // l'autre photo se rend pendant ce temps. Chaque part est celle d'une photo seule
@@ -739,7 +735,7 @@ impl Worker {
                         else {
                             break;
                         };
-                        let result = caught(|| sharp_share(&path, given, side));
+                        let result = caught(|| sharp_share(&path, given));
                         let _ = sender.send(Event::Sharpness { path, result });
                         repaint();
                     }
