@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Aperçus plus rapides** : l'histogramme de chaque aperçu compté sur tous les cœurs,
+  aux mêmes comptes : de 3,3 à 1,3 ms par aperçu de 2,8 Mpx.
 - **Rejeter les floues** : dans la barre de sélection, les photos choisies qui ont
   moins du tiers de la part au point de la plus nette reçoivent le drapeau « Rejetée ».
 - **Correction : « Rendu… » sans fin** quand une collection ou une recherche était
