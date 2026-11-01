@@ -18,6 +18,7 @@
 //! luma geotag <photo>… --gpx t.gpx  place les photos d'après une trace GPX (dans le XMP)
 //! luma lens <raw>… [--write]       distorsion et vignetage d'après le JPEG du boîtier
 //! luma sharpness <photos|dossier>  la part au point de chaque photo, la plus nette retenue
+//! luma before-after <photos|dossier> l'avant / après de chaque photo, à côté d'elle
 //! luma import [carte] --to dossier  importe une carte (rangement, renommage, 2nd disque)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
@@ -176,6 +177,10 @@ USAGE
       préréglage XMP ou des réglages à chaque image d'une vidéo AVI en Motion JPEG
       (celle de nombreux appareils photo), puis l'enregistre au même format : même
       taille, même rythme, le son recopié tel quel. Pour une vidéo courte (1 Go au plus).
+  luma before-after <photo|dossier>… [--size N]
+      l'avant / après de chaque photo (ses réglages, sinon ceux par défaut) en un JPEG
+      à côté d'elle, « nom-avant-apres.jpg » (numéroté s'il existe), chaque moitié au
+      grand côté N (1600)
   luma sharpness <photo|dossier>… [--pick] [--reject]
       la part au point de chaque photo (ses réglages, sinon ceux par défaut), la plus
       nette d'abord, sans IA ; --pick : la plus nette « retenue », --reject : celles
@@ -1927,6 +1932,52 @@ fn lens(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma before-after` : l'avant / après de chaque photo, à côté d'elle (le lot de
+/// l'app).
+fn before_after(args: Vec<String>) -> Result<(), String> {
+    let mut side = 1600;
+    let mut photos = Vec::new();
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--size" => side = bounded("--size", it.next(), 64, 20_000)?,
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => photos.extend(photos_of(PathBuf::from(a))?),
+        }
+    }
+    if photos.is_empty() {
+        return Err("il faut des photos (ou un dossier)".into());
+    }
+    for path in &photos {
+        let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
+        let settings = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
+        let out = export::write_before_after(&photo, &settings, path, side)?;
+        println!("{} → {}", path.display(), out.display());
+    }
+    println!("{} avant / après écrit(s)", photos.len());
+    Ok(())
+}
+
+/// Les photos d'un argument : la photo, ou celles d'un dossier (par nom), sans les
+/// avant / après déjà écrits.
+fn photos_of(p: PathBuf) -> Result<Vec<PathBuf>, String> {
+    if !p.is_dir() {
+        return Ok(vec![p]);
+    }
+    let mut found: Vec<PathBuf> = std::fs::read_dir(&p)
+        .map_err(|e| format!("{} : {e}", p.display()))?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|f| f.is_file() && luma_raw::is_photo(f))
+        .filter(|f| {
+            !f.file_stem()
+                .is_some_and(|s| s.to_string_lossy().contains("-avant-apres"))
+        })
+        .collect();
+    found.sort();
+    Ok(found)
+}
+
 /// `luma sharpness` : la part au point de chaque photo (la mesure de l'app), la plus
 /// nette d'abord ; `--pick` et `--reject` posent les drapeaux dans les XMP.
 fn sharpness(args: Vec<String>) -> Result<(), String> {
@@ -2824,6 +2875,15 @@ fn main() -> ExitCode {
             _ => gallery(args.collect()),
         };
         return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "before-after" {
+        return match before_after(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");

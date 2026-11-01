@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **`luma before-after`** : l'avant / après de chaque photo d'un dossier (ou des photos
+  données), à côté d'elle, avec ses réglages ; les mêmes noms que dans l'app.
 - **Netteté dans la comparaison** : sous chaque photo comparée (C), sa part au point ;
   la plus nette est signalée en couleur.
 - **Avant / après par lot plus rapide** : deux photos à la fois, aux mêmes fichiers

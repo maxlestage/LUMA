@@ -361,41 +361,7 @@ fn write_before_after(
     let settings = given
         .or_else(|| read_sidecar(path))
         .unwrap_or_else(|| photo.default_settings());
-    let stem = path
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let mut out = None;
-    for k in 1.. {
-        let name = match k {
-            1 => format!("{stem}-avant-apres.jpg"),
-            k => format!("{stem}-avant-apres-{k}.jpg"),
-        };
-        let p = path.with_file_name(name);
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&p)
-        {
-            Ok(_) => {
-                out = Some(p);
-                break;
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
-            Err(e) => return Err(format!("{} : {e}", p.display())),
-        }
-    }
-    let out = out.expect("un nom libre");
-    let img = photo
-        .before_after(&settings, side)
-        .map_err(|e| e.to_string());
-    let written =
-        img.and_then(|img| luma_render::export::write(&out, &img, OutputSpace::Srgb, 92, 8));
-    if written.is_err() {
-        // Le nom réservé ne reste pas vide.
-        let _ = std::fs::remove_file(&out);
-    }
-    written.map(|()| out)
+    luma_render::export::write_before_after(&photo, &settings, path, side)
 }
 
 /// La part au point d'une photo (0 à 1), avec ses réglages (ceux donnés, sinon son
