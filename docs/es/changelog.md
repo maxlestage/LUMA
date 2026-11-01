@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Ordenar por nitidez**: la parte enfocada de cada foto de la tira medida en segundo
+  plano, y luego la tira ordenada, la más nítida primero.
 - **Sensibilidad de las zonas nítidas** (baja, estándar, alta): con un objetivo
   suave, la alta marca también los detalles finos; la baja solo los contornos nítidos.
 - **Interfaz más fluida**: la imagen de cada vista previa convertida en textura en
