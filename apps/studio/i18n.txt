@@ -6434,3 +6434,11 @@ es = Ordenar por
 fr = Date de prise de vue
 en = Capture date
 es = Fecha de la toma
+
+fr = Ordre inverse
+en = Reverse order
+es = Orden inverso
+
+fr = La plus récente, la moins bien notée ou le dernier nom d'abord
+en = The most recent, the lowest rated or the last name first
+es = La más reciente, la peor valorada o el último nombre primero

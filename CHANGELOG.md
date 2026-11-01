@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Ordre inverse**, gardé d'une séance à l'autre : le film à l'envers (la plus récente
+  ou la moins bien notée d'abord) ; l'ordre choisi revient au prochain lancement.
 - **Trier par** : le film rangé par nom, par date de prise de vue ou par note (la
   meilleure d'abord) ; la photo ouverte et la sélection restent les mêmes.
 - **Aperçus plus rapides** : l'histogramme de chaque aperçu compté sur tous les cœurs,
