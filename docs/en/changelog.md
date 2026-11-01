@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Reject the blurred**: in the selection bar, the selected photos with less than a
+  third of the in-focus share of the sharpest get the “Rejected” flag.
 - **Fix: endless “Rendering…”** when a collection or a search was shown while a
   preview of the open photo was being computed: the photo is rendered again.
 - **More responsive sliders**: the memory of already-computed steps evicted from the
