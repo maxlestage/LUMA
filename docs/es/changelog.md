@@ -2,6 +2,11 @@
 
 ## 0.4.0 — próximamente
 
+- **Lista de fotos (CSV) sustituida de una vez**: una escritura interrumpida nunca deja
+  una lista a medio escribir en lugar de la anterior.
+- **Ampliación al exportar limitada a 100 MP en iPhone y iPad** (200 en los demás): la
+  memoria de una app es limitada allí; duplicar cada lado de una foto de 24 MP sigue
+  cabiendo.
 - **Página «Descargar» en el sitio**: todas las versiones de la app (Mac, Windows,
   Linux, la línea de comandos) y, para cada sistema, cómo instalarla; el botón
   «Descargar» de la barra lleva allí.

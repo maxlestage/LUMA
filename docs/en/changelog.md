@@ -2,6 +2,10 @@
 
 ## 0.4.0 — upcoming
 
+- **Photo list (CSV) replaced in one go**: an interrupted write never leaves a
+  half-written list in place of the previous one.
+- **Export enlargement capped at 100 MP on iPhone and iPad** (200 elsewhere): an
+  app's memory is limited there; doubling each side of a 24 MP photo still fits.
 - **“Download” page on the website**: every build of the app (Mac, Windows, Linux,
   the command line) and, for each system, how to install it; the “Download” button
   in the bar leads there.

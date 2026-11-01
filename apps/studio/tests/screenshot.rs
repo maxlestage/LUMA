@@ -3525,7 +3525,20 @@ fn library_by_year_and_month() {
     harness.state_mut().as_mut().unwrap().show_view(View::All);
     harness.run_steps(2);
     let list = dir.join("liste.csv");
+    // Une ancienne liste au même nom est remplacée d'un coup, jamais réécrite sur place :
+    // un second nom du même fichier (lien physique) garde l'ancienne, entière.
+    std::fs::write(&list, "ancienne liste\n").unwrap();
+    let old = dir.join("ancienne.csv");
+    std::fs::hard_link(&list, &old).unwrap();
     assert_eq!(harness.state_mut().as_mut().unwrap().export_list(&list), 5);
+    assert_eq!(std::fs::read_to_string(&old).unwrap(), "ancienne liste\n");
+    assert!(
+        std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .all(|e| !e.file_name().to_string_lossy().ends_with(".tmp")),
+        "aucun fichier temporaire laissé"
+    );
     let csv = std::fs::read_to_string(&list).unwrap();
     assert!(csv.starts_with("Fichier,Date,Boîtier,Objectif"), "{csv}");
     assert_eq!(csv.lines().count(), 6);
