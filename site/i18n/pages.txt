@@ -1760,3 +1760,7 @@ es = La línea de comandos luma viene con la app para Linux y con el archivo par
 fr = Toutes les versions et leurs notes
 en = All versions and their release notes
 es = Todas las versiones y sus notas
+
+fr = Pour votre système
+en = For your system
+es = Para tu sistema
