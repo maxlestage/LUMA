@@ -6,8 +6,32 @@
 use rayon::prelude::*;
 
 /// L'écart de luminance (0 à 255, laplacien d'un lissage 3 × 3) au‑delà duquel un
-/// pixel compte comme net.
+/// pixel compte comme net : celui de la sensibilité moyenne, et de la mesure de la
+/// part au point (« Retenir la plus nette »), pour que les photos se comparent.
 pub const THRESHOLD: f32 = 14.0;
+
+/// La sensibilité des zones nettes : haute, les détails fins d'un objectif doux comptent
+/// aussi ; basse, seuls les contours les plus francs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Sensitivity {
+    Low,
+    #[default]
+    Medium,
+    High,
+}
+
+impl Sensitivity {
+    pub const ALL: [Sensitivity; 3] = [Sensitivity::Low, Sensitivity::Medium, Sensitivity::High];
+
+    /// Le seuil de cette sensibilité.
+    pub fn threshold(self) -> f32 {
+        match self {
+            Sensitivity::Low => 22.0,
+            Sensitivity::Medium => THRESHOLD,
+            Sensitivity::High => 8.0,
+        }
+    }
+}
 
 /// La couleur des zones nettes : un vert vif, qu'on ne confond pas avec l'écrêtage
 /// (rouge et bleu).
@@ -22,6 +46,11 @@ fn luma(p: &[u8]) -> f32 {
 /// Les pixels nets d'une image RGBA de `w × h` (8 bits) : `true` là où le détail est au
 /// point. Les deux pixels du bord ne comptent jamais.
 pub fn sharp(rgba: &[u8], w: usize, h: usize) -> Vec<bool> {
+    sharp_above(rgba, w, h, THRESHOLD)
+}
+
+/// [`sharp`] avec un autre seuil (voir [`Sensitivity`]).
+pub fn sharp_above(rgba: &[u8], w: usize, h: usize, threshold: f32) -> Vec<bool> {
     let mut out = vec![false; w * h];
     if w < 5 || h < 5 || rgba.len() < w * h * 4 {
         return out;
@@ -57,7 +86,7 @@ pub fn sharp(rgba: &[u8], w: usize, h: usize) -> Vec<bool> {
             );
             for (x, v) in row.iter_mut().enumerate().take(w - 2).skip(2) {
                 let lap = 4.0 * mid[x] - mid[x - 1] - mid[x + 1] - up[x] - down[x];
-                *v = lap.abs() > THRESHOLD;
+                *v = lap.abs() > threshold;
             }
         });
     out
@@ -154,6 +183,31 @@ mod tests {
         let noisy = image(w, h, |x, y| (128 + ((x * 7919 + y * 104_729) % 21) as i32 - 10) as u8);
         let n = sharp(&noisy, w, h).iter().filter(|&&m| m).count();
         assert!(n < w * h / 100, "{n}");
+    }
+
+    /// Plus sensible, plus de zones nettes : la basse sensibilité en marque moins que la
+    /// moyenne, la haute plus, et chacune contient la précédente.
+    #[test]
+    fn a_higher_sensitivity_marks_more() {
+        let (w, h) = (160, 80);
+        // Des marches de contraste croissant : chaque seuil en garde une de plus.
+        let img = image(w, h, |x, y| {
+            let step = (x / 40) as u8 + 1;
+            if (x / 4 + y / 4) % 2 == 0 { 120 } else { 120 + 6 * step }
+        });
+        let count = |s: Sensitivity| sharp_above(&img, w, h, s.threshold());
+        let [low, medium, high] = Sensitivity::ALL.map(count);
+        let n = |m: &Vec<bool>| m.iter().filter(|&&v| v).count();
+        assert!(
+            n(&low) < n(&medium) && n(&medium) < n(&high),
+            "{} {} {}",
+            n(&low),
+            n(&medium),
+            n(&high)
+        );
+        assert!(low.iter().zip(&medium).all(|(a, b)| !a || *b));
+        assert!(medium.iter().zip(&high).all(|(a, b)| !a || *b));
+        assert_eq!(sharp(&img, w, h), medium);
     }
 
     /// La peinture : les pixels nets en vert, les autres intacts, l'alpha gardé.

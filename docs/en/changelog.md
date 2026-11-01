@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **In-focus area sensitivity** (low, standard, high): with a soft lens, high also
+  marks the fine details; low keeps only the sharpest edges.
 - **Smoother interface**: each preview turned into a texture on all cores, with the
   same colours: from 2.2 to 1.0 ms per preview on the interface thread.
 - **Reverse order**, kept from one session to the next: the filmstrip backwards (most
