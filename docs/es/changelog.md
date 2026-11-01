@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Orden inverso**, guardado de una sesión a otra: la tira al revés (la más reciente
+  o la peor valorada primero); el orden elegido vuelve en el siguiente arranque.
 - **Ordenar por**: la tira ordenada por nombre, fecha de la toma o valoración (la
   mejor primero); la foto abierta y la selección siguen siendo las mismas.
 - **Vistas previas más rápidas**: el histograma de cada vista previa contado en todos

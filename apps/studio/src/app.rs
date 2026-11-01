@@ -109,6 +109,29 @@ impl PhotoOrder {
             PhotoOrder::Rating => "Note",
         }
     }
+
+    /// Le mot de l'ordre dans « Ordre du film.txt ».
+    fn id(self) -> &'static str {
+        match self {
+            PhotoOrder::Name => "nom",
+            PhotoOrder::Date => "date",
+            PhotoOrder::Rating => "note",
+        }
+    }
+}
+
+/// L'ordre gardé dans un fichier : « date », « note inverse »… ; rien de lisible : le
+/// nom, dans l'ordre.
+fn read_photo_order(path: Option<&Path>) -> (PhotoOrder, bool) {
+    let text = path
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .unwrap_or_default();
+    let mut words = text.split_whitespace();
+    let order = words
+        .next()
+        .and_then(|w| PhotoOrder::ALL.into_iter().find(|o| o.id() == w))
+        .unwrap_or_default();
+    (order, words.next() == Some("inverse"))
 }
 
 /// Un réglage du panneau : son curseur et l'endroit où il vit dans les réglages.
@@ -974,8 +997,12 @@ pub struct Studio {
     /// Les groupes de photos dessinés sur la carte : leur place et leur nombre.
     map_groups: Vec<(egui::Pos2, usize)>,
     stacks: Vec<luma_library::stacks::Stack>,
-    /// L'ordre des photos du film (« Trier par »).
+    /// L'ordre des photos du film (« Trier par »), et s'il est inversé.
     photo_order: PhotoOrder,
+    photo_reverse: bool,
+    /// Le fichier où l'ordre est gardé (`None` : « Ordre du film.txt » du dossier de
+    /// LÜMA ; les essais en donnent un à eux).
+    order_path: Option<PathBuf>,
     /// La pile de chaque photo (sa place dans `stacks`).
     stack_of: HashMap<PathBuf, usize>,
     /// Les piles dépliées, par leur première photo.
@@ -1411,7 +1438,9 @@ impl Studio {
             tiles: Default::default(),
             map_groups: Vec::new(),
             stacks: Vec::new(),
-            photo_order: PhotoOrder::Name,
+            photo_order: read_photo_order(Self::default_order_path().as_deref()).0,
+            photo_reverse: read_photo_order(Self::default_order_path().as_deref()).1,
+            order_path: None,
             stack_of: HashMap::new(),
             unfolded: Default::default(),
             compare_tag: 0,
@@ -1607,7 +1636,7 @@ impl Studio {
         }
         // L'ordre choisi ; par défaut, celui de la vue (le nom pour un dossier, la date
         // pour la photothèque et les recherches).
-        if self.photo_order != PhotoOrder::Name {
+        if self.photo_order != PhotoOrder::Name || self.photo_reverse {
             self.order_folder();
         }
         let index = file
@@ -4820,10 +4849,45 @@ impl Studio {
     }
 
     /// Les piles du film (rafales et séries d'exposition), d'après la photothèque.
+    /// « Ordre du film.txt », dans le dossier de LÜMA.
+    fn default_order_path() -> Option<PathBuf> {
+        Some(crate::dialogs::app_dir()?.join("Ordre du film.txt"))
+    }
+
+    fn order_file(&self) -> Option<PathBuf> {
+        self.order_path.clone().or_else(Self::default_order_path)
+    }
+
+    /// Garde l'ordre du film dans ce fichier (les essais), et le relit.
+    pub fn use_order_file(&mut self, path: PathBuf) {
+        (self.photo_order, self.photo_reverse) = read_photo_order(Some(&path));
+        self.order_path = Some(path);
+    }
+
+    /// L'ordre du film choisi, et s'il est inversé.
+    pub fn photo_order(&self) -> (PhotoOrder, bool) {
+        (self.photo_order, self.photo_reverse)
+    }
+
+    /// Inverse (ou non) l'ordre du film, comme [`Self::set_photo_order`].
+    pub fn set_photo_reverse(&mut self, reverse: bool) {
+        self.photo_reverse = reverse;
+        self.set_photo_order(self.photo_order);
+    }
+
     /// Range le film dans l'ordre choisi ; la photo ouverte et la sélection restent les
-    /// mêmes photos (à leurs nouvelles places).
+    /// mêmes photos (à leurs nouvelles places). L'ordre est gardé pour la prochaine
+    /// fois.
     pub fn set_photo_order(&mut self, order: PhotoOrder) {
         self.photo_order = order;
+        if let Some(path) = self.order_file() {
+            let text = format!(
+                "{}{}\n",
+                order.id(),
+                if self.photo_reverse { " inverse" } else { "" }
+            );
+            let _ = std::fs::write(path, text);
+        }
         let current = self.current_path().map(Path::to_path_buf);
         let selected: Vec<PathBuf> = self
             .selected
@@ -4860,6 +4924,9 @@ impl Studio {
                     std::cmp::Reverse(self.meta.get(p).map_or(0, |m| m.rating))
                 });
             }
+        }
+        if self.photo_reverse {
+            folder.reverse();
         }
         self.folder = folder;
     }
@@ -6243,6 +6310,11 @@ impl Studio {
         self.keys_note = None;
         self.save_keys();
         self.hide_panels = false;
+        self.photo_reverse = false;
+        self.set_photo_order(PhotoOrder::Name);
+        if let Some(path) = self.order_file() {
+            let _ = std::fs::remove_file(path);
+        }
         self.stacking = true;
         self.auto_advance = true;
         self.min_rating = 0;
@@ -10627,6 +10699,16 @@ impl Studio {
         });
         if order != self.photo_order {
             self.set_photo_order(order);
+        }
+        let mut reverse = self.photo_reverse;
+        if ui
+            .checkbox(&mut reverse, tr("Ordre inverse"))
+            .on_hover_text(tr(
+                "La plus récente, la moins bien notée ou le dernier nom d'abord",
+            ))
+            .changed()
+        {
+            self.set_photo_reverse(reverse);
         }
         let mut stacking = self.stacking;
         if ui

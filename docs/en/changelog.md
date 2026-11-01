@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Reverse order**, kept from one session to the next: the filmstrip backwards (most
+  recent or lowest rated first); the chosen order comes back at the next launch.
 - **Sort by**: the filmstrip ordered by name, capture date or rating (best first);
   the open photo and the selection stay the same.
 - **Faster previews**: each preview's histogram counted on all cores, with the same
