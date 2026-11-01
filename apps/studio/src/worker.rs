@@ -316,8 +316,85 @@ pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
     out
 }
 
-/// Les photos mesurées à la fois par [`Worker::sharpness`].
-const SHARPNESS_THREADS: usize = 2;
+/// Les photos menées à la fois par les traitements par lot (netteté, avant / après).
+const BATCH_THREADS: usize = 2;
+
+/// `each` sur chaque élément, [`BATCH_THREADS`] à la fois sur des fils nommés `name` :
+/// la lecture d'un RAW n'occupe qu'en partie les cœurs, l'autre photo se traite pendant
+/// ce temps. Chaque résultat est celui de l'élément seul ; ils arrivent dans le
+/// désordre.
+fn two_at_a_time<T: Send + 'static>(
+    name: &str,
+    items: Vec<T>,
+    each: impl Fn(T) + Send + Sync + 'static,
+) {
+    let queue = Arc::new(Mutex::new(std::collections::VecDeque::from(items)));
+    let each = Arc::new(each);
+    for k in 0..BATCH_THREADS {
+        let (queue, each) = (queue.clone(), each.clone());
+        std::thread::Builder::new()
+            .name(format!("{name}-{k}"))
+            .spawn(move || {
+                loop {
+                    let Some(item) = queue.lock().expect("file du lot").pop_front() else {
+                        break;
+                    };
+                    each(item);
+                }
+            })
+            .expect("fil du lot");
+    }
+}
+
+/// L'avant / après d'une photo (ses réglages : ceux donnés, sinon son XMP, sinon ceux
+/// par défaut) en un JPEG à côté d'elle : « nom-avant-apres.jpg », numéroté s'il existe.
+/// Le nom est réservé d'un coup (création exclusive) : deux photos du même nom menées
+/// en même temps (`IMG.ARW` et `IMG.JPG`) n'écrivent jamais dans le même fichier.
+fn write_before_after(
+    path: &Path,
+    given: Option<Settings>,
+    side: usize,
+) -> Result<PathBuf, String> {
+    let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+    let settings = given
+        .or_else(|| read_sidecar(path))
+        .unwrap_or_else(|| photo.default_settings());
+    let stem = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut out = None;
+    for k in 1.. {
+        let name = match k {
+            1 => format!("{stem}-avant-apres.jpg"),
+            k => format!("{stem}-avant-apres-{k}.jpg"),
+        };
+        let p = path.with_file_name(name);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&p)
+        {
+            Ok(_) => {
+                out = Some(p);
+                break;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(e) => return Err(format!("{} : {e}", p.display())),
+        }
+    }
+    let out = out.expect("un nom libre");
+    let img = photo
+        .before_after(&settings, side)
+        .map_err(|e| e.to_string());
+    let written =
+        img.and_then(|img| luma_render::export::write(&out, &img, OutputSpace::Srgb, 92, 8));
+    if written.is_err() {
+        // Le nom réservé ne reste pas vide.
+        let _ = std::fs::remove_file(&out);
+    }
+    written.map(|()| out)
+}
 
 /// La part au point d'une photo (0 à 1), avec ses réglages (ceux donnés, sinon son
 /// XMP, sinon ceux par défaut) : [`luma_render::Photo::in_focus_share`].
@@ -683,36 +760,11 @@ impl Worker {
     /// réglages donnés (ceux de la photo ouverte) passent avant le XMP.
     pub fn before_after(&self, paths: Vec<(PathBuf, Option<Settings>)>, side: usize) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
-        std::thread::Builder::new()
-            .name("luma-avant-apres".into())
-            .spawn(move || {
-                for (path, given) in paths {
-                    let result = caught(|| -> Result<PathBuf, String> {
-                        let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
-                        let settings = given
-                            .or_else(|| read_sidecar(&path))
-                            .unwrap_or_else(|| photo.default_settings());
-                        let stem = path
-                            .file_stem()
-                            .map(|s| s.to_string_lossy().into_owned())
-                            .unwrap_or_default();
-                        let mut out = path.with_file_name(format!("{stem}-avant-apres.jpg"));
-                        let mut k = 2;
-                        while out.exists() {
-                            out = path.with_file_name(format!("{stem}-avant-apres-{k}.jpg"));
-                            k += 1;
-                        }
-                        let img = photo
-                            .before_after(&settings, side)
-                            .map_err(|e| e.to_string())?;
-                        luma_render::export::write(&out, &img, OutputSpace::Srgb, 92, 8)?;
-                        Ok(out)
-                    });
-                    let _ = sender.send(Event::BeforeAfterWritten { result });
-                    repaint();
-                }
-            })
-            .expect("fil des avant / après");
+        two_at_a_time("luma-avant-apres", paths, move |(path, given)| {
+            let result = caught(|| write_before_after(&path, given, side));
+            let _ = sender.send(Event::BeforeAfterWritten { result });
+            repaint();
+        });
     }
 
     /// La part au point de chaque photo (`luma_image::focus`), avec ses réglages (ceux
@@ -720,28 +772,11 @@ impl Worker {
     /// pour toutes, pour qu'elles se comparent.
     pub fn sharpness(&self, paths: Vec<(PathBuf, Option<Settings>)>) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
-        // Deux photos à la fois : la lecture d'un RAW n'occupe qu'en partie les cœurs,
-        // l'autre photo se rend pendant ce temps. Chaque part est celle d'une photo seule
-        // (son rendu ne dépend que d'elle), les résultats arrivent dans le désordre.
-        let queue = Arc::new(Mutex::new(std::collections::VecDeque::from(paths)));
-        for k in 0..SHARPNESS_THREADS {
-            let (queue, sender, repaint) = (queue.clone(), sender.clone(), repaint.clone());
-            std::thread::Builder::new()
-                .name(format!("luma-nettete-{k}"))
-                .spawn(move || {
-                    loop {
-                        let Some((path, given)) =
-                            queue.lock().expect("file de la netteté").pop_front()
-                        else {
-                            break;
-                        };
-                        let result = caught(|| sharp_share(&path, given));
-                        let _ = sender.send(Event::Sharpness { path, result });
-                        repaint();
-                    }
-                })
-                .expect("fil de la netteté");
-        }
+        two_at_a_time("luma-nettete", paths, move |(path, given)| {
+            let result = caught(|| sharp_share(&path, given));
+            let _ = sender.send(Event::Sharpness { path, result });
+            repaint();
+        });
     }
 
     pub fn lens_from_camera(&self, paths: Vec<PathBuf>) {
@@ -1465,6 +1500,46 @@ mod tests {
     }
 
     use super::*;
+
+    /// Deux photos du même nom (`photo.png`, `photo.jpg`) menées en même temps : deux
+    /// avant / après distincts, aucun écrasé ; et les deux arrivent par le lot.
+    #[test]
+    fn before_afters_of_photos_with_the_same_name_do_not_collide() {
+        let dir =
+            std::env::temp_dir().join(format!("luma-avant-apres-noms-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let img = image::RgbImage::from_fn(300, 200, |x, y| image::Rgb([x as u8, y as u8, 90]));
+        img.save(dir.join("photo.png")).unwrap();
+        img.save(dir.join("photo.jpg")).unwrap();
+        let (tx, rx) = channel();
+        let tx = Mutex::new(tx);
+        let paths = vec![(dir.join("photo.png"), None), (dir.join("photo.jpg"), None)];
+        two_at_a_time(
+            "essai-avant-apres",
+            paths,
+            move |(path, given): (PathBuf, Option<Settings>)| {
+                let _ = tx
+                    .lock()
+                    .unwrap()
+                    .send(write_before_after(&path, given, 200));
+            },
+        );
+        let mut outs: Vec<PathBuf> = (0..2).map(|_| rx.recv().unwrap().unwrap()).collect();
+        outs.sort();
+        assert_eq!(
+            outs,
+            vec![
+                dir.join("photo-avant-apres-2.jpg"),
+                dir.join("photo-avant-apres.jpg")
+            ]
+        );
+        for o in &outs {
+            let img = image::open(o).unwrap();
+            assert!(img.width() > 380, "{}", img.width());
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     /// Les textures sur tous les cœurs : les couleurs d'egui, pour toutes les valeurs
     /// d'alpha (opaque ou non) et toutes les couleurs.

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Avant / après par lot plus rapide** : deux photos à la fois, aux mêmes fichiers
+  (sept RAW en 2,35 s au lieu de 2,8 s) ; deux photos du même nom (IMG.ARW, IMG.JPG)
+  ne s'écrasent jamais.
 - **Télécharger depuis le site** : les boutons « Télécharger » (Mac, Linux, Windows)
   mènent aux fichiers de la dernière Release quand le site ne les sert pas lui‑même.
 - **Tri d'une rafale au clavier** : Maj+P retient la plus nette de la sélection, Maj+X
