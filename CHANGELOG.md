@@ -1,6 +1,6 @@
 # Nouveautés
 
-## 0.3.0 — à venir
+## 0.3.0 — novembre 2026
 
 La photothèque professionnelle, étape par étape.
 
