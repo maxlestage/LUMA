@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster corrections from the camera JPEG**: two photos at a time, with the same
+  measurements (seven RAWs in 2.15 s instead of 2.9 s).
 - **`luma before-after`**: the before / after of each photo in a folder (or of the
   given photos), next to it, with its settings; the same names as in the app.
 - **Sharpness in the comparison**: under each compared photo (C), its in-focus share;
