@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Sort by**: the filmstrip ordered by name, capture date or rating (best first);
+  the open photo and the selection stay the same.
 - **Faster previews**: each preview's histogram counted on all cores, with the same
   counts: from 3.3 to 1.3 ms per 2.8 Mpx preview.
 - **Reject the blurred**: in the selection bar, the selected photos with less than a
