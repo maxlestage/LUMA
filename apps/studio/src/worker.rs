@@ -319,7 +319,7 @@ pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
 }
 
 /// Les photos menées à la fois par les traitements par lot (netteté, avant / après,
-/// corrections d'objectif).
+/// corrections d'objectif, comparaison).
 const BATCH_THREADS: usize = 2;
 
 /// `each` sur chaque élément, [`BATCH_THREADS`] à la fois sur des fils nommés `name` :
@@ -347,6 +347,23 @@ fn two_at_a_time<T: Send + 'static>(
             })
             .expect("fil du lot");
     }
+}
+
+/// Une photo comparée : la taille de son rendu, ses pixels RGBA, sa part au point.
+type Compared = ([usize; 2], Vec<u8>, Option<f32>);
+
+/// Une photo de la comparaison : son rendu au grand côté `side` (ses réglages, sinon
+/// ceux d'origine) en RGBA, et sa part au point (à la taille de la mesure, la même pour
+/// toutes).
+fn compare_one(path: &Path, side: usize) -> Result<Compared, String> {
+    let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+    let settings = read_sidecar(path).unwrap_or_default();
+    let r = photo
+        .render(&settings, Size::Fit(side), &Cancel::new())
+        .map_err(|e| e.to_string())?;
+    let sharp = photo.in_focus_share(&settings, &Cancel::new()).ok();
+    let rgba = luma_image::encode8_rgba(&r.image, OutputSpace::Srgb);
+    Ok(([r.image.width, r.image.height], rgba, sharp))
 }
 
 /// Les corrections d'objectif d'une photo, mesurées sur le JPEG que le boîtier a rangé
@@ -789,36 +806,24 @@ impl Worker {
     }
 
     /// Développe les photos à comparer, chacune avec ses réglages, au grand côté `side`,
-    /// l'une après l'autre (la première arrive vite).
+    /// deux à la fois (voir [`two_at_a_time`]) : chacune arrive à sa case dès qu'elle est
+    /// prête.
     pub fn compare(&self, paths: Vec<PathBuf>, side: usize, tag: u64) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
-        std::thread::Builder::new()
-            .name("luma-comparaison".into())
-            .spawn(move || {
-                for (index, path) in paths.iter().enumerate() {
-                    let Ok((r, sharp)) = caught(|| {
-                        let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
-                        let settings = read_sidecar(path).unwrap_or_default();
-                        let r = photo
-                            .render(&settings, Size::Fit(side), &Cancel::new())
-                            .map_err(|e| e.to_string())?;
-                        // La part au point, à la taille de la mesure (la même pour toutes).
-                        let sharp = photo.in_focus_share(&settings, &Cancel::new()).ok();
-                        Ok((r, sharp))
-                    }) else {
-                        continue;
-                    };
-                    let _ = sender.send(Event::Compared {
-                        tag,
-                        index,
-                        size: [r.image.width, r.image.height],
-                        rgba: luma_image::encode8_rgba(&r.image, OutputSpace::Srgb),
-                        sharp,
-                    });
-                    repaint();
-                }
-            })
-            .expect("fil de la comparaison");
+        let items: Vec<(usize, PathBuf)> = paths.into_iter().enumerate().collect();
+        two_at_a_time("luma-comparaison", items, move |(index, path)| {
+            let Ok((size, rgba, sharp)) = caught(|| compare_one(&path, side)) else {
+                return;
+            };
+            let _ = sender.send(Event::Compared {
+                tag,
+                index,
+                size,
+                rgba,
+                sharp,
+            });
+            repaint();
+        });
     }
 
     /// Développe `photo` avec `settings` (l'« avant » de la vue côte à côte), à `size`.

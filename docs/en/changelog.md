@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster comparison**: two photos developed at a time, with the same images (four
+  RAWs in 1.57 s instead of 2.0 s).
 - **In-focus areas in the comparison**: Shift+F paints them on all the compared photos
   at once, at the chosen sensitivity.
 - **In-focus area sensitivity kept** from one session to the next (“Reset

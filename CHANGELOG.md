@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Comparaison plus rapide** : deux photos développées à la fois, aux mêmes images
+  (quatre RAW en 1,57 s au lieu de 2,0 s).
 - **Zones nettes dans la comparaison** : Maj+F les peint sur toutes les photos
   comparées à la fois, à la sensibilité choisie.
 - **Sensibilité des zones nettes gardée** d'une séance à l'autre (« Tout remettre à
