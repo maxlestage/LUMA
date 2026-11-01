@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **In-focus area sensitivity kept** from one session to the next (“Reset
+  everything” brings it back to standard).
 - **Faster corrections from the camera JPEG**: two photos at a time, with the same
   measurements (seven RAWs in 2.15 s instead of 2.9 s).
 - **`luma before-after`**: the before / after of each photo in a folder (or of the
