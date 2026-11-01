@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Netteté mesurée plus vite** : deux photos à la fois (pendant qu'une se lit, l'autre
+  se rend), aux mêmes parts au point : sept RAW en 1,7 s au lieu de 2,3 s.
 - **Trier par netteté** : la part au point de chaque photo du film mesurée en
   arrière‑plan, puis le film rangé, la plus nette d'abord.
 - **Sensibilité des zones nettes** (basse, normale, haute) : avec un objectif doux,

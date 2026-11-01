@@ -316,6 +316,25 @@ pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
     out
 }
 
+/// Les photos mesurées à la fois par [`Worker::sharpness`].
+const SHARPNESS_THREADS: usize = 2;
+
+/// La part au point d'une photo (0 à 1), sur un aperçu de `side` pixels avec ses
+/// réglages (ceux donnés, sinon son XMP, sinon ceux par défaut).
+fn sharp_share(path: &Path, given: Option<Settings>, side: usize) -> Result<f32, String> {
+    let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+    let settings = given
+        .or_else(|| read_sidecar(path))
+        .unwrap_or_else(|| photo.default_settings());
+    let r = photo
+        .render(&settings, Size::Fit(side), &Cancel::new())
+        .map_err(|e| e.to_string())?;
+    let (w, h) = (r.image.width, r.image.height);
+    let rgba = luma_image::encode8_rgba(&r.image, OutputSpace::Srgb);
+    let sharp = luma_image::focus::sharp(&rgba, w, h);
+    Ok(sharp.iter().filter(|&&m| m).count() as f32 / (w * h).max(1) as f32)
+}
+
 pub struct Worker {
     events: Receiver<Event>,
     sender: Sender<Event>,
@@ -705,28 +724,28 @@ impl Worker {
     /// la même taille pour toutes, pour qu'elles se comparent.
     pub fn sharpness(&self, paths: Vec<(PathBuf, Option<Settings>)>, side: usize) {
         let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
-        std::thread::Builder::new()
-            .name("luma-nettete".into())
-            .spawn(move || {
-                for (path, given) in paths {
-                    let result = caught(|| -> Result<f32, String> {
-                        let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
-                        let settings = given
-                            .or_else(|| read_sidecar(&path))
-                            .unwrap_or_else(|| photo.default_settings());
-                        let r = photo
-                            .render(&settings, Size::Fit(side), &Cancel::new())
-                            .map_err(|e| e.to_string())?;
-                        let (w, h) = (r.image.width, r.image.height);
-                        let rgba = luma_image::encode8_rgba(&r.image, OutputSpace::Srgb);
-                        let sharp = luma_image::focus::sharp(&rgba, w, h);
-                        Ok(sharp.iter().filter(|&&m| m).count() as f32 / (w * h).max(1) as f32)
-                    });
-                    let _ = sender.send(Event::Sharpness { path, result });
-                    repaint();
-                }
-            })
-            .expect("fil de la netteté");
+        // Deux photos à la fois : la lecture d'un RAW n'occupe qu'en partie les cœurs,
+        // l'autre photo se rend pendant ce temps. Chaque part est celle d'une photo seule
+        // (son rendu ne dépend que d'elle), les résultats arrivent dans le désordre.
+        let queue = Arc::new(Mutex::new(std::collections::VecDeque::from(paths)));
+        for k in 0..SHARPNESS_THREADS {
+            let (queue, sender, repaint) = (queue.clone(), sender.clone(), repaint.clone());
+            std::thread::Builder::new()
+                .name(format!("luma-nettete-{k}"))
+                .spawn(move || {
+                    loop {
+                        let Some((path, given)) =
+                            queue.lock().expect("file de la netteté").pop_front()
+                        else {
+                            break;
+                        };
+                        let result = caught(|| sharp_share(&path, given, side));
+                        let _ = sender.send(Event::Sharpness { path, result });
+                        repaint();
+                    }
+                })
+                .expect("fil de la netteté");
+        }
     }
 
     pub fn lens_from_camera(&self, paths: Vec<PathBuf>) {
