@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Sort by sharpness**: the in-focus share of each photo in the filmstrip measured in
+  the background, then the filmstrip ordered, sharpest first.
 - **In-focus area sensitivity** (low, standard, high): with a soft lens, high also
   marks the fine details; low keeps only the sharpest edges.
 - **Smoother interface**: each preview turned into a texture on all cores, with the
