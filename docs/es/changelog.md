@@ -7,6 +7,9 @@
 - **Ampliación al exportar limitada a 100 MP en iPhone y iPad** (200 en los demás): la
   memoria de una app es limitada allí; duplicar cada lado de una foto de 24 MP sigue
   cabiendo.
+- **El sitio propone la versión de tu sistema**: en la página «Descargar» y en la
+  portada, el botón de tu sistema (Mac, Windows o Linux) pasa primero, «Para tu
+  sistema»; no se envía nada.
 - **Página «Descargar» en el sitio**: todas las versiones de la app (Mac, Windows,
   Linux, la línea de comandos) y, para cada sistema, cómo instalarla; el botón
   «Descargar» de la barra lleva allí.
