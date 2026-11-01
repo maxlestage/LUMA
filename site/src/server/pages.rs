@@ -1587,9 +1587,11 @@ pub fn doc(site: &Site, origin: &str, lang: Lang, page: &super::docs::Doc) -> Pa
 fn download_columns(lang: Lang) -> Element {
     div()
         .class("download reveal")
+        .attr("data-yours", t(lang, "Pour votre système"))
         .child(
             div()
                 .class("download-option")
+                .attr("data-os", "mac")
                 .child(
                     a().class("btn magnetic")
                         .href(download("LUMA-macos.zip"))
@@ -1602,6 +1604,7 @@ fn download_columns(lang: Lang) -> Element {
         .child(
             div()
                 .class("download-option")
+                .attr("data-os", "linux")
                 .child(
                     a().class("btn btn-ghost magnetic")
                         .href(download("LUMA-linux-x86_64.tar.gz"))
@@ -1728,7 +1731,14 @@ pub fn downloads(site: &Site, origin: &str, lang: Lang) -> Page {
         ),
         body,
     )
+    .head(YOUR_SYSTEM_SCRIPT)
 }
+
+/// Le script des téléchargements : d'après le système du navigateur (rien n'est envoyé
+/// nulle part), la colonne de ce système passe en premier, marquée « Pour votre
+/// système », son bouton mis en avant ; sur iPhone et iPad (l'App Store), ou sans
+/// bouton pour ce système, rien ne bouge. Dans l'en‑tête, pour que la politique de sécurité le compte.
+const YOUR_SYSTEM_SCRIPT: &str = r#"<script>addEventListener("DOMContentLoaded",()=>{const u=navigator.userAgent,p=(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||"",s=p+" "+u;if(/iPhone|iPad|iPod|Android/.test(s)||navigator.maxTouchPoints>1&&/Mac/.test(s))return;const os=/Mac/.test(s)?"mac":/Win/.test(s)?"windows":/Linux|X11/.test(s)?"linux":"";if(!os)return;document.querySelectorAll(".download").forEach(d=>{const o=d.querySelector('[data-os="'+os+'"]');if(o&&o.querySelector("a.btn")){d.prepend(o);o.dataset.yours=d.dataset.yours||"";o.classList.add("download-yours");d.querySelectorAll(".download-option>a.btn").forEach(b=>b.classList.toggle("btn-ghost",!o.contains(b)))}})})</script>"#;
 
 /// L'adresse de la page « Télécharger ».
 pub const DOWNLOADS_PAGE: &str = "/telecharger/";
@@ -1887,6 +1897,7 @@ pub fn home(site: &Site, origin: &str, lang: Lang) -> Page {
         t(lang, DESCRIPTION),
         body,
     )
+    .head(YOUR_SYSTEM_SCRIPT)
 }
 
 pub fn not_found(site: &Site, origin: &str, lang: Lang) -> Page {
@@ -2024,6 +2035,7 @@ fn windows_download(lang: Lang) -> Element {
     match windows_primary() {
         Some(file) => div()
             .class("download-option")
+            .attr("data-os", "windows")
             .child(
                 a().class("btn btn-ghost magnetic")
                     .href(download(file))
@@ -2042,6 +2054,7 @@ fn windows_download(lang: Lang) -> Element {
             }),
         None => div()
             .class("download-option")
+            .attr("data-os", "windows")
             .child(
                 span()
                     .class("btn btn-ghost btn-disabled")
