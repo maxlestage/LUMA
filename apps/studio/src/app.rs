@@ -87,6 +87,30 @@ fn sort_photos(files: &mut [PathBuf]) {
     });
 }
 
+/// L'ordre des photos du film.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PhotoOrder {
+    /// Par nom de fichier (les copies virtuelles après leur original).
+    #[default]
+    Name,
+    /// Par date de prise de vue (celle de la photothèque), la plus ancienne d'abord.
+    Date,
+    /// Par note, la meilleure d'abord ; à note égale, par nom.
+    Rating,
+}
+
+impl PhotoOrder {
+    pub const ALL: [PhotoOrder; 3] = [PhotoOrder::Name, PhotoOrder::Date, PhotoOrder::Rating];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            PhotoOrder::Name => "Nom",
+            PhotoOrder::Date => "Date de prise de vue",
+            PhotoOrder::Rating => "Note",
+        }
+    }
+}
+
 /// Un réglage du panneau : son curseur et l'endroit où il vit dans les réglages.
 struct Field {
     spec: SliderSpec,
@@ -950,6 +974,8 @@ pub struct Studio {
     /// Les groupes de photos dessinés sur la carte : leur place et leur nombre.
     map_groups: Vec<(egui::Pos2, usize)>,
     stacks: Vec<luma_library::stacks::Stack>,
+    /// L'ordre des photos du film (« Trier par »).
+    photo_order: PhotoOrder,
     /// La pile de chaque photo (sa place dans `stacks`).
     stack_of: HashMap<PathBuf, usize>,
     /// Les piles dépliées, par leur première photo.
@@ -1385,6 +1411,7 @@ impl Studio {
             tiles: Default::default(),
             map_groups: Vec::new(),
             stacks: Vec::new(),
+            photo_order: PhotoOrder::Name,
             stack_of: HashMap::new(),
             unfolded: Default::default(),
             compare_tag: 0,
@@ -1578,6 +1605,11 @@ impl Studio {
                 .unwrap_or_default();
             self.edits.insert(p.clone(), edits);
         }
+        // L'ordre choisi ; par défaut, celui de la vue (le nom pour un dossier, la date
+        // pour la photothèque et les recherches).
+        if self.photo_order != PhotoOrder::Name {
+            self.order_folder();
+        }
         let index = file
             .and_then(|f| self.folder.iter().position(|p| *p == f))
             .or(if self.folder.is_empty() {
@@ -1762,6 +1794,10 @@ impl Studio {
                 }
                 self.catalog = catalog;
                 self.indexing = None;
+                // Les dates de prise de vue arrivent avec la photothèque.
+                if self.photo_order == PhotoOrder::Date {
+                    self.set_photo_order(PhotoOrder::Date);
+                }
                 self.refresh_catalog_lists();
                 if !self.pending_index.is_empty() {
                     let dir = self.pending_index.remove(0);
@@ -4784,6 +4820,50 @@ impl Studio {
     }
 
     /// Les piles du film (rafales et séries d'exposition), d'après la photothèque.
+    /// Range le film dans l'ordre choisi ; la photo ouverte et la sélection restent les
+    /// mêmes photos (à leurs nouvelles places).
+    pub fn set_photo_order(&mut self, order: PhotoOrder) {
+        self.photo_order = order;
+        let current = self.current_path().map(Path::to_path_buf);
+        let selected: Vec<PathBuf> = self
+            .selected
+            .iter()
+            .filter_map(|&i| self.folder.get(i).cloned())
+            .collect();
+        self.order_folder();
+        let at = |p: &PathBuf| self.folder.iter().position(|q| q == p);
+        self.current = current.as_ref().and_then(at);
+        self.selected = selected.iter().filter_map(at).collect();
+    }
+
+    /// L'ordre choisi appliqué au film (sans rien d'autre).
+    fn order_folder(&mut self) {
+        let mut folder = std::mem::take(&mut self.folder);
+        sort_photos(&mut folder);
+        match self.photo_order {
+            PhotoOrder::Name => {}
+            PhotoOrder::Date => {
+                // Sans date connue (pas encore dans la photothèque), à la fin, par nom.
+                let date = |p: &PathBuf| {
+                    self.catalog
+                        .get(&luma_project::copies::source(p))
+                        .map(|e| e.date.clone())
+                        .filter(|d| !d.is_empty())
+                };
+                folder.sort_by_cached_key(|p| {
+                    let d = date(p);
+                    (d.is_none(), d)
+                });
+            }
+            PhotoOrder::Rating => {
+                folder.sort_by_cached_key(|p| {
+                    std::cmp::Reverse(self.meta.get(p).map_or(0, |m| m.rating))
+                });
+            }
+        }
+        self.folder = folder;
+    }
+
     fn find_stacks(&mut self) {
         let entries: Vec<&luma_library::Entry> = self
             .folder
@@ -10530,6 +10610,23 @@ impl Studio {
             {
                 self.tiles.set_online(online);
             }
+        }
+        let mut order = self.photo_order;
+        ui.horizontal(|ui| {
+            let label = ui.label(RichText::new(tr("Trier par")).color(theme::DIM).size(11.5));
+            // Le menu porte le nom de son étiquette (lecteurs d'écran, essais).
+            egui::ComboBox::from_id_salt("ordre-du-film")
+                .selected_text(tr(order.name()))
+                .show_ui(ui, |ui| {
+                    for o in PhotoOrder::ALL {
+                        ui.selectable_value(&mut order, o, tr(o.name()));
+                    }
+                })
+                .response
+                .labelled_by(label.id);
+        });
+        if order != self.photo_order {
+            self.set_photo_order(order);
         }
         let mut stacking = self.stacking;
         if ui

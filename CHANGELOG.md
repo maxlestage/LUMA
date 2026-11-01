@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Trier par** : le film rangé par nom, par date de prise de vue ou par note (la
+  meilleure d'abord) ; la photo ouverte et la sélection restent les mêmes.
 - **Aperçus plus rapides** : l'histogramme de chaque aperçu compté sur tous les cœurs,
   aux mêmes comptes : de 3,3 à 1,3 ms par aperçu de 2,8 Mpx.
 - **Rejeter les floues** : dans la barre de sélection, les photos choisies qui ont

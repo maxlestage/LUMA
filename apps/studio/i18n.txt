@@ -6426,3 +6426,11 @@ es = Da la marca «Rechazada» a las fotos elegidas que tienen menos de un terci
 fr = Floues : {n} photo(s) rejetée(s) (moins du tiers de la plus nette, {percent} % au point)
 en = Blurred: {n} photo(s) rejected (less than a third of the sharpest, {percent}% in focus)
 es = Desenfocadas: {n} foto(s) rechazada(s) (menos de un tercio de la más nítida, {percent} % enfocada)
+
+fr = Trier par
+en = Sort by
+es = Ordenar por
+
+fr = Date de prise de vue
+en = Capture date
+es = Fecha de la toma
