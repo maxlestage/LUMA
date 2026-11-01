@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Sensibilidad de las zonas nítidas** (baja, estándar, alta): con un objetivo
+  suave, la alta marca también los detalles finos; la baja solo los contornos nítidos.
 - **Interfaz más fluida**: la imagen de cada vista previa convertida en textura en
   todos los núcleos, con los mismos colores: de 2,2 a 1,0 ms por vista previa en el
   hilo de la interfaz.
