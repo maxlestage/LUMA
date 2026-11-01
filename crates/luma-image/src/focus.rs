@@ -10,6 +10,21 @@ use rayon::prelude::*;
 /// part au point (« Retenir la plus nette »), pour que les photos se comparent.
 pub const THRESHOLD: f32 = 14.0;
 
+/// Une photo dont la part au point est sous cette fraction de celle de la plus nette
+/// d'un lot compte comme floue.
+pub const BLURRED_FRACTION: f32 = 1.0 / 3.0;
+
+/// La taille (grand côté, en pixels) de l'aperçu sur lequel se mesure la part au point :
+/// la même pour toutes les photos, pour qu'elles se comparent.
+pub const SHARE_SIDE: usize = 1600;
+
+/// La part au point (0 à 1) d'une image RGBA de `w × h` : la part de ses pixels nets
+/// (voir [`sharp`]).
+pub fn share(rgba: &[u8], w: usize, h: usize) -> f32 {
+    let n = sharp(rgba, w, h).iter().filter(|&&m| m).count();
+    n as f32 / (w * h).max(1) as f32
+}
+
 /// La sensibilité des zones nettes : haute, les détails fins d'un objectif doux comptent
 /// aussi ; basse, seuls les contours les plus francs.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
