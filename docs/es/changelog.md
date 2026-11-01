@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma before-after`**: el antes / después de cada foto de una carpeta (o de las
+  fotos dadas), junto a ella, con sus ajustes; los mismos nombres que en la app.
 - **Nitidez en la comparación**: bajo cada foto comparada (C), su parte enfocada; la
   más nítida se destaca en color.
 - **Antes / después por lotes más rápido**: dos fotos a la vez, con los mismos
