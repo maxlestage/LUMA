@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Rejeter les floues** : dans la barre de sélection, les photos choisies qui ont
+  moins du tiers de la part au point de la plus nette reçoivent le drapeau « Rejetée ».
 - **Correction : « Rendu… » sans fin** quand une collection ou une recherche était
   montrée pendant le calcul d'un aperçu de la photo ouverte : la photo est rendue de
   nouveau.

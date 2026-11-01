@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Rechazar las desenfocadas**: en la barra de selección, las fotos elegidas con menos
+  de un tercio de la parte enfocada de la más nítida reciben la marca «Rechazada».
 - **Corrección: «Procesando…» sin fin** cuando se mostraba una colección o una
   búsqueda mientras se calculaba una vista previa de la foto abierta: la foto se
   renderiza de nuevo.
