@@ -399,4 +399,7 @@ fn the_interface_draws_in_every_language() {
         }
     }
     i18n::set_lang(Lang::Fr);
+    // La photo copiée (25 Mo) et les licences d'essai ne restent pas dans le dossier
+    // temporaire.
+    let _ = std::fs::remove_dir_all(&tmp);
 }
