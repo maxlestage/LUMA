@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Corrections d'après le JPEG du boîtier plus rapides** : deux photos à la fois, aux
+  mêmes mesures (sept RAW en 2,15 s au lieu de 2,9 s).
 - **`luma before-after`** : l'avant / après de chaque photo d'un dossier (ou des photos
   données), à côté d'elle, avec ses réglages ; les mêmes noms que dans l'app.
 - **Netteté dans la comparaison** : sous chaque photo comparée (C), sa part au point ;
