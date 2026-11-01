@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Nitidez medida más rápido**: dos fotos a la vez (mientras una se lee, la otra se
+  renderiza), con las mismas partes enfocadas: siete RAW en 1,7 s en lugar de 2,3 s.
 - **Ordenar por nitidez**: la parte enfocada de cada foto de la tira medida en segundo
   plano, y luego la tira ordenada, la más nítida primero.
 - **Sensibilidad de las zonas nítidas** (baja, estándar, alta): con un objetivo
