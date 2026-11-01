@@ -498,9 +498,7 @@ enum SharpGoal {
     Sort,
 }
 
-/// Une photo dont la part au point est sous cette fraction de celle de la plus nette
-/// de la sélection compte comme floue.
-pub const BLURRED_FRACTION: f32 = 1.0 / 3.0;
+use luma_image::focus::BLURRED_FRACTION;
 
 #[derive(PartialEq)]
 struct Request {
@@ -8879,7 +8877,7 @@ impl Studio {
             .collect();
         self.sharp_batch = Some((n, Vec::new(), goal));
         self.status = trf("Netteté de {n} photo(s)…", &[("n", &n)]);
-        self.worker.sharpness(paths, 1600);
+        self.worker.sharpness(paths);
     }
 
     /// La plus nette des parts reçues : son drapeau « Retenue », et la barre d'état le

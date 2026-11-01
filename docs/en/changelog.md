@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **`luma sharpness`**: the in-focus share of each photo, sharpest first, the same
+  measurement as the app; `--pick` picks the sharpest, `--reject` rejects the blurred
+  (flags in the XMP files).
 - **Sharpness measured faster**: two photos at a time (while one is read, the other is
   rendered), with the same in-focus shares: seven RAWs in 1.7 s instead of 2.3 s.
 - **Sort by sharpness**: the in-focus share of each photo in the filmstrip measured in

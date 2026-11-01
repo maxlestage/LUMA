@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **`luma sharpness`** : la part au point de chaque photo, la plus nette d'abord, la
+  même mesure que l'app ; `--pick` retient la plus nette, `--reject` rejette les
+  floues (drapeaux dans les XMP).
 - **Netteté mesurée plus vite** : deux photos à la fois (pendant qu'une se lit, l'autre
   se rend), aux mêmes parts au point : sept RAW en 1,7 s au lieu de 2,3 s.
 - **Trier par netteté** : la part au point de chaque photo du film mesurée en

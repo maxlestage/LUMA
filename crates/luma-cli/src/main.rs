@@ -17,6 +17,7 @@
 //! luma rename <photo>… --name m     renomme par lot (XMP et copies virtuelles suivent)
 //! luma geotag <photo>… --gpx t.gpx  place les photos d'après une trace GPX (dans le XMP)
 //! luma lens <raw>… [--write]       distorsion et vignetage d'après le JPEG du boîtier
+//! luma sharpness <photos|dossier>  la part au point de chaque photo, la plus nette retenue
 //! luma import [carte] --to dossier  importe une carte (rangement, renommage, 2nd disque)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
 //! luma book <photo>… -o livre.pdf   un livre photo en PDF (couverture et titre)
@@ -175,6 +176,10 @@ USAGE
       préréglage XMP ou des réglages à chaque image d'une vidéo AVI en Motion JPEG
       (celle de nombreux appareils photo), puis l'enregistre au même format : même
       taille, même rythme, le son recopié tel quel. Pour une vidéo courte (1 Go au plus).
+  luma sharpness <photo|dossier>… [--pick] [--reject]
+      la part au point de chaque photo (ses réglages, sinon ceux par défaut), la plus
+      nette d'abord, sans IA ; --pick : la plus nette « retenue », --reject : celles
+      sous le tiers de la plus nette « rejetées » (drapeaux dans les XMP)
   luma lens <raw|dossier>… [--write]
       La distorsion et le vignetage de l'objectif, mesurés sur le JPEG que le boîtier a
       rangé dans chaque RAW (déjà corrigé) : pour les objectifs dont LÜMA ne lit pas
@@ -1922,6 +1927,79 @@ fn lens(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma sharpness` : la part au point de chaque photo (la mesure de l'app), la plus
+/// nette d'abord ; `--pick` et `--reject` posent les drapeaux dans les XMP.
+fn sharpness(args: Vec<String>) -> Result<(), String> {
+    use luma_image::focus::BLURRED_FRACTION;
+    let (mut pick, mut reject) = (false, false);
+    let mut photos = Vec::new();
+    for a in args {
+        match a.as_str() {
+            "--pick" => pick = true,
+            "--reject" => reject = true,
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => {
+                let p = PathBuf::from(a);
+                if p.is_dir() {
+                    let mut found: Vec<PathBuf> = std::fs::read_dir(&p)
+                        .map_err(|e| format!("{} : {e}", p.display()))?
+                        .flatten()
+                        .map(|e| e.path())
+                        .filter(|f| f.is_file() && luma_raw::is_photo(f))
+                        .collect();
+                    found.sort();
+                    photos.extend(found);
+                } else {
+                    photos.push(p);
+                }
+            }
+        }
+    }
+    if photos.is_empty() {
+        return Err("il faut des photos (ou un dossier)".into());
+    }
+    let mut shares = Vec::new();
+    for path in &photos {
+        let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
+        let settings = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
+        let share = photo
+            .in_focus_share(&settings, &Cancel::new())
+            .map_err(|e| format!("{} : {e}", path.display()))?;
+        shares.push((path.clone(), share));
+    }
+    shares.sort_by(|a, b| b.1.total_cmp(&a.1));
+    let best = shares[0].1;
+    let flag = |path: &Path, f: xmp::Flag| -> Result<(), String> {
+        let mut meta = luma_library::photo_meta(path);
+        meta.flag = f;
+        let settings = luma_library::photo_settings(path)
+            .or_else(|| Photo::open(path).ok().map(|p| p.default_settings()))
+            .unwrap_or_default();
+        let target = xmp::sidecar_path(path);
+        xmp::save(&target, &xmp::write_with_meta(&settings, &meta)).map_err(|e| format!("{} : {e}", target.display()))
+    };
+    let mut rejected = 0;
+    for (k, (path, share)) in shares.iter().enumerate() {
+        let blurred = *share < best * BLURRED_FRACTION;
+        let mut note = String::new();
+        if pick && k == 0 {
+            flag(path, xmp::Flag::Pick)?;
+            note = " — retenue".into();
+        } else if reject && blurred {
+            flag(path, xmp::Flag::Reject)?;
+            rejected += 1;
+            note = " — rejetée".into();
+        } else if blurred {
+            note = " — floue".into();
+        }
+        println!("{:5.1} %  {}{note}", share * 100.0, path.display());
+    }
+    if reject {
+        println!("{rejected} photo(s) rejetée(s) (moins du tiers de la plus nette)");
+    }
+    Ok(())
+}
+
 fn geotag(args: Vec<String>) -> Result<(), String> {
     use luma_library::geotag::{self, Outcome};
     let (mut gpx, mut offset, mut max_gap, mut replace, mut dry) = (None, Some(0), 3600, false, false);
@@ -2746,6 +2824,15 @@ fn main() -> ExitCode {
             _ => gallery(args.collect()),
         };
         return match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "sharpness" {
+        return match sharpness(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");
