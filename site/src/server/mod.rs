@@ -887,6 +887,10 @@ mod tests {
                 !html.contains("LUMA-macos.zip"),
                 "{path} : un lien sans fichier"
             );
+            // Le script du système du visiteur, dans l'en‑tête (compté par la politique de
+            // sécurité).
+            let head = &html[..html.find("</head>").expect("en-tête")];
+            assert!(head.contains(r#"querySelectorAll(".download")"#), "{path}");
         }
     }
 

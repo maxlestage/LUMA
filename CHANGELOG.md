@@ -7,6 +7,9 @@
 - **Agrandissement à l'export plafonné à 100 Mpx sur iPhone et iPad** (200 ailleurs) :
   la mémoire d'une app y est comptée ; le doublement de chaque côté d'un 24 Mpx passe
   toujours entier.
+- **Le site propose la version de votre système** : sur la page « Télécharger » et à
+  l'accueil, le bouton de votre système (Mac, Windows ou Linux) passe en premier,
+  « Pour votre système » ; rien n'est envoyé.
 - **Page « Télécharger » sur le site** : toutes les versions de l'app (Mac, Windows,
   Linux, la ligne de commande) et, pour chaque système, comment l'installer ; le
   bouton « Télécharger » de la barre y mène.
