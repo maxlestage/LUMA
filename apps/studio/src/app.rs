@@ -428,6 +428,9 @@ struct CropTool {
 /// Ce dont dépend l'« avant » de la vue côte à côte : la photo, ses réglages, la taille.
 type BeforeKey = (PathBuf, Settings, Size);
 
+/// La part au point d'une photo d'un lot (`None` : pas mesurée).
+type SharpShare = (PathBuf, Option<f32>);
+
 #[derive(PartialEq)]
 struct Request {
     path: PathBuf,
@@ -897,6 +900,8 @@ pub struct Studio {
     /// Le point de la photo (0 à 1) sur lequel centrer le zoom 1:1 qui s'ouvre.
     zoom_target: Option<egui::Vec2>,
     zoom_retries: u8,
+    /// La plus nette d'une sélection, en cours : photos demandées, parts au point reçues.
+    sharp_batch: Option<(usize, Vec<SharpShare>)>,
     /// Le lot des avant / après : photos demandées, écrites, en échec.
     before_after_batch: (usize, usize, usize),
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
@@ -1345,6 +1350,7 @@ impl Studio {
             zoom_target: None,
             zoom_retries: 0,
             before_after_batch: (0, 0, 0),
+            sharp_batch: None,
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -4692,6 +4698,15 @@ impl Studio {
                 self.auto_balance_selected();
             }
             if ui
+                .small_button(tr("Retenir la plus nette"))
+                .on_hover_text(tr(
+                    "Mesure la part au point de chaque photo choisie (une rafale) et donne le drapeau « Retenue » à la plus nette",
+                ))
+                .clicked()
+            {
+                self.sharpest_selected();
+            }
+            if ui
                 .small_button(tr("Avant / après"))
                 .on_hover_text(tr(
                     "L'avant / après de chaque photo choisie, en un JPEG à côté d'elle",
@@ -5008,6 +5023,7 @@ impl Studio {
             && !self.measuring
             && self.lens_batch.0 == 0
             && self.before_after_batch.0 == 0
+            && self.sharp_batch.is_none()
             && (self.split.is_none() || self.before_asked.is_none())
             && self.reference_asked.is_none()
     }
@@ -5231,6 +5247,15 @@ impl Studio {
                             "Impossible d'ouvrir {file} : {error}",
                             &[("file", &file_name(&path)), ("error", &error)],
                         );
+                    }
+                }
+                Event::Sharpness { path, result } => {
+                    if let Some(batch) = &mut self.sharp_batch {
+                        batch.1.push((path, result.ok()));
+                        if batch.1.len() >= batch.0 {
+                            let done = self.sharp_batch.take().map(|b| b.1).unwrap_or_default();
+                            self.keep_sharpest(done);
+                        }
                     }
                 }
                 Event::BeforeAfterWritten { result } => {
@@ -8560,6 +8585,54 @@ impl Studio {
                 }
             });
         });
+    }
+
+    /// « Retenir la plus nette » : la part au point de chaque photo choisie, mesurée en
+    /// arrière‑plan (la photo ouverte avec ses réglages du moment) ; la plus nette reçoit
+    /// le drapeau « Retenue », les autres restent telles quelles.
+    pub fn sharpest_selected(&mut self) {
+        let paths = self.keyword_targets();
+        if paths.len() < 2 || self.sharp_batch.is_some() {
+            return;
+        }
+        let open = (self.loading.is_none() && self.photo.is_some())
+            .then(|| self.current_path().map(Path::to_path_buf))
+            .flatten();
+        let n = paths.len();
+        let paths = paths
+            .into_iter()
+            .map(|p| {
+                let given = (open.as_ref() == Some(&p)).then(|| self.settings.clone());
+                (p, given)
+            })
+            .collect();
+        self.sharp_batch = Some((n, Vec::new()));
+        self.status = trf("Netteté de {n} photo(s)…", &[("n", &n)]);
+        self.worker.sharpness(paths, 1600);
+    }
+
+    /// La plus nette des parts reçues : son drapeau « Retenue », et la barre d'état le
+    /// dit (avec l'écart à la suivante).
+    fn keep_sharpest(&mut self, shares: Vec<SharpShare>) {
+        let mut measured: Vec<(PathBuf, f32)> = shares
+            .into_iter()
+            .filter_map(|(p, s)| Some((p, s?)))
+            .collect();
+        measured.sort_by(|a, b| b.1.total_cmp(&a.1));
+        let Some((best, share)) = measured.first().cloned() else {
+            self.status = tr("Netteté : aucune photo n'a pu être mesurée").into();
+            return;
+        };
+        self.edit_meta(std::slice::from_ref(&best), |m| m.flag = Flag::Pick);
+        let next = measured.get(1).map_or(0.0, |s| s.1);
+        self.status = trf(
+            "La plus nette : {file} ({percent} % au point, la suivante {next} %), retenue",
+            &[
+                ("file", &file_name(&best)),
+                ("percent", &widgets::format_value(share * 100.0, 1, false)),
+                ("next", &widgets::format_value(next * 100.0, 1, false)),
+            ],
+        );
     }
 
     /// L'avant / après de chaque photo choisie (de la photo ouverte sinon), en arrière‑
@@ -12276,7 +12349,7 @@ impl Studio {
         let sharp_badge = self.sharp_share.map(|f| {
             trf(
                 "Zones nettes : {percent} %",
-                &[("percent", &format!("{:.1}", f * 100.0))],
+                &[("percent", &widgets::format_value(f * 100.0, 1, false))],
             )
         });
         let mut badges = Vec::new();

@@ -4,6 +4,9 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Retenir la plus nette** : dans la barre de sélection, la part au point de chaque
+  photo choisie (une rafale) mesurée en arrière‑plan ; la plus nette reçoit le drapeau
+  « Retenue », les autres restent telles quelles.
 - **Zones nettes** (Maj+F, bouton « Zones nettes ») : les détails au point de la photo
   en vert, sans IA, et leur part de la photo dans un badge, pour départager les
   photos d'une rafale ; une photo floue n'en a pas.
