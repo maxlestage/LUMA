@@ -1,5 +1,10 @@
 # Nouveautés
 
+## 0.4.0 — à venir
+
+- **Tri d'une rafale au clavier** : Maj+P retient la plus nette de la sélection, Maj+X
+  rejette les floues (raccourcis modifiables comme les autres).
+
 ## 0.3.0 — novembre 2026
 
 La photothèque professionnelle, étape par étape.

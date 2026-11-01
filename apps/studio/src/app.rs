@@ -6692,6 +6692,8 @@ impl Studio {
             }
             "pick" => self.set_meta(|m| m.flag = Flag::Pick),
             "reject" => self.set_meta(|m| m.flag = Flag::Reject),
+            "pick_sharpest" => self.sharpest_selected(),
+            "reject_blurred" => self.reject_blurred_selected(),
             "unflag" => self.set_meta(|m| m.flag = Flag::None),
             r if r.starts_with("rate") => {
                 let n: u8 = r[4..].parse().unwrap_or(0);

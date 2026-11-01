@@ -1,5 +1,10 @@
 # What's new
 
+## 0.4.0 — upcoming
+
+- **Burst culling from the keyboard**: Shift+P picks the sharpest of the selection,
+  Shift+X rejects the blurred (shortcuts customisable like the others).
+
 ## 0.3.0 — November 2026
 
 The professional photo library, step by step.

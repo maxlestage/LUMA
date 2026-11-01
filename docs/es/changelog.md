@@ -1,5 +1,10 @@
 # Novedades
 
+## 0.4.0 — próximamente
+
+- **Selección de una ráfaga con el teclado**: Mayús+P elige la más nítida de la
+  selección, Mayús+X rechaza las desenfocadas (atajos modificables como los demás).
+
 ## 0.3.0 — noviembre de 2026
 
 La fototeca profesional, paso a paso.
