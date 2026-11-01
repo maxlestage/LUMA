@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Ordenar por**: la tira ordenada por nombre, fecha de la toma o valoración (la
+  mejor primero); la foto abierta y la selección siguen siendo las mismas.
 - **Vistas previas más rápidas**: el histograma de cada vista previa contado en todos
   los núcleos, con los mismos recuentos: de 3,3 a 1,3 ms por vista previa de 2,8 Mpx.
 - **Rechazar las desenfocadas**: en la barra de selección, las fotos elegidas con menos

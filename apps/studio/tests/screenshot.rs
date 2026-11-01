@@ -4364,3 +4364,65 @@ fn the_blurred_photos_of_a_burst_are_rejected() {
     use luma_project::xmp::Flag;
     assert_eq!(burst.map(read), [Flag::None, Flag::None, Flag::Reject]);
 }
+
+/// « Trier par » : par note (la meilleure d'abord), par date de prise de vue (d'après
+/// la photothèque, la plus ancienne d'abord), puis par nom ; la photo ouverte et la
+/// sélection restent les mêmes photos.
+#[test]
+fn the_filmstrip_is_sorted_by_rating_date_and_name() {
+    use luma_studio::app::PhotoOrder;
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("ordre-du-film") else {
+        return;
+    };
+    let start = Instant::now();
+    while s.studio().is_indexing() && start.elapsed() < Duration::from_secs(60) {
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let by_name = s.studio().photos().to_vec();
+    assert!(by_name.len() >= 4);
+    // Des notes : la troisième 5, la dernière 3, la première 1.
+    let last = by_name.len() - 1;
+    for (i, key) in [(2usize, Key::Num5), (last, Key::Num3), (0, Key::Num1)] {
+        s.studio().set_current(i);
+        s.wait();
+        s.keys(&[(NONE, key)]);
+    }
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let chosen = by_name[1].clone();
+    s.studio().selected = [1].into_iter().collect();
+    s.studio().set_photo_order(PhotoOrder::Rating);
+    let photos = s.studio().photos().to_vec();
+    assert_eq!(photos[0], by_name[2]);
+    assert_eq!(photos[1], by_name[last]);
+    assert_eq!(photos[2], by_name[0]);
+    assert_eq!(s.studio().current_path(), Some(open.as_path()));
+    let sel: Vec<_> = s
+        .studio()
+        .selected
+        .iter()
+        .map(|&i| photos[i].clone())
+        .collect();
+    assert_eq!(sel, vec![chosen.clone()]);
+    // Par date : les dates de la photothèque en ordre croissant.
+    s.studio().set_photo_order(PhotoOrder::Date);
+    let photos = s.studio().photos().to_vec();
+    let dates: Vec<String> = photos
+        .iter()
+        .map(|p| {
+            s.studio()
+                .catalog()
+                .get(p)
+                .map(|e| e.date.clone())
+                .unwrap_or_default()
+        })
+        .collect();
+    let known: Vec<&String> = dates.iter().filter(|d| !d.is_empty()).collect();
+    assert!(known.len() >= 4, "{dates:?}");
+    assert!(known.windows(2).all(|w| w[0] <= w[1]), "{dates:?}");
+    assert_eq!(s.studio().current_path(), Some(open.as_path()));
+    s.studio().set_photo_order(PhotoOrder::Name);
+    assert_eq!(s.studio().photos(), by_name.as_slice());
+    s.wait();
+}
