@@ -430,6 +430,45 @@ pub fn render_tables(s: &Settings) -> (Vec<f32>, Option<[Vec<f32>; 3]>) {
     )
 }
 
+/// La mémoire d'une image de travail qui ne sert plus (une base chassée du cache),
+/// reprise par la prochaine étape d'entrée : une image neuve coûte une faute de page par
+/// page à la première écriture (6 ms pour un aperçu de 2,8 Mpx), une reprise rien.
+static SPARE_IMAGE: std::sync::Mutex<Option<Vec<[f32; 3]>>> = std::sync::Mutex::new(None);
+
+/// Au‑delà (en pixels), la mémoire n'est pas gardée : une pleine définition ne reste
+/// pas en réserve.
+const SPARE_IMAGE_LIMIT: usize = 8_000_000;
+
+/// Rend la mémoire d'une image qui ne sert plus, pour l'étape d'entrée suivante ; la
+/// plus grande des deux est gardée.
+pub fn give_back_image(data: Vec<[f32; 3]>) {
+    if data.capacity() > SPARE_IMAGE_LIMIT {
+        return;
+    }
+    if let Ok(mut spare) = SPARE_IMAGE.try_lock()
+        && spare.as_ref().is_none_or(|s| s.capacity() < data.capacity())
+    {
+        *spare = Some(data);
+    }
+}
+
+/// `n` pixels pour une image dont chaque pixel sera écrit avant d'être lu : la mémoire
+/// rendue si elle suffit (son ancien contenu ne compte pas), sinon une neuve.
+fn image_buffer(n: usize) -> Vec<[f32; 3]> {
+    let spare = SPARE_IMAGE
+        .try_lock()
+        .ok()
+        .and_then(|mut s| s.take_if(|v| v.capacity() >= n));
+    match spare {
+        Some(mut v) => {
+            v.truncate(n);
+            v.resize(n, [0.0; 3]);
+            v
+        }
+        None => vec![[0.0; 3]; n],
+    }
+}
+
 fn input_stage(cam: &RgbImage, input: &Input, s: &Settings) -> RgbImage {
     let gain = (s.exposure + input.exposure_bias).exp2();
     // Le mélangeur de couches, en Rec. 2020 linéaire : une matrice de plus dans la même
@@ -442,10 +481,11 @@ fn input_stage(cam: &RgbImage, input: &Input, s: &Settings) -> RgbImage {
     };
     let m = mixed.map(|r| r.map(|v| v * gain));
     let tint = s.calibration.shadows_tint / 100.0;
+    // Chaque pixel est écrit ci‑dessous : la mémoire d'une base chassée convient.
     let mut img = RgbImage {
         width: cam.width,
         height: cam.height,
-        data: vec![[0.0; 3]; cam.data.len()],
+        data: image_buffer(cam.data.len()),
     };
     img.data.par_iter_mut().zip(&cam.data).for_each(|(p, src)| {
         let src = *src;

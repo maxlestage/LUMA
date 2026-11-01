@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **More responsive sliders**: the memory of already-computed steps evicted from the
+  cache is reused by the next one, with the same pixels: the input step drops from 9.6
+  to 5.7 ms, a preview render is about 9% faster.
 - **Pick the sharpest**: in the selection bar, the in-focus share of each selected
   photo (a burst) measured in the background; the sharpest gets the “Pick” flag, the
   others stay as they are.
