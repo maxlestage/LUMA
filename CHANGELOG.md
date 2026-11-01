@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Sensibilité des zones nettes gardée** d'une séance à l'autre (« Tout remettre à
+  zéro » la remet à la normale).
 - **Corrections d'après le JPEG du boîtier plus rapides** : deux photos à la fois, aux
   mêmes mesures (sept RAW en 2,15 s au lieu de 2,9 s).
 - **`luma before-after`** : l'avant / après de chaque photo d'un dossier (ou des photos

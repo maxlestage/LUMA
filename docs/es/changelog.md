@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Sensibilidad de las zonas nítidas guardada** de una sesión a otra («Restablecer
+  todo» la devuelve a la estándar).
 - **Correcciones según el JPEG de la cámara más rápidas**: dos fotos a la vez, con las
   mismas medidas (siete RAW en 2,15 s en lugar de 2,9 s).
 - **`luma before-after`**: el antes / después de cada foto de una carpeta (o de las
