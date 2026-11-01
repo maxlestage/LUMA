@@ -4296,3 +4296,33 @@ fn the_sharpest_of_a_burst_is_picked() {
     assert_eq!(read(&photos[sharp]).flag, luma_project::xmp::Flag::Pick);
     assert_eq!(read(&photos[blurred]).flag, luma_project::xmp::Flag::None);
 }
+
+/// La photo ouverte rouverte pendant qu'un aperçu se calcule (ce que fait la vue d'une
+/// collection) : l'aperçu en route arrive pendant l'ouverture et n'est pas montré ; une
+/// fois rouverte, la photo est rendue de nouveau même si rien n'a changé (sans quoi
+/// l'app attendait sans fin un aperçu qui ne venait pas).
+#[test]
+fn reopening_the_open_photo_renders_it_again() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("rouverte") else {
+        return;
+    };
+    let start = Instant::now();
+    while s.studio().is_indexing() && start.elapsed() < Duration::from_secs(60) {
+        s.harness.step();
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert_eq!(s.studio().add_to_collection("Choix"), 1);
+    let path = s.studio().current_path().unwrap().to_path_buf();
+    for k in 0..4 {
+        // Une Exposition nouvelle, écrite dans le XMP : son aperçu part ; la collection
+        // montrée aussitôt rouvre la photo, avec ces mêmes réglages.
+        s.studio().settings.exposure = 0.3 * (k + 1) as f32;
+        let settings = s.studio().settings.clone();
+        luma_studio::worker::write_sidecar(&path, &settings, &Default::default()).unwrap();
+        s.harness.step();
+        s.studio().show_view(View::Collection("Choix".into()));
+        s.wait();
+        assert_eq!(s.studio().busy_reason(), None, "essai {k}");
+    }
+}

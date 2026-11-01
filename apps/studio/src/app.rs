@@ -5067,6 +5067,11 @@ impl Studio {
                             self.crop_tool = None;
                             self.guiding = false;
                             self.fresh_from = self.generation + 1;
+                            // Un aperçu demandé avant l'ouverture n'est pas montré (il
+                            // arrive pendant, ou d'avant `fresh_from`) : la photo rouverte
+                            // est rendue de nouveau, même si sa demande est la même que la
+                            // dernière (sans quoi l'app attendait sans fin cet aperçu).
+                            self.last_request = None;
                             let raw = photo.raw();
                             let e = &raw.exif;
                             let mut info = format!("{} {}", raw.make, raw.model);
