@@ -110,6 +110,11 @@ pub enum Event {
     },
     /// Les corrections d'objectif d'une photo d'un lot, mesurées sur le JPEG du boîtier :
     /// distorsion, vignetage et le recadrage sans bords vides ; ou pourquoi pas.
+    /// La part au point d'une photo d'un lot (0 à 1), ou pourquoi elle manque.
+    Sharpness {
+        path: PathBuf,
+        result: Result<f32, String>,
+    },
     /// L'avant / après d'une photo d'un lot, écrit (son fichier) ou pas (pourquoi).
     BeforeAfterWritten {
         result: Result<PathBuf, String>,
@@ -693,6 +698,35 @@ impl Worker {
                 }
             })
             .expect("fil des avant / après");
+    }
+
+    /// La part au point de chaque photo (`luma_image::focus`), sur un aperçu de `side`
+    /// pixels avec ses réglages (ceux donnés, sinon son XMP, sinon ceux par défaut) ;
+    /// la même taille pour toutes, pour qu'elles se comparent.
+    pub fn sharpness(&self, paths: Vec<(PathBuf, Option<Settings>)>, side: usize) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        std::thread::Builder::new()
+            .name("luma-nettete".into())
+            .spawn(move || {
+                for (path, given) in paths {
+                    let result = caught(|| -> Result<f32, String> {
+                        let photo = crate::dialogs::open_photo(&path).map_err(|e| e.to_string())?;
+                        let settings = given
+                            .or_else(|| read_sidecar(&path))
+                            .unwrap_or_else(|| photo.default_settings());
+                        let r = photo
+                            .render(&settings, Size::Fit(side), &Cancel::new())
+                            .map_err(|e| e.to_string())?;
+                        let (w, h) = (r.image.width, r.image.height);
+                        let rgba = luma_image::encode8_rgba(&r.image, OutputSpace::Srgb);
+                        let sharp = luma_image::focus::sharp(&rgba, w, h);
+                        Ok(sharp.iter().filter(|&&m| m).count() as f32 / (w * h).max(1) as f32)
+                    });
+                    let _ = sender.send(Event::Sharpness { path, result });
+                    repaint();
+                }
+            })
+            .expect("fil de la netteté");
     }
 
     pub fn lens_from_camera(&self, paths: Vec<PathBuf>) {

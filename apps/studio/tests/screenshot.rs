@@ -4237,3 +4237,42 @@ fn focus_peaking_shows_the_sharp_areas() {
     s.wait();
     assert_eq!(s.studio().sharp_share, None);
 }
+
+/// « Retenir la plus nette » sur une photo et sa copie floutée : la nette reçoit le
+/// drapeau « Retenue » (dans son XMP), la floue reste sans drapeau ; la barre d'état
+/// donne les deux parts au point.
+#[test]
+fn the_sharpest_of_a_burst_is_picked() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("plus-nette", [1440.0, 900.0], 1.0, |dir| {
+        // Une scène pleine de détails, et la même floutée (un bougé, une mise au point
+        // manquée).
+        let sharp = image::RgbImage::from_fn(1200, 800, |x, y| {
+            let v = (((x / 3) ^ (y / 5)) % 7) as u8 * 30 + ((x * y) % 17) as u8;
+            image::Rgb([v, v / 2 + 60, 255 - v])
+        });
+        sharp.save(dir.join("rafale-1.png")).unwrap();
+        image::imageops::blur(&sharp, 4.0)
+            .save(dir.join("rafale-2.png"))
+            .unwrap();
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let (sharp, blurred) = (at("rafale-1.png"), at("rafale-2.png"));
+    s.studio().selected = [blurred, sharp].into_iter().collect();
+    s.studio().sharpest_selected();
+    s.wait();
+    let status = s.studio().status().to_owned();
+    // Les parts en français, à la virgule ; la floue n'a rien au point.
+    assert!(status.ends_with("la suivante 0,0 %), retenue"), "{status}");
+    assert!(
+        status.starts_with("La plus nette : rafale-1.png ("),
+        "{status}"
+    );
+    s.studio().flush_xmp();
+    let read = |p: &std::path::Path| luma_studio::worker::read_meta(p);
+    assert_eq!(read(&photos[sharp]).flag, luma_project::xmp::Flag::Pick);
+    assert_eq!(read(&photos[blurred]).flag, luma_project::xmp::Flag::None);
+}
