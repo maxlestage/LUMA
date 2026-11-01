@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Seleccionar la más nítida**: en la barra de selección, la parte enfocada de cada
+  foto elegida (una ráfaga) medida en segundo plano; la más nítida recibe la marca
+  «Seleccionada», las demás se quedan como están.
 - **Zonas nítidas** (Mayús+F, botón «Zonas nítidas»): los detalles enfocados de la
   foto en verde, sin IA, y su parte de la foto en una etiqueta, para elegir la mejor
   de una ráfaga; una foto desenfocada no tiene.

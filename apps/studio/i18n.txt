@@ -6394,3 +6394,23 @@ es = Mayús+F: los detalles enfocados, en verde (una foto desenfocada no tiene)
 fr = Zones nettes : {percent} %
 en = In-focus areas: {percent}%
 es = Zonas nítidas: {percent} %
+
+fr = Retenir la plus nette
+en = Pick the sharpest
+es = Seleccionar la más nítida
+
+fr = Mesure la part au point de chaque photo choisie (une rafale) et donne le drapeau « Retenue » à la plus nette
+en = Measures the in-focus share of each selected photo (a burst) and gives the sharpest the “Pick” flag
+es = Mide la parte enfocada de cada foto elegida (una ráfaga) y da la marca «Seleccionada» a la más nítida
+
+fr = Netteté de {n} photo(s)…
+en = Sharpness of {n} photo(s)…
+es = Nitidez de {n} foto(s)…
+
+fr = Netteté : aucune photo n'a pu être mesurée
+en = Sharpness: no photo could be measured
+es = Nitidez: no se pudo medir ninguna foto
+
+fr = La plus nette : {file} ({percent} % au point, la suivante {next} %), retenue
+en = The sharpest: {file} ({percent}% in focus, the next {next}%), picked
+es = La más nítida: {file} ({percent} % enfocada, la siguiente {next} %), seleccionada

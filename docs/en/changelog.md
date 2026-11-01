@@ -4,6 +4,9 @@
 
 The professional photo library, step by step.
 
+- **Pick the sharpest**: in the selection bar, the in-focus share of each selected
+  photo (a burst) measured in the background; the sharpest gets the “Pick” flag, the
+  others stay as they are.
 - **In-focus areas** (Shift+F, “In-focus areas” button): the details in focus in
   green, without AI, and their share of the photo in a badge, to pick the best of a
   burst; a blurred photo has none.
