@@ -1105,6 +1105,28 @@ fn render_job(
     }
 }
 
+/// L'image RGBA 8 bits (non prémultipliée) d'une texture d'egui : les couleurs de
+/// `ColorImage::from_rgba_unmultiplied`, sur tous les cœurs ; un pixel opaque (tous
+/// ceux d'un aperçu) est déjà prémultiplié, sans calcul.
+pub fn color_image(size: [usize; 2], rgba: &[u8]) -> egui::ColorImage {
+    use egui::Color32;
+    use rayon::prelude::*;
+    assert_eq!(size[0] * size[1] * 4, rgba.len(), "{size:?} {}", rgba.len());
+    let pixels = rgba
+        .as_chunks::<4>()
+        .0
+        .par_iter()
+        .map(|&[r, g, b, a]| {
+            if a == 255 {
+                Color32::from_rgba_premultiplied(r, g, b, a)
+            } else {
+                Color32::from_rgba_unmultiplied(r, g, b, a)
+            }
+        })
+        .collect();
+    egui::ColorImage::new(size, pixels)
+}
+
 /// L'histogramme des trois couches d'une image RGBA : par bandes de 64 000 pixels sur
 /// tous les cœurs, chacune son histogramme, puis leur somme (des comptes : les mêmes,
 /// dans n'importe quel ordre).
@@ -1427,6 +1449,23 @@ mod tests {
     }
 
     use super::*;
+
+    /// Les textures sur tous les cœurs : les couleurs d'egui, pour toutes les valeurs
+    /// d'alpha (opaque ou non) et toutes les couleurs.
+    #[test]
+    fn color_images_have_the_colors_of_egui() {
+        let rgba: Vec<u8> = (0..256 * 256 * 4)
+            .map(|i: usize| match i % 4 {
+                3 => (i / 1024) as u8,
+                c => ((i / 4) % 256) as u8 ^ (c as u8 * 85),
+            })
+            .collect();
+        let size = [256, 256];
+        assert_eq!(
+            color_image(size, &rgba).pixels,
+            egui::ColorImage::from_rgba_unmultiplied(size, &rgba).pixels
+        );
+    }
 
     #[test]
     fn a_render_that_panics_does_not_stop_the_next_ones() {
