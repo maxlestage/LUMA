@@ -1105,15 +1105,39 @@ fn render_job(
     }
 }
 
-/// L'histogramme des trois couches d'une image RGBA.
+/// L'histogramme des trois couches d'une image RGBA : par bandes de 64 000 pixels sur
+/// tous les cœurs, chacune son histogramme, puis leur somme (des comptes : les mêmes,
+/// dans n'importe quel ordre).
 pub fn histogram_rgba(rgba: &[u8]) -> [[u32; 256]; 3] {
-    let mut h = [[0u32; 256]; 3];
-    for p in rgba.as_chunks::<4>().0 {
-        for c in 0..3 {
-            h[c][usize::from(p[c])] += 1;
+    use rayon::prelude::*;
+    let count = |h: &mut [[u32; 256]; 3], px: &[[u8; 4]]| {
+        for p in px {
+            for c in 0..3 {
+                h[c][usize::from(p[c])] += 1;
+            }
         }
-    }
-    h
+    };
+    rgba.as_chunks::<4>()
+        .0
+        .par_chunks(64_000)
+        .fold(
+            || [[0u32; 256]; 3],
+            |mut h, px| {
+                count(&mut h, px);
+                h
+            },
+        )
+        .reduce(
+            || [[0u32; 256]; 3],
+            |mut a, b| {
+                for (ca, cb) in a.iter_mut().zip(&b) {
+                    for (x, y) in ca.iter_mut().zip(cb) {
+                        *x += y;
+                    }
+                }
+                a
+            },
+        )
 }
 
 /// L'indicateur d'écrêtage sur une image RGBA (voir [`to_rgba`]).
@@ -1384,6 +1408,24 @@ fn srgb_luts() -> &'static ([f32; 256], luma_color::EncodeLut) {
 
 #[cfg(test)]
 mod tests {
+    /// L'histogramme sur tous les cœurs : les comptes d'un seul passage (le calcul
+    /// d'avant), pour des images petites, grandes et de taille impaire.
+    #[test]
+    fn histogram_on_all_cores_counts_the_same() {
+        for n in [0usize, 1, 7, 63_999, 64_001, 3_000_017] {
+            let rgba: Vec<u8> = (0..n * 4)
+                .map(|i| ((i as u64 * 2_654_435_761) >> 13) as u8)
+                .collect();
+            let mut one = [[0u32; 256]; 3];
+            for p in rgba.as_chunks::<4>().0 {
+                for c in 0..3 {
+                    one[c][usize::from(p[c])] += 1;
+                }
+            }
+            assert_eq!(super::histogram_rgba(&rgba), one, "{n} pixels");
+        }
+    }
+
     use super::*;
 
     #[test]

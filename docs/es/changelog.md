@@ -4,6 +4,8 @@
 
 La fototeca profesional, paso a paso.
 
+- **Vistas previas más rápidas**: el histograma de cada vista previa contado en todos
+  los núcleos, con los mismos recuentos: de 3,3 a 1,3 ms por vista previa de 2,8 Mpx.
 - **Rechazar las desenfocadas**: en la barra de selección, las fotos elegidas con menos
   de un tercio de la parte enfocada de la más nítida reciben la marca «Rechazada».
 - **Corrección: «Procesando…» sin fin** cuando se mostraba una colección o una
