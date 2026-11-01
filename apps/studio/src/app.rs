@@ -1056,6 +1056,12 @@ pub struct Studio {
     /// Le fichier où elle est gardée (`None` : « Zones nettes.txt » du dossier de LÜMA ;
     /// les essais en donnent un à eux).
     sensitivity_path: Option<PathBuf>,
+    /// Le dossier où arrivent les photos importées (iPhone, iPad : `Documents`) ; `None` :
+    /// celui de l'app là où le sélecteur de Photos existe, aucun ailleurs. Les essais en
+    /// donnent un à eux.
+    imports_dir: Option<PathBuf>,
+    /// Les photos importées à supprimer, en attente de confirmation.
+    pub delete_asked: Option<Vec<PathBuf>>,
     /// La part de l'aperçu au point (0 à 1), lue avec les zones nettes.
     pub sharp_share: Option<f32>,
     proofing: Proofing,
@@ -1509,6 +1515,8 @@ impl Studio {
             focus_peaking: false,
             focus_sensitivity: read_sensitivity(Self::default_sensitivity_path().as_deref()),
             sensitivity_path: None,
+            imports_dir: None,
+            delete_asked: None,
             sharp_share: None,
             proofing: Proofing::default(),
             zoom: false,
@@ -2471,6 +2479,171 @@ impl Studio {
         self.selected.clear();
         self.select(at);
         Some(copy)
+    }
+
+    /// Le dossier où arrivent les photos importées, s'il y en a un.
+    fn imports_folder(&self) -> Option<PathBuf> {
+        self.imports_dir.clone().or_else(|| {
+            luma_apple::photos::AVAILABLE
+                .then(crate::dialogs::documents)
+                .flatten()
+        })
+    }
+
+    /// Les photos arrivent dans ce dossier (les essais), comme `Documents` sur iPhone.
+    pub fn use_imports_dir(&mut self, dir: PathBuf) {
+        self.imports_dir = Some(dir);
+    }
+
+    /// Une photo importée dans LÜMA (une copie posée dans son dossier d'import, dont
+    /// l'original reste dans Photos ou Fichiers) : elle peut être supprimée sans perte.
+    /// Jamais une photo d'un dossier à soi, ni une copie virtuelle.
+    pub fn is_imported(&self, photo: &Path) -> bool {
+        luma_project::copies::number(photo).is_none()
+            && self
+                .imports_folder()
+                .is_some_and(|dir| photo.parent() == Some(dir.as_path()))
+    }
+
+    /// Les photos importées du film (« Tout effacer »).
+    pub fn imported_photos(&self) -> Vec<PathBuf> {
+        self.folder
+            .iter()
+            .filter(|p| self.is_imported(p))
+            .cloned()
+            .collect()
+    }
+
+    /// Les photos importées choisies, sinon la photo ouverte si elle l'est (« Supprimer »).
+    fn imported_targets(&self) -> Vec<PathBuf> {
+        let chosen: Vec<PathBuf> = self
+            .selected
+            .iter()
+            .filter_map(|&i| self.folder.get(i))
+            .filter(|p| self.is_imported(p))
+            .cloned()
+            .collect();
+        if !chosen.is_empty() {
+            return chosen;
+        }
+        self.current_path()
+            .filter(|p| self.is_imported(p))
+            .map(|p| vec![p.to_path_buf()])
+            .unwrap_or_default()
+    }
+
+    /// Supprime ces photos importées : leur fichier, leur XMP, leurs copies virtuelles, et
+    /// leur place dans le film et la photothèque. Celles qui ne sont pas importées ne sont
+    /// jamais touchées. Rend le nombre de photos supprimées.
+    pub fn delete_imported(&mut self, photos: &[PathBuf]) -> usize {
+        let gone: Vec<PathBuf> = photos
+            .iter()
+            .filter(|p| self.is_imported(p))
+            .cloned()
+            .collect();
+        if gone.is_empty() {
+            return 0;
+        }
+        // Rien ne doit réécrire le XMP d'une photo une fois supprimée.
+        self.flush_xmp();
+        self.xmp_due = None;
+        let mut deleted = Vec::new();
+        for p in &gone {
+            let copies = luma_project::copies::of(p);
+            if std::fs::remove_file(p).is_err() && p.exists() {
+                continue;
+            }
+            let _ = std::fs::remove_file(crate::worker::sidecar_path(p));
+            for c in &copies {
+                let _ = std::fs::remove_file(luma_project::copies::sidecar(c));
+            }
+            deleted.push(p.clone());
+            deleted.extend(copies);
+        }
+        let current = self.current_path().map(Path::to_path_buf);
+        let kept_selection: Vec<PathBuf> = self
+            .selected
+            .iter()
+            .filter_map(|&i| self.folder.get(i))
+            .filter(|p| !deleted.contains(p))
+            .cloned()
+            .collect();
+        for p in &deleted {
+            self.meta.remove(p);
+            self.edits.remove(p);
+            self.thumbs.remove(p);
+        }
+        let first = current
+            .as_ref()
+            .and_then(|c| self.folder.iter().position(|p| p == c))
+            .unwrap_or(0);
+        self.folder.retain(|p| !deleted.contains(p));
+        if let Some(dir) = self.imports_folder() {
+            self.catalog.forget_missing(&dir);
+            self.upkeep_changed();
+        }
+        self.selected = kept_selection
+            .iter()
+            .filter_map(|p| self.folder.iter().position(|f| f == p))
+            .collect();
+        let n = gone.iter().filter(|p| deleted.contains(p)).count();
+        if current.as_ref().is_some_and(|c| deleted.contains(c)) || current.is_none() {
+            self.current = None;
+            self.photo = None;
+            if !self.folder.is_empty() {
+                // La voisine de la photo supprimée prend sa place.
+                self.select(first.min(self.folder.len() - 1));
+            }
+        } else {
+            self.current = current.and_then(|c| self.folder.iter().position(|p| *p == c));
+        }
+        self.status = trf("{n} photo(s) supprimée(s).", &[("n", &n)]);
+        n
+    }
+
+    /// La confirmation d'une suppression de photos importées : combien, et que les
+    /// originaux restent.
+    fn delete_window(&mut self, ctx: &egui::Context) {
+        let Some(photos) = self.delete_asked.clone() else {
+            return;
+        };
+        let mut open = true;
+        let (mut confirmed, mut cancelled) = (false, false);
+        egui::Window::new(tr("Supprimer des photos"))
+            .id(egui::Id::unique("fenetre-supprimer-photos"))
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_max_width(380.0);
+                ui.label(trf(
+                    "{n} photo(s) seront retirées de LÜMA, avec leurs réglages, leurs notes et leurs copies virtuelles.",
+                    &[("n", &photos.len())],
+                ));
+                ui.add_space(4.0);
+                ui.label(
+                    RichText::new(tr(
+                        "Les originaux restent dans Photos ou dans Fichiers : vous pouvez les importer à nouveau.",
+                    ))
+                    .color(theme::DIM),
+                );
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(tr("Supprimer")).clicked() {
+                        confirmed = true;
+                    }
+                    if ui.button(tr("Annuler")).clicked() {
+                        cancelled = true;
+                    }
+                });
+            });
+        if confirmed {
+            self.delete_imported(&photos);
+        }
+        if confirmed || cancelled || !open {
+            self.delete_asked = None;
+        }
     }
 
     /// Supprime la copie virtuelle affichée (son XMP) et revient à son original ; une
@@ -7759,6 +7932,7 @@ impl Studio {
         if self.reset_all_open {
             self.reset_all_window(&ctx);
         }
+        self.delete_window(&ctx);
         if !allowed || self.premium_open {
             self.premium_screen(&ctx, full, !allowed);
         }
@@ -11544,6 +11718,16 @@ impl Studio {
             {
                 self.delete_copy();
             }
+            if self.is_imported(&path)
+                && ui
+                    .small_button(tr("Supprimer…"))
+                    .on_hover_text(tr(
+                        "Retire de LÜMA la photo (ou celles choisies) ; l'original reste dans Photos ou Fichiers",
+                    ))
+                    .clicked()
+            {
+                self.delete_asked = Some(self.imported_targets());
+            }
             if ui
                 .small_button(tr("Renommer…"))
                 .on_hover_text(tr("Renommer les photos choisies d'après un modèle"))
@@ -12047,7 +12231,31 @@ impl Studio {
                         vec2(ui.available_width(), 44.0),
                         egui::Sense::hover(),
                     );
-                    let place = Rect::from_min_size(row.min + vec2(pad, 0.0), vec2(width, 44.0));
+                    let imported = self.imported_photos();
+                    // « Tout effacer… » à droite quand des photos sont déjà là : repartir
+                    // de zéro avant un nouvel import.
+                    let clear = if imported.is_empty() { 0.0 } else { 130.0 };
+                    let place = Rect::from_min_size(
+                        row.min + vec2(pad, 0.0),
+                        vec2(width - if clear > 0.0 { clear + gap } else { 0.0 }, 44.0),
+                    );
+                    if clear > 0.0 {
+                        let at = Rect::from_min_size(
+                            row.min + vec2(pad + width - clear, 0.0),
+                            vec2(clear, 44.0),
+                        );
+                        let button = egui::Button::new(RichText::new(tr("Tout effacer…")).size(15.0))
+                            .corner_radius(22.0);
+                        if ui
+                            .put(at, button)
+                            .on_hover_text(tr(
+                                "Retire toutes les photos importées, pour repartir de zéro ; les originaux restent dans Photos ou Fichiers",
+                            ))
+                            .clicked()
+                        {
+                            self.delete_asked = Some(imported);
+                        }
+                    }
                     let button = egui::Button::new(
                         RichText::new(format!("+  {}", tr("Importer des photos")))
                             .size(15.0)

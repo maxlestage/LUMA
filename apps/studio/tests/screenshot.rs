@@ -4674,3 +4674,124 @@ fn focus_peaking_sensitivity_is_remembered() {
     assert_eq!(s.studio().focus_sensitivity, Sensitivity::Medium);
     s.wait();
 }
+
+/// Les photos importées (iPhone, iPad : copiées dans le dossier de LÜMA) se suppriment :
+/// « Supprimer… » retire la photo ouverte, son XMP et ses copies virtuelles, après
+/// confirmation ; « Tout effacer » (toutes les photos importées) repart de zéro. Une
+/// photo d'un dossier à soi n'est jamais supprimée.
+#[test]
+fn imported_photos_can_be_deleted() {
+    let _gpu = one_at_a_time();
+    let dir = std::env::temp_dir().join(format!("luma-effacer-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let imports = dir.join("Documents");
+    std::fs::create_dir_all(&imports).unwrap();
+    for (name, v) in [("a.png", 40u8), ("b.png", 120), ("c.png", 200)] {
+        image::RgbImage::from_fn(64, 48, |x, y| image::Rgb([v, (x * 3) as u8, (y * 5) as u8]))
+            .save(imports.join(name))
+            .unwrap();
+    }
+    let own = dir.join("a-moi.png");
+    image::RgbImage::from_pixel(64, 48, image::Rgb([90, 90, 90]))
+        .save(&own)
+        .unwrap();
+    let a = imports.join("a.png");
+    let tmp = dir.clone();
+    let docs = imports.clone();
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 1000.0])
+        .build_ui_state(
+            move |ui, studio: &mut Option<Studio>| {
+                studio
+                    .get_or_insert_with(|| {
+                        let mut s = Studio::new(ui.ctx());
+                        s.use_licence_dir(tmp.join("licence"));
+                        s.use_catalog(tmp.join("cat.lumacat"));
+                        s.use_imports_dir(docs.clone());
+                        s.tool = luma_studio::app::Tool::Library;
+                        s.open_path(&docs.join("a.png"));
+                        s
+                    })
+                    .ui(ui);
+            },
+            None,
+        );
+    harness.run_steps(5);
+    // Une copie virtuelle de « a » et des réglages à elle : supprimés avec elle.
+    let copy = harness.state_mut().as_mut().unwrap().create_copy().unwrap();
+    harness.run_steps(3);
+    harness.state_mut().as_mut().unwrap().flush_xmp();
+    assert!(luma_project::copies::sidecar(&copy).is_file());
+    {
+        let s = harness.state().as_ref().unwrap();
+        assert!(s.is_imported(&a));
+        assert!(
+            !s.is_imported(&copy),
+            "une copie virtuelle se supprime à part"
+        );
+        assert!(
+            !s.is_imported(&own),
+            "une photo à soi n'est jamais supprimée"
+        );
+        assert_eq!(s.imported_photos().len(), 3);
+    }
+    // « a » ouverte : « Supprimer… », puis la confirmation.
+    harness.state_mut().as_mut().unwrap().open_path(&a);
+    harness.run_steps(3);
+    assert_eq!(
+        harness.state().as_ref().unwrap().current_path(),
+        Some(a.as_path())
+    );
+    harness.get_by_label("Supprimer…").click();
+    harness.run_steps(2);
+    assert_eq!(
+        harness.state().as_ref().unwrap().delete_asked,
+        Some(vec![a.clone()])
+    );
+    harness.get_by_label("Supprimer des photos");
+    harness
+        .get_all_by_label("Supprimer")
+        .last()
+        .unwrap()
+        .click();
+    harness.run_steps(3);
+    assert!(!a.exists() && !luma_studio::worker::sidecar_path(&a).exists());
+    assert!(!luma_project::copies::sidecar(&copy).exists());
+    {
+        let s = harness.state().as_ref().unwrap();
+        assert!(s.delete_asked.is_none());
+        assert_eq!(s.photos(), &[imports.join("b.png"), imports.join("c.png")]);
+        assert!(s.current_path().is_some(), "la voisine prend sa place");
+        assert!(s.catalog().get(&a).is_none());
+    }
+    // Une photo à soi : jamais supprimée, même demandée.
+    assert_eq!(
+        harness
+            .state_mut()
+            .as_mut()
+            .unwrap()
+            .delete_imported(std::slice::from_ref(&own)),
+        0
+    );
+    assert!(own.is_file());
+    // Repartir de zéro : toutes les photos importées, après confirmation.
+    let all = harness.state().as_ref().unwrap().imported_photos();
+    harness.state_mut().as_mut().unwrap().delete_asked = Some(all);
+    harness.run_steps(2);
+    harness
+        .get_all_by_label("Supprimer")
+        .last()
+        .unwrap()
+        .click();
+    harness.run_steps(3);
+    assert!(harness.state().as_ref().unwrap().photos().is_empty());
+    assert!(harness.state().as_ref().unwrap().current_path().is_none());
+    assert_eq!(
+        std::fs::read_dir(&imports).unwrap().count(),
+        0,
+        "plus rien d'importé"
+    );
+    assert!(own.is_file());
+    drop(harness);
+    let _ = std::fs::remove_dir_all(&dir);
+}

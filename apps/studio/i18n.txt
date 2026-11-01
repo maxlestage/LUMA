@@ -6470,3 +6470,37 @@ es = {percent} % enfocada
 fr = {percent} % au point, la plus nette
 en = {percent}% in focus, the sharpest
 es = {percent} % enfocada, la más nítida
+
+# ----- Supprimer des photos importées (iPhone, iPad) -----
+
+fr = Supprimer…
+en = Delete…
+es = Eliminar…
+
+fr = Retire de LÜMA la photo (ou celles choisies) ; l'original reste dans Photos ou Fichiers
+en = Removes the photo (or the selected ones) from LÜMA; the original stays in Photos or Files
+es = Quita la foto (o las elegidas) de LÜMA; el original se queda en Fotos o Archivos
+
+fr = Tout effacer…
+en = Clear all…
+es = Borrar todo…
+
+fr = Retire toutes les photos importées, pour repartir de zéro ; les originaux restent dans Photos ou Fichiers
+en = Removes every imported photo, to start from scratch; the originals stay in Photos or Files
+es = Quita todas las fotos importadas, para empezar de cero; los originales se quedan en Fotos o Archivos
+
+fr = Supprimer des photos
+en = Delete photos
+es = Eliminar fotos
+
+fr = {n} photo(s) seront retirées de LÜMA, avec leurs réglages, leurs notes et leurs copies virtuelles.
+en = {n} photo(s) will be removed from LÜMA, with their settings, ratings and virtual copies.
+es = {n} foto(s) se quitarán de LÜMA, con sus ajustes, sus valoraciones y sus copias virtuales.
+
+fr = Les originaux restent dans Photos ou dans Fichiers : vous pouvez les importer à nouveau.
+en = The originals stay in Photos or in Files: you can import them again.
+es = Los originales se quedan en Fotos o en Archivos: puede importarlos de nuevo.
+
+fr = {n} photo(s) supprimée(s).
+en = {n} photo(s) deleted.
+es = {n} foto(s) eliminada(s).

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Delete imported photos (iPhone, iPad)**: “Delete…” in Metadata (the photo or the
+  selected ones) and “Clear all…” next to “Import photos”, to start from scratch;
+  after confirmation. The originals stay in Photos or Files.
 - **Photo list (CSV) replaced in one go**: an interrupted write never leaves a
   half-written list in place of the previous one.
 - **Export enlargement capped at 100 MP on iPhone and iPad** (200 elsewhere): an
