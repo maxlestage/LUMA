@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Controles más ágiles**: la memoria de las etapas ya calculadas y expulsadas de la
+  caché se reutiliza en la siguiente, con los mismos píxeles: la etapa de entrada baja
+  de 9,6 a 5,7 ms, un renderizado de vista previa cerca de un 9 % más rápido.
 - **Seleccionar la más nítida**: en la barra de selección, la parte enfocada de cada
   foto elegida (una ráfaga) medida en segundo plano; la más nítida recibe la marca
   «Seleccionada», las demás se quedan como están.
