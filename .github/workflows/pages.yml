@@ -175,7 +175,11 @@ jobs:
           LUMA_RELEASE_DOWNLOADS: https://github.com/${{ github.repository }}/releases/latest/download
           # Les fichiers Windows arrivent après l'export : la page ne peut pas les voir.
           LUMA_WINDOWS_DOWNLOADS: ${{ vars.LUMA_DOWNLOADS }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          # Le numéro de la dernière Release, affiché sur la page « Télécharger » (rien
+          # s'il n'y en a pas : la page s'en passe).
+          export LUMA_RELEASE_VERSION=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name 2>/dev/null || true)
           cargo run --release -- export dist
           test -f dist/index.html && test -f dist/pkg/luma_site_bg.wasm
 
