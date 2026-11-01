@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **In-focus areas in the comparison**: Shift+F paints them on all the compared photos
+  at once, at the chosen sensitivity.
 - **In-focus area sensitivity kept** from one session to the next (“Reset
   everything” brings it back to standard).
 - **Faster corrections from the camera JPEG**: two photos at a time, with the same

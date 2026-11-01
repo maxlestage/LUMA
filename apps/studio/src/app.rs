@@ -164,6 +164,41 @@ fn read_photo_order(path: Option<&Path>) -> (PhotoOrder, bool) {
     (order, words.next() == Some("inverse"))
 }
 
+/// La texture d'une photo de la comparaison, avec ses zones nettes peintes en vert à
+/// cette sensibilité s'il y en a une ; et le nombre de pixels peints.
+fn compare_texture(
+    ctx: &egui::Context,
+    index: usize,
+    size: [usize; 2],
+    rgba: &[u8],
+    focus: Option<luma_image::focus::Sensitivity>,
+) -> (TextureHandle, usize) {
+    let mut marked = 0;
+    let painted;
+    let pixels = match focus {
+        Some(level) => {
+            let mask = luma_image::focus::sharp_above(rgba, size[0], size[1], level.threshold());
+            let mut copy = rgba.to_vec();
+            for (p, &m) in copy.as_chunks_mut::<4>().0.iter_mut().zip(&mask) {
+                if m {
+                    p[..3].copy_from_slice(&luma_image::focus::COLOR);
+                    marked += 1;
+                }
+            }
+            painted = copy;
+            painted.as_slice()
+        }
+        None => rgba,
+    };
+    let image = crate::worker::color_image(size, pixels);
+    let texture = ctx.load_texture(
+        format!("comparaison {index}"),
+        image,
+        TextureOptions::LINEAR,
+    );
+    (texture, marked)
+}
+
 /// Un réglage du panneau : son curseur et l'endroit où il vit dans les réglages.
 struct Field {
     spec: SliderSpec,
@@ -543,6 +578,13 @@ struct Compare {
     textures: Vec<Option<TextureHandle>>,
     /// La part au point de chaque photo, arrivée avec son rendu.
     shares: Vec<Option<f32>>,
+    /// L'image de chaque photo telle qu'elle est arrivée (sans les zones nettes), pour
+    /// refaire sa texture quand on les montre ou les cache.
+    images: Vec<Option<([usize; 2], Vec<u8>)>>,
+    /// Les zones nettes peintes sur les textures (leur sensibilité), et le nombre de
+    /// pixels peints de chaque photo.
+    painted: Option<luma_image::focus::Sensitivity>,
+    marked: Vec<usize>,
     tag: u64,
     /// 1 : la photo entière ; au‑delà, agrandie.
     zoom: f32,
@@ -5590,12 +5632,10 @@ impl Studio {
                         && index < c.textures.len()
                     {
                         c.shares[index] = sharp;
-                        let image = crate::worker::color_image(size, &rgba);
-                        c.textures[index] = Some(ctx.load_texture(
-                            format!("comparaison {index}"),
-                            image,
-                            TextureOptions::LINEAR,
-                        ));
+                        let (texture, marked) = compare_texture(ctx, index, size, &rgba, c.painted);
+                        c.textures[index] = Some(texture);
+                        c.marked[index] = marked;
+                        c.images[index] = Some((size, rgba));
                     }
                 }
                 Event::Preview {
@@ -7754,6 +7794,9 @@ impl Studio {
         self.compare = Some(Compare {
             textures: vec![None; paths.len()],
             shares: vec![None; paths.len()],
+            images: vec![None; paths.len()],
+            painted: None,
+            marked: vec![0; paths.len()],
             paths,
             tag: self.compare_tag,
             zoom: 1.0,
@@ -7767,6 +7810,12 @@ impl Studio {
         self.compare
             .as_ref()
             .is_some_and(|c| c.textures.iter().all(Option::is_some))
+    }
+
+    /// Les zones nettes peintes sur la comparaison (leur sensibilité), et le nombre de
+    /// pixels peints de chaque photo.
+    pub fn compare_focus(&self) -> Option<(Option<luma_image::focus::Sensitivity>, Vec<usize>)> {
+        self.compare.as_ref().map(|c| (c.painted, c.marked.clone()))
     }
 
     /// La part au point de chaque photo comparée (`None` : pas encore mesurée).
@@ -7811,6 +7860,21 @@ impl Studio {
     }
 
     fn compare_view(&mut self, ui: &mut Ui, full: Rect, top: Rect, m: f32) {
+        // Les zones nettes (Maj+F) sur toutes les photos comparées, à la sensibilité
+        // choisie : les textures refaites quand on les montre, les cache ou en change.
+        let wanted = self.focus_peaking.then_some(self.focus_sensitivity);
+        if let Some(c) = &mut self.compare
+            && c.painted != wanted
+        {
+            c.painted = wanted;
+            for (i, image) in c.images.iter().enumerate() {
+                if let Some((size, rgba)) = image {
+                    let (texture, marked) = compare_texture(ui.ctx(), i, *size, rgba, wanted);
+                    c.textures[i] = Some(texture);
+                    c.marked[i] = marked;
+                }
+            }
+        }
         let area = Rect::from_min_max(
             pos2(full.min.x + m, top.max.y + m),
             full.max - vec2(m, m + 40.0),

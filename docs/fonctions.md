@@ -156,7 +156,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | Film du dossier avec vignettes, navigation ← → | ✅ |
 | Grille, notes (0 à 5), drapeaux (P, X, U), filtre par note et drapeau, dans le XMP | ✅ |
 | Tri en plein écran au clavier (F) : notes, drapeaux, libellés de couleur (6 à 9), photo suivante d'elle‑même (A), Échap pour sortir ; libellés aux noms du format dans le XMP, retrouvés en français, anglais et espagnol | ✅ |
-| Comparaison de 2 à 4 photos (C) : côte à côte puis en grille, chacune développée avec ses réglages ; zoom et déplacement synchronisés (molette, double clic, glisser), loupe ×4 au même endroit de chaque photo (L), la part au point de chacune (la plus nette signalée), un clic ouvre la photo | ✅ |
+| Comparaison de 2 à 4 photos (C) : côte à côte puis en grille, chacune développée avec ses réglages ; zoom et déplacement synchronisés (molette, double clic, glisser), loupe ×4 au même endroit de chaque photo (L), la part au point de chacune (la plus nette signalée) et ses zones nettes (Maj+F), un clic ouvre la photo | ✅ |
 | Piles : rafales et séries d'exposition reconnues (même boîtier, moins de deux secondes d'écart ; l'exposition qui change fait la série), repliées derrière la première photo (S pour déplier), « Fusionner la série » vers l'outil Fusion | ✅ |
 | Film trié par nom, date de prise de vue, note ou netteté (« Trier par » ; la netteté mesurée en arrière‑plan), à l'endroit ou à l'envers (« Ordre inverse »), l'ordre gardé d'une séance à l'autre ; la photo ouverte et la sélection suivent | ✅ |
 | Doublons par empreinte d'image (la même photo copiée, exportée à une autre taille ou recompressée), groupés côte à côte ; notes, drapeaux et libellés en lot sur les photos choisies | ✅ |
