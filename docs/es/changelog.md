@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Antes / después por lotes más rápido**: dos fotos a la vez, con los mismos
+  archivos (siete RAW en 2,35 s en lugar de 2,8 s); dos fotos con el mismo nombre
+  (IMG.ARW, IMG.JPG) nunca se sobrescriben.
 - **Descargar desde el sitio**: los botones «Descargar» (Mac, Linux, Windows) llevan a
   los archivos de la última Release cuando el sitio no los sirve él mismo.
 - **Selección de una ráfaga con el teclado**: Mayús+P elige la más nítida de la
