@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Netteté dans la comparaison** : sous chaque photo comparée (C), sa part au point ;
+  la plus nette est signalée en couleur.
 - **Avant / après par lot plus rapide** : deux photos à la fois, aux mêmes fichiers
   (sept RAW en 2,35 s au lieu de 2,8 s) ; deux photos du même nom (IMG.ARW, IMG.JPG)
   ne s'écrasent jamais.
