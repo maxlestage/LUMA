@@ -4,6 +4,9 @@
 
 La fototeca profesional, paso a paso.
 
+- **Interfaz más fluida**: la imagen de cada vista previa convertida en textura en
+  todos los núcleos, con los mismos colores: de 2,2 a 1,0 ms por vista previa en el
+  hilo de la interfaz.
 - **Orden inverso**, guardado de una sesión a otra: la tira al revés (la más reciente
   o la peor valorada primero); el orden elegido vuelve en el siguiente arranque.
 - **Ordenar por**: la tira ordenada por nombre, fecha de la toma o valoración (la

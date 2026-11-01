@@ -4,6 +4,8 @@
 
 The professional photo library, step by step.
 
+- **Smoother interface**: each preview turned into a texture on all cores, with the
+  same colours: from 2.2 to 1.0 ms per preview on the interface thread.
 - **Reverse order**, kept from one session to the next: the filmstrip backwards (most
   recent or lowest rated first); the chosen order comes back at the next launch.
 - **Sort by**: the filmstrip ordered by name, capture date or rating (best first);

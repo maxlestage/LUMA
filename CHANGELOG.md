@@ -4,6 +4,8 @@
 
 La photothèque professionnelle, étape par étape.
 
+- **Interface plus fluide** : l'image de chaque aperçu mise en texture sur tous les
+  cœurs, aux mêmes couleurs : de 2,2 à 1,0 ms par aperçu sur le fil de l'interface.
 - **Ordre inverse**, gardé d'une séance à l'autre : le film à l'envers (la plus récente
   ou la moins bien notée d'abord) ; l'ordre choisi revient au prochain lancement.
 - **Trier par** : le film rangé par nom, par date de prise de vue ou par note (la
