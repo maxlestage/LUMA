@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **`luma sharpness --bursts`**: burst by burst; with `--pick` and `--reject`, the
+  sharpest of each burst picked and its blurred ones rejected, photos outside any
+  burst measured without a flag.
 - **Pick the sharpest of each burst** (Library, or Alt+Shift+P): every burst in the
   filmstrip culled at once; the sharpest of each gets the “Pick” flag. Exposure
   brackets are left out.
