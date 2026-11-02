@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Move rejects aside** (Library, under the “Flag” filter): the filmstrip's rejected
+  photos and their XMP go into the “Rejects” subfolder of their folder; nothing is
+  deleted, and the filmstrip keeps the rest.
 - **Shift+P and Shift+X on the open stack**: with no photos selected, “Pick the
   sharpest” and “Reject the blurred” work on the open photo's stack; open a burst and
   press Shift+P.

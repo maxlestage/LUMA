@@ -2591,44 +2591,120 @@ impl Studio {
             deleted.push(p.clone());
             deleted.extend(copies);
         }
+        self.drop_from_film(&deleted);
+        if let Some(dir) = self.imports_folder() {
+            self.catalog.forget_missing(&dir);
+            self.upkeep_changed();
+        }
+        let n = gone.iter().filter(|p| deleted.contains(p)).count();
+        self.status = trf("{n} photo(s) supprimée(s).", &[("n", &n)]);
+        n
+    }
+
+    /// Retire ces photos du film (et de la sélection, des caches) : la voisine de la
+    /// photo ouverte prend sa place si elle en fait partie.
+    fn drop_from_film(&mut self, removed: &[PathBuf]) {
         let current = self.current_path().map(Path::to_path_buf);
         let kept_selection: Vec<PathBuf> = self
             .selected
             .iter()
             .filter_map(|&i| self.folder.get(i))
-            .filter(|p| !deleted.contains(p))
+            .filter(|p| !removed.contains(p))
             .cloned()
             .collect();
-        for p in &deleted {
+        for p in removed {
             self.meta.remove(p);
             self.edits.remove(p);
             self.thumbs.remove(p);
+            self.sharp_shares.remove(p);
         }
         let first = current
             .as_ref()
             .and_then(|c| self.folder.iter().position(|p| p == c))
             .unwrap_or(0);
-        self.folder.retain(|p| !deleted.contains(p));
-        if let Some(dir) = self.imports_folder() {
-            self.catalog.forget_missing(&dir);
-            self.upkeep_changed();
-        }
+        self.folder.retain(|p| !removed.contains(p));
         self.selected = kept_selection
             .iter()
             .filter_map(|p| self.folder.iter().position(|f| f == p))
             .collect();
-        let n = gone.iter().filter(|p| deleted.contains(p)).count();
-        if current.as_ref().is_some_and(|c| deleted.contains(c)) || current.is_none() {
+        if current.as_ref().is_some_and(|c| removed.contains(c)) || current.is_none() {
             self.current = None;
             self.photo = None;
             if !self.folder.is_empty() {
-                // La voisine de la photo supprimée prend sa place.
+                // La voisine de la photo retirée prend sa place.
                 self.select(first.min(self.folder.len() - 1));
             }
         } else {
             self.current = current.and_then(|c| self.folder.iter().position(|p| *p == c));
         }
-        self.status = trf("{n} photo(s) supprimée(s).", &[("n", &n)]);
+    }
+
+    /// Les photos rejetées du film (des fichiers, pas des copies virtuelles).
+    pub fn rejected_photos(&self) -> Vec<PathBuf> {
+        self.folder
+            .iter()
+            .filter(|p| luma_project::copies::number(p).is_none())
+            .filter(|p| self.meta.get(*p).is_some_and(|m| m.flag == Flag::Reject))
+            .cloned()
+            .collect()
+    }
+
+    /// « Ranger les rejetées » : chaque photo rejetée du film, son XMP et ceux de ses
+    /// copies virtuelles déplacés dans le sous‑dossier « Rejetées » de son dossier ;
+    /// rien n'est effacé (le dossier se rouvre et se range à la main). Une photo du même
+    /// nom déjà rangée n'est pas écrasée : celle‑là reste. Renvoie le nombre de photos
+    /// rangées.
+    pub fn move_rejects(&mut self) -> usize {
+        let rejects = self.rejected_photos();
+        if rejects.is_empty() {
+            self.status = tr("Aucune photo rejetée dans le film").into();
+            return 0;
+        }
+        // Le XMP en attente écrit d'abord : il part avec sa photo.
+        self.flush_xmp();
+        self.xmp_due = None;
+        let folder_name = tr("Rejetées|dossier").to_owned();
+        let mut moved = Vec::new();
+        let mut dirs = std::collections::BTreeSet::new();
+        for p in &rejects {
+            let (Some(dir), Some(name)) = (p.parent(), p.file_name()) else {
+                continue;
+            };
+            let target_dir = dir.join(&folder_name);
+            let target = target_dir.join(name);
+            if target.exists() || std::fs::create_dir_all(&target_dir).is_err() {
+                continue;
+            }
+            let copies = luma_project::copies::of(p);
+            if std::fs::rename(p, &target).is_err() {
+                continue;
+            }
+            // Les XMP suivent, sous leur nom à côté de la photo rangée.
+            let mut sidecars = vec![crate::worker::sidecar_path(p)];
+            sidecars.extend(copies.iter().map(|c| luma_project::copies::sidecar(c)));
+            for x in sidecars {
+                if let Some(n) = x.file_name()
+                    && x.exists()
+                {
+                    let _ = std::fs::rename(&x, target_dir.join(n));
+                }
+            }
+            dirs.insert(dir.to_path_buf());
+            moved.push(p.clone());
+            moved.extend(copies);
+        }
+        let n = rejects.iter().filter(|p| moved.contains(p)).count();
+        self.drop_from_film(&moved);
+        for dir in &dirs {
+            self.catalog.forget_missing(dir);
+        }
+        if !dirs.is_empty() {
+            self.upkeep_changed();
+        }
+        self.status = trf(
+            "{n} photo(s) rejetée(s) rangée(s) dans « {folder} »",
+            &[("n", &n), ("folder", &folder_name)],
+        );
         n
     }
 
@@ -7153,6 +7229,9 @@ impl Studio {
                 self.selected = self.visible().into_iter().collect();
                 self.status = trf("{n} photos choisies", &[("n", &self.selected.len())]);
             }
+            "move_rejects" => {
+                self.move_rejects();
+            }
             "select_none" => {
                 self.selected.clear();
                 self.status = tr("Aucune photo choisie").into();
@@ -11520,6 +11599,17 @@ impl Studio {
             (FlagFilter::Unflagged, tr("Sans drapeau (à trier)")),
         ] {
             ui.radio_value(&mut self.flag_filter, f, name);
+        }
+        // Toujours à sa place (grisé sans rejetée) : le panneau ne bouge pas.
+        let rejects = self.rejected_photos().len();
+        if ui
+            .add_enabled(rejects > 0, egui::Button::new(tr("Ranger les rejetées")).small())
+            .on_hover_text(tr(
+                "Déplace les photos rejetées du film, avec leur XMP, dans le sous-dossier « Rejetées » de leur dossier ; rien n'est effacé",
+            ))
+            .clicked()
+        {
+            self.act("move_rejects");
         }
         let keywords = self.folder_keywords();
         if !keywords.is_empty() {
