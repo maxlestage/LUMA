@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster in-focus areas**: their computation (on every preview with Shift+F, and
+  for every sharpness measurement) is 3 to 4 times faster on a 2048 px preview
+  (7.7 → 2.0 ms), with the same pixels.
 - **In-focus area color**: green, yellow, red or white (“Peaking color”, next to the
   sensitivity), when green gets lost in foliage or a meadow; kept from one session to
   the next, in the photo view as in the comparison.

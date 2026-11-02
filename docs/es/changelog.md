@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Zonas nítidas más rápidas**: su cálculo (en cada vista previa con Mayús+F, y en
+  cada medida de nitidez) es de 3 a 4 veces más rápido en una vista previa de
+  2048 px (7,7 → 2,0 ms), con los mismos píxeles.
 - **Color de las zonas nítidas**: verde, amarillo, rojo o blanco («Color de las
   zonas», junto a la sensibilidad), cuando el verde se pierde en el follaje o una
   pradera; guardado de una sesión a otra, en la vista de la foto y en la comparación.

@@ -10,6 +10,9 @@ use rayon::prelude::*;
 /// part au point (« Retenir la plus nette »), pour que les photos se comparent.
 pub const THRESHOLD: f32 = 14.0;
 
+/// Les lignes d'une bande de [`sharp_above`], menée d'un coup sur un cœur.
+const BAND: usize = 32;
+
 /// Une photo dont la part au point est sous cette fraction de celle de la plus nette
 /// d'un lot compte comme floue.
 pub const BLURRED_FRACTION: f32 = 1.0 / 3.0;
@@ -123,40 +126,49 @@ pub fn sharp_above(rgba: &[u8], w: usize, h: usize, threshold: f32) -> Vec<bool>
     if w < 5 || h < 5 || rgba.len() < w * h * 4 {
         return out;
     }
-    // La luminance lissée 3 × 3 : le bruit d'un pixel ne fait pas une zone nette.
-    let lum: Vec<f32> = rgba.as_chunks::<4>().0.par_iter().map(|p| luma(p)).collect();
-    let mut smooth = vec![0.0f32; w * h];
-    smooth
-        .par_chunks_mut(w)
-        .enumerate()
-        .skip(1)
-        .take(h - 2)
-        .for_each(|(y, row)| {
-            let (a, b, c) = (
-                &lum[(y - 1) * w..y * w],
-                &lum[y * w..(y + 1) * w],
-                &lum[(y + 1) * w..(y + 2) * w],
-            );
-            for (x, v) in row.iter_mut().enumerate().take(w - 1).skip(1) {
-                let s: f32 = (x - 1..=x + 1).map(|i| a[i] + b[i] + c[i]).sum();
-                *v = s / 9.0;
+    // Par bandes de lignes, chacune sur un cœur avec ses petits tampons (la luminance et
+    // la luminance lissée 3 × 3 de ses lignes et de leurs voisines), qui restent dans le
+    // cache : trois images entières en mémoire coûtaient plus que le calcul. Les mêmes
+    // opérations dans le même ordre, donc les mêmes pixels.
+    out.par_chunks_mut(w * BAND).enumerate().for_each(|(i, band)| {
+        let y0 = i * BAND;
+        // Les lignes marquées de la bande (les deux du bord ne comptent jamais).
+        let (ya, yb) = (y0.max(2), (y0 + band.len() / w).min(h - 2));
+        if ya >= yb {
+            return;
+        }
+        // La luminance des lignes ya − 2 à yb + 1 : le lissage du bruit d'un pixel.
+        let first = ya - 2;
+        let lum: Vec<f32> = rgba[first * w * 4..(yb + 2) * w * 4]
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|p| luma(p))
+            .collect();
+        let line = |y: usize| &lum[(y - first) * w..(y - first + 1) * w];
+        // Lissée, lignes ya − 1 à yb ; les sommes des trois lignes une fois par colonne.
+        let top = ya - 1;
+        let mut smooth = vec![0.0f32; (yb + 1 - top) * w];
+        let mut col = vec![0.0f32; w];
+        for (r, row) in (top..=yb).zip(smooth.chunks_exact_mut(w)) {
+            let (a, b, c) = (line(r - 1), line(r), line(r + 1));
+            for (i, v) in col.iter_mut().enumerate() {
+                *v = a[i] + b[i] + c[i];
             }
-        });
-    out.par_chunks_mut(w)
-        .enumerate()
-        .skip(2)
-        .take(h - 4)
-        .for_each(|(y, row)| {
-            let (up, mid, down) = (
-                &smooth[(y - 1) * w..y * w],
-                &smooth[y * w..(y + 1) * w],
-                &smooth[(y + 1) * w..(y + 2) * w],
-            );
+            for (x, v) in row.iter_mut().enumerate().take(w - 1).skip(1) {
+                *v = (col[x - 1] + col[x] + col[x + 1]) / 9.0;
+            }
+        }
+        let smoothed = |y: usize| &smooth[(y - top) * w..(y - top + 1) * w];
+        for y in ya..yb {
+            let (up, mid, down) = (smoothed(y - 1), smoothed(y), smoothed(y + 1));
+            let row = &mut band[(y - y0) * w..(y - y0 + 1) * w];
             for (x, v) in row.iter_mut().enumerate().take(w - 2).skip(2) {
                 let lap = 4.0 * mid[x] - mid[x - 1] - mid[x + 1] - up[x] - down[x];
                 *v = lap.abs() > threshold;
             }
-        });
+        }
+    });
     out
 }
 
@@ -269,6 +281,41 @@ mod tests {
         assert!(low.iter().zip(&medium).all(|(a, b)| !a || *b));
         assert!(medium.iter().zip(&high).all(|(a, b)| !a || *b));
         assert_eq!(sharp(&img, w, h), medium);
+    }
+
+    /// Le calcul par bandes donne exactement les pixels du calcul d'origine (trois images
+    /// entières : luminance, luminance lissée, laplacien), sur des tailles qui tombent
+    /// juste ou non sur les bandes, jusqu'à la plus petite, à chaque sensibilité.
+    #[test]
+    fn bands_give_the_same_pixels_as_whole_images() {
+        fn whole(rgba: &[u8], w: usize, h: usize, threshold: f32) -> Vec<bool> {
+            let mut out = vec![false; w * h];
+            let lum: Vec<f32> = rgba.as_chunks::<4>().0.iter().map(|p| luma(p)).collect();
+            let mut smooth = vec![0.0f32; w * h];
+            for y in 1..h - 1 {
+                for x in 1..w - 1 {
+                    let s: f32 = (x - 1..=x + 1)
+                        .map(|i| lum[(y - 1) * w + i] + lum[y * w + i] + lum[(y + 1) * w + i])
+                        .sum();
+                    smooth[y * w + x] = s / 9.0;
+                }
+            }
+            for y in 2..h - 2 {
+                for x in 2..w - 2 {
+                    let m = |y: usize, x: usize| smooth[y * w + x];
+                    let lap = 4.0 * m(y, x) - m(y, x - 1) - m(y, x + 1) - m(y - 1, x) - m(y + 1, x);
+                    out[y * w + x] = lap.abs() > threshold;
+                }
+            }
+            out
+        }
+        for (w, h) in [(5, 5), (7, 40), (64, BAND), (33, BAND + 1), (100, 3 * BAND + 5)] {
+            let img = image(w, h, |x, y| ((x * 7919 + y * 104_729 + x * y * 31) % 251) as u8);
+            for s in Sensitivity::ALL {
+                let t = s.threshold();
+                assert_eq!(sharp_above(&img, w, h, t), whole(&img, w, h, t), "{w} × {h}, {t}");
+            }
+        }
     }
 
     /// Chaque couleur peint les mêmes pixels (ceux de la sensibilité), de sa couleur ;
