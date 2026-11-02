@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Desplegar o plegar todas las pilas** (Mayús+S, o el botón de la Biblioteca):
+  todas las ráfagas y series de la tira de una vez; al plegarlas, la foto abierta pasa
+  a ser la portada de su pila.
 - **Rechazar las desenfocadas de cada ráfaga** (Biblioteca, o Alt+Mayús+X): en cada
   ráfaga de la tira, las fotos por debajo de un tercio de la más nítida de su ráfaga
   reciben la marca «Rechazada».

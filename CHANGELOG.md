@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Déplier ou replier toutes les piles** (Maj+S, ou le bouton de la Bibliothèque) :
+  toutes les rafales et séries du film d'un coup ; repliées, la photo ouverte devient
+  la couverture de sa pile.
 - **Rejeter les floues de chaque rafale** (Bibliothèque, ou Alt+Maj+X) : dans chaque
   rafale du film, les photos sous le tiers de la plus nette de leur rafale reçoivent
   le drapeau « Rejetée ».

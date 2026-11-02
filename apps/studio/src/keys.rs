@@ -213,6 +213,11 @@ pub const ACTIONS: &[Action] = &[
     a("compare", "Comparer", &[Combo::new(Key::C)]),
     a("loupe", "Loupe de la comparaison", &[Combo::new(Key::L)]),
     a("stack", "Déplier ou replier la pile", &[Combo::new(Key::S)]),
+    a(
+        "stack_all",
+        "Déplier ou replier toutes les piles",
+        &[Combo::shift(Key::S)],
+    ),
     a("prev", "Photo précédente", &[Combo::new(Key::ArrowLeft)]),
     a("next", "Photo suivante", &[Combo::new(Key::ArrowRight)]),
     a(

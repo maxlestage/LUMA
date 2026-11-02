@@ -465,6 +465,19 @@ fn bursts_are_stacked() {
     assert_eq!(s.studio().visible().len(), all);
     s.keys(&[(NONE, Key::S)]);
     assert_eq!(s.studio().visible().len(), all - 2);
+    // Maj+S déplie toutes les piles ; ouverte sur la dernière de la pile, Maj+S les
+    // replie toutes et la couverture devient la photo ouverte.
+    s.keys(&[(Modifiers::SHIFT, Key::S)]);
+    assert!(s.studio().all_stacks_unfolded());
+    assert_eq!(s.studio().visible().len(), all);
+    let last = stacks[0].photos[2].clone();
+    let j = s.studio().photos().iter().position(|p| *p == last).unwrap();
+    s.studio().set_current(j);
+    s.wait();
+    s.keys(&[(Modifiers::SHIFT, Key::S)]);
+    assert!(!s.studio().all_stacks_unfolded());
+    assert_eq!(s.studio().visible().len(), all - 2);
+    assert_eq!(s.studio().current_path(), Some(cover.as_path()));
     // Sans empilement, tout se voit.
     s.studio().set_stacking(false);
     assert_eq!(s.studio().visible().len(), all);
