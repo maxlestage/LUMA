@@ -4581,7 +4581,8 @@ fn burst_culling_from_the_keyboard() {
 
 /// « Retenir la plus nette de chaque rafale » (Alt+Maj+P) : deux rafales de deux
 /// photos (à dix minutes d'écart), une photo seule ; la nette de chaque rafale est
-/// retenue, la floue et la photo seule restent sans drapeau.
+/// retenue, la floue et la photo seule restent sans drapeau. Puis « Rejeter les floues
+/// de chaque rafale » (Alt+Maj+X) : la floue de chaque rafale rejetée.
 #[test]
 fn the_sharpest_of_each_burst_is_picked() {
     let _gpu = one_at_a_time();
@@ -4665,6 +4666,25 @@ fn the_sharpest_of_each_burst_is_picked() {
         ["a-1.png", "a-2.png", "b-1.png", "b-2.png", "seule.png"].map(flag),
         [Flag::None, Flag::Pick, Flag::Pick, Flag::None, Flag::None]
     );
+    // Alt+Maj+X : la floue de chaque rafale rejetée ; les retenues et la photo seule
+    // gardent leur drapeau.
+    s.keys(&[(Modifiers::SHIFT | Modifiers::ALT, Key::X)]);
+    s.wait();
+    assert_eq!(
+        s.studio().status(),
+        "Rafales : 2 photo(s) floue(s) rejetée(s) dans 2 rafale(s)"
+    );
+    s.studio().flush_xmp();
+    assert_eq!(
+        ["a-1.png", "a-2.png", "b-1.png", "b-2.png", "seule.png"].map(flag),
+        [
+            Flag::Reject,
+            Flag::Pick,
+            Flag::Pick,
+            Flag::Reject,
+            Flag::None
+        ]
+    );
 }
 
 /// Sans rafale dans le film (les RAW du corpus, chacun d'un autre boîtier), « Retenir la
@@ -4677,6 +4697,8 @@ fn no_burst_no_measure() {
     };
     assert!(s.studio().stacks().is_empty(), "{:?}", s.studio().stacks());
     s.studio().sharpest_of_each_burst();
+    assert_eq!(s.studio().status(), "Aucune rafale dans le film");
+    s.studio().blurred_of_each_burst();
     assert_eq!(s.studio().status(), "Aucune rafale dans le film");
     s.wait();
 }
