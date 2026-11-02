@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma sharpness --bursts`**: ráfaga por ráfaga; con `--pick` y `--reject`, la más
+  nítida de cada ráfaga seleccionada y sus desenfocadas rechazadas, las fotos fuera
+  de ráfaga medidas sin marca.
 - **Seleccionar la más nítida de cada ráfaga** (Biblioteca, o Alt+Mayús+P): todas
   las ráfagas de la tira cribadas de una vez; la más nítida de cada una recibe la
   marca «Seleccionada». Las series de exposición no cuentan.
