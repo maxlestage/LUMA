@@ -2,9 +2,9 @@
 
 ## 0.4.0 — à venir
 
-- **Part au point toujours à jour** : une photo dont les réglages changent sans être
-  ouverte (synchronisés, balance automatique, corrections d'objectif, remise à zéro)
-  ne garde plus sur la grille, ni pour le tri, la part au point d'avant.
+- **Maj+P et Maj+X sur la pile ouverte** : sans photos choisies, « Retenir la plus
+  nette » et « Rejeter les floues » départagent la pile de la photo ouverte ; ouvrir
+  une rafale et appuyer sur Maj+P suffit.
 - **`luma print` plus rapide** : les photos de chaque page développées deux à la
   fois ; planche contact de sept RAW : 2,2 → 1,6 s, au même PDF.
 - **La netteté sur la grille** : après « Retenir la plus nette », « Rejeter les

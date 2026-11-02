@@ -2,9 +2,9 @@
 
 ## 0.4.0 — próximamente
 
-- **Parte enfocada siempre al día**: una foto cuyos ajustes cambian sin estar abierta
-  (sincronizados, balance automático, correcciones de objetivo, restablecer) ya no
-  conserva en la cuadrícula, ni para ordenar, la parte enfocada de antes.
+- **Mayús+P y Mayús+X en la pila abierta**: sin fotos elegidas, «Seleccionar la más
+  nítida» y «Rechazar las desenfocadas» trabajan sobre la pila de la foto abierta;
+  basta con abrir una ráfaga y pulsar Mayús+P.
 - **`luma print` más rápido**: las fotos de cada página reveladas de dos en dos;
   hoja de contactos de siete RAW: 2,2 → 1,6 s, con el mismo PDF.
 - **La nitidez en la cuadrícula**: tras «Seleccionar la más nítida», «Rechazar las

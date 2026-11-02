@@ -2,9 +2,9 @@
 
 ## 0.4.0 — upcoming
 
-- **In-focus share always up to date**: a photo whose settings change without being
-  open (synced, auto white balance, lens corrections, reset) no longer keeps its old
-  in-focus share on the grid or for sorting.
+- **Shift+P and Shift+X on the open stack**: with no photos selected, “Pick the
+  sharpest” and “Reject the blurred” work on the open photo's stack; open a burst and
+  press Shift+P.
 - **Faster `luma print`**: the photos of each page developed two at a time; contact
   sheet of seven RAWs: 2.2 → 1.6 s, with the same PDF.
 - **Sharpness on the grid**: after “Pick the sharpest”, “Reject the blurred”, the

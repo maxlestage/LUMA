@@ -4975,15 +4975,6 @@ impl Studio {
             .collect()
     }
 
-    /// Les réglages d'une photo viennent d'être écrits (une autre que l'ouverte : la
-    /// synchronisation, la balance automatique, les corrections d'objectif, la remise à
-    /// zéro) : sa vignette est refaite, et sa part au point mesurée oubliée (elle ne
-    /// vaut plus pour ses nouveaux réglages, ni sur la grille, ni pour le tri).
-    fn settings_written(&mut self, path: PathBuf) {
-        self.sharp_shares.remove(&path);
-        self.worker.thumbnail(path);
-    }
-
     /// Donne les réglages de la photo ouverte (ces groupes‑là) aux autres photos
     /// choisies : leur XMP est écrit, leur vignette refaite. Rend le nombre de photos.
     pub fn sync_selected(&mut self, groups: &[luma_project::paste::Group]) -> usize {
@@ -4997,7 +4988,7 @@ impl Studio {
                 Ok(()) => {
                     done += 1;
                     self.edits.insert(path.clone(), presets::summary(&after));
-                    self.settings_written(path);
+                    self.worker.thumbnail(path);
                 }
                 Err(e) => self.status = trf("XMP non enregistré : {error}", &[("error", &e)]),
             }
@@ -5043,7 +5034,7 @@ impl Studio {
                 self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
             }
             self.edits.insert(path.clone(), presets::summary(&s));
-            self.settings_written(path);
+            self.worker.thumbnail(path);
         }
         if self.auto_pending == 0 {
             self.status = tr("Balance automatique appliquée.").into();
@@ -6721,7 +6712,7 @@ impl Studio {
                     done += 1;
                     self.edits.insert(path.clone(), presets::Summary::default());
                     self.meta.insert(path.clone(), meta);
-                    self.settings_written(path);
+                    self.worker.thumbnail(path);
                 }
                 Err(e) => self.status = trf("XMP non enregistré : {error}", &[("error", &e)]),
             }
@@ -9435,7 +9426,27 @@ impl Studio {
         let paths = match goal {
             SharpGoal::Sort => self.folder.clone(),
             SharpGoal::PickEachBurst | SharpGoal::RejectEachBurst => self.burst_photos(),
-            SharpGoal::Pick | SharpGoal::Reject => self.keyword_targets(),
+            SharpGoal::Pick | SharpGoal::Reject => {
+                // Moins de deux photos choisies, la photo ouverte dans une pile : sa pile.
+                let chosen = self.keyword_targets();
+                let stack = self
+                    .current_path()
+                    .and_then(|p| self.stack_of.get(p))
+                    .map(|&k| {
+                        self.stacks[k]
+                            .photos
+                            .iter()
+                            .filter(|p| self.folder.contains(p))
+                            .cloned()
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+                if chosen.len() < 2 && stack.len() >= 2 {
+                    stack
+                } else {
+                    chosen
+                }
+            }
         };
         if paths.len() < 2 || self.sharp_batch.is_some() {
             return;
@@ -10440,7 +10451,7 @@ impl Studio {
                 match write_sidecar(&path, &s, &meta) {
                     Ok(()) => {
                         self.edits.insert(path.clone(), presets::summary(&s));
-                        self.settings_written(path);
+                        self.worker.thumbnail(path);
                         true
                     }
                     Err(e) => {
