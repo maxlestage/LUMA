@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster `luma print`**: the photos of each page developed two at a time; contact
+  sheet of seven RAWs: 2.2 → 1.6 s, with the same PDF.
 - **Sharpness on the grid**: after “Pick the sharpest”, “Reject the blurred”, the
   sort by sharpness or their per-burst versions, each measured thumbnail shows its
   in-focus share (“12.5% sharp”); dropped when the photo is edited.

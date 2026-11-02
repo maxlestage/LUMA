@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **`luma print` plus rapide** : les photos de chaque page développées deux à la
+  fois ; planche contact de sept RAW : 2,2 → 1,6 s, au même PDF.
 - **La netteté sur la grille** : après « Retenir la plus nette », « Rejeter les
   floues », le tri par netteté ou leurs versions par rafale, chaque vignette mesurée
   porte sa part au point (« 12,5 % net ») ; oubliée quand la photo est retouchée.
