@@ -11358,19 +11358,22 @@ impl Studio {
         {
             self.stacking = stacking;
         }
-        if self.stacking && !self.stacks.is_empty() {
-            let label = if self.all_stacks_unfolded() {
-                tr("Replier toutes les piles")
-            } else {
-                tr("Déplier toutes les piles")
-            };
-            if ui
-                .small_button(label)
-                .on_hover_text(tr("Maj+S : toutes les piles du film d'un coup"))
-                .clicked()
-            {
-                self.act("stack_all");
-            }
+        // Toujours à sa place (grisé sans pile) : le panneau ne bouge pas quand le film
+        // change.
+        let label = if !self.stacks.is_empty() && self.all_stacks_unfolded() {
+            tr("Replier toutes les piles")
+        } else {
+            tr("Déplier toutes les piles")
+        };
+        if ui
+            .add_enabled(
+                self.stacking && !self.stacks.is_empty(),
+                egui::Button::new(label).small(),
+            )
+            .on_hover_text(tr("Maj+S : toutes les piles du film d'un coup"))
+            .clicked()
+        {
+            self.act("stack_all");
         }
         if ui
             .small_button(tr("Retenir la plus nette de chaque rafale"))
