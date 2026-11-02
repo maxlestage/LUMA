@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster `luma book`**: the orientation and the development of the photos two at a
+  time; seven RAWs: 3.5 → 2.8–2.9 s, with the same PDF.
 - **Invert selection** (Cmd+Alt+A, customizable): among the photos shown, the
   selected ones are deselected and the others selected; for example, select the
   keepers, invert, and reject the rest at once.

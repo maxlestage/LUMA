@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **`luma book` plus rapide** : l'orientation et le développement des photos deux à
+  la fois ; sept RAW : 3,5 → 2,8–2,9 s, au même PDF.
 - **Inverser le choix** (Cmd+Alt+A, modifiable) : parmi les photos montrées, les
   choisies ne le sont plus et les autres le deviennent ; par exemple, choisir celles
   à garder, inverser, et rejeter le reste d'un coup.
