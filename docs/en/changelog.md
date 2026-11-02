@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Fix**: after “Move rejects aside” or deleting imported photos, the report (“2
+  photo(s) deleted.”) lasted a split second, wiped by the opening of the neighboring
+  photo; it now stays on screen.
 - **“Move rejects aside” no longer overwrites settings**: a photo whose XMP has the
   name of one already moved (IMG.ARW moved before, then IMG.DNG) stays where it is;
   the settings already moved are kept.
