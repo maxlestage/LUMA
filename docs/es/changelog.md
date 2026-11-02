@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma lens` más rápido**: dos RAW a la vez; siete RAW de cámaras distintas:
+  3,4–3,6 → 2,5–2,7 s, con las mismas medidas.
 - **Desplegar o plegar todas las pilas** (Mayús+S, o el botón de la Biblioteca):
   todas las ráfagas y series de la tira de una vez; al plegarlas, la foto abierta pasa
   a ser la portada de su pila.
