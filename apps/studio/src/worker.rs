@@ -319,7 +319,7 @@ pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
 }
 
 /// Les photos menées à la fois par les traitements par lot (netteté, avant / après,
-/// corrections d'objectif, comparaison).
+/// corrections d'objectif, comparaison, vignettes).
 const BATCH_THREADS: usize = 2;
 
 /// `each` sur chaque élément, [`BATCH_THREADS`] à la fois sur des fils nommés `name` :
@@ -1207,37 +1207,73 @@ fn thumbnail_loop(
     sender: Sender<Event>,
     repaint: Arc<dyn Fn() + Send + Sync>,
 ) {
-    use std::sync::mpsc::TryRecvError;
-    let mut pending: std::collections::VecDeque<PathBuf> = std::collections::VecDeque::new();
-    loop {
-        let path = match queue.try_recv() {
-            Ok(p) => p,
-            Err(TryRecvError::Disconnected) => return,
-            Err(TryRecvError::Empty) => {
-                if let Some(p) = pending.pop_front() {
-                    guarded(&p, || render_thumbnail(&p, &sender, &repaint));
-                    continue;
+    // Les vrais rendus (les vignettes retouchées, et celles qui remplacent l'aperçu
+    // intégré au RAW) se font sur deux fils, une photo chacun : la lecture d'un RAW
+    // n'occupe qu'en partie les cœurs. Ce fil‑ci garde le rapide (les vignettes déjà
+    // enregistrées, les aperçus intégrés), dans l'ordre des demandes.
+    let renders = Arc::new(RenderQueue::default());
+    for k in 0..BATCH_THREADS {
+        let (renders, sender, repaint) = (renders.clone(), sender.clone(), repaint.clone());
+        std::thread::Builder::new()
+            .name(format!("luma-vignettes-rendu-{k}"))
+            .spawn(move || {
+                loop {
+                    let path = renders.next();
+                    guarded(&path, || render_thumbnail(&path, &sender, &repaint));
+                    renders.done(&path);
                 }
-                match queue.recv() {
-                    Ok(p) => p,
-                    Err(_) => return,
-                }
-            }
-        };
+            })
+            .expect("fil des rendus de vignettes");
+    }
+    while let Ok(path) = queue.recv() {
         guarded(&path, || {
             if saved_thumbnail(&path, &sender, &repaint) {
                 return;
             }
             // Une photo retouchée attend son vrai rendu : l'aperçu intégré au RAW la
-            // montrerait sans ses retouches.
+            // montrerait sans ses retouches. Sinon l'aperçu tout de suite, le rendu ensuite.
             let edited =
                 read_sidecar(&path).is_some_and(|s| luma_project::presets::summary(&s).is_edited());
-            if !edited && quick_thumbnail(&path, &sender, &repaint) {
-                pending.push_back(path.clone());
-            } else {
-                render_thumbnail(&path, &sender, &repaint);
+            if !edited {
+                quick_thumbnail(&path, &sender, &repaint);
             }
+            renders.push(path.clone());
         });
+    }
+}
+
+/// Les vignettes à rendre, servies aux fils de rendu ; une photo n'y est jamais deux
+/// fois (ni en attente, ni en cours), pour que deux fils ne la rendent pas ensemble.
+#[derive(Default)]
+struct RenderQueue {
+    state: Mutex<(std::collections::VecDeque<PathBuf>, Vec<PathBuf>)>,
+    ready: std::sync::Condvar,
+}
+
+impl RenderQueue {
+    fn push(&self, path: PathBuf) {
+        let mut s = self.state.lock().expect("file des vignettes");
+        if !s.0.contains(&path) && !s.1.contains(&path) {
+            s.0.push_back(path);
+            self.ready.notify_one();
+        }
+    }
+
+    /// La prochaine photo à rendre (attend qu'il y en ait une), marquée en cours.
+    fn next(&self) -> PathBuf {
+        let mut s = self.state.lock().expect("file des vignettes");
+        loop {
+            if let Some(p) = s.0.pop_front() {
+                s.1.push(p.clone());
+                return p;
+            }
+            s = self.ready.wait(s).expect("file des vignettes");
+        }
+    }
+
+    fn done(&self, path: &Path) {
+        let mut s = self.state.lock().expect("file des vignettes");
+        s.1.retain(|p| p != path);
     }
 }
 
@@ -1477,6 +1513,25 @@ mod tests {
     }
 
     use super::*;
+
+    /// La file des rendus de vignettes : une photo n'y est jamais deux fois, ni en
+    /// attente ni en cours ; une fois rendue, elle peut revenir.
+    #[test]
+    fn a_thumbnail_is_never_rendered_twice_at_once() {
+        let q = RenderQueue::default();
+        let (a, b) = (PathBuf::from("a.ARW"), PathBuf::from("b.ARW"));
+        q.push(a.clone());
+        q.push(a.clone());
+        q.push(b.clone());
+        assert_eq!(q.next(), a);
+        // En cours : pas de seconde demande.
+        q.push(a.clone());
+        assert_eq!(q.next(), b);
+        assert!(q.state.lock().unwrap().0.is_empty());
+        q.done(&a);
+        q.push(a.clone());
+        assert_eq!(q.next(), a);
+    }
 
     /// Deux photos du même nom (`photo.png`, `photo.jpg`) menées en même temps : deux
     /// avant / après distincts, aucun écrasé ; et les deux arrivent par le lot.
