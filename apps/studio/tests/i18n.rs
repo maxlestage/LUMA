@@ -312,6 +312,10 @@ fn the_interface_draws_in_every_language() {
         copy
     });
     let out = |name: &str| root().join(format!("target/studio-{name}.png"));
+    // La photothèque de l'essai, à lui : celle de l'utilisateur n'est jamais touchée
+    // (la photo ouverte y entrait, avec son chemin dans le dossier temporaire).
+    let catalog = tmp.join("cat.lumacat");
+    let users = luma_library::default_path().map(|p| std::fs::read(p).ok());
 
     for lang in [Lang::En, Lang::Es] {
         i18n::set_lang(lang);
@@ -321,6 +325,7 @@ fn the_interface_draws_in_every_language() {
 
         // L'écran Premium.
         let dir = expired.clone();
+        let cat = catalog.clone();
         let mut h = Harness::builder()
             .with_size([1440.0, 900.0])
             .wgpu()
@@ -330,6 +335,7 @@ fn the_interface_draws_in_every_language() {
                         .get_or_insert_with(|| {
                             let mut s = Studio::new(ui.ctx());
                             s.use_licence_dir(dir.clone());
+                            s.use_catalog(cat.clone());
                             s
                         })
                         .ui(ui);
@@ -351,6 +357,7 @@ fn the_interface_draws_in_every_language() {
             continue;
         };
         let licence = tmp.join(format!("licence-{code}"));
+        let cat = catalog.clone();
         let mut h = Harness::builder()
             .with_size([1440.0, 900.0])
             .wgpu()
@@ -360,6 +367,7 @@ fn the_interface_draws_in_every_language() {
                         .get_or_insert_with(|| {
                             let mut s = Studio::new(ui.ctx());
                             s.use_licence_dir(licence.clone());
+                            s.use_catalog(cat.clone());
                             s.open_path(&raw);
                             s
                         })
@@ -399,6 +407,11 @@ fn the_interface_draws_in_every_language() {
         }
     }
     i18n::set_lang(Lang::Fr);
+    assert_eq!(
+        luma_library::default_path().map(|p| std::fs::read(p).ok()),
+        users,
+        "la photothèque de l'utilisateur est restée telle quelle"
+    );
     // La photo copiée (25 Mo) et les licences d'essai ne restent pas dans le dossier
     // temporaire.
     let _ = std::fs::remove_dir_all(&tmp);
