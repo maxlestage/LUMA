@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Expand or collapse all stacks** (Shift+S, or the Library button): every burst and
+  bracket in the filmstrip at once; when collapsed, the open photo becomes the cover
+  of its stack.
 - **Reject the blurred of each burst** (Library, or Alt+Shift+X): in each burst of
   the filmstrip, the photos below a third of the sharpest of their burst get the
   “Rejected” flag.
