@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Miniaturas siempre al día**: una foto retocada mientras se genera su miniatura se
+  genera una vez más justo después, en lugar de conservar la antigua.
 - **Eliminar las fotos importadas (iPhone, iPad)**: «Eliminar…» en Metadatos (la foto
   o las elegidas) y «Borrar todo…» junto a «Importar fotos», para empezar de cero;
   tras confirmación. Los originales se quedan en Fotos o Archivos.

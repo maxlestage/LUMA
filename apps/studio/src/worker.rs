@@ -1217,8 +1217,8 @@ fn thumbnail_loop(
         std::thread::Builder::new()
             .name(format!("luma-vignettes-rendu-{k}"))
             .spawn(move || {
-                loop {
-                    let path = renders.next();
+                // Jusqu'à la fin du fil des vignettes (l'app, ou l'essai, refermé).
+                while let Some(path) = renders.next() {
                     guarded(&path, || render_thumbnail(&path, &sender, &repaint));
                     renders.done(&path);
                 }
@@ -1240,32 +1240,54 @@ fn thumbnail_loop(
             renders.push(path.clone());
         });
     }
+    // Plus de demandes : les fils de rendu finissent ce qui attend, puis s'arrêtent.
+    renders.close();
 }
 
 /// Les vignettes à rendre, servies aux fils de rendu ; une photo n'y est jamais deux
 /// fois (ni en attente, ni en cours), pour que deux fils ne la rendent pas ensemble.
+/// Redemandée pendant son rendu (retouchée entre‑temps), elle est rendue encore une
+/// fois ensuite : la vignette montre toujours les derniers réglages.
 #[derive(Default)]
 struct RenderQueue {
-    state: Mutex<(std::collections::VecDeque<PathBuf>, Vec<PathBuf>)>,
+    state: Mutex<RenderState>,
     ready: std::sync::Condvar,
+}
+
+#[derive(Default)]
+struct RenderState {
+    waiting: std::collections::VecDeque<PathBuf>,
+    running: Vec<PathBuf>,
+    /// Redemandées pendant leur rendu : remises en attente quand il finit.
+    again: Vec<PathBuf>,
+    /// Plus de demandes à venir : les fils s'arrêtent une fois l'attente vide.
+    closed: bool,
 }
 
 impl RenderQueue {
     fn push(&self, path: PathBuf) {
         let mut s = self.state.lock().expect("file des vignettes");
-        if !s.0.contains(&path) && !s.1.contains(&path) {
-            s.0.push_back(path);
+        if s.running.contains(&path) {
+            if !s.again.contains(&path) {
+                s.again.push(path);
+            }
+        } else if !s.waiting.contains(&path) {
+            s.waiting.push_back(path);
             self.ready.notify_one();
         }
     }
 
-    /// La prochaine photo à rendre (attend qu'il y en ait une), marquée en cours.
-    fn next(&self) -> PathBuf {
+    /// La prochaine photo à rendre (attend qu'il y en ait une), marquée en cours ;
+    /// `None` une fois la file fermée et vide.
+    fn next(&self) -> Option<PathBuf> {
         let mut s = self.state.lock().expect("file des vignettes");
         loop {
-            if let Some(p) = s.0.pop_front() {
-                s.1.push(p.clone());
-                return p;
+            if let Some(p) = s.waiting.pop_front() {
+                s.running.push(p.clone());
+                return Some(p);
+            }
+            if s.closed {
+                return None;
             }
             s = self.ready.wait(s).expect("file des vignettes");
         }
@@ -1273,7 +1295,18 @@ impl RenderQueue {
 
     fn done(&self, path: &Path) {
         let mut s = self.state.lock().expect("file des vignettes");
-        s.1.retain(|p| p != path);
+        s.running.retain(|p| p != path);
+        if let Some(i) = s.again.iter().position(|p| p == path) {
+            let p = s.again.remove(i);
+            s.waiting.push_back(p);
+            self.ready.notify_one();
+        }
+    }
+
+    /// Plus de demandes : réveille les fils qui attendent, pour qu'ils s'arrêtent.
+    fn close(&self) {
+        self.state.lock().expect("file des vignettes").closed = true;
+        self.ready.notify_all();
     }
 }
 
@@ -1494,6 +1527,44 @@ fn srgb_luts() -> &'static ([f32; 256], luma_color::EncodeLut) {
 
 #[cfg(test)]
 mod tests {
+    /// Une photo redemandée pendant son rendu (retouchée entre‑temps) est rendue encore
+    /// une fois ensuite, jamais par deux fils ensemble ; la file fermée, les fils
+    /// s'arrêtent au lieu d'attendre pour toujours.
+    #[test]
+    fn the_render_queue_renders_again_and_stops() {
+        let q = super::RenderQueue::default();
+        let a = std::path::PathBuf::from("a.ARW");
+        q.push(a.clone());
+        assert_eq!(q.next(), Some(a.clone()));
+        // Redemandée pendant son rendu : pas en même temps…
+        q.push(a.clone());
+        assert!(q.state.lock().unwrap().waiting.is_empty());
+        // … mais aussitôt après.
+        q.done(&a);
+        assert_eq!(q.next(), Some(a.clone()));
+        q.done(&a);
+        // Fermée : ce qui attend est servi, puis plus rien, sans attendre.
+        let b = std::path::PathBuf::from("b.ARW");
+        q.push(b.clone());
+        q.close();
+        assert_eq!(q.next(), Some(b));
+        let q = std::sync::Arc::new(q);
+        let waiting = {
+            let q = q.clone();
+            std::thread::spawn(move || q.next())
+        };
+        assert_eq!(waiting.join().unwrap(), None);
+        // Un fil qui attendait déjà est réveillé par la fermeture.
+        let q = std::sync::Arc::new(super::RenderQueue::default());
+        let waiting = {
+            let q = q.clone();
+            std::thread::spawn(move || q.next())
+        };
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        q.close();
+        assert_eq!(waiting.join().unwrap(), None);
+    }
+
     /// L'histogramme sur tous les cœurs : les comptes d'un seul passage (le calcul
     /// d'avant), pour des images petites, grandes et de taille impaire.
     #[test]
@@ -1523,14 +1594,14 @@ mod tests {
         q.push(a.clone());
         q.push(a.clone());
         q.push(b.clone());
-        assert_eq!(q.next(), a);
-        // En cours : pas de seconde demande.
+        assert_eq!(q.next(), Some(a.clone()));
+        // En cours : pas de second rendu en même temps.
         q.push(a.clone());
-        assert_eq!(q.next(), b);
-        assert!(q.state.lock().unwrap().0.is_empty());
+        assert_eq!(q.next(), Some(b));
+        assert!(q.state.lock().unwrap().waiting.is_empty());
         q.done(&a);
         q.push(a.clone());
-        assert_eq!(q.next(), a);
+        assert_eq!(q.next(), Some(a.clone()));
     }
 
     /// Deux photos du même nom (`photo.png`, `photo.jpg`) menées en même temps : deux
