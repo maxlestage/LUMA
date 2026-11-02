@@ -6435,6 +6435,18 @@ fr = La photo ouverte n'est dans aucune pile
 en = The open photo is not in a stack
 es = La foto abierta no está en ninguna pila
 
+fr = Tout choisir
+en = Select all
+es = Elegir todo
+
+fr = Ne rien choisir
+en = Select none
+es = No elegir nada
+
+fr = Aucune photo choisie
+en = No photo selected
+es = Ninguna foto elegida
+
 fr = Déplier toutes les piles
 en = Expand all stacks
 es = Desplegar todas las pilas
