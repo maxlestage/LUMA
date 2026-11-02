@@ -569,6 +569,8 @@ enum SharpGoal {
     Reject,
     /// Le film trié par netteté.
     Sort,
+    /// La plus nette de chaque rafale du film retenue.
+    PickEachBurst,
 }
 
 use luma_image::focus::BLURRED_FRACTION;
@@ -5776,6 +5778,7 @@ impl Studio {
                         {
                             match goal {
                                 SharpGoal::Pick => self.keep_sharpest(done),
+                                SharpGoal::PickEachBurst => self.keep_sharpest_of_each_burst(done),
                                 SharpGoal::Reject => self.reject_blurred(done),
                                 SharpGoal::Sort => {
                                     let n = done.iter().filter(|d| d.1.is_some()).count();
@@ -7016,6 +7019,7 @@ impl Studio {
             "pick" => self.set_meta(|m| m.flag = Flag::Pick),
             "reject" => self.set_meta(|m| m.flag = Flag::Reject),
             "pick_sharpest" => self.sharpest_selected(),
+            "pick_sharpest_bursts" => self.sharpest_of_each_burst(),
             "reject_blurred" => self.reject_blurred_selected(),
             "unflag" => self.set_meta(|m| m.flag = Flag::None),
             r if r.starts_with("rate") => {
@@ -9262,12 +9266,46 @@ impl Studio {
         self.measure_sharpness(SharpGoal::Sort);
     }
 
+    /// « Retenir la plus nette de chaque rafale » : la part au point de chaque photo des
+    /// rafales du film (ses piles de photos aux mêmes réglages ; pas les séries
+    /// d'exposition), mesurée en arrière‑plan ; la plus nette de chaque rafale reçoit le
+    /// drapeau « Retenue », les autres restent telles quelles.
+    pub fn sharpest_of_each_burst(&mut self) {
+        if self.burst_photos().is_empty() {
+            self.status = tr("Aucune rafale dans le film").into();
+            return;
+        }
+        self.measure_sharpness(SharpGoal::PickEachBurst);
+    }
+
+    /// Les rafales du film (deux photos au moins encore dans le film chacune).
+    fn bursts(&self) -> Vec<Vec<PathBuf>> {
+        self.stacks
+            .iter()
+            .filter(|s| s.kind == luma_library::stacks::Kind::Burst)
+            .map(|s| {
+                s.photos
+                    .iter()
+                    .filter(|p| self.folder.contains(p))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
+            .filter(|photos| photos.len() >= 2)
+            .collect()
+    }
+
+    /// Les photos de toutes les rafales du film.
+    fn burst_photos(&self) -> Vec<PathBuf> {
+        self.bursts().into_iter().flatten().collect()
+    }
+
     fn measure_sharpness(&mut self, goal: SharpGoal) {
-        // Le tri mesure tout le film ; les autres, les photos choisies.
-        let paths = if goal == SharpGoal::Sort {
-            self.folder.clone()
-        } else {
-            self.keyword_targets()
+        // Le tri mesure tout le film ; les rafales, leurs photos ; les autres, les photos
+        // choisies.
+        let paths = match goal {
+            SharpGoal::Sort => self.folder.clone(),
+            SharpGoal::PickEachBurst => self.burst_photos(),
+            SharpGoal::Pick | SharpGoal::Reject => self.keyword_targets(),
         };
         if paths.len() < 2 || self.sharp_batch.is_some() {
             return;
@@ -9309,6 +9347,35 @@ impl Studio {
                 ("percent", &widgets::format_value(share * 100.0, 1, false)),
                 ("next", &widgets::format_value(next * 100.0, 1, false)),
             ],
+        );
+    }
+
+    /// La plus nette de chaque rafale d'après les parts reçues : son drapeau « Retenue » ;
+    /// la barre d'état dit combien de rafales.
+    fn keep_sharpest_of_each_burst(&mut self, shares: Vec<SharpShare>) {
+        let measured: HashMap<PathBuf, f32> = shares
+            .into_iter()
+            .filter_map(|(p, s)| Some((p, s?)))
+            .collect();
+        let best: Vec<PathBuf> = self
+            .bursts()
+            .into_iter()
+            .filter_map(|photos| {
+                photos
+                    .into_iter()
+                    .filter_map(|p| Some((measured.get(&p).copied()?, p)))
+                    .max_by(|a, b| a.0.total_cmp(&b.0))
+                    .map(|(_, p)| p)
+            })
+            .collect();
+        if best.is_empty() {
+            self.status = tr("Netteté : aucune photo n'a pu être mesurée").into();
+            return;
+        }
+        self.edit_meta(&best, |m| m.flag = Flag::Pick);
+        self.status = trf(
+            "Rafales : la plus nette de chacune retenue ({n} rafale(s))",
+            &[("n", &best.len())],
         );
     }
 
@@ -11205,6 +11272,15 @@ impl Studio {
             .changed()
         {
             self.stacking = stacking;
+        }
+        if ui
+            .small_button(tr("Retenir la plus nette de chaque rafale"))
+            .on_hover_text(tr(
+                "Mesure la part au point de chaque photo des rafales du film et donne le drapeau « Retenue » à la plus nette de chacune",
+            ))
+            .clicked()
+        {
+            self.act("pick_sharpest_bursts");
         }
         ui.add_space(10.0);
         section_title(ui, tr("Filtre"));
