@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Invertir la selección** (Cmd+Alt+A, modificable): entre las fotos mostradas, las
+  elegidas dejan de estarlo y las demás pasan a estarlo; por ejemplo, elegir las que
+  se quedan, invertir y rechazar el resto de una vez.
 - **Elegir todo con el teclado**: Cmd+A elige las fotos mostradas (con el filtro
   aplicado: todas las seleccionadas de una vez, por ejemplo), Cmd+Mayús+A ninguna;
   modificables. Mientras se escribe un texto, Cmd+A sigue en el texto.
