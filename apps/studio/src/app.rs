@@ -5306,6 +5306,33 @@ impl Studio {
         self.stacking = on;
     }
 
+    /// Toutes les piles du film dépliées.
+    pub fn all_stacks_unfolded(&self) -> bool {
+        self.stacks
+            .iter()
+            .all(|s| self.unfolded.contains(&s.photos[0]))
+    }
+
+    /// Déplie toutes les piles du film, ou les replie toutes si elles le sont déjà ;
+    /// repliée, la photo ouverte devient la couverture de sa pile.
+    pub fn toggle_all_stacks(&mut self) {
+        if self.all_stacks_unfolded() {
+            self.unfolded.clear();
+            let current = self.current_path().map(Path::to_path_buf);
+            if let Some(&k) = current.as_ref().and_then(|p| self.stack_of.get(p)) {
+                let cover = self.stacks[k].photos[0].clone();
+                if current.as_ref() != Some(&cover)
+                    && let Some(i) = self.folder.iter().position(|p| *p == cover)
+                {
+                    self.select(i);
+                }
+            }
+        } else {
+            let covers: Vec<PathBuf> = self.stacks.iter().map(|s| s.photos[0].clone()).collect();
+            self.unfolded.extend(covers);
+        }
+    }
+
     /// Déplie ou replie la pile de cette photo.
     pub fn toggle_stack(&mut self, path: &Path) {
         if let Some(&k) = self.stack_of.get(path) {
@@ -7089,6 +7116,7 @@ impl Studio {
                     self.toggle_stack(&p);
                 }
             }
+            "stack_all" => self.toggle_all_stacks(),
             "loupe" => {
                 if let Some(c) = &mut self.compare {
                     c.loupe = !c.loupe;
@@ -11329,6 +11357,20 @@ impl Studio {
             .changed()
         {
             self.stacking = stacking;
+        }
+        if self.stacking && !self.stacks.is_empty() {
+            let label = if self.all_stacks_unfolded() {
+                tr("Replier toutes les piles")
+            } else {
+                tr("Déplier toutes les piles")
+            };
+            if ui
+                .small_button(label)
+                .on_hover_text(tr("Maj+S : toutes les piles du film d'un coup"))
+                .clicked()
+            {
+                self.act("stack_all");
+            }
         }
         if ui
             .small_button(tr("Retenir la plus nette de chaque rafale"))

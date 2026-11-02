@@ -6415,6 +6415,22 @@ fr = La plus nette : {file} ({percent} % au point, la suivante {next} %), retenu
 en = The sharpest: {file} ({percent}% in focus, the next {next}%), picked
 es = La más nítida: {file} ({percent} % enfocada, la siguiente {next} %), seleccionada
 
+fr = Déplier toutes les piles
+en = Expand all stacks
+es = Desplegar todas las pilas
+
+fr = Replier toutes les piles
+en = Collapse all stacks
+es = Plegar todas las pilas
+
+fr = Maj+S : toutes les piles du film d'un coup
+en = Shift+S: every stack in the filmstrip at once
+es = Mayús+S: todas las pilas de la tira de una vez
+
+fr = Déplier ou replier toutes les piles
+en = Expand or collapse all stacks
+es = Desplegar o plegar todas las pilas
+
 fr = Retenir la plus nette de chaque rafale
 en = Pick the sharpest of each burst
 es = Seleccionar la más nítida de cada ráfaga
