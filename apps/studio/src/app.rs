@@ -1064,6 +1064,9 @@ pub struct Studio {
     sharp_batch: Option<(usize, Vec<SharpShare>, SharpGoal)>,
     /// Les parts au point mesurées pour le tri par netteté.
     sharp_shares: HashMap<PathBuf, f32>,
+    /// Le message de la barre d'état gardé à l'ouverture de la photo suivante (une
+    /// photo retirée du film : sa voisine s'ouvre, le compte rendu reste).
+    keep_status: bool,
     /// Le lot des avant / après : photos demandées, écrites, en échec.
     before_after_batch: (usize, usize, usize),
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
@@ -1533,6 +1536,7 @@ impl Studio {
             before_after_batch: (0, 0, 0),
             sharp_batch: None,
             sharp_shares: HashMap::new(),
+            keep_status: false,
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -2631,7 +2635,9 @@ impl Studio {
             self.current = None;
             self.photo = None;
             if !self.folder.is_empty() {
-                // La voisine de la photo retirée prend sa place.
+                // La voisine de la photo retirée prend sa place ; le compte rendu de ce
+                // qui vient d'être fait reste affiché.
+                self.keep_status = true;
                 self.select(first.min(self.folder.len() - 1));
             }
         } else {
@@ -5729,7 +5735,9 @@ impl Studio {
                                     format!(" · {t:.1} s")
                                 };
                             }
-                            self.status = info;
+                            if !std::mem::take(&mut self.keep_status) {
+                                self.status = info;
+                            }
                             self.photo = Some(photo);
                             self.original_asked = None;
                             self.zoom = false;
