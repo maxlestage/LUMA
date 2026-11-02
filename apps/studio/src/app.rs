@@ -5812,6 +5812,9 @@ impl Studio {
                         if batch.1.len() >= batch.0
                             && let Some((_, done, goal)) = self.sharp_batch.take()
                         {
+                            // Chaque mesure reste, montrée sur la grille.
+                            self.sharp_shares
+                                .extend(done.iter().filter_map(|(p, s)| Some((p.clone(), (*s)?))));
                             match goal {
                                 SharpGoal::Pick => self.keep_sharpest(done),
                                 SharpGoal::PickEachBurst => self.keep_sharpest_of_each_burst(done),
@@ -6057,6 +6060,21 @@ impl Studio {
         self.history.truncate(self.history_pos + 1);
         self.history.push((label, self.settings.clone()));
         self.history_pos = self.history.len() - 1;
+        // Retouchée, sa part au point mesurée ne vaut plus.
+        if let Some(p) = self.current_path().map(Path::to_path_buf) {
+            self.sharp_shares.remove(&p);
+        }
+    }
+
+    /// La part au point mesurée de cette photo (par « Retenir la plus nette », « Rejeter
+    /// les floues », le tri par netteté…), telle que la grille la montre : « 12,5 % net ».
+    /// Oubliée quand la photo est retouchée.
+    pub fn sharp_label(&self, path: &Path) -> Option<String> {
+        let share = self.sharp_shares.get(path)?;
+        Some(trf(
+            "{percent} % net",
+            &[("percent", &widgets::format_value(share * 100.0, 1, false))],
+        ))
     }
 
     fn restore(&mut self, pos: usize) {
@@ -12692,6 +12710,21 @@ impl Studio {
                                         egui::StrokeKind::Outside,
                                     );
                                 }
+                                painter.galley(chip.min + vec2(5.0, 2.0), galley, theme::TEXT);
+                            }
+                            // La part au point mesurée, sous la pastille de la pile.
+                            if let Some(text) = self.sharp_label(path) {
+                                let galley = painter.layout_no_wrap(
+                                    text,
+                                    egui::FontId::proportional(10.5),
+                                    theme::TEXT,
+                                );
+                                let chip = Rect::from_min_size(
+                                    pos2(rect.max.x - 14.0 - galley.size().x, rect.min.y + 52.0),
+                                    galley.size(),
+                                )
+                                .expand2(vec2(5.0, 2.0));
+                                painter.rect_filled(chip, 6.0, Color32::from_black_alpha(160));
                                 painter.galley(chip.min + vec2(5.0, 2.0), galley, theme::TEXT);
                             }
                             // Le nom, coupé avant la pastille du libellé.

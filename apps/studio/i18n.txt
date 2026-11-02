@@ -6487,6 +6487,10 @@ fr = Rafales : {n} photo(s) floue(s) rejetée(s) dans {bursts} rafale(s)
 en = Bursts: {n} blurred photo(s) rejected in {bursts} burst(s)
 es = Ráfagas: {n} foto(s) desenfocada(s) rechazada(s) en {bursts} ráfaga(s)
 
+fr = {percent} % net
+en = {percent}% sharp
+es = {percent} % nítido
+
 fr = Aucune rafale dans le film
 en = No burst in the filmstrip
 es = Ninguna ráfaga en la tira

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **La nitidez en la cuadrícula**: tras «Seleccionar la más nítida», «Rechazar las
+  desenfocadas», el orden por nitidez o sus versiones por ráfaga, cada miniatura
+  medida muestra su parte enfocada («12,5 % nítido»); se olvida al retocar la foto.
 - **`luma book` más rápido**: la orientación y el revelado de las fotos de dos en
   dos; siete RAW: 3,5 → 2,8–2,9 s, con el mismo PDF.
 - **Invertir la selección** (Cmd+Alt+A, modificable): entre las fotos mostradas, las
