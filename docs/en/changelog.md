@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Sharpness on the grid**: after “Pick the sharpest”, “Reject the blurred”, the
+  sort by sharpness or their per-burst versions, each measured thumbnail shows its
+  in-focus share (“12.5% sharp”); dropped when the photo is edited.
 - **Faster `luma book`**: the orientation and the development of the photos two at a
   time; seven RAWs: 3.5 → 2.8–2.9 s, with the same PDF.
 - **Invert selection** (Cmd+Alt+A, customizable): among the photos shown, the

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **La netteté sur la grille** : après « Retenir la plus nette », « Rejeter les
+  floues », le tri par netteté ou leurs versions par rafale, chaque vignette mesurée
+  porte sa part au point (« 12,5 % net ») ; oubliée quand la photo est retouchée.
 - **`luma book` plus rapide** : l'orientation et le développement des photos deux à
   la fois ; sept RAW : 3,5 → 2,8–2,9 s, au même PDF.
 - **Inverser le choix** (Cmd+Alt+A, modifiable) : parmi les photos montrées, les
