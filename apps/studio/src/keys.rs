@@ -219,6 +219,12 @@ pub const ACTIONS: &[Action] = &[
         "Déplier ou replier toutes les piles",
         &[Combo::shift(Key::S)],
     ),
+    a("select_all", "Tout choisir", &[Combo::cmd(Key::A)]),
+    a(
+        "select_none",
+        "Ne rien choisir",
+        &[Combo::cmd_shift(Key::A)],
+    ),
     a("prev", "Photo précédente", &[Combo::new(Key::ArrowLeft)]),
     a("next", "Photo suivante", &[Combo::new(Key::ArrowRight)]),
     a(

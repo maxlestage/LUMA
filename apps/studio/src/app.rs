@@ -7130,6 +7130,15 @@ impl Studio {
                 }
             }
             "stack_all" => self.toggle_all_stacks(),
+            "select_all" => {
+                // Les photos montrées (filtre et piles repliées compris).
+                self.selected = self.visible().into_iter().collect();
+                self.status = trf("{n} photos choisies", &[("n", &self.selected.len())]);
+            }
+            "select_none" => {
+                self.selected.clear();
+                self.status = tr("Aucune photo choisie").into();
+            }
             "loupe" => {
                 if let Some(c) = &mut self.compare {
                     c.loupe = !c.loupe;
