@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **`luma sharpness --bursts`** : rafale par rafale ; avec `--pick` et `--reject`, la
+  plus nette de chaque rafale retenue et ses floues rejetées, les photos hors rafale
+  mesurées sans drapeau.
 - **Retenir la plus nette de chaque rafale** (Bibliothèque, ou Alt+Maj+P) : toutes les
   rafales du film triées d'un coup ; la plus nette de chacune reçoit le drapeau
   « Retenue ». Les séries d'exposition ne comptent pas.

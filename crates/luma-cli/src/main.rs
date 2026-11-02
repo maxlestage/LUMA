@@ -181,10 +181,12 @@ USAGE
       l'avant / après de chaque photo (ses réglages, sinon ceux par défaut) en un JPEG
       à côté d'elle, « nom-avant-apres.jpg » (numéroté s'il existe), chaque moitié au
       grand côté N (1600)
-  luma sharpness <photo|dossier>… [--pick] [--reject]
+  luma sharpness <photo|dossier>… [--pick] [--reject] [--bursts]
       la part au point de chaque photo (ses réglages, sinon ceux par défaut), la plus
       nette d'abord, sans IA ; --pick : la plus nette « retenue », --reject : celles
-      sous le tiers de la plus nette « rejetées » (drapeaux dans les XMP)
+      sous le tiers de la plus nette « rejetées » (drapeaux dans les XMP) ; --bursts :
+      rafale par rafale (même boîtier, moins de deux secondes d'écart, mêmes réglages),
+      les photos hors rafale mesurées sans drapeau
   luma lens <raw|dossier>… [--write]
       La distorsion et le vignetage de l'objectif, mesurés sur le JPEG que le boîtier a
       rangé dans chaque RAW (déjà corrigé) : pour les objectifs dont LÜMA ne lit pas
@@ -1978,16 +1980,22 @@ fn photos_of(p: PathBuf) -> Result<Vec<PathBuf>, String> {
     Ok(found)
 }
 
+/// Un lot de `luma sharpness` : son titre (une rafale, « Hors rafale »), ses photos et
+/// leurs parts au point, et s'il reçoit des drapeaux.
+type Lot = (Option<String>, Vec<(PathBuf, f32)>, bool);
+
 /// `luma sharpness` : la part au point de chaque photo (la mesure de l'app), la plus
-/// nette d'abord ; `--pick` et `--reject` posent les drapeaux dans les XMP.
+/// nette d'abord ; `--pick` et `--reject` posent les drapeaux dans les XMP ; avec
+/// `--bursts`, rafale par rafale (les piles de `luma_library::stacks`).
 fn sharpness(args: Vec<String>) -> Result<(), String> {
     use luma_image::focus::BLURRED_FRACTION;
-    let (mut pick, mut reject) = (false, false);
+    let (mut pick, mut reject, mut bursts) = (false, false, false);
     let mut photos = Vec::new();
     for a in args {
         match a.as_str() {
             "--pick" => pick = true,
             "--reject" => reject = true,
+            "--bursts" => bursts = true,
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => {
                 let p = PathBuf::from(a);
@@ -2018,8 +2026,38 @@ fn sharpness(args: Vec<String>) -> Result<(), String> {
             .map_err(|e| format!("{} : {e}", path.display()))?;
         shares.push((path.clone(), share));
     }
-    shares.sort_by(|a, b| b.1.total_cmp(&a.1));
-    let best = shares[0].1;
+    // Les lots à départager : le tout, ou chaque rafale puis les photos hors rafale
+    // (mesurées, sans drapeau).
+    let groups: Vec<Lot> = if bursts {
+        let entries: Vec<luma_library::Entry> = photos.iter().map(|p| luma_library::entry_of(p)).collect();
+        let stacks: Vec<Vec<PathBuf>> = luma_library::stacks::stacks(&entries)
+            .into_iter()
+            .filter(|s| s.kind == luma_library::stacks::Kind::Burst)
+            .map(|s| s.photos)
+            .collect();
+        let of = |set: &[PathBuf]| -> Vec<(PathBuf, f32)> {
+            shares.iter().filter(|(p, _)| set.contains(p)).cloned().collect()
+        };
+        let mut groups: Vec<_> = stacks
+            .iter()
+            .enumerate()
+            .map(|(k, set)| (Some(format!("Rafale {} ({} photos)", k + 1, set.len())), of(set), true))
+            .collect();
+        let alone: Vec<PathBuf> = photos
+            .iter()
+            .filter(|p| !stacks.iter().any(|s| s.contains(p)))
+            .cloned()
+            .collect();
+        if !alone.is_empty() {
+            groups.push((Some("Hors rafale".to_string()), of(&alone), false));
+        }
+        if stacks.is_empty() {
+            println!("Aucune rafale");
+        }
+        groups
+    } else {
+        vec![(None, shares, true)]
+    };
     let flag = |path: &Path, f: xmp::Flag| -> Result<(), String> {
         let mut meta = luma_library::photo_meta(path);
         meta.flag = f;
@@ -2029,21 +2067,35 @@ fn sharpness(args: Vec<String>) -> Result<(), String> {
         let target = xmp::sidecar_path(path);
         xmp::save(&target, &xmp::write_with_meta(&settings, &meta)).map_err(|e| format!("{} : {e}", target.display()))
     };
-    let mut rejected = 0;
-    for (k, (path, share)) in shares.iter().enumerate() {
-        let blurred = *share < best * BLURRED_FRACTION;
-        let mut note = String::new();
-        if pick && k == 0 {
-            flag(path, xmp::Flag::Pick)?;
-            note = " — retenue".into();
-        } else if reject && blurred {
-            flag(path, xmp::Flag::Reject)?;
-            rejected += 1;
-            note = " — rejetée".into();
-        } else if blurred {
-            note = " — floue".into();
+    let (mut rejected, mut picked) = (0, 0);
+    for (title, mut shares, flags) in groups {
+        let indent = if let Some(t) = &title {
+            println!("{t}");
+            "  "
+        } else {
+            ""
+        };
+        shares.sort_by(|a, b| b.1.total_cmp(&a.1));
+        let best = shares.first().map_or(0.0, |s| s.1);
+        for (k, (path, share)) in shares.iter().enumerate() {
+            let blurred = flags && *share < best * BLURRED_FRACTION;
+            let mut note = String::new();
+            if flags && pick && k == 0 {
+                flag(path, xmp::Flag::Pick)?;
+                picked += 1;
+                note = " — retenue".into();
+            } else if reject && blurred {
+                flag(path, xmp::Flag::Reject)?;
+                rejected += 1;
+                note = " — rejetée".into();
+            } else if blurred {
+                note = " — floue".into();
+            }
+            println!("{indent}{:5.1} %  {}{note}", share * 100.0, path.display());
         }
-        println!("{:5.1} %  {}{note}", share * 100.0, path.display());
+    }
+    if bursts && pick {
+        println!("{picked} photo(s) retenue(s) (la plus nette de chaque rafale)");
     }
     if reject {
         println!("{rejected} photo(s) rejetée(s) (moins du tiers de la plus nette)");
