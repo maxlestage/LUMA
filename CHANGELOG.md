@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **`luma export` ne reste plus bloqué** : une photo dont la lecture plante devient
+  une erreur pour elle seule ; les suivantes s'exportent, au lieu d'attendre pour
+  toujours leur tour de réserver leurs noms.
 - **« Ranger les rejetées » n'écrase plus de réglages** : une photo dont le XMP porte
   le nom d'un XMP déjà rangé (IMG.ARW rangée avant, puis IMG.DNG) reste à sa place ;
   les réglages déjà rangés sont gardés.
