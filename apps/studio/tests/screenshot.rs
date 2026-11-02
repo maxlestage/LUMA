@@ -4717,7 +4717,7 @@ fn the_sharpest_of_each_burst_is_picked() {
 /// Le filtre « Drapeau » : une retenue, une rejetée, une sans drapeau ; « Rejetées
 /// seulement » ne montre que la rejetée, « Sans drapeau (à trier) » que celle sans
 /// drapeau (et les RAW du corpus, sans drapeau eux aussi), « Toutes » tout le film ;
-/// Cmd+A choisit les photos montrées, Cmd+Maj+A aucune.
+/// Cmd+A choisit les photos montrées, Cmd+Maj+A aucune, Cmd+Alt+A inverse le choix.
 #[test]
 fn the_flag_filter_shows_rejects_or_what_is_left() {
     let _gpu = one_at_a_time();
@@ -4756,6 +4756,15 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
     );
     assert_eq!(s.studio().status(), "1 photos choisies");
     s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::A)]);
+    assert!(s.studio().selected.is_empty());
+    // Cmd+Alt+A inverse le choix parmi les photos montrées : rien choisi → la rejetée ;
+    // encore → plus rien.
+    s.keys(&[(Modifiers::COMMAND | Modifiers::ALT, Key::A)]);
+    assert_eq!(
+        s.studio().selected.iter().copied().collect::<Vec<_>>(),
+        vec![at("f-2.png")]
+    );
+    s.keys(&[(Modifiers::COMMAND | Modifiers::ALT, Key::A)]);
     assert!(s.studio().selected.is_empty());
     s.harness.get_by_label("Sans drapeau (à trier)").click();
     s.harness.run_steps(2);

@@ -225,6 +225,14 @@ pub const ACTIONS: &[Action] = &[
         "Ne rien choisir",
         &[Combo::cmd_shift(Key::A)],
     ),
+    a(
+        "select_invert",
+        "Inverser le choix",
+        &[Combo {
+            alt: true,
+            ..Combo::cmd(Key::A)
+        }],
+    ),
     a("prev", "Photo précédente", &[Combo::new(Key::ArrowLeft)]),
     a("next", "Photo suivante", &[Combo::new(Key::ArrowRight)]),
     a(
