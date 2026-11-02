@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Tout choisir au clavier** : Cmd+A choisit les photos montrées (avec le filtre en
+  place : toutes les retenues d'un coup, par exemple), Cmd+Maj+A n'en choisit plus
+  aucune ; modifiables. Pendant la saisie d'un texte, Cmd+A reste au texte.
 - **`luma gallery` et `luma slideshow` plus rapides** : deux photos à la fois ; sept
   RAW : galerie 3,3 → 2,7 s, diaporama 3,2 → 2,4–2,5 s, aux mêmes fichiers.
 - **Filtre « Drapeau » complété** : « Rejetées seulement », pour revoir le rebut avant

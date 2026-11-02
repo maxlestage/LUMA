@@ -154,7 +154,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 |---|---|
 | Lectura de los XMP (archivo sidecar `IMG_0001.xmp`), escritura en el mismo formato | ✅ guardado automático en la app |
 | Tira de película de la carpeta con miniaturas, navegación ← → | ✅ |
-| Cuadrícula, valoraciones (0 a 5), banderas (P, X, U), filtro por valoración y bandera (seleccionadas, sin rechazadas, solo rechazadas, sin marca), en el XMP | ✅ |
+| Cuadrícula, valoraciones (0 a 5), banderas (P, X, U), filtro por valoración y bandera (seleccionadas, sin rechazadas, solo rechazadas, sin marca), en el XMP; Cmd+A elige las fotos mostradas, Cmd+Mayús+A ninguna | ✅ |
 | Selección a pantalla completa con el teclado (F): valoraciones, banderas, etiquetas de color (6 a 9), foto siguiente por sí sola (A), Esc para salir; etiquetas con los nombres del formato en el XMP, encontradas en francés, inglés y español | ✅ |
 | Comparación de 2 a 4 fotos (C): lado a lado y luego en cuadrícula, cada una revelada con sus ajustes; zoom y desplazamiento sincronizados (rueda, doble clic, arrastrar), lupa ×4 en el mismo punto de cada foto (L), la parte enfocada de cada una (la más nítida destacada) y sus zonas nítidas (Mayús+F), un clic abre la foto | ✅ |
 | Pilas: ráfagas y series de exposición reconocidas (misma cámara, menos de dos segundos de diferencia; la exposición que cambia hace la serie), plegadas tras la primera foto (S para desplegar, Mayús+S para todas, Mayús+C para comparar sus fotos), «Fusionar la serie» hacia la herramienta Fusión | ✅ |

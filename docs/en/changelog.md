@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Select all from the keyboard**: Cmd+A selects the photos shown (with the filter
+  in place: every pick at once, for example), Cmd+Shift+A selects none;
+  customizable. While typing text, Cmd+A stays with the text.
 - **Faster `luma gallery` and `luma slideshow`**: two photos at a time; seven RAWs:
   gallery 3.3 → 2.7 s, slideshow 3.2 → 2.4–2.5 s, with the same files.
 - **More “Flag” filters**: “Rejects only”, to review the rejects before discarding

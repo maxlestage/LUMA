@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Elegir todo con el teclado**: Cmd+A elige las fotos mostradas (con el filtro
+  aplicado: todas las seleccionadas de una vez, por ejemplo), Cmd+Mayús+A ninguna;
+  modificables. Mientras se escribe un texto, Cmd+A sigue en el texto.
 - **`luma gallery` y `luma slideshow` más rápidos**: dos fotos a la vez; siete RAW:
   galería 3,3 → 2,7 s, presentación 3,2 → 2,4–2,5 s, con los mismos archivos.
 - **Filtro «Marca» completado**: «Solo rechazadas», para revisar el descarte antes
