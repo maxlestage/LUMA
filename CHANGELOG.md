@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **`luma sharpness` et `luma before-after` plus rapides** : deux photos à la fois,
+  comme dans l'app ; sept RAW de boîtiers différents : 2,3–2,5 → 1,8–1,9 s et
+  2,7–2,9 → 2,3–2,4 s, aux mêmes résultats.
 - **`luma sharpness --bursts`** : rafale par rafale ; avec `--pick` et `--reject`, la
   plus nette de chaque rafale retenue et ses floues rejetées, les photos hors rafale
   mesurées sans drapeau.

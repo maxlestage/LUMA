@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma sharpness` y `luma before-after` más rápidos**: dos fotos a la vez, como
+  en la app; siete RAW de cámaras distintas: 2,3–2,5 → 1,8–1,9 s y
+  2,7–2,9 → 2,3–2,4 s, con los mismos resultados.
 - **`luma sharpness --bursts`**: ráfaga por ráfaga; con `--pick` y `--reject`, la más
   nítida de cada ráfaga seleccionada y sus desenfocadas rechazadas, las fotos fuera
   de ráfaga medidas sin marca.

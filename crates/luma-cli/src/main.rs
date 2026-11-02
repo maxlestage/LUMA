@@ -1950,14 +1950,41 @@ fn before_after(args: Vec<String>) -> Result<(), String> {
     if photos.is_empty() {
         return Err("il faut des photos (ou un dossier)".into());
     }
-    for path in &photos {
+    let written = two_at_a_time(&photos, |path| {
         let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
         let settings = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
-        let out = export::write_before_after(&photo, &settings, path, side)?;
-        println!("{} → {}", path.display(), out.display());
+        export::write_before_after(&photo, &settings, path, side)
+    });
+    for (path, out) in photos.iter().zip(written) {
+        println!("{} → {}", path.display(), out?.display());
     }
     println!("{} avant / après écrit(s)", photos.len());
     Ok(())
+}
+
+/// `f` pour chaque photo, deux photos à la fois (la lecture d'un RAW n'occupe qu'en
+/// partie les cœurs : l'autre photo se rend pendant ce temps, comme dans l'app) ; les
+/// résultats dans l'ordre des photos, chacun celui de la photo seule.
+fn two_at_a_time<T: Send>(photos: &[PathBuf], f: impl Fn(&Path) -> Result<T, String> + Sync) -> Vec<Result<T, String>> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let next = AtomicUsize::new(0);
+    let slots: Vec<std::sync::Mutex<Option<Result<T, String>>>> = photos.iter().map(|_| Default::default()).collect();
+    std::thread::scope(|scope| {
+        for _ in 0..2.min(photos.len()) {
+            scope.spawn(|| {
+                loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(path) = photos.get(i) else { break };
+                    let out = f(path);
+                    *slots[i].lock().expect("résultat") = Some(out);
+                }
+            });
+        }
+    });
+    slots
+        .into_iter()
+        .map(|m| m.into_inner().expect("résultat").expect("chaque photo traitée"))
+        .collect()
 }
 
 /// Les photos d'un argument : la photo, ou celles d'un dossier (par nom), sans les
@@ -2017,14 +2044,16 @@ fn sharpness(args: Vec<String>) -> Result<(), String> {
     if photos.is_empty() {
         return Err("il faut des photos (ou un dossier)".into());
     }
-    let mut shares = Vec::new();
-    for path in &photos {
+    let measured = two_at_a_time(&photos, |path| {
         let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
         let settings = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
-        let share = photo
+        photo
             .in_focus_share(&settings, &Cancel::new())
-            .map_err(|e| format!("{} : {e}", path.display()))?;
-        shares.push((path.clone(), share));
+            .map_err(|e| format!("{} : {e}", path.display()))
+    });
+    let mut shares = Vec::new();
+    for (path, share) in photos.iter().zip(measured) {
+        shares.push((path.clone(), share?));
     }
     // Les lots à départager : le tout, ou chaque rafale puis les photos hors rafale
     // (mesurées, sans drapeau).
@@ -3073,5 +3102,35 @@ fn main() -> ExitCode {
             eprintln!("erreur : {e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Deux photos à la fois : chaque photo traitée une fois, jamais plus de deux
+    /// ensemble, les résultats (et les erreurs) dans l'ordre des photos.
+    #[test]
+    fn two_at_a_time_keeps_the_order() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let photos: Vec<PathBuf> = (0..9).map(|i| PathBuf::from(format!("{i}.png"))).collect();
+        let (running, most, calls) = (AtomicUsize::new(0), AtomicUsize::new(0), AtomicUsize::new(0));
+        let out = two_at_a_time(&photos, |p| {
+            let now = running.fetch_add(1, Ordering::SeqCst) + 1;
+            most.fetch_max(now, Ordering::SeqCst);
+            calls.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(std::time::Duration::from_millis(5));
+            running.fetch_sub(1, Ordering::SeqCst);
+            let name = p.to_string_lossy().into_owned();
+            if name == "4.png" { Err(name) } else { Ok(name) }
+        });
+        assert_eq!(calls.load(Ordering::SeqCst), 9);
+        assert!(most.load(Ordering::SeqCst) <= 2);
+        for (i, r) in out.iter().enumerate() {
+            let name = format!("{i}.png");
+            assert_eq!(r, &if i == 4 { Err(name) } else { Ok(name) });
+        }
+        assert!(two_at_a_time(&[], |_| Ok::<(), String>(())).is_empty());
     }
 }

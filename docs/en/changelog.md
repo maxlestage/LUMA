@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster `luma sharpness` and `luma before-after`**: two photos at a time, as in
+  the app; seven RAWs from different cameras: 2.3–2.5 → 1.8–1.9 s and
+  2.7–2.9 → 2.3–2.4 s, with the same results.
 - **`luma sharpness --bursts`**: burst by burst; with `--pick` and `--reject`, the
   sharpest of each burst picked and its blurred ones rejected, photos outside any
   burst measured without a flag.
