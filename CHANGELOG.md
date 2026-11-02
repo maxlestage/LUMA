@@ -11,6 +11,9 @@
 - **Agrandissement à l'export plafonné à 100 Mpx sur iPhone et iPad** (200 ailleurs) :
   la mémoire d'une app y est comptée ; le doublement de chaque côté d'un 24 Mpx passe
   toujours entier.
+- **Vignettes plus rapides** : leurs rendus se font deux photos à la fois, aux mêmes
+  images (sept RAW en 1,32 s au lieu de 1,7 s) ; l'aperçu intégré au RAW arrive
+  toujours d'abord.
 - **Le numéro de version sur la page « Télécharger »** (« Version 0.3.0 »), lu sur la
   dernière Release à chaque publication du site.
 - **Le site propose la version de votre système** : sur la page « Télécharger » et à
