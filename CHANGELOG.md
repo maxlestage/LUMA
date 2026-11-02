@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Vignettes toujours à jour** : une photo retouchée pendant le rendu de sa vignette
+  est rendue encore une fois juste après, au lieu de garder l'ancienne.
 - **Supprimer les photos importées (iPhone, iPad)** : « Supprimer… » dans Métadonnées
   (la photo ou celles choisies) et « Tout effacer… » à côté d'« Importer des photos »,
   pour repartir de zéro ; après confirmation. Les originaux restent dans Photos ou

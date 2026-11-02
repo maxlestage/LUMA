@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Thumbnails always up to date**: a photo edited while its thumbnail is being
+  rendered is rendered once more right after, instead of keeping the old one.
 - **Delete imported photos (iPhone, iPad)**: “Delete…” in Metadata (the photo or the
   selected ones) and “Clear all…” next to “Import photos”, to start from scratch;
   after confirmation. The originals stay in Photos or Files.
