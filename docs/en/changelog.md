@@ -5,6 +5,10 @@
 - **“Move rejects aside” no longer overwrites settings**: a photo whose XMP has the
   name of one already moved (IMG.ARW moved before, then IMG.DNG) stays where it is;
   the settings already moved are kept.
+- **Faster `luma export` at reduced sizes**: two photos at a time when every preset
+  scales the image down (4096 px, 16 MP at most); seven RAWs at 2048 px:
+  2.7 → 2.4 s, with the same files and names. At full size, still one at a time (two
+  whole images in memory for a 5% gain).
 - **Move rejects aside** (Library, under the “Flag” filter): the filmstrip's rejected
   photos and their XMP go into the “Rejects” subfolder of their folder; nothing is
   deleted, and the filmstrip keeps the rest.

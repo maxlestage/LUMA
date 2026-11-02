@@ -639,3 +639,56 @@ fn export_to_several_presets() {
     assert!(!ok && out.contains("luma export"), "{out}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// Exportées deux à la fois, des photos qui donnent toutes le même nom reçoivent leurs
+/// numéros dans l'ordre où elles sont données (le même qu'une après l'autre) : la
+/// première « lot.png », la deuxième « lot-2.png »… chacune avec sa propre image.
+#[test]
+fn same_names_numbered_in_order() {
+    let dir = scratch("export-ordre");
+    let file = dir.join("Exports.json");
+    let out_dir = dir.join("sortie");
+    let (ok, out) = luma(
+        &file,
+        &[
+            "export-preset",
+            "Lot",
+            "--size",
+            "32",
+            "--format",
+            "png",
+            "--folder",
+            out_dir.to_str().unwrap(),
+            "--name",
+            "lot",
+        ],
+    );
+    assert!(ok, "{out}");
+    let shades = [20u8, 70, 120, 170, 220];
+    let mut photos = Vec::new();
+    for (k, v) in shades.iter().enumerate() {
+        let p = dir.join(format!("p{k}.png"));
+        image::RgbImage::from_pixel(64, 48, image::Rgb([*v, *v, *v]))
+            .save(&p)
+            .unwrap();
+        photos.push(p.display().to_string());
+    }
+    let mut args = vec!["export", "--no-sidecar", "--preset", "Lot"];
+    args.extend(photos.iter().map(String::as_str));
+    let (ok, out) = luma(&file, &args);
+    assert!(ok && out.contains("5 fichier(s)"), "{out}");
+    let mut last = 0u8;
+    for k in 0..shades.len() {
+        let name = if k == 0 {
+            "lot.png".to_string()
+        } else {
+            format!("lot-{}.png", k + 1)
+        };
+        let (_, _, rgb) = png_rgb(&out_dir.join(&name));
+        // Le gris de chaque photo, dans l'ordre (le rendu le change, mais pas l'ordre).
+        let v = rgb[rgb.len() / 2];
+        assert!(k == 0 || v > last, "{name} : {v} après {last}");
+        last = v;
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
