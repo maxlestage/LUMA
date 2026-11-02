@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **In-focus share always up to date**: a photo whose settings change without being
+  open (synced, auto white balance, lens corrections, reset) no longer keeps its old
+  in-focus share on the grid or for sorting.
 - **Sharpness on the grid**: after “Pick the sharpest”, “Reject the blurred”, the
   sort by sharpness or their per-burst versions, each measured thumbnail shows its
   in-focus share (“12.5% sharp”); dropped when the photo is edited.

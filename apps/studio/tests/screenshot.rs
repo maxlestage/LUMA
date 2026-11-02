@@ -5071,3 +5071,50 @@ fn imported_photos_can_be_deleted() {
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// La part au point mesurée d'une photo est oubliée quand ses réglages changent sans
+/// qu'elle soit ouverte (synchronisés depuis la photo ouverte) : la grille ne montre
+/// plus un chiffre d'avant.
+#[test]
+fn a_synced_photo_forgets_its_sharpness() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("nettete-oubliee", [1440.0, 900.0], 1.0, |dir| {
+        let sharp = image::RgbImage::from_fn(1200, 800, |x, y| {
+            let v = (((x / 3) ^ (y / 5)) % 7) as u8 * 30 + ((x * y) % 17) as u8;
+            image::Rgb([v, v / 2 + 60, 255 - v])
+        });
+        sharp.save(dir.join("a-nette.png")).unwrap();
+        image::imageops::blur(&sharp, 4.0)
+            .save(dir.join("b-floue.png"))
+            .unwrap();
+    }) else {
+        return;
+    };
+    s.studio().sort_by_sharpness();
+    s.wait();
+    let open = s.studio().current_path().unwrap().to_path_buf();
+    let other = s
+        .studio()
+        .photos()
+        .iter()
+        .find(|p| **p != open && p.extension().is_some_and(|e| e == "png"))
+        .unwrap()
+        .clone();
+    assert!(s.studio().sharp_label(&other).is_some(), "mesurée");
+    // La photo ouverte plus claire, ses réglages donnés à l'autre.
+    s.studio().settings.exposure = 1.0;
+    let at = s
+        .studio()
+        .photos()
+        .iter()
+        .position(|p| *p == other)
+        .unwrap();
+    s.studio().selected.insert(at);
+    assert_eq!(
+        s.studio()
+            .sync_selected(&luma_project::paste::default_groups()),
+        1
+    );
+    assert!(s.studio().sharp_label(&other).is_none(), "plus mesurée");
+    s.wait();
+}
