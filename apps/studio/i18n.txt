@@ -1697,6 +1697,14 @@ fr = Sans les rejetées (X)
 en = Hide rejects (X)
 es = Sin rechazadas (X)
 
+fr = Rejetées seulement
+en = Rejects only
+es = Solo rechazadas
+
+fr = Sans drapeau (à trier)
+en = Unflagged (to sort)
+es = Sin marca (por cribar)
+
 fr = Raccourcis
 en = Shortcuts
 es = Atajos

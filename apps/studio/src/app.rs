@@ -545,6 +545,10 @@ pub enum FlagFilter {
     All,
     Picks,
     NotRejected,
+    /// Les rejetées seules : les revoir avant de les écarter pour de bon.
+    Rejects,
+    /// Les photos sans drapeau : ce qui reste à trier.
+    Unflagged,
 }
 
 /// L'outil Recadrage ouvert : le cadre d'avant (pour Échap) et les proportions.
@@ -2746,6 +2750,8 @@ impl Studio {
                         FlagFilter::All => true,
                         FlagFilter::Picks => m.flag == Flag::Pick,
                         FlagFilter::NotRejected => m.flag != Flag::Reject,
+                        FlagFilter::Rejects => m.flag == Flag::Reject,
+                        FlagFilter::Unflagged => m.flag == Flag::None,
                     }
                     && self
                         .keyword_filter
@@ -11453,6 +11459,8 @@ impl Studio {
             (FlagFilter::All, tr("Toutes")),
             (FlagFilter::Picks, tr("Retenues (P)")),
             (FlagFilter::NotRejected, tr("Sans les rejetées (X)")),
+            (FlagFilter::Rejects, tr("Rejetées seulement")),
+            (FlagFilter::Unflagged, tr("Sans drapeau (à trier)")),
         ] {
             ui.radio_value(&mut self.flag_filter, f, name);
         }

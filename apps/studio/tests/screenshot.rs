@@ -4706,6 +4706,49 @@ fn the_sharpest_of_each_burst_is_picked() {
     );
 }
 
+/// Le filtre « Drapeau » : une retenue, une rejetée, une sans drapeau ; « Rejetées
+/// seulement » ne montre que la rejetée, « Sans drapeau (à trier) » que celle sans
+/// drapeau (et les RAW du corpus, sans drapeau eux aussi), « Toutes » tout le film.
+#[test]
+fn the_flag_filter_shows_rejects_or_what_is_left() {
+    let _gpu = one_at_a_time();
+    // Une fenêtre haute : le filtre, en bas du panneau de la Bibliothèque, y est visible
+    // sans défiler (un clic ne vaut que sur ce qui se voit).
+    let Some(mut s) = Session::open_prepared("filtre-drapeau", [1440.0, 2000.0], 1.0, |dir| {
+        for (name, v) in [("f-1.png", 40u8), ("f-2.png", 120), ("f-3.png", 200)] {
+            image::RgbImage::from_pixel(64, 48, image::Rgb([v, v, v]))
+                .save(dir.join(name))
+                .unwrap();
+        }
+    }) else {
+        return;
+    };
+    s.studio().set_stacking(false);
+    s.keys(&[(NONE, Key::G)]);
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    s.studio().set_current(at("f-1.png"));
+    s.wait();
+    s.keys(&[(NONE, Key::P)]);
+    s.studio().set_current(at("f-2.png"));
+    s.wait();
+    s.keys(&[(NONE, Key::X)]);
+    let all = s.studio().visible().len();
+    assert_eq!(all, photos.len());
+    s.harness.get_by_label("Rejetées seulement").click();
+    s.harness.run_steps(2);
+    assert_eq!(s.studio().visible(), vec![at("f-2.png")]);
+    s.harness.get_by_label("Sans drapeau (à trier)").click();
+    s.harness.run_steps(2);
+    let left = s.studio().visible();
+    assert_eq!(left.len(), all - 2, "{left:?}");
+    assert!(left.contains(&at("f-3.png")));
+    assert!(!left.contains(&at("f-1.png")) && !left.contains(&at("f-2.png")));
+    s.harness.get_by_label("Toutes").click();
+    s.harness.run_steps(2);
+    assert_eq!(s.studio().visible().len(), all);
+}
+
 /// Sans rafale dans le film (les RAW du corpus, chacun d'un autre boîtier), « Retenir la
 /// plus nette de chaque rafale » ne mesure rien et le dit.
 #[test]

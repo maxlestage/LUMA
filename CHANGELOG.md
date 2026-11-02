@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Filtre « Drapeau » complété** : « Rejetées seulement », pour revoir le rebut avant
+  de l'écarter, et « Sans drapeau (à trier) », pour voir ce qui reste à trier.
 - **Comparer la pile** (Maj+C, ou le bouton de la Bibliothèque) : les photos de la
   pile de la photo ouverte côte à côte (quatre au plus), même repliée, sans les
   choisir une à une.
