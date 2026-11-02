@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **« Ranger les rejetées » n'écrase plus de réglages** : une photo dont le XMP porte
+  le nom d'un XMP déjà rangé (IMG.ARW rangée avant, puis IMG.DNG) reste à sa place ;
+  les réglages déjà rangés sont gardés.
 - **Ranger les rejetées** (Bibliothèque, sous le filtre « Drapeau ») : les photos
   rejetées du film et leur XMP passent dans le sous‑dossier « Rejetées » de leur
   dossier ; rien n'est effacé, et le film ne garde que le reste.

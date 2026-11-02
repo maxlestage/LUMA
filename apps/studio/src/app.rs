@@ -2672,22 +2672,32 @@ impl Studio {
             };
             let target_dir = dir.join(&folder_name);
             let target = target_dir.join(name);
-            if target.exists() || std::fs::create_dir_all(&target_dir).is_err() {
-                continue;
-            }
             let copies = luma_project::copies::of(p);
-            if std::fs::rename(p, &target).is_err() {
-                continue;
-            }
             // Les XMP suivent, sous leur nom à côté de la photo rangée.
             let mut sidecars = vec![crate::worker::sidecar_path(p)];
             sidecars.extend(copies.iter().map(|c| luma_project::copies::sidecar(c)));
-            for x in sidecars {
-                if let Some(n) = x.file_name()
-                    && x.exists()
-                {
-                    let _ = std::fs::rename(&x, target_dir.join(n));
-                }
+            let sidecars: Vec<(PathBuf, PathBuf)> = sidecars
+                .into_iter()
+                .filter(|x| x.exists())
+                .filter_map(|x| {
+                    let to = target_dir.join(x.file_name()?);
+                    Some((x, to))
+                })
+                .collect();
+            // Rien n'est écrasé : ni une photo du même nom déjà rangée, ni un XMP du même
+            // nom (celui d'une autre photo rangée avant, `IMG.ARW` puis `IMG.DNG`) ; la
+            // photo reste alors où elle est.
+            if target.exists()
+                || sidecars.iter().any(|(_, to)| to.exists())
+                || std::fs::create_dir_all(&target_dir).is_err()
+            {
+                continue;
+            }
+            if std::fs::rename(p, &target).is_err() {
+                continue;
+            }
+            for (x, to) in sidecars {
+                let _ = std::fs::rename(&x, &to);
             }
             dirs.insert(dir.to_path_buf());
             moved.push(p.clone());
