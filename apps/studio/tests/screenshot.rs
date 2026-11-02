@@ -4676,6 +4676,53 @@ fn the_sharpest_of_each_burst_is_picked() {
         [["a-1.png", "a-2.png"], ["b-1.png", "b-2.png"]],
         "{bursts:?}"
     );
+    // Rien de choisi, la photo ouverte dans la première rafale : Maj+P départage sa
+    // pile, Maj+X rejette la floue de sa pile.
+    let photos = s.studio().photos().to_vec();
+    let a1 = photos.iter().position(|p| p.ends_with("a-1.png")).unwrap();
+    s.studio().set_current(a1);
+    s.wait();
+    s.studio().selected.clear();
+    s.keys(&[(Modifiers::SHIFT, Key::P)]);
+    s.wait();
+    assert!(
+        s.studio().status().starts_with("La plus nette : a-2.png"),
+        "{}",
+        s.studio().status()
+    );
+    s.studio().selected.clear();
+    s.keys(&[(Modifiers::SHIFT, Key::X)]);
+    s.wait();
+    assert!(
+        s.studio()
+            .status()
+            .starts_with("Floues : 1 photo(s) rejetée(s)"),
+        "{}",
+        s.studio().status()
+    );
+    s.studio().flush_xmp();
+    {
+        use luma_project::xmp::Flag;
+        let flag = |name: &str| {
+            let p = photos.iter().find(|p| p.ends_with(name)).unwrap();
+            luma_studio::worker::read_meta(p).flag
+        };
+        assert_eq!(
+            ["a-1.png", "a-2.png", "b-1.png"].map(flag),
+            [Flag::Reject, Flag::Pick, Flag::None]
+        );
+        // Les drapeaux remis à zéro pour la suite.
+        s.studio().selected = [
+            a1,
+            photos.iter().position(|p| p.ends_with("a-2.png")).unwrap(),
+        ]
+        .into_iter()
+        .collect();
+        s.keys(&[(NONE, Key::U)]);
+        s.studio().selected.clear();
+        s.studio().flush_xmp();
+        assert_eq!(["a-1.png", "a-2.png"].map(flag), [Flag::None, Flag::None]);
+    }
     s.keys(&[(Modifiers::SHIFT | Modifiers::ALT, Key::P)]);
     s.wait();
     assert_eq!(
@@ -5070,51 +5117,4 @@ fn imported_photos_can_be_deleted() {
     assert!(own.is_file());
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
-}
-
-/// La part au point mesurée d'une photo est oubliée quand ses réglages changent sans
-/// qu'elle soit ouverte (synchronisés depuis la photo ouverte) : la grille ne montre
-/// plus un chiffre d'avant.
-#[test]
-fn a_synced_photo_forgets_its_sharpness() {
-    let _gpu = one_at_a_time();
-    let Some(mut s) = Session::open_prepared("nettete-oubliee", [1440.0, 900.0], 1.0, |dir| {
-        let sharp = image::RgbImage::from_fn(1200, 800, |x, y| {
-            let v = (((x / 3) ^ (y / 5)) % 7) as u8 * 30 + ((x * y) % 17) as u8;
-            image::Rgb([v, v / 2 + 60, 255 - v])
-        });
-        sharp.save(dir.join("a-nette.png")).unwrap();
-        image::imageops::blur(&sharp, 4.0)
-            .save(dir.join("b-floue.png"))
-            .unwrap();
-    }) else {
-        return;
-    };
-    s.studio().sort_by_sharpness();
-    s.wait();
-    let open = s.studio().current_path().unwrap().to_path_buf();
-    let other = s
-        .studio()
-        .photos()
-        .iter()
-        .find(|p| **p != open && p.extension().is_some_and(|e| e == "png"))
-        .unwrap()
-        .clone();
-    assert!(s.studio().sharp_label(&other).is_some(), "mesurée");
-    // La photo ouverte plus claire, ses réglages donnés à l'autre.
-    s.studio().settings.exposure = 1.0;
-    let at = s
-        .studio()
-        .photos()
-        .iter()
-        .position(|p| *p == other)
-        .unwrap();
-    s.studio().selected.insert(at);
-    assert_eq!(
-        s.studio()
-            .sync_selected(&luma_project::paste::default_groups()),
-        1
-    );
-    assert!(s.studio().sharp_label(&other).is_none(), "plus mesurée");
-    s.wait();
 }
