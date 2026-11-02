@@ -10,6 +10,9 @@
 - **Ampliación al exportar limitada a 100 MP en iPhone y iPad** (200 en los demás): la
   memoria de una app es limitada allí; duplicar cada lado de una foto de 24 MP sigue
   cabiendo.
+- **Miniaturas más rápidas**: se renderizan dos fotos a la vez, con las mismas
+  imágenes (siete RAW en 1,32 s en lugar de 1,7 s); la vista previa integrada en el
+  RAW sigue llegando primero.
 - **El número de versión en la página «Descargar»** («Versión 0.3.0»), leído en la
   última Release cada vez que se publica el sitio.
 - **El sitio propone la versión de tu sistema**: en la página «Descargar» y en la
