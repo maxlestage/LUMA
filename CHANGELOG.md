@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Couleur des zones nettes** : vert, jaune, rouge ou blanc (« Couleur des zones », à
+  côté de la sensibilité), quand le vert se perd dans un feuillage ou une prairie ;
+  gardée d'une séance à l'autre, dans la vue de la photo comme dans la comparaison.
 - **Vignettes toujours à jour** : une photo retouchée pendant le rendu de sa vignette
   est rendue encore une fois juste après, au lieu de garder l'ancienne.
 - **Supprimer les photos importées (iPhone, iPad)** : « Supprimer… » dans Métadonnées

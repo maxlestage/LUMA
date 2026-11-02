@@ -48,9 +48,62 @@ impl Sensitivity {
     }
 }
 
-/// La couleur des zones nettes : un vert vif, qu'on ne confond pas avec l'écrêtage
-/// (rouge et bleu).
+/// La couleur des zones nettes par défaut : un vert vif, qu'on ne confond pas avec
+/// l'écrêtage (rouge et bleu).
 pub const COLOR: [u8; 3] = [40, 255, 90];
+
+/// La couleur dont on peint les zones nettes : le vert par défaut ; le jaune, le rouge ou
+/// le blanc quand le vert se perd dans la photo (un feuillage, une prairie).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Color {
+    #[default]
+    Green,
+    Yellow,
+    Red,
+    White,
+}
+
+impl Color {
+    pub const ALL: [Color; 4] = [Color::Green, Color::Yellow, Color::Red, Color::White];
+
+    /// Ses valeurs RVB 8 bits.
+    pub fn rgb(self) -> [u8; 3] {
+        match self {
+            Color::Green => COLOR,
+            Color::Yellow => [255, 230, 0],
+            Color::Red => [255, 30, 30],
+            Color::White => [255, 255, 255],
+        }
+    }
+}
+
+/// L'allure des zones nettes : leur sensibilité et leur couleur.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Look {
+    pub sensitivity: Sensitivity,
+    pub color: Color,
+}
+
+/// Les zones nettes de `source` (même taille, RGBA) peintes sur `dest` avec cette
+/// allure ; le nombre de pixels peints.
+pub fn paint_look(dest: &mut [u8], source: &[u8], w: usize, h: usize, look: Look) -> usize {
+    let mask = sharp_above(source, w, h, look.sensitivity.threshold());
+    paint_mask(dest, &mask, look.color)
+}
+
+/// Les pixels marqués de `mask` peints de cette couleur sur `dest` (RGBA, l'alpha gardé) ;
+/// leur nombre.
+pub fn paint_mask(dest: &mut [u8], mask: &[bool], color: Color) -> usize {
+    let rgb = color.rgb();
+    let mut n = 0;
+    for (p, &m) in dest.as_chunks_mut::<4>().0.iter_mut().zip(mask) {
+        if m {
+            p[..3].copy_from_slice(&rgb);
+            n += 1;
+        }
+    }
+    n
+}
 
 /// La luminance (0 à 255) d'un pixel 8 bits encodé.
 #[inline]
@@ -111,14 +164,7 @@ pub fn sharp_above(rgba: &[u8], w: usize, h: usize, threshold: f32) -> Vec<bool>
 /// pixels peints.
 pub fn paint(rgba: &mut [u8], w: usize, h: usize) -> usize {
     let mask = sharp(rgba, w, h);
-    let mut n = 0;
-    for (p, &m) in rgba.as_chunks_mut::<4>().0.iter_mut().zip(&mask) {
-        if m {
-            p[..3].copy_from_slice(&COLOR);
-            n += 1;
-        }
-    }
-    n
+    paint_mask(rgba, &mask, Color::Green)
 }
 
 #[cfg(test)]
@@ -223,6 +269,36 @@ mod tests {
         assert!(low.iter().zip(&medium).all(|(a, b)| !a || *b));
         assert!(medium.iter().zip(&high).all(|(a, b)| !a || *b));
         assert_eq!(sharp(&img, w, h), medium);
+    }
+
+    /// Chaque couleur peint les mêmes pixels (ceux de la sensibilité), de sa couleur ;
+    /// les couleurs sont distinctes, la verte est celle par défaut.
+    #[test]
+    fn each_color_paints_the_same_pixels() {
+        let (w, h) = (60, 40);
+        let img = image(w, h, |x, y| if (x / 5 + y / 5).is_multiple_of(2) { 40 } else { 200 });
+        let mask = sharp_above(&img, w, h, Sensitivity::High.threshold());
+        let mut seen = Vec::new();
+        for color in Color::ALL {
+            let mut out = img.clone();
+            let look = Look {
+                sensitivity: Sensitivity::High,
+                color,
+            };
+            let n = paint_look(&mut out, &img, w, h, look);
+            assert_eq!(n, mask.iter().filter(|&&m| m).count());
+            for (i, p) in out.as_chunks::<4>().0.iter().enumerate() {
+                if mask[i] {
+                    assert_eq!(p[..3], color.rgb());
+                } else {
+                    assert_eq!(p, &img[i * 4..i * 4 + 4]);
+                }
+            }
+            assert!(!seen.contains(&color.rgb()));
+            seen.push(color.rgb());
+        }
+        assert_eq!(Look::default().color.rgb(), COLOR);
+        assert_eq!(Look::default().sensitivity, Sensitivity::Medium);
     }
 
     /// La peinture : les pixels nets en vert, les autres intacts, l'alpha gardé.
