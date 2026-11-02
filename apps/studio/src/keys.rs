@@ -211,6 +211,7 @@ pub const ACTIONS: &[Action] = &[
     ),
     a("culling", "Tri en plein écran", &[Combo::new(Key::F)]),
     a("compare", "Comparer", &[Combo::new(Key::C)]),
+    a("compare_stack", "Comparer la pile", &[Combo::shift(Key::C)]),
     a("loupe", "Loupe de la comparaison", &[Combo::new(Key::L)]),
     a("stack", "Déplier ou replier la pile", &[Combo::new(Key::S)]),
     a(

@@ -478,6 +478,12 @@ fn bursts_are_stacked() {
     assert!(!s.studio().all_stacks_unfolded());
     assert_eq!(s.studio().visible().len(), all - 2);
     assert_eq!(s.studio().current_path(), Some(cover.as_path()));
+    // Maj+C : les trois photos de la pile (repliée) comparées, dans l'ordre de la prise
+    // de vue ; Maj+C de nouveau referme.
+    s.keys(&[(Modifiers::SHIFT, Key::C)]);
+    assert_eq!(s.studio().compared(), stacks[0].photos);
+    s.keys(&[(Modifiers::SHIFT, Key::C)]);
+    assert!(s.studio().compared().is_empty());
     // Sans empilement, tout se voit.
     s.studio().set_stacking(false);
     assert_eq!(s.studio().visible().len(), all);
@@ -4713,6 +4719,12 @@ fn no_burst_no_measure() {
     assert_eq!(s.studio().status(), "Aucune rafale dans le film");
     s.studio().blurred_of_each_burst();
     assert_eq!(s.studio().status(), "Aucune rafale dans le film");
+    s.studio().start_compare_stack();
+    assert!(s.studio().compared().is_empty());
+    assert_eq!(
+        s.studio().status(),
+        "La photo ouverte n'est dans aucune pile"
+    );
     s.wait();
 }
 
