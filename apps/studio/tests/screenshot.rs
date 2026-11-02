@@ -4690,12 +4690,16 @@ fn focus_peaking_color_is_chosen_and_remembered() {
     s.keys(&[(Modifiers::SHIFT, Key::F)]);
     s.wait();
     assert!(s.harness.query_by_label("Couleur des zones").is_some());
-    // La part au point (les pixels peints) ne dépend pas de la couleur.
+    // La part au point (les pixels peints) ne dépend pas de la couleur. Deux rendus de
+    // la même photo peuvent différer d'un rien (processeur ou carte graphique, selon la
+    // machine) : la même part à 1 % près ; l'égalité exacte, à image égale, est vérifiée
+    // par `each_color_paints_the_same_pixels` (luma-image).
     let green = s.studio().sharp_share.expect("la part au point");
     assert!(green > 0.0);
     s.studio().set_focus_color(Color::Yellow);
     s.wait();
-    assert_eq!(s.studio().sharp_share, Some(green));
+    let yellow = s.studio().sharp_share.expect("la part au point");
+    assert!((yellow - green).abs() < 0.01, "{green} puis {yellow}");
     assert_eq!(s.studio().focus_look().color, Color::Yellow);
     let file = s.dir.join("zones-nettes.txt");
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "normale jaune\n");
