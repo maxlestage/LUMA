@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Correction** : après « Ranger les rejetées » ou la suppression de photos
+  importées, le compte rendu (« 2 photo(s) supprimée(s). ») restait une fraction de
+  seconde, effacé par l'ouverture de la photo voisine ; il reste affiché.
 - **« Ranger les rejetées » n'écrase plus de réglages** : une photo dont le XMP porte
   le nom d'un XMP déjà rangé (IMG.ARW rangée avant, puis IMG.DNG) reste à sa place ;
   les réglages déjà rangés sont gardés.

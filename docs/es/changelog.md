@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Corrección**: tras «Apartar las rechazadas» o eliminar fotos importadas, el
+  resumen («2 foto(s) eliminada(s).») duraba una fracción de segundo, borrado al
+  abrirse la foto vecina; ahora se queda en pantalla.
 - **«Apartar las rechazadas» ya no sobrescribe ajustes**: una foto cuyo XMP tiene el
   nombre de uno ya apartado (IMG.ARW apartada antes, luego IMG.DNG) se queda en su
   sitio; los ajustes ya apartados se conservan.
