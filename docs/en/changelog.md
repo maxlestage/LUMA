@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Pick the sharpest of each burst** (Library, or Alt+Shift+P): every burst in the
+  filmstrip culled at once; the sharpest of each gets the “Pick” flag. Exposure
+  brackets are left out.
 - **Faster in-focus areas**: their computation (on every preview with Shift+F, and
   for every sharpness measurement) is 3 to 4 times faster on a 2048 px preview
   (7.7 → 2.0 ms), with the same pixels.

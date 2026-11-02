@@ -6415,6 +6415,22 @@ fr = La plus nette : {file} ({percent} % au point, la suivante {next} %), retenu
 en = The sharpest: {file} ({percent}% in focus, the next {next}%), picked
 es = La más nítida: {file} ({percent} % enfocada, la siguiente {next} %), seleccionada
 
+fr = Retenir la plus nette de chaque rafale
+en = Pick the sharpest of each burst
+es = Seleccionar la más nítida de cada ráfaga
+
+fr = Mesure la part au point de chaque photo des rafales du film et donne le drapeau « Retenue » à la plus nette de chacune
+en = Measures the in-focus share of every photo in the filmstrip's bursts and gives the “Pick” flag to the sharpest of each
+es = Mide la parte enfocada de cada foto de las ráfagas de la tira y da la marca «Seleccionada» a la más nítida de cada una
+
+fr = Aucune rafale dans le film
+en = No burst in the filmstrip
+es = Ninguna ráfaga en la tira
+
+fr = Rafales : la plus nette de chacune retenue ({n} rafale(s))
+en = Bursts: the sharpest of each picked ({n} burst(s))
+es = Ráfagas: la más nítida de cada una seleccionada ({n} ráfaga(s))
+
 fr = Rejeter les floues
 en = Reject the blurred
 es = Rechazar las desenfocadas
