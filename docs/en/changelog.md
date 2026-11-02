@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **More “Flag” filters**: “Rejects only”, to review the rejects before discarding
+  them, and “Unflagged (to sort)”, to see what is left to cull.
 - **Compare the stack** (Shift+C, or the Library button): the photos of the open
   photo's stack side by side (four at most), even when collapsed, without picking
   them one by one.

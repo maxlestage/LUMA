@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Filtro «Marca» completado**: «Solo rechazadas», para revisar el descarte antes
+  de apartarlo, y «Sin marca (por cribar)», para ver lo que queda por cribar.
 - **Comparar la pila** (Mayús+C, o el botón de la Biblioteca): las fotos de la pila
   de la foto abierta lado a lado (cuatro como máximo), aunque esté plegada, sin
   elegirlas una a una.
