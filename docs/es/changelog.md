@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Rechazar las desenfocadas de cada ráfaga** (Biblioteca, o Alt+Mayús+X): en cada
+  ráfaga de la tira, las fotos por debajo de un tercio de la más nítida de su ráfaga
+  reciben la marca «Rechazada».
 - **`luma sharpness` y `luma before-after` más rápidos**: dos fotos a la vez, como
   en la app; siete RAW de cámaras distintas: 2,3–2,5 → 1,8–1,9 s y
   2,7–2,9 → 2,3–2,4 s, con los mismos resultados.

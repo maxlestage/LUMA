@@ -6423,6 +6423,18 @@ fr = Mesure la part au point de chaque photo des rafales du film et donne le dra
 en = Measures the in-focus share of every photo in the filmstrip's bursts and gives the “Pick” flag to the sharpest of each
 es = Mide la parte enfocada de cada foto de las ráfagas de la tira y da la marca «Seleccionada» a la más nítida de cada una
 
+fr = Rejeter les floues de chaque rafale
+en = Reject the blurred of each burst
+es = Rechazar las desenfocadas de cada ráfaga
+
+fr = Donne le drapeau « Rejetée » aux photos de chaque rafale du film qui ont moins du tiers de la part au point de la plus nette de leur rafale
+en = Gives the “Rejected” flag to the photos of each burst in the filmstrip with less than a third of the in-focus share of the sharpest of their burst
+es = Da la marca «Rechazada» a las fotos de cada ráfaga de la tira que tienen menos de un tercio de la parte enfocada de la más nítida de su ráfaga
+
+fr = Rafales : {n} photo(s) floue(s) rejetée(s) dans {bursts} rafale(s)
+en = Bursts: {n} blurred photo(s) rejected in {bursts} burst(s)
+es = Ráfagas: {n} foto(s) desenfocada(s) rechazada(s) en {bursts} ráfaga(s)
+
 fr = Aucune rafale dans le film
 en = No burst in the filmstrip
 es = Ninguna ráfaga en la tira

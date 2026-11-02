@@ -243,6 +243,14 @@ pub const ACTIONS: &[Action] = &[
         }],
     ),
     a(
+        "reject_blurred_bursts",
+        "Rejeter les floues de chaque rafale",
+        &[Combo {
+            alt: true,
+            ..Combo::shift(Key::X)
+        }],
+    ),
+    a(
         "reject_blurred",
         "Rejeter les floues",
         &[Combo::shift(Key::X)],

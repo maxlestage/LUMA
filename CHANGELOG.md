@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Rejeter les floues de chaque rafale** (Bibliothèque, ou Alt+Maj+X) : dans chaque
+  rafale du film, les photos sous le tiers de la plus nette de leur rafale reçoivent
+  le drapeau « Rejetée ».
 - **`luma sharpness` et `luma before-after` plus rapides** : deux photos à la fois,
   comme dans l'app ; sept RAW de boîtiers différents : 2,3–2,5 → 1,8–1,9 s et
   2,7–2,9 → 2,3–2,4 s, aux mêmes résultats.
