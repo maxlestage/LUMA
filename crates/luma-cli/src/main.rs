@@ -1130,11 +1130,13 @@ fn export_many(a: &Args) -> Result<(), String> {
         Some(export::Resize::Megapixels(m)) => m <= 16.0,
         Some(export::Resize::Print { .. }) | None => false,
     });
-    let turn = (std::sync::Mutex::new((0usize, taken)), std::sync::Condvar::new());
+    let turns = Turns::new(taken);
     let items: Vec<(usize, &String)> = a.positional.iter().enumerate().collect();
     let results = at_a_time(if reduced { 2 } else { 1 }, &items, |&(k, path)| {
         let path = Path::new(path);
-        let prepared = (|| -> Result<_, String> {
+        // À l'abri : une photo dont la lecture plante devient une erreur, et son tour
+        // passe (sinon la suivante attendrait pour toujours).
+        let prepared = sheltered(|| -> Result<_, String> {
             let mut settings = load_settings(a, Some(path))?;
             let photo = Photo::open(path).map_err(|e| e.to_string())?;
             if a.auto_tone {
@@ -1143,24 +1145,15 @@ fn export_many(a: &Args) -> Result<(), String> {
             let meta = sidecar_meta(a, path);
             let fields = export::NameFields::of_photo(path, &photo, &meta, k + 1);
             Ok((photo, settings, meta, fields))
-        })();
+        });
         // Son tour de réserver ses noms, même en erreur (la suivante attend).
-        let outs: Vec<PathBuf> = {
-            let mut state = turn.0.lock().expect("noms d'export");
-            while state.0 != k {
-                state = turn.1.wait(state).expect("noms d'export");
-            }
-            let outs = match &prepared {
-                Ok((_, _, _, fields)) => targets
-                    .iter()
-                    .map(|o| export::unique(export::output_path(path, o, fields), &mut state.1))
-                    .collect(),
-                Err(_) => Vec::new(),
-            };
-            state.0 += 1;
-            turn.1.notify_all();
-            outs
-        };
+        let outs: Vec<PathBuf> = turns.take(k, |taken| match &prepared {
+            Ok((_, _, _, fields)) => targets
+                .iter()
+                .map(|o| export::unique(export::output_path(path, o, fields), taken))
+                .collect(),
+            Err(_) => Vec::new(),
+        });
         let (photo, settings, meta, _) = prepared?;
         let mut n = 0;
         for (o, out) in targets.iter().zip(&outs) {
@@ -2013,6 +2006,40 @@ fn before_after(args: Vec<String>) -> Result<(), String> {
 /// résultats dans l'ordre des photos, chacun celui de la photo seule.
 fn two_at_a_time<I: Sync, T: Send>(photos: &[I], f: impl Fn(&I) -> Result<T, String> + Sync) -> Vec<Result<T, String>> {
     at_a_time(2, photos, f)
+}
+
+/// Des tours pris dans l'ordre : `take(k, …)` attend que les tours `0` à `k − 1` soient
+/// passés, puis agit sur la valeur partagée (les noms d'export réservés).
+struct Turns<T> {
+    state: std::sync::Mutex<(usize, T)>,
+    ready: std::sync::Condvar,
+}
+
+impl<T> Turns<T> {
+    fn new(value: T) -> Self {
+        Turns {
+            state: std::sync::Mutex::new((0, value)),
+            ready: std::sync::Condvar::new(),
+        }
+    }
+
+    /// Le tour `k` : `f` sur la valeur partagée, puis le tour suivant.
+    fn take<R>(&self, k: usize, f: impl FnOnce(&mut T) -> R) -> R {
+        let mut state = self.state.lock().expect("tours");
+        while state.0 != k {
+            state = self.ready.wait(state).expect("tours");
+        }
+        let out = f(&mut state.1);
+        state.0 += 1;
+        self.ready.notify_all();
+        out
+    }
+}
+
+/// `f` à l'abri : un plantage (un fichier qui fait paniquer un décodeur) devient une
+/// erreur, comme un fichier illisible.
+fn sheltered<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|_| Err("la lecture a planté".into()))
 }
 
 /// `f` pour chaque photo, `n` à la fois (voir [`two_at_a_time`]).
@@ -3176,6 +3203,37 @@ mod tests {
 
     /// Deux photos à la fois : chaque photo traitée une fois, jamais plus de deux
     /// ensemble, les résultats (et les erreurs) dans l'ordre des photos.
+    /// Deux photos à la fois, les noms réservés à tour de rôle : une photo dont la
+    /// lecture plante devient une erreur et laisse passer la suivante (avant : son tour
+    /// ne passait jamais, la suivante attendait pour toujours, l'export restait bloqué).
+    #[test]
+    fn a_crashing_photo_does_not_block_the_next() {
+        let (done, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let turns = Turns::new(Vec::new());
+            let photos: Vec<usize> = (0..4).collect();
+            let out = at_a_time(2, &photos, |&k| {
+                let prepared = sheltered(|| {
+                    if k == 1 {
+                        panic!("décodeur");
+                    }
+                    Ok(k)
+                });
+                turns.take(k, |order: &mut Vec<usize>| order.push(k));
+                prepared
+            });
+            let order = turns.state.into_inner().unwrap().1;
+            let _ = done.send((out, order));
+        });
+        let (out, order) = rx
+            .recv_timeout(std::time::Duration::from_secs(20))
+            .expect("l'export ne doit pas rester bloqué");
+        assert_eq!(order, vec![0, 1, 2, 3], "les tours dans l'ordre");
+        assert_eq!(out[0], Ok(0));
+        assert_eq!(out[1], Err("la lecture a planté".to_string()));
+        assert_eq!(out[2..], [Ok(2), Ok(3)]);
+    }
+
     #[test]
     fn two_at_a_time_keeps_the_order() {
         use std::sync::atomic::{AtomicUsize, Ordering};

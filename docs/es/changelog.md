@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma export` ya no se queda bloqueado**: una foto cuya lectura falla se convierte
+  en un error solo para ella; las siguientes se exportan, en lugar de esperar para
+  siempre su turno de reservar sus nombres.
 - **«Apartar las rechazadas» ya no sobrescribe ajustes**: una foto cuyo XMP tiene el
   nombre de uno ya apartado (IMG.ARW apartada antes, luego IMG.DNG) se queda en su
   sitio; los ajustes ya apartados se conservan.
