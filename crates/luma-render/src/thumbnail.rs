@@ -49,7 +49,11 @@ pub fn store(path: &Path, rgb: &[u8], width: u32, height: u32) -> std::io::Resul
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    let tmp = path.with_extension("tmp");
+    // Un nom de passage à chaque écriture : deux écritures de la même vignette en même
+    // temps ne mêlent jamais leurs octets.
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = path.with_extension(format!("{}-{n}.tmp", std::process::id()));
     let written = std::fs::write(&tmp, &bytes).and_then(|()| std::fs::rename(&tmp, path));
     if written.is_err() {
         let _ = std::fs::remove_file(&tmp);
