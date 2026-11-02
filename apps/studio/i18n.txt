@@ -6459,6 +6459,14 @@ fr = Haute : les détails fins d'un objectif doux comptent aussi ; basse : seuls
 en = High: the fine details of a soft lens count too; low: only the sharpest edges
 es = Alta: los detalles finos de un objetivo suave también cuentan; baja: solo los contornos más nítidos
 
+fr = Couleur des zones
+en = Peaking color
+es = Color de las zonas
+
+fr = Une autre couleur quand le vert se perd dans la photo (un feuillage, une prairie)
+en = Another color when green gets lost in the photo (foliage, a meadow)
+es = Otro color cuando el verde se pierde en la foto (follaje, una pradera)
+
 fr = Film trié par netteté ({n} photo(s) mesurée(s))
 en = Filmstrip sorted by sharpness ({n} photo(s) measured)
 es = Tira ordenada por nitidez ({n} foto(s) medida(s))

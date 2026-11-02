@@ -4633,7 +4633,7 @@ fn the_comparison_shows_the_in_focus_share() {
     s.keys(&[(Modifiers::SHIFT, Key::F)]);
     s.harness.run_steps(2);
     let (painted, marked) = s.studio().compare_focus().unwrap();
-    assert_eq!(painted, Some(Sensitivity::Medium));
+    assert_eq!(painted.map(|l| l.sensitivity), Some(Sensitivity::Medium));
     let at_cell = |name: &str| compared.iter().position(|p| p.ends_with(name)).unwrap();
     let (nette, floue) = (
         marked[at_cell("rafale-1.png")],
@@ -4644,7 +4644,7 @@ fn the_comparison_shows_the_in_focus_share() {
     s.studio().set_focus_sensitivity(Sensitivity::High);
     s.harness.run_steps(2);
     let (painted, high) = s.studio().compare_focus().unwrap();
-    assert_eq!(painted, Some(Sensitivity::High));
+    assert_eq!(painted.map(|l| l.sensitivity), Some(Sensitivity::High));
     assert!(high[at_cell("rafale-1.png")] >= nette, "{high:?}");
     s.keys(&[(Modifiers::SHIFT, Key::F)]);
     s.harness.run_steps(2);
@@ -4664,7 +4664,7 @@ fn focus_peaking_sensitivity_is_remembered() {
     assert_eq!(s.studio().focus_sensitivity, Sensitivity::Medium);
     s.studio().set_focus_sensitivity(Sensitivity::High);
     let file = s.dir.join("zones-nettes.txt");
-    assert_eq!(std::fs::read_to_string(&file).unwrap(), "haute\n");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "haute vert\n");
     let other = s.dir.join("zones-nettes-2.txt");
     std::fs::write(&other, "basse\n").unwrap();
     s.studio().use_sensitivity_file(other.clone());
@@ -4672,6 +4672,48 @@ fn focus_peaking_sensitivity_is_remembered() {
     std::fs::write(&other, "?").unwrap();
     s.studio().use_sensitivity_file(other);
     assert_eq!(s.studio().focus_sensitivity, Sensitivity::Medium);
+    s.wait();
+}
+
+/// La couleur des zones nettes : le menu « Couleur des zones » n'apparaît qu'avec elles ;
+/// les pixels peints prennent la couleur choisie, aux mêmes places ; elle est gardée
+/// avec la sensibilité (« normale jaune ») et relue, une couleur inconnue donne le vert.
+#[test]
+fn focus_peaking_color_is_chosen_and_remembered() {
+    use luma_image::focus::{Color, Sensitivity};
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("zones-nettes-couleur") else {
+        return;
+    };
+    assert_eq!(s.studio().focus_color, Color::Green);
+    assert!(s.harness.query_by_label("Couleur des zones").is_none());
+    s.keys(&[(Modifiers::SHIFT, Key::F)]);
+    s.wait();
+    assert!(s.harness.query_by_label("Couleur des zones").is_some());
+    // La part au point (les pixels peints) ne dépend pas de la couleur.
+    let green = s.studio().sharp_share.expect("la part au point");
+    assert!(green > 0.0);
+    s.studio().set_focus_color(Color::Yellow);
+    s.wait();
+    assert_eq!(s.studio().sharp_share, Some(green));
+    assert_eq!(s.studio().focus_look().color, Color::Yellow);
+    let file = s.dir.join("zones-nettes.txt");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "normale jaune\n");
+    s.studio().set_focus_sensitivity(Sensitivity::High);
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "haute jaune\n");
+    let other = s.dir.join("zones-nettes-3.txt");
+    std::fs::write(&other, "basse rouge\n").unwrap();
+    s.studio().use_sensitivity_file(other.clone());
+    assert_eq!(
+        (s.studio().focus_sensitivity, s.studio().focus_color),
+        (Sensitivity::Low, Color::Red)
+    );
+    std::fs::write(&other, "haute violet\n").unwrap();
+    s.studio().use_sensitivity_file(other);
+    assert_eq!(
+        (s.studio().focus_sensitivity, s.studio().focus_color),
+        (Sensitivity::High, Color::Green)
+    );
     s.wait();
 }
 

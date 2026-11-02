@@ -223,8 +223,8 @@ struct RenderJob {
     size: Size,
     generation: u64,
     clipping: bool,
-    /// Les zones nettes peintes par‑dessus, à cette sensibilité.
-    focus: Option<luma_image::focus::Sensitivity>,
+    /// Les zones nettes peintes par‑dessus, avec cette allure (sensibilité, couleur).
+    focus: Option<luma_image::focus::Look>,
     /// L'épreuvage à l'écran, s'il est actif.
     proof: Option<Proofed>,
     /// Joindre une copie réduite de la base (la retouche y cherche ses sources).
@@ -241,8 +241,8 @@ struct RenderJob {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Extras {
     pub clipping: bool,
-    /// Les zones nettes (`luma_image::focus`) peintes par‑dessus, à cette sensibilité.
-    pub focus: Option<luma_image::focus::Sensitivity>,
+    /// Les zones nettes (`luma_image::focus`) peintes par‑dessus, avec cette allure.
+    pub focus: Option<luma_image::focus::Look>,
     pub scene: bool,
     /// La vue des taches (les poussières du capteur en points sombres).
     pub dust_view: bool,
@@ -1089,14 +1089,8 @@ fn render_job(
         // Sur l'aperçu tel qu'il s'affiche (avant l'écrêtage, qui ne crée pas de détail).
         let sharp = job.focus.map(|level| {
             let source = clean.as_deref().unwrap_or(&rgba);
-            let mask = luma_image::focus::sharp_above(source, w, h, level.threshold());
-            let mut n = 0usize;
-            for (p, &m) in rgba.as_chunks_mut::<4>().0.iter_mut().zip(&mask) {
-                if m {
-                    p[..3].copy_from_slice(&luma_image::focus::COLOR);
-                    n += 1;
-                }
-            }
+            let mask = luma_image::focus::sharp_above(source, w, h, level.sensitivity.threshold());
+            let n = luma_image::focus::paint_mask(&mut rgba, &mask, level.color);
             n as f32 / (w * h).max(1) as f32
         });
         if job.dust_view {
