@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **“Move rejects aside” no longer overwrites settings**: a photo whose XMP has the
+  name of one already moved (IMG.ARW moved before, then IMG.DNG) stays where it is;
+  the settings already moved are kept.
 - **Move rejects aside** (Library, under the “Flag” filter): the filmstrip's rejected
   photos and their XMP go into the “Rejects” subfolder of their folder; nothing is
   deleted, and the filmstrip keeps the rest.

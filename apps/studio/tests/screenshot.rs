@@ -5166,3 +5166,48 @@ fn imported_photos_can_be_deleted() {
     drop(harness);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// « Ranger les rejetées » n'écrase jamais un XMP déjà rangé : une photo dont le XMP
+/// porte le nom d'un autre déjà dans « Rejetées » (`IMG.ARW` rangée avant, puis
+/// `IMG.DNG` et son `IMG.xmp`) reste où elle est, et l'ancien XMP garde ses réglages.
+#[test]
+fn moving_rejects_never_overwrites_a_sidecar() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("rejetees-xmp", [1440.0, 2000.0], 1.0, |dir| {
+        for (name, v) in [("r-1.png", 60u8), ("r-2.png", 180)] {
+            image::RgbImage::from_pixel(64, 48, image::Rgb([v, v, v]))
+                .save(dir.join(name))
+                .unwrap();
+        }
+    }) else {
+        return;
+    };
+    s.studio().set_stacking(false);
+    s.keys(&[(NONE, Key::G)]);
+    let photos = s.studio().photos().to_vec();
+    let rejected = photos
+        .iter()
+        .find(|p| p.ends_with("r-2.png"))
+        .unwrap()
+        .clone();
+    let i = photos.iter().position(|p| *p == rejected).unwrap();
+    s.studio().set_current(i);
+    s.wait();
+    s.keys(&[(NONE, Key::X)]);
+    s.studio().flush_xmp();
+    let sidecar = luma_studio::worker::sidecar_path(&rejected);
+    assert!(sidecar.is_file());
+    // Un XMP du même nom déjà rangé, celui d'une autre photo.
+    let aside = rejected.parent().unwrap().join("Rejetées");
+    std::fs::create_dir_all(&aside).unwrap();
+    let older = aside.join(sidecar.file_name().unwrap());
+    std::fs::write(&older, "les réglages d'une autre photo").unwrap();
+    assert_eq!(s.studio().move_rejects(), 0);
+    assert_eq!(
+        std::fs::read_to_string(&older).unwrap(),
+        "les réglages d'une autre photo"
+    );
+    assert!(rejected.is_file() && sidecar.is_file(), "la photo reste");
+    assert!(!aside.join("r-2.png").exists());
+    assert!(s.studio().photos().contains(&rejected));
+}
