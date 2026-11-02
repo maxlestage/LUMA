@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Inverser le choix** (Cmd+Alt+A, modifiable) : parmi les photos montrées, les
+  choisies ne le sont plus et les autres le deviennent ; par exemple, choisir celles
+  à garder, inverser, et rejeter le reste d'un coup.
 - **Tout choisir au clavier** : Cmd+A choisit les photos montrées (avec le filtre en
   place : toutes les retenues d'un coup, par exemple), Cmd+Maj+A n'en choisit plus
   aucune ; modifiables. Pendant la saisie d'un texte, Cmd+A reste au texte.

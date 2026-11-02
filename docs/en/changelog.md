@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Invert selection** (Cmd+Alt+A, customizable): among the photos shown, the
+  selected ones are deselected and the others selected; for example, select the
+  keepers, invert, and reject the rest at once.
 - **Select all from the keyboard**: Cmd+A selects the photos shown (with the filter
   in place: every pick at once, for example), Cmd+Shift+A selects none;
   customizable. While typing text, Cmd+A stays with the text.

@@ -6443,6 +6443,10 @@ fr = Ne rien choisir
 en = Select none
 es = No elegir nada
 
+fr = Inverser le choix
+en = Invert selection
+es = Invertir la selección
+
 fr = Aucune photo choisie
 en = No photo selected
 es = Ninguna foto elegida

@@ -7139,6 +7139,16 @@ impl Studio {
                 self.selected.clear();
                 self.status = tr("Aucune photo choisie").into();
             }
+            "select_invert" => {
+                // Parmi les photos montrées : les choisies ne le sont plus, les autres le
+                // deviennent.
+                let shown = self.visible();
+                self.selected = shown
+                    .into_iter()
+                    .filter(|i| !self.selected.contains(i))
+                    .collect();
+                self.status = trf("{n} photos choisies", &[("n", &self.selected.len())]);
+            }
             "loupe" => {
                 if let Some(c) = &mut self.compare {
                     c.loupe = !c.loupe;
