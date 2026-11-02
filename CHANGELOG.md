@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Zones nettes plus rapides** : leur calcul (à chaque aperçu avec Maj+F, et pour
+  chaque mesure de netteté) est 3 à 4 fois plus rapide sur un aperçu de 2048 px
+  (7,7 → 2,0 ms), aux mêmes pixels.
 - **Couleur des zones nettes** : vert, jaune, rouge ou blanc (« Couleur des zones », à
   côté de la sensibilité), quand le vert se perd dans un feuillage ou une prairie ;
   gardée d'une séance à l'autre, dans la vue de la photo comme dans la comparaison.
