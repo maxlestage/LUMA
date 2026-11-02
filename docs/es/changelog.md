@@ -2,6 +2,10 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma export` más rápido en tamaño reducido**: dos fotos a la vez cuando cada
+  ajuste preestablecido reduce la imagen (4096 px, 16 Mpx como máximo); siete RAW a
+  2048 px: 2,7 → 2,4 s, con los mismos archivos y nombres. A tamaño completo, una a
+  una (dos imágenes enteras en memoria para un 5 % de ganancia).
 - **Apartar las rechazadas** (Biblioteca, bajo el filtro «Marca»): las fotos
   rechazadas de la tira y su XMP pasan a la subcarpeta «Rechazadas» de su carpeta; no
   se borra nada y la tira conserva el resto.
