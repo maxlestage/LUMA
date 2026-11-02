@@ -5,6 +5,9 @@
 - **`luma export` no longer hangs**: a photo whose reading crashes becomes an error
   for that photo alone; the next ones are exported instead of waiting forever for
   their turn to reserve their names.
+- **Fix**: after “Move rejects aside” or deleting imported photos, the report (“2
+  photo(s) deleted.”) lasted a split second, wiped by the opening of the neighboring
+  photo; it now stays on screen.
 - **“Move rejects aside” no longer overwrites settings**: a photo whose XMP has the
   name of one already moved (IMG.ARW moved before, then IMG.DNG) stays where it is;
   the settings already moved are kept.

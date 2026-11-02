@@ -4869,6 +4869,11 @@ fn rejects_are_moved_aside() {
     assert_eq!(s.studio().rejected_photos(), vec![rejected.clone()]);
     s.harness.get_by_label("Ranger les rejetées").click();
     s.wait();
+    // Le compte rendu reste affiché, la voisine ouverte.
+    assert_eq!(
+        s.studio().status(),
+        "1 photo(s) rejetée(s) rangée(s) dans « Rejetées »"
+    );
     let moved = rejected.parent().unwrap().join("Rejetées").join("r-2.png");
     assert!(moved.is_file() && !rejected.exists() && kept.is_file());
     assert!(!luma_studio::worker::sidecar_path(&rejected).exists());
@@ -5135,6 +5140,18 @@ fn imported_photos_can_be_deleted() {
         assert!(s.current_path().is_some(), "la voisine prend sa place");
         assert!(s.catalog().get(&a).is_none());
     }
+    // La voisine ouverte, le compte rendu de la suppression reste affiché.
+    for _ in 0..600 {
+        harness.run_steps(1);
+        if harness.state().as_ref().unwrap().busy_reason().is_none() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert_eq!(
+        harness.state().as_ref().unwrap().status(),
+        "1 photo(s) supprimée(s)."
+    );
     // Une photo à soi : jamais supprimée, même demandée.
     assert_eq!(
         harness
