@@ -1119,10 +1119,22 @@ fn export_many(a: &Args) -> Result<(), String> {
     let start = Instant::now();
     let mut taken = std::collections::HashSet::new();
     export::reserve_sources(&mut taken, a.positional.iter().map(Path::new));
-    let (mut written, mut failed) = (0, 0);
-    for (k, path) in a.positional.iter().enumerate() {
+    // Deux photos à la fois quand chaque export est réduit (4096 px, 16 Mpx au plus) ;
+    // en pleine taille, une à la fois : deux images entières en mémoire pour 5 % de
+    // gain seulement (mesuré). Les noms se réservent à tour de rôle, dans l'ordre des
+    // photos (un nom pris reçoit un numéro : le même qu'une photo après l'autre), puis
+    // chacune se développe de son côté.
+    let reduced = targets.iter().all(|o| match o.resize {
+        Some(export::Resize::LongEdge(n) | export::Resize::ShortEdge(n)) => n <= 4096,
+        Some(export::Resize::Fit { width, height }) => width.max(height) <= 4096,
+        Some(export::Resize::Megapixels(m)) => m <= 16.0,
+        Some(export::Resize::Print { .. }) | None => false,
+    });
+    let turn = (std::sync::Mutex::new((0usize, taken)), std::sync::Condvar::new());
+    let items: Vec<(usize, &String)> = a.positional.iter().enumerate().collect();
+    let results = at_a_time(if reduced { 2 } else { 1 }, &items, |&(k, path)| {
         let path = Path::new(path);
-        let result = (|| -> Result<(), String> {
+        let prepared = (|| -> Result<_, String> {
             let mut settings = load_settings(a, Some(path))?;
             let photo = Photo::open(path).map_err(|e| e.to_string())?;
             if a.auto_tone {
@@ -1130,17 +1142,42 @@ fn export_many(a: &Args) -> Result<(), String> {
             }
             let meta = sidecar_meta(a, path);
             let fields = export::NameFields::of_photo(path, &photo, &meta, k + 1);
-            for o in &targets {
-                let out = export::unique(export::output_path(path, o, &fields), &mut taken);
-                export::develop(&photo, &settings, &out, o, &meta)?;
-                println!("{} → {}", path.display(), out.display());
-                written += 1;
-            }
-            Ok(())
+            Ok((photo, settings, meta, fields))
         })();
-        if let Err(e) = result {
-            eprintln!("erreur : {} : {e}", path.display());
-            failed += 1;
+        // Son tour de réserver ses noms, même en erreur (la suivante attend).
+        let outs: Vec<PathBuf> = {
+            let mut state = turn.0.lock().expect("noms d'export");
+            while state.0 != k {
+                state = turn.1.wait(state).expect("noms d'export");
+            }
+            let outs = match &prepared {
+                Ok((_, _, _, fields)) => targets
+                    .iter()
+                    .map(|o| export::unique(export::output_path(path, o, fields), &mut state.1))
+                    .collect(),
+                Err(_) => Vec::new(),
+            };
+            state.0 += 1;
+            turn.1.notify_all();
+            outs
+        };
+        let (photo, settings, meta, _) = prepared?;
+        let mut n = 0;
+        for (o, out) in targets.iter().zip(&outs) {
+            export::develop(&photo, &settings, out, o, &meta)?;
+            println!("{} → {}", path.display(), out.display());
+            n += 1;
+        }
+        Ok(n)
+    });
+    let (mut written, mut failed) = (0, 0);
+    for (path, result) in a.positional.iter().zip(results) {
+        match result {
+            Ok(n) => written += n,
+            Err(e) => {
+                eprintln!("erreur : {path} : {e}");
+                failed += 1;
+            }
         }
     }
     println!(
@@ -1975,11 +2012,20 @@ fn before_after(args: Vec<String>) -> Result<(), String> {
 /// partie les cœurs : l'autre photo se rend pendant ce temps, comme dans l'app) ; les
 /// résultats dans l'ordre des photos, chacun celui de la photo seule.
 fn two_at_a_time<I: Sync, T: Send>(photos: &[I], f: impl Fn(&I) -> Result<T, String> + Sync) -> Vec<Result<T, String>> {
+    at_a_time(2, photos, f)
+}
+
+/// `f` pour chaque photo, `n` à la fois (voir [`two_at_a_time`]).
+fn at_a_time<I: Sync, T: Send>(
+    n: usize,
+    photos: &[I],
+    f: impl Fn(&I) -> Result<T, String> + Sync,
+) -> Vec<Result<T, String>> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     let next = AtomicUsize::new(0);
     let slots: Vec<std::sync::Mutex<Option<Result<T, String>>>> = photos.iter().map(|_| Default::default()).collect();
     std::thread::scope(|scope| {
-        for _ in 0..2.min(photos.len()) {
+        for _ in 0..n.max(1).min(photos.len()) {
             scope.spawn(|| {
                 loop {
                     let i = next.fetch_add(1, Ordering::Relaxed);
