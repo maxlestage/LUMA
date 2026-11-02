@@ -6415,6 +6415,18 @@ fr = La plus nette : {file} ({percent} % au point, la suivante {next} %), retenu
 en = The sharpest: {file} ({percent}% in focus, the next {next}%), picked
 es = La más nítida: {file} ({percent} % enfocada, la siguiente {next} %), seleccionada
 
+fr = Comparer la pile
+en = Compare the stack
+es = Comparar la pila
+
+fr = Maj+C : les photos de la pile de la photo ouverte, côte à côte (quatre au plus)
+en = Shift+C: the photos of the open photo's stack, side by side (four at most)
+es = Mayús+C: las fotos de la pila de la foto abierta, lado a lado (cuatro como máximo)
+
+fr = La photo ouverte n'est dans aucune pile
+en = The open photo is not in a stack
+es = La foto abierta no está en ninguna pila
+
 fr = Déplier toutes les piles
 en = Expand all stacks
 es = Desplegar todas las pilas

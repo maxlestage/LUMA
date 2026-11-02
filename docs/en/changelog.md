@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Compare the stack** (Shift+C, or the Library button): the photos of the open
+  photo's stack side by side (four at most), even when collapsed, without picking
+  them one by one.
 - **Faster `luma lens`**: two RAWs at a time; seven RAWs from different cameras:
   3.4–3.6 → 2.5–2.7 s, with the same measurements.
 - **Expand or collapse all stacks** (Shift+S, or the Library button): every burst and

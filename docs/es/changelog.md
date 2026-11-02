@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Comparar la pila** (Mayús+C, o el botón de la Biblioteca): las fotos de la pila
+  de la foto abierta lado a lado (cuatro como máximo), aunque esté plegada, sin
+  elegirlas una a una.
 - **`luma lens` más rápido**: dos RAW a la vez; siete RAW de cámaras distintas:
   3,4–3,6 → 2,5–2,7 s, con las mismas medidas.
 - **Desplegar o plegar todas las pilas** (Mayús+S, o el botón de la Biblioteca):

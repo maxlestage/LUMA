@@ -7111,6 +7111,13 @@ impl Studio {
                     self.start_compare();
                 }
             }
+            "compare_stack" => {
+                if self.compare.is_some() {
+                    self.compare = None;
+                } else {
+                    self.start_compare_stack();
+                }
+            }
             "stack" => {
                 if let Some(p) = self.current_path().map(Path::to_path_buf) {
                     self.toggle_stack(&p);
@@ -8051,6 +8058,31 @@ impl Studio {
             return;
         }
         let paths: Vec<PathBuf> = picked.iter().map(|&i| self.folder[i].clone()).collect();
+        self.begin_compare(paths);
+    }
+
+    /// Compare les photos de la pile de la photo ouverte (les quatre premières de la
+    /// prise de vue), repliée ou non : une rafale départagée d'un coup d'œil.
+    pub fn start_compare_stack(&mut self) {
+        let stack = self
+            .current_path()
+            .and_then(|p| self.stack_of.get(p))
+            .map(|&k| self.stacks[k].photos.clone())
+            .unwrap_or_default();
+        let paths: Vec<PathBuf> = stack
+            .into_iter()
+            .filter(|p| self.folder.contains(p))
+            .take(4)
+            .collect();
+        if paths.len() < 2 {
+            self.status = tr("La photo ouverte n'est dans aucune pile").into();
+            return;
+        }
+        self.begin_compare(paths);
+    }
+
+    /// Lance la comparaison de ces photos (2 à 4).
+    fn begin_compare(&mut self, paths: Vec<PathBuf>) {
         self.compare_tag += 1;
         // Une case fait au plus la moitié de l'écran : 2048 px suffisent, même zoomés.
         self.worker.compare(paths.clone(), 2048, self.compare_tag);
@@ -11374,6 +11406,18 @@ impl Studio {
             .clicked()
         {
             self.act("stack_all");
+        }
+        let in_stack = self
+            .current_path()
+            .is_some_and(|p| self.stack_of.contains_key(p));
+        if ui
+            .add_enabled(in_stack, egui::Button::new(tr("Comparer la pile")).small())
+            .on_hover_text(tr(
+                "Maj+C : les photos de la pile de la photo ouverte, côte à côte (quatre au plus)",
+            ))
+            .clicked()
+        {
+            self.act("compare_stack");
         }
         if ui
             .small_button(tr("Retenir la plus nette de chaque rafale"))

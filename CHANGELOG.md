@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Comparer la pile** (Maj+C, ou le bouton de la Bibliothèque) : les photos de la
+  pile de la photo ouverte côte à côte (quatre au plus), même repliée, sans les
+  choisir une à une.
 - **`luma lens` plus rapide** : deux RAW à la fois ; sept RAW de boîtiers différents :
   3,4–3,6 → 2,5–2,7 s, aux mêmes mesures.
 - **Déplier ou replier toutes les piles** (Maj+S, ou le bouton de la Bibliothèque) :
