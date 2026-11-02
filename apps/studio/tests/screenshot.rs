@@ -3719,10 +3719,18 @@ fn library_folders_as_a_tree() {
     );
     // « Toutes ses photos » : le dossier et ses sous‑dossiers d'un coup.
     let top = dir.join("Photos");
-    harness
-        .get_by_label(&format!("{} (3)", top.display()))
-        .click_secondary();
-    harness.run_steps(3);
+    // Le panneau peut encore bouger d'une image à l'autre (la photo ouverte arrive) : le
+    // clic droit est refait sur la position du moment tant que le menu n'est pas là.
+    for _ in 0..5 {
+        harness
+            .get_by_label(&format!("{} (3)", top.display()))
+            .click_secondary();
+        harness.run_steps(3);
+        if harness.query_by_label("Toutes ses photos").is_some() {
+            break;
+        }
+        harness.run_steps(5);
+    }
     harness.get_by_label("Toutes ses photos").click();
     harness.run_steps(3);
     let s = harness.state().as_ref().unwrap();
