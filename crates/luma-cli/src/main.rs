@@ -2604,8 +2604,10 @@ fn print(args: Vec<String>) -> Result<(), String> {
     // Page par page : développées, posées, compressées.
     let mut pages = print::Pages::for_path(&out, printer.is_none());
     for chunk in photos.chunks(cells.len()) {
-        let mut pictures = Vec::with_capacity(chunk.len());
-        for (path, cell) in chunk.iter().zip(&cells) {
+        // Les photos de la page deux à la fois, dans l'ordre des cases.
+        let placed: Vec<(&PathBuf, _)> = chunk.iter().zip(&cells).collect();
+        let mut pictures = Vec::with_capacity(placed.len());
+        for picture in two_at_a_time(&placed, |&(path, cell)| {
             let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
             let settings = match sidecar(path) {
                 Some(x) => {
@@ -2616,7 +2618,9 @@ fn print(args: Vec<String>) -> Result<(), String> {
             let name = path
                 .file_name()
                 .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-            pictures.push(print::develop(&photo, &settings, &layout, cell, name)?);
+            print::develop(&photo, &settings, &layout, cell, name)
+        }) {
+            pictures.push(picture?);
         }
         for page in print::compose(&layout, &pictures, printer.as_ref()) {
             pages.push(&page, &layout)?;
