@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **«Apartar las rechazadas» ya no sobrescribe ajustes**: una foto cuyo XMP tiene el
+  nombre de uno ya apartado (IMG.ARW apartada antes, luego IMG.DNG) se queda en su
+  sitio; los ajustes ya apartados se conservan.
 - **Apartar las rechazadas** (Biblioteca, bajo el filtro «Marca»): las fotos
   rechazadas de la tira y su XMP pasan a la subcarpeta «Rechazadas» de su carpeta; no
   se borra nada y la tira conserva el resto.
