@@ -571,6 +571,9 @@ enum SharpGoal {
     Sort,
     /// La plus nette de chaque rafale du film retenue.
     PickEachBurst,
+    /// Les floues de chaque rafale du film rejetées (moins du tiers de la plus nette de
+    /// leur rafale).
+    RejectEachBurst,
 }
 
 use luma_image::focus::BLURRED_FRACTION;
@@ -5779,6 +5782,9 @@ impl Studio {
                             match goal {
                                 SharpGoal::Pick => self.keep_sharpest(done),
                                 SharpGoal::PickEachBurst => self.keep_sharpest_of_each_burst(done),
+                                SharpGoal::RejectEachBurst => {
+                                    self.reject_blurred_of_each_burst(done)
+                                }
                                 SharpGoal::Reject => self.reject_blurred(done),
                                 SharpGoal::Sort => {
                                     let n = done.iter().filter(|d| d.1.is_some()).count();
@@ -7020,6 +7026,7 @@ impl Studio {
             "reject" => self.set_meta(|m| m.flag = Flag::Reject),
             "pick_sharpest" => self.sharpest_selected(),
             "pick_sharpest_bursts" => self.sharpest_of_each_burst(),
+            "reject_blurred_bursts" => self.blurred_of_each_burst(),
             "reject_blurred" => self.reject_blurred_selected(),
             "unflag" => self.set_meta(|m| m.flag = Flag::None),
             r if r.starts_with("rate") => {
@@ -9278,6 +9285,17 @@ impl Studio {
         self.measure_sharpness(SharpGoal::PickEachBurst);
     }
 
+    /// « Rejeter les floues de chaque rafale » : la même mesure ; dans chaque rafale,
+    /// les photos qui ont moins du tiers de la part au point de la plus nette de leur
+    /// rafale reçoivent le drapeau « Rejetée », les autres restent telles quelles.
+    pub fn blurred_of_each_burst(&mut self) {
+        if self.burst_photos().is_empty() {
+            self.status = tr("Aucune rafale dans le film").into();
+            return;
+        }
+        self.measure_sharpness(SharpGoal::RejectEachBurst);
+    }
+
     /// Les rafales du film (deux photos au moins encore dans le film chacune).
     fn bursts(&self) -> Vec<Vec<PathBuf>> {
         self.stacks
@@ -9304,7 +9322,7 @@ impl Studio {
         // choisies.
         let paths = match goal {
             SharpGoal::Sort => self.folder.clone(),
-            SharpGoal::PickEachBurst => self.burst_photos(),
+            SharpGoal::PickEachBurst | SharpGoal::RejectEachBurst => self.burst_photos(),
             SharpGoal::Pick | SharpGoal::Reject => self.keyword_targets(),
         };
         if paths.len() < 2 || self.sharp_batch.is_some() {
@@ -9376,6 +9394,45 @@ impl Studio {
         self.status = trf(
             "Rafales : la plus nette de chacune retenue ({n} rafale(s))",
             &[("n", &best.len())],
+        );
+    }
+
+    /// Les floues de chaque rafale d'après les parts reçues (moins de
+    /// [`BLURRED_FRACTION`] de la plus nette de leur rafale) : leur drapeau « Rejetée » ;
+    /// la barre d'état dit combien.
+    fn reject_blurred_of_each_burst(&mut self, shares: Vec<SharpShare>) {
+        let measured: HashMap<PathBuf, f32> = shares
+            .into_iter()
+            .filter_map(|(p, s)| Some((p, s?)))
+            .collect();
+        if measured.is_empty() {
+            self.status = tr("Netteté : aucune photo n'a pu être mesurée").into();
+            return;
+        }
+        let mut blurred = Vec::new();
+        let mut bursts = 0;
+        for photos in self.bursts() {
+            let shares: Vec<(PathBuf, f32)> = photos
+                .into_iter()
+                .filter_map(|p| Some((p.clone(), *measured.get(&p)?)))
+                .collect();
+            let Some(best) = shares.iter().map(|s| s.1).max_by(f32::total_cmp) else {
+                continue;
+            };
+            bursts += 1;
+            blurred.extend(
+                shares
+                    .into_iter()
+                    .filter(|s| s.1 < best * BLURRED_FRACTION)
+                    .map(|s| s.0),
+            );
+        }
+        if !blurred.is_empty() {
+            self.edit_meta(&blurred, |m| m.flag = Flag::Reject);
+        }
+        self.status = trf(
+            "Rafales : {n} photo(s) floue(s) rejetée(s) dans {bursts} rafale(s)",
+            &[("n", &blurred.len()), ("bursts", &bursts)],
         );
     }
 
@@ -11281,6 +11338,15 @@ impl Studio {
             .clicked()
         {
             self.act("pick_sharpest_bursts");
+        }
+        if ui
+            .small_button(tr("Rejeter les floues de chaque rafale"))
+            .on_hover_text(tr(
+                "Donne le drapeau « Rejetée » aux photos de chaque rafale du film qui ont moins du tiers de la part au point de la plus nette de leur rafale",
+            ))
+            .clicked()
+        {
+            self.act("reject_blurred_bursts");
         }
         ui.add_space(10.0);
         section_title(ui, tr("Filtre"));

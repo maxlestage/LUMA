@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Reject the blurred of each burst** (Library, or Alt+Shift+X): in each burst of
+  the filmstrip, the photos below a third of the sharpest of their burst get the
+  “Rejected” flag.
 - **Faster `luma sharpness` and `luma before-after`**: two photos at a time, as in
   the app; seven RAWs from different cameras: 2.3–2.5 → 1.8–1.9 s and
   2.7–2.9 → 2.3–2.4 s, with the same results.
