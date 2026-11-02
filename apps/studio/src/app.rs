@@ -4975,6 +4975,15 @@ impl Studio {
             .collect()
     }
 
+    /// Les réglages d'une photo viennent d'être écrits (une autre que l'ouverte : la
+    /// synchronisation, la balance automatique, les corrections d'objectif, la remise à
+    /// zéro) : sa vignette est refaite, et sa part au point mesurée oubliée (elle ne
+    /// vaut plus pour ses nouveaux réglages, ni sur la grille, ni pour le tri).
+    fn settings_written(&mut self, path: PathBuf) {
+        self.sharp_shares.remove(&path);
+        self.worker.thumbnail(path);
+    }
+
     /// Donne les réglages de la photo ouverte (ces groupes‑là) aux autres photos
     /// choisies : leur XMP est écrit, leur vignette refaite. Rend le nombre de photos.
     pub fn sync_selected(&mut self, groups: &[luma_project::paste::Group]) -> usize {
@@ -4988,7 +4997,7 @@ impl Studio {
                 Ok(()) => {
                     done += 1;
                     self.edits.insert(path.clone(), presets::summary(&after));
-                    self.worker.thumbnail(path);
+                    self.settings_written(path);
                 }
                 Err(e) => self.status = trf("XMP non enregistré : {error}", &[("error", &e)]),
             }
@@ -5034,7 +5043,7 @@ impl Studio {
                 self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
             }
             self.edits.insert(path.clone(), presets::summary(&s));
-            self.worker.thumbnail(path);
+            self.settings_written(path);
         }
         if self.auto_pending == 0 {
             self.status = tr("Balance automatique appliquée.").into();
@@ -6712,7 +6721,7 @@ impl Studio {
                     done += 1;
                     self.edits.insert(path.clone(), presets::Summary::default());
                     self.meta.insert(path.clone(), meta);
-                    self.worker.thumbnail(path);
+                    self.settings_written(path);
                 }
                 Err(e) => self.status = trf("XMP non enregistré : {error}", &[("error", &e)]),
             }
@@ -10431,7 +10440,7 @@ impl Studio {
                 match write_sidecar(&path, &s, &meta) {
                     Ok(()) => {
                         self.edits.insert(path.clone(), presets::summary(&s));
-                        self.worker.thumbnail(path);
+                        self.settings_written(path);
                         true
                     }
                     Err(e) => {
