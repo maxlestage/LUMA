@@ -4693,6 +4693,16 @@ fn the_sharpest_of_each_burst_is_picked() {
         ["a-1.png", "a-2.png", "b-1.png", "b-2.png", "seule.png"].map(flag),
         [Flag::None, Flag::Pick, Flag::Pick, Flag::None, Flag::None]
     );
+    // La part au point de chaque photo mesurée reste, sur la grille ; la photo seule,
+    // pas mesurée, n'en a pas.
+    let label = |s: &mut Session, name: &str| {
+        let p = photos.iter().find(|p| p.ends_with(name)).unwrap().clone();
+        s.studio().sharp_label(&p)
+    };
+    let nette = label(&mut s, "a-2.png").expect("mesurée");
+    assert!(nette.ends_with(" % net"), "{nette}");
+    assert!(label(&mut s, "a-1.png").is_some() && label(&mut s, "seule.png").is_none());
+    s.capture("grille-nettete");
     // Alt+Maj+X : la floue de chaque rafale rejetée ; les retenues et la photo seule
     // gardent leur drapeau.
     s.keys(&[(Modifiers::SHIFT | Modifiers::ALT, Key::X)]);
