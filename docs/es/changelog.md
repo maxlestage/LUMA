@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Seleccionar la más nítida de cada ráfaga** (Biblioteca, o Alt+Mayús+P): todas
+  las ráfagas de la tira cribadas de una vez; la más nítida de cada una recibe la
+  marca «Seleccionada». Las series de exposición no cuentan.
 - **Zonas nítidas más rápidas**: su cálculo (en cada vista previa con Mayús+F, y en
   cada medida de nitidez) es de 3 a 4 veces más rápido en una vista previa de
   2048 px (7,7 → 2,0 ms), con los mismos píxeles.

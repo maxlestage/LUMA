@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Retenir la plus nette de chaque rafale** (Bibliothèque, ou Alt+Maj+P) : toutes les
+  rafales du film triées d'un coup ; la plus nette de chacune reçoit le drapeau
+  « Retenue ». Les séries d'exposition ne comptent pas.
 - **Zones nettes plus rapides** : leur calcul (à chaque aperçu avec Maj+F, et pour
   chaque mesure de netteté) est 3 à 4 fois plus rapide sur un aperçu de 2048 px
   (7,7 → 2,0 ms), aux mêmes pixels.

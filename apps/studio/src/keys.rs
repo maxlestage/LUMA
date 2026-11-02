@@ -235,6 +235,14 @@ pub const ACTIONS: &[Action] = &[
         &[Combo::shift(Key::P)],
     ),
     a(
+        "pick_sharpest_bursts",
+        "Retenir la plus nette de chaque rafale",
+        &[Combo {
+            alt: true,
+            ..Combo::shift(Key::P)
+        }],
+    ),
+    a(
         "reject_blurred",
         "Rejeter les floues",
         &[Combo::shift(Key::X)],

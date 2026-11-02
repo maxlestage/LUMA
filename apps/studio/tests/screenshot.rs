@@ -4579,6 +4579,108 @@ fn burst_culling_from_the_keyboard() {
     assert_eq!((read(sharp), read(blurred)), (Flag::Pick, Flag::Reject));
 }
 
+/// « Retenir la plus nette de chaque rafale » (Alt+Maj+P) : deux rafales de deux
+/// photos (à dix minutes d'écart), une photo seule ; la nette de chaque rafale est
+/// retenue, la floue et la photo seule restent sans drapeau.
+#[test]
+fn the_sharpest_of_each_burst_is_picked() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) =
+        Session::open_prepared("plus-nette-par-rafale", [1440.0, 900.0], 1.0, |dir| {
+            let scene = |k: u32| {
+                image::RgbImage::from_fn(1200, 800, move |x, y| {
+                    let v = (((x / 3) ^ (y / (5 + k))) % 7) as u8 * 30 + ((x * y) % 17) as u8;
+                    image::Rgb([v, v / 2 + 60, 255 - v])
+                })
+            };
+            let start = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+            let at = |name: &str, minutes: u64| {
+                let file = std::fs::File::options()
+                    .write(true)
+                    .open(dir.join(name))
+                    .unwrap();
+                file.set_modified(start + std::time::Duration::from_secs(minutes * 60))
+                    .unwrap();
+            };
+            // La première rafale : la floue d'abord, la nette ensuite.
+            image::imageops::blur(&scene(0), 4.0)
+                .save(dir.join("a-1.png"))
+                .unwrap();
+            scene(0).save(dir.join("a-2.png")).unwrap();
+            // La seconde : la nette d'abord.
+            scene(1).save(dir.join("b-1.png")).unwrap();
+            image::imageops::blur(&scene(1), 4.0)
+                .save(dir.join("b-2.png"))
+                .unwrap();
+            scene(2).save(dir.join("seule.png")).unwrap();
+            for (name, minutes) in [
+                ("a-1.png", 0),
+                ("a-2.png", 0),
+                ("b-1.png", 10),
+                ("b-2.png", 10),
+                ("seule.png", 20),
+            ] {
+                at(name, minutes);
+            }
+        })
+    else {
+        return;
+    };
+    s.keys(&[(NONE, Key::G)]);
+    let bursts: Vec<Vec<String>> = s
+        .studio()
+        .stacks()
+        .iter()
+        .filter(|k| {
+            k.photos
+                .iter()
+                .any(|p| p.extension().is_some_and(|e| e == "png"))
+        })
+        .map(|k| {
+            k.photos
+                .iter()
+                .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+                .collect()
+        })
+        .collect();
+    assert_eq!(
+        bursts,
+        [["a-1.png", "a-2.png"], ["b-1.png", "b-2.png"]],
+        "{bursts:?}"
+    );
+    s.keys(&[(Modifiers::SHIFT | Modifiers::ALT, Key::P)]);
+    s.wait();
+    assert_eq!(
+        s.studio().status(),
+        "Rafales : la plus nette de chacune retenue (2 rafale(s))"
+    );
+    s.studio().flush_xmp();
+    use luma_project::xmp::Flag;
+    let photos = s.studio().photos().to_vec();
+    let flag = |name: &str| {
+        let p = photos.iter().find(|p| p.ends_with(name)).unwrap();
+        luma_studio::worker::read_meta(p).flag
+    };
+    assert_eq!(
+        ["a-1.png", "a-2.png", "b-1.png", "b-2.png", "seule.png"].map(flag),
+        [Flag::None, Flag::Pick, Flag::Pick, Flag::None, Flag::None]
+    );
+}
+
+/// Sans rafale dans le film (les RAW du corpus, chacun d'un autre boîtier), « Retenir la
+/// plus nette de chaque rafale » ne mesure rien et le dit.
+#[test]
+fn no_burst_no_measure() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("sans-rafale") else {
+        return;
+    };
+    assert!(s.studio().stacks().is_empty(), "{:?}", s.studio().stacks());
+    s.studio().sharpest_of_each_burst();
+    assert_eq!(s.studio().status(), "Aucune rafale dans le film");
+    s.wait();
+}
+
 /// La comparaison donne la part au point de chaque photo (la mesure de « Retenir la
 /// plus nette ») : une scène détaillée a plus de détails au point que sa copie floutée.
 #[test]
