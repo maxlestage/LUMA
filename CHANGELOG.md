@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **`luma gallery` et `luma slideshow` plus rapides** : deux photos à la fois ; sept
+  RAW : galerie 3,3 → 2,7 s, diaporama 3,2 → 2,4–2,5 s, aux mêmes fichiers.
 - **Filtre « Drapeau » complété** : « Rejetées seulement », pour revoir le rebut avant
   de l'écarter, et « Sans drapeau (à trier) », pour voir ce qui reste à trier.
 - **Comparer la pile** (Maj+C, ou le bouton de la Bibliothèque) : les photos de la

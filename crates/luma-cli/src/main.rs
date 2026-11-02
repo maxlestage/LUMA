@@ -2435,7 +2435,8 @@ fn gallery(args: Vec<String>) -> Result<(), String> {
     }
     let start = Instant::now();
     let mut entries = Vec::with_capacity(photos.len());
-    for p in &photos {
+    // Deux photos à la fois, rangées ensuite dans l'ordre.
+    for entry in two_at_a_time(&photos, |p| {
         let (photo, settings) = open_with_settings(p)?;
         let r = photo
             .render(&settings, Size::Fit(g.size), &Cancel::new())
@@ -2445,7 +2446,9 @@ fn gallery(args: Vec<String>) -> Result<(), String> {
             .and_then(|x| std::fs::read_to_string(x).ok())
             .map(|t| xmp::read_meta(&t).title)
             .filter(|t| !t.trim().is_empty());
-        entries.push(gallery::entry(&r.image, &g, title.unwrap_or_else(|| file_label(p)))?);
+        gallery::entry(&r.image, &g, title.unwrap_or_else(|| file_label(p)))
+    }) {
+        entries.push(entry?);
     }
     gallery::write(&out, &g, &entries)?;
     let bytes: usize = entries.iter().map(|e| e.photo.len() + e.thumb.len()).sum();
@@ -2500,14 +2503,17 @@ fn slideshow(args: Vec<String>) -> Result<(), String> {
     }
     let start = Instant::now();
     let mut frames = Vec::with_capacity(photos.len());
-    for p in &photos {
+    // Deux photos à la fois, rangées ensuite dans l'ordre.
+    for frame in two_at_a_time(&photos, |p| {
         let (photo, settings) = open_with_settings(p)?;
         let r = photo
             .render(&settings, Size::Fit(show.size), &Cancel::new())
             .map_err(|e| format!("{} : {e}", p.display()))?;
         let rgb = luma_image::encode8(&r.image, OutputSpace::Srgb);
         let jpeg = luma_render::jpeg::encode(&rgb, r.image.width, r.image.height, show.quality, &[], &[])?;
-        frames.push((jpeg, file_label(p)));
+        Ok((jpeg, file_label(p)))
+    }) {
+        frames.push(frame?);
     }
     slideshow::write(&out, &show, &frames)?;
     println!(

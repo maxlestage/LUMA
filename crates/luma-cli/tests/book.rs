@@ -1,4 +1,5 @@
-//! `luma book` et `luma slideshow` : le livre photo en PDF et le diaporama autonome.
+//! `luma book`, `luma slideshow` et `luma gallery` : le livre photo en PDF, le
+//! diaporama autonome et la galerie web.
 //! Les erreurs se vérifient sans photo ; les vrais RAW n'entrent qu'avec le corpus
 //! (`scripts/fetch-corpus.sh`).
 
@@ -28,6 +29,15 @@ fn corpus(names: &[&str]) -> Option<Vec<String>> {
             p.is_file().then(|| p.display().to_string())
         })
         .collect()
+}
+
+/// Les quatre photos de l'essai nommées dans la page dans l'ordre donné.
+fn in_order(page: &str) {
+    let at: Vec<usize> = ["_DSC0009.ARW", "DSC_0750.NEF", "AFXT2720.RAF", "P1000951.RW2"]
+        .iter()
+        .map(|n| page.find(n).unwrap_or_else(|| panic!("{n} absente")))
+        .collect();
+    assert!(at.windows(2).all(|w| w[0] < w[1]), "{at:?}");
 }
 
 #[test]
@@ -148,6 +158,8 @@ fn a_book_and_a_slideshow() {
     assert!(ok, "{out}");
     let page = std::fs::read_to_string(show.join("index.html")).unwrap();
     assert!(page.contains("_DSC0009.ARW") && page.contains("<title>Essais</title>"));
+    // Rendues deux à la fois, les photos restent dans l'ordre donné.
+    in_order(&page);
     for k in 1..=4 {
         let jpeg = std::fs::read(show.join(format!("photos/{k:03}.jpg"))).unwrap();
         assert!(jpeg.starts_with(&[0xFF, 0xD8]));
@@ -169,6 +181,7 @@ fn a_book_and_a_slideshow() {
     assert!(ok, "{out}");
     let page = std::fs::read_to_string(site.join("index.html")).unwrap();
     assert!(page.contains("<h1>Essais</h1>") && page.contains("alt=\"_DSC0009.ARW\""));
+    in_order(&page);
     for k in 1..=4 {
         for sub in ["photos", "vignettes"] {
             let jpeg = std::fs::read(site.join(format!("{sub}/{k:03}.jpg"))).unwrap();
