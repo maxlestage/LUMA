@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma gallery` y `luma slideshow` más rápidos**: dos fotos a la vez; siete RAW:
+  galería 3,3 → 2,7 s, presentación 3,2 → 2,4–2,5 s, con los mismos archivos.
 - **Filtro «Marca» completado**: «Solo rechazadas», para revisar el descarte antes
   de apartarlo, y «Sin marca (por cribar)», para ver lo que queda por cribar.
 - **Comparar la pila** (Mayús+C, o el botón de la Biblioteca): las fotos de la pila
