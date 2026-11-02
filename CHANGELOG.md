@@ -5,6 +5,10 @@
 - **« Ranger les rejetées » n'écrase plus de réglages** : une photo dont le XMP porte
   le nom d'un XMP déjà rangé (IMG.ARW rangée avant, puis IMG.DNG) reste à sa place ;
   les réglages déjà rangés sont gardés.
+- **`luma export` plus rapide en taille réduite** : deux photos à la fois quand chaque
+  préréglage réduit l'image (4096 px, 16 Mpx au plus) ; sept RAW à 2048 px :
+  2,7 → 2,4 s, aux mêmes fichiers et aux mêmes noms. En pleine taille, toujours une à
+  la fois (deux images entières en mémoire pour 5 % de gain).
 - **Ranger les rejetées** (Bibliothèque, sous le filtre « Drapeau ») : les photos
   rejetées du film et leur XMP passent dans le sous‑dossier « Rejetées » de leur
   dossier ; rien n'est effacé, et le film ne garde que le reste.
