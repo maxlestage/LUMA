@@ -139,15 +139,38 @@ fn sensitivity_id(s: luma_image::focus::Sensitivity) -> &'static str {
     }
 }
 
-/// La sensibilité gardée dans un fichier ; rien de lisible : la normale.
-fn read_sensitivity(path: Option<&Path>) -> luma_image::focus::Sensitivity {
+/// Le mot d'une couleur des zones nettes dans « Zones nettes.txt ».
+fn focus_color_id(c: luma_image::focus::Color) -> &'static str {
+    use luma_image::focus::Color;
+    match c {
+        Color::Green => "vert",
+        Color::Yellow => "jaune",
+        Color::Red => "rouge",
+        Color::White => "blanc",
+    }
+}
+
+/// L'allure des zones nettes gardée dans un fichier (« haute jaune » : la sensibilité,
+/// puis la couleur) ; un mot illisible ou absent : la normale, le vert.
+fn read_focus_look(path: Option<&Path>) -> luma_image::focus::Look {
+    use luma_image::focus::{Color, Look, Sensitivity};
     let text = path
         .and_then(|p| std::fs::read_to_string(p).ok())
         .unwrap_or_default();
-    luma_image::focus::Sensitivity::ALL
-        .into_iter()
-        .find(|s| sensitivity_id(*s) == text.trim())
-        .unwrap_or_default()
+    let mut words = text.split_whitespace();
+    let sensitivity = words
+        .next()
+        .and_then(|w| {
+            Sensitivity::ALL
+                .into_iter()
+                .find(|s| sensitivity_id(*s) == w)
+        })
+        .unwrap_or_default();
+    let color = words
+        .next()
+        .and_then(|w| Color::ALL.into_iter().find(|c| focus_color_id(*c) == w))
+        .unwrap_or_default();
+    Look { sensitivity, color }
 }
 
 /// L'ordre gardé dans un fichier : « date », « note inverse »… ; rien de lisible : le
@@ -164,27 +187,21 @@ fn read_photo_order(path: Option<&Path>) -> (PhotoOrder, bool) {
     (order, words.next() == Some("inverse"))
 }
 
-/// La texture d'une photo de la comparaison, avec ses zones nettes peintes en vert à
-/// cette sensibilité s'il y en a une ; et le nombre de pixels peints.
+/// La texture d'une photo de la comparaison, avec ses zones nettes peintes avec cette
+/// allure s'il y en a une ; et le nombre de pixels peints.
 fn compare_texture(
     ctx: &egui::Context,
     index: usize,
     size: [usize; 2],
     rgba: &[u8],
-    focus: Option<luma_image::focus::Sensitivity>,
+    focus: Option<luma_image::focus::Look>,
 ) -> (TextureHandle, usize) {
     let mut marked = 0;
     let painted;
     let pixels = match focus {
-        Some(level) => {
-            let mask = luma_image::focus::sharp_above(rgba, size[0], size[1], level.threshold());
+        Some(look) => {
             let mut copy = rgba.to_vec();
-            for (p, &m) in copy.as_chunks_mut::<4>().0.iter_mut().zip(&mask) {
-                if m {
-                    p[..3].copy_from_slice(&luma_image::focus::COLOR);
-                    marked += 1;
-                }
-            }
+            marked = luma_image::focus::paint_look(&mut copy, rgba, size[0], size[1], look);
             painted = copy;
             painted.as_slice()
         }
@@ -562,7 +579,7 @@ struct Request {
     settings: Settings,
     size: Size,
     clipping: bool,
-    focus: Option<luma_image::focus::Sensitivity>,
+    focus: Option<luma_image::focus::Look>,
     /// La version de la table d'épreuvage, la simulation et l'alerte de gamut.
     proof: Option<(u64, bool, bool)>,
     scene: bool,
@@ -581,9 +598,9 @@ struct Compare {
     /// L'image de chaque photo telle qu'elle est arrivée (sans les zones nettes), pour
     /// refaire sa texture quand on les montre ou les cache.
     images: Vec<Option<([usize; 2], Vec<u8>)>>,
-    /// Les zones nettes peintes sur les textures (leur sensibilité), et le nombre de
-    /// pixels peints de chaque photo.
-    painted: Option<luma_image::focus::Sensitivity>,
+    /// Les zones nettes peintes sur les textures (leur allure), et le nombre de pixels
+    /// peints de chaque photo.
+    painted: Option<luma_image::focus::Look>,
     marked: Vec<usize>,
     tag: u64,
     /// 1 : la photo entière ; au‑delà, agrandie.
@@ -1053,7 +1070,9 @@ pub struct Studio {
     pub focus_peaking: bool,
     /// La sensibilité des zones nettes, gardée d'une séance à l'autre.
     pub focus_sensitivity: luma_image::focus::Sensitivity,
-    /// Le fichier où elle est gardée (`None` : « Zones nettes.txt » du dossier de LÜMA ;
+    /// Leur couleur, gardée avec la sensibilité.
+    pub focus_color: luma_image::focus::Color,
+    /// Le fichier où elles sont gardées (`None` : « Zones nettes.txt » du dossier de LÜMA ;
     /// les essais en donnent un à eux).
     sensitivity_path: Option<PathBuf>,
     /// Le dossier où arrivent les photos importées (iPhone, iPad : `Documents`) ; `None` :
@@ -1513,7 +1532,8 @@ impl Studio {
             before_asked: None,
             clipping: false,
             focus_peaking: false,
-            focus_sensitivity: read_sensitivity(Self::default_sensitivity_path().as_deref()),
+            focus_sensitivity: Default::default(),
+            focus_color: Default::default(),
             sensitivity_path: None,
             imports_dir: None,
             delete_asked: None,
@@ -1665,6 +1685,8 @@ impl Studio {
             pick_map: ([0, 0], Vec::new()),
             wb_label: "Personnalisée",
         };
+        let look = read_focus_look(Self::default_sensitivity_path().as_deref());
+        (studio.focus_sensitivity, studio.focus_color) = (look.sensitivity, look.color);
         if let Some(path) = luma_library::default_path() {
             // Une sauvegarde du catalogue par semaine, sans attendre.
             if luma_library::backup::due(&path, 7) {
@@ -5117,21 +5139,46 @@ impl Studio {
         Some(crate::dialogs::app_dir()?.join("Zones nettes.txt"))
     }
 
-    /// Garde la sensibilité des zones nettes dans ce fichier (les essais), et la relit.
+    /// Garde l'allure des zones nettes dans ce fichier (les essais), et la relit.
     pub fn use_sensitivity_file(&mut self, path: PathBuf) {
-        self.focus_sensitivity = read_sensitivity(Some(&path));
+        let look = read_focus_look(Some(&path));
+        (self.focus_sensitivity, self.focus_color) = (look.sensitivity, look.color);
         self.sensitivity_path = Some(path);
+    }
+
+    /// L'allure des zones nettes : la sensibilité et la couleur choisies.
+    pub fn focus_look(&self) -> luma_image::focus::Look {
+        luma_image::focus::Look {
+            sensitivity: self.focus_sensitivity,
+            color: self.focus_color,
+        }
     }
 
     /// Change la sensibilité des zones nettes et la garde pour la prochaine fois.
     pub fn set_focus_sensitivity(&mut self, s: luma_image::focus::Sensitivity) {
         self.focus_sensitivity = s;
+        self.save_focus_look();
+    }
+
+    /// Change la couleur des zones nettes et la garde pour la prochaine fois.
+    pub fn set_focus_color(&mut self, c: luma_image::focus::Color) {
+        self.focus_color = c;
+        self.save_focus_look();
+    }
+
+    /// Écrit l'allure des zones nettes dans « Zones nettes.txt » (« haute jaune »).
+    fn save_focus_look(&self) {
         if let Some(path) = self
             .sensitivity_path
             .clone()
             .or_else(Self::default_sensitivity_path)
         {
-            let _ = std::fs::write(path, format!("{}\n", sensitivity_id(s)));
+            let text = format!(
+                "{} {}\n",
+                sensitivity_id(self.focus_sensitivity),
+                focus_color_id(self.focus_color)
+            );
+            let _ = std::fs::write(path, text);
         }
     }
 
@@ -6475,7 +6522,7 @@ impl Studio {
             settings,
             size,
             clipping: self.clipping,
-            focus: self.focus_peaking.then_some(self.focus_sensitivity),
+            focus: self.focus_peaking.then(|| self.focus_look()),
             proof: self
                 .proofing
                 .active()
@@ -6509,7 +6556,7 @@ impl Studio {
             self.generation,
             crate::worker::Extras {
                 clipping: self.clipping,
-                focus: self.focus_peaking.then_some(self.focus_sensitivity),
+                focus: self.focus_peaking.then(|| self.focus_look()),
                 scene: request.scene,
                 dust_view: request.dust_view,
                 find_dust: request.find_dust,
@@ -6622,6 +6669,7 @@ impl Studio {
         self.photo_reverse = false;
         self.set_photo_order(PhotoOrder::Name);
         self.focus_sensitivity = Default::default();
+        self.focus_color = Default::default();
         if let Some(path) = self
             .sensitivity_path
             .clone()
@@ -7988,9 +8036,9 @@ impl Studio {
             .is_some_and(|c| c.textures.iter().all(Option::is_some))
     }
 
-    /// Les zones nettes peintes sur la comparaison (leur sensibilité), et le nombre de
+    /// Les zones nettes peintes sur la comparaison (leur allure), et le nombre de
     /// pixels peints de chaque photo.
-    pub fn compare_focus(&self) -> Option<(Option<luma_image::focus::Sensitivity>, Vec<usize>)> {
+    pub fn compare_focus(&self) -> Option<(Option<luma_image::focus::Look>, Vec<usize>)> {
         self.compare.as_ref().map(|c| (c.painted, c.marked.clone()))
     }
 
@@ -8036,9 +8084,10 @@ impl Studio {
     }
 
     fn compare_view(&mut self, ui: &mut Ui, full: Rect, top: Rect, m: f32) {
-        // Les zones nettes (Maj+F) sur toutes les photos comparées, à la sensibilité
-        // choisie : les textures refaites quand on les montre, les cache ou en change.
-        let wanted = self.focus_peaking.then_some(self.focus_sensitivity);
+        // Les zones nettes (Maj+F) sur toutes les photos comparées, à la sensibilité et
+        // de la couleur choisies : les textures refaites quand on les montre, les cache
+        // ou en change.
+        let wanted = self.focus_peaking.then(|| self.focus_look());
         if let Some(c) = &mut self.compare
             && c.painted != wanted
         {
@@ -9146,6 +9195,29 @@ impl Studio {
                         .labelled_by(label.id);
                     if level != self.focus_sensitivity {
                         self.set_focus_sensitivity(level);
+                    }
+                    use luma_image::focus::Color;
+                    let name = |c: Color| match c {
+                        Color::Green => tr("Vert"),
+                        Color::Yellow => tr("Jaune"),
+                        Color::Red => tr("Rouge"),
+                        Color::White => tr("Blanc"),
+                    };
+                    let label = ui.label(RichText::new(tr("Couleur des zones")).size(11.0).color(theme::DIM));
+                    let mut color = self.focus_color;
+                    egui::ComboBox::from_id_salt("couleur-zones-nettes")
+                        .selected_text(name(color))
+                        .width(70.0)
+                        .show_ui(ui, |ui| {
+                            for c in Color::ALL {
+                                ui.selectable_value(&mut color, c, name(c));
+                            }
+                        })
+                        .response
+                        .on_hover_text(tr("Une autre couleur quand le vert se perd dans la photo (un feuillage, une prairie)"))
+                        .labelled_by(label.id);
+                    if color != self.focus_color {
+                        self.set_focus_color(color);
                     }
                 }
                 if !compact

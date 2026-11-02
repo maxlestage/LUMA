@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **In-focus area color**: green, yellow, red or white (“Peaking color”, next to the
+  sensitivity), when green gets lost in foliage or a meadow; kept from one session to
+  the next, in the photo view as in the comparison.
 - **Thumbnails always up to date**: a photo edited while its thumbnail is being
   rendered is rendered once more right after, instead of keeping the old one.
 - **Delete imported photos (iPhone, iPad)**: “Delete…” in Metadata (the photo or the

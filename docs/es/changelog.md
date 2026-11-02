@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Color de las zonas nítidas**: verde, amarillo, rojo o blanco («Color de las
+  zonas», junto a la sensibilidad), cuando el verde se pierde en el follaje o una
+  pradera; guardado de una sesión a otra, en la vista de la foto y en la comparación.
 - **Miniaturas siempre al día**: una foto retocada mientras se genera su miniatura se
   genera una vez más justo después, en lugar de conservar la antigua.
 - **Eliminar las fotos importadas (iPhone, iPad)**: «Eliminar…» en Metadatos (la foto
