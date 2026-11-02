@@ -1974,7 +1974,7 @@ fn before_after(args: Vec<String>) -> Result<(), String> {
 /// `f` pour chaque photo, deux photos à la fois (la lecture d'un RAW n'occupe qu'en
 /// partie les cœurs : l'autre photo se rend pendant ce temps, comme dans l'app) ; les
 /// résultats dans l'ordre des photos, chacun celui de la photo seule.
-fn two_at_a_time<T: Send>(photos: &[PathBuf], f: impl Fn(&Path) -> Result<T, String> + Sync) -> Vec<Result<T, String>> {
+fn two_at_a_time<I: Sync, T: Send>(photos: &[I], f: impl Fn(&I) -> Result<T, String> + Sync) -> Vec<Result<T, String>> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     let next = AtomicUsize::new(0);
     let slots: Vec<std::sync::Mutex<Option<Result<T, String>>>> = photos.iter().map(|_| Default::default()).collect();
@@ -2374,26 +2374,26 @@ fn book(args: Vec<String>) -> Result<(), String> {
     };
     let start = Instant::now();
     // L'orientation de chaque photo décide des pages.
+    // Deux photos à la fois, ici comme pour les pages.
     let mut landscape = Vec::with_capacity(photos.len());
-    for p in &photos {
+    for wide in two_at_a_time(&photos, |p| {
         let (photo, settings) = open_with_settings(p)?;
-        landscape.push(book::is_landscape(&photo, &settings));
+        Ok(book::is_landscape(&photo, &settings))
+    }) {
+        landscape.push(wide?);
     }
     let layout = b.layout();
     let mut pages = print::Pages::for_path(&out, printer.is_none());
     for sheet in b.sheets(&landscape) {
         let orientation = sheet.photos.first().is_none_or(|&k| landscape[k]);
         let cells = b.cells(sheet.kind, orientation);
-        let mut pictures = Vec::with_capacity(sheet.photos.len());
-        for (&k, cell) in sheet.photos.iter().zip(&cells) {
+        let placed: Vec<(usize, _)> = sheet.photos.iter().copied().zip(&cells).collect();
+        let mut pictures = Vec::with_capacity(placed.len());
+        for picture in two_at_a_time(&placed, |&(k, cell)| {
             let (photo, settings) = open_with_settings(&photos[k])?;
-            pictures.push(print::develop(
-                &photo,
-                &settings,
-                &layout,
-                cell,
-                file_label(&photos[k]),
-            )?);
+            print::develop(&photo, &settings, &layout, cell, file_label(&photos[k]))
+        }) {
+            pictures.push(picture?);
         }
         pages.push(&b.page(sheet.kind, &cells, &pictures, printer.as_ref()), &layout)?;
     }
@@ -3146,6 +3146,6 @@ mod tests {
             let name = format!("{i}.png");
             assert_eq!(r, &if i == 4 { Err(name) } else { Ok(name) });
         }
-        assert!(two_at_a_time(&[], |_| Ok::<(), String>(())).is_empty());
+        assert!(two_at_a_time(&[] as &[PathBuf], |_| Ok::<(), String>(())).is_empty());
     }
 }
