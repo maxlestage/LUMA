@@ -4834,6 +4834,54 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
     assert_eq!(s.studio().visible().len(), all);
 }
 
+/// « Ranger les rejetées » : la photo rejetée et son XMP déplacés dans « Rejetées » à
+/// côté, hors du film, son drapeau gardé ; l'autre photo reste. Une seconde fois : rien
+/// à ranger.
+#[test]
+fn rejects_are_moved_aside() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("ranger-rejetees", [1440.0, 2000.0], 1.0, |dir| {
+        for (name, v) in [("r-1.png", 60u8), ("r-2.png", 180)] {
+            image::RgbImage::from_pixel(64, 48, image::Rgb([v, v, v]))
+                .save(dir.join(name))
+                .unwrap();
+        }
+    }) else {
+        return;
+    };
+    s.studio().set_stacking(false);
+    s.keys(&[(NONE, Key::G)]);
+    let photos = s.studio().photos().to_vec();
+    let rejected = photos
+        .iter()
+        .find(|p| p.ends_with("r-2.png"))
+        .unwrap()
+        .clone();
+    let kept = photos
+        .iter()
+        .find(|p| p.ends_with("r-1.png"))
+        .unwrap()
+        .clone();
+    let i = photos.iter().position(|p| *p == rejected).unwrap();
+    s.studio().set_current(i);
+    s.wait();
+    s.keys(&[(NONE, Key::X)]);
+    assert_eq!(s.studio().rejected_photos(), vec![rejected.clone()]);
+    s.harness.get_by_label("Ranger les rejetées").click();
+    s.wait();
+    let moved = rejected.parent().unwrap().join("Rejetées").join("r-2.png");
+    assert!(moved.is_file() && !rejected.exists() && kept.is_file());
+    assert!(!luma_studio::worker::sidecar_path(&rejected).exists());
+    assert_eq!(
+        luma_studio::worker::read_meta(&moved).flag,
+        luma_project::xmp::Flag::Reject
+    );
+    assert!(!s.studio().photos().contains(&rejected));
+    assert!(s.studio().photos().contains(&kept));
+    assert_eq!(s.studio().move_rejects(), 0);
+    assert_eq!(s.studio().status(), "Aucune photo rejetée dans le film");
+}
+
 /// Sans rafale dans le film (les RAW du corpus, chacun d'un autre boîtier), « Retenir la
 /// plus nette de chaque rafale » ne mesure rien et le dit.
 #[test]

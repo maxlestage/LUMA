@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Apartar las rechazadas** (Biblioteca, bajo el filtro «Marca»): las fotos
+  rechazadas de la tira y su XMP pasan a la subcarpeta «Rechazadas» de su carpeta; no
+  se borra nada y la tira conserva el resto.
 - **Mayús+P y Mayús+X en la pila abierta**: sin fotos elegidas, «Seleccionar la más
   nítida» y «Rechazar las desenfocadas» trabajan sobre la pila de la foto abierta;
   basta con abrir una ráfaga y pulsar Mayús+P.

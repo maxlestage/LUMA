@@ -1697,6 +1697,26 @@ fr = Sans les rejetées (X)
 en = Hide rejects (X)
 es = Sin rechazadas (X)
 
+fr = Rejetées|dossier
+en = Rejects
+es = Rechazadas
+
+fr = Ranger les rejetées
+en = Move rejects aside
+es = Apartar las rechazadas
+
+fr = Déplace les photos rejetées du film, avec leur XMP, dans le sous-dossier « Rejetées » de leur dossier ; rien n'est effacé
+en = Moves the filmstrip's rejected photos, with their XMP, into the “Rejects” subfolder of their folder; nothing is deleted
+es = Mueve las fotos rechazadas de la tira, con su XMP, a la subcarpeta «Rechazadas» de su carpeta; no se borra nada
+
+fr = Aucune photo rejetée dans le film
+en = No rejected photo in the filmstrip
+es = Ninguna foto rechazada en la tira
+
+fr = {n} photo(s) rejetée(s) rangée(s) dans « {folder} »
+en = {n} rejected photo(s) moved to “{folder}”
+es = {n} foto(s) rechazada(s) movida(s) a «{folder}»
+
 fr = Rejetées seulement
 en = Rejects only
 es = Solo rechazadas

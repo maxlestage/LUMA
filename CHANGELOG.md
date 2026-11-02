@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Ranger les rejetées** (Bibliothèque, sous le filtre « Drapeau ») : les photos
+  rejetées du film et leur XMP passent dans le sous‑dossier « Rejetées » de leur
+  dossier ; rien n'est effacé, et le film ne garde que le reste.
 - **Maj+P et Maj+X sur la pile ouverte** : sans photos choisies, « Retenir la plus
   nette » et « Rejeter les floues » départagent la pile de la photo ouverte ; ouvrir
   une rafale et appuyer sur Maj+P suffit.
