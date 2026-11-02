@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster `luma lens`**: two RAWs at a time; seven RAWs from different cameras:
+  3.4–3.6 → 2.5–2.7 s, with the same measurements.
 - **Expand or collapse all stacks** (Shift+S, or the Library button): every burst and
   bracket in the filmstrip at once; when collapsed, the open photo becomes the cover
   of its stack.

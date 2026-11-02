@@ -1894,24 +1894,20 @@ fn lens(args: Vec<String>) -> Result<(), String> {
     if photos.is_empty() {
         return Err("il faut des RAW (ou un dossier)".into());
     }
-    let (mut done, mut skipped) = (0, 0);
-    for path in &photos {
+    // Deux RAW à la fois ; chacun donne sa ligne et s'il a été mesuré, dans l'ordre.
+    let measured = two_at_a_time(&photos, |path| {
         let name = path.display();
         let photo = Photo::open(path).map_err(|e| format!("{name} : {e}"))?;
         if photo.has_camera_corrections() {
-            println!("{name} : corrections du boîtier déjà dans le fichier, laissée de côté");
-            skipped += 1;
-            continue;
+            return Ok((
+                format!("{name} : corrections du boîtier déjà dans le fichier, laissée de côté"),
+                false,
+            ));
         }
         let (distortion, vignetting) = match camera_lens::corrections(&photo, path) {
             Ok((d, v)) => (d.round(), v.round()),
-            Err(e) => {
-                println!("{name} : {e}, laissée de côté");
-                skipped += 1;
-                continue;
-            }
+            Err(e) => return Ok((format!("{name} : {e}, laissée de côté"), false)),
         };
-        println!("{name} : distorsion {distortion:+}, vignetage {vignetting:+}");
         if write {
             let mut s = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
             s.lens.distortion = distortion;
@@ -1925,7 +1921,20 @@ fn lens(args: Vec<String>) -> Result<(), String> {
             xmp::save(&target, &xmp::write_with_meta(&s, &luma_library::photo_meta(path)))
                 .map_err(|e| format!("{} : {e}", target.display()))?;
         }
-        done += 1;
+        Ok((
+            format!("{name} : distorsion {distortion:+}, vignetage {vignetting:+}"),
+            true,
+        ))
+    });
+    let (mut done, mut skipped) = (0, 0);
+    for result in measured {
+        let (line, ok) = result?;
+        println!("{line}");
+        if ok {
+            done += 1;
+        } else {
+            skipped += 1;
+        }
     }
     println!(
         "{done} photo(s) {}, {skipped} laissée(s) de côté",
