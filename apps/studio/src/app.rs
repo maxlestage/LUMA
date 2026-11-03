@@ -2645,6 +2645,24 @@ impl Studio {
         }
     }
 
+    /// Le nombre de photos du film que ce filtre de drapeau montrerait (sans les autres
+    /// filtres) : retenues, rejetées, sans drapeau…
+    pub fn flag_count(&self, filter: FlagFilter) -> usize {
+        self.folder
+            .iter()
+            .filter(|p| {
+                let flag = self.meta.get(*p).map_or(Flag::None, |m| m.flag);
+                match filter {
+                    FlagFilter::All => true,
+                    FlagFilter::Picks => flag == Flag::Pick,
+                    FlagFilter::NotRejected => flag != Flag::Reject,
+                    FlagFilter::Rejects => flag == Flag::Reject,
+                    FlagFilter::Unflagged => flag == Flag::None,
+                }
+            })
+            .count()
+    }
+
     /// Les photos rejetées du film (des fichiers, pas des copies virtuelles).
     pub fn rejected_photos(&self) -> Vec<PathBuf> {
         self.folder
@@ -11589,7 +11607,16 @@ impl Studio {
             (FlagFilter::Rejects, tr("Rejetées seulement")),
             (FlagFilter::Unflagged, tr("Sans drapeau (à trier)")),
         ] {
-            ui.radio_value(&mut self.flag_filter, f, name);
+            // Le nombre de photos de chaque cas, à droite : l'avancement du tri.
+            let count = self.flag_count(f);
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut self.flag_filter, f, name);
+                ui.label(
+                    RichText::new(count.to_string())
+                        .size(11.0)
+                        .color(theme::DIM),
+                );
+            });
         }
         // Toujours à sa place (grisé sans rejetée) : le panneau ne bouge pas.
         let rejects = self.rejected_photos().len();
