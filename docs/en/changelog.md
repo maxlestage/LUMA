@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster keyword filter**: each keyword compared without being copied to lowercase
+  without accents; 20,000-photo filmstrip with eight keywords each: 25–28 → 3.7 ms,
+  with the same photos.
 - **Ratings counted**: under “Minimum rating”, the number of photos with at least the
   chosen rating and the breakdown per rating (1★ 4 · 2★ 10…).
 - **Cmd+Shift+Z redoes an undone rating or flag**: right after a Cmd+Z that undid
