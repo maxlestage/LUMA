@@ -4783,6 +4783,14 @@ fn the_sharpest_of_each_burst_is_picked() {
     };
     let nette = label(&mut s, "a-2.png").expect("mesurée");
     assert!(nette.ends_with(" % net"), "{nette}");
+    // Dans le tri en plein écran aussi, sur la photo ouverte.
+    let a2 = photos.iter().position(|p| p.ends_with("a-2.png")).unwrap();
+    s.studio().set_current(a2);
+    s.wait();
+    s.keys(&[(NONE, Key::F)]);
+    s.harness.run_steps(1);
+    assert!(s.harness.query_by_label(&nette).is_some(), "{nette}");
+    s.keys(&[(NONE, Key::Escape)]);
     assert!(label(&mut s, "a-1.png").is_some() && label(&mut s, "seule.png").is_none());
     s.capture("grille-nettete");
     // Alt+Maj+X : la floue de chaque rafale rejetée ; les retenues et la photo seule
