@@ -1158,6 +1158,10 @@ pub struct Studio {
     /// (avec le numéro du changement), et le numéro du dernier réglage retenu dans
     /// l'historique : Cmd+Z défait le plus récent des deux.
     meta_undo: Vec<(u64, Vec<(PathBuf, Meta)>)>,
+    /// Ce que Cmd+Z a défait, pour Cmd+Maj+Z ; `last_undo_meta` : le dernier Cmd+Z a
+    /// défait des notes (pas un réglage).
+    meta_redo: Vec<(u64, Vec<(PathBuf, Meta)>)>,
+    last_undo_meta: bool,
     edit_seq: u64,
     settings_seq: u64,
     /// Le lot des avant / après : photos demandées, écrites, en échec.
@@ -1631,6 +1635,8 @@ impl Studio {
             sharp_shares: HashMap::new(),
             keep_status: false,
             meta_undo: Vec::new(),
+            meta_redo: Vec::new(),
+            last_undo_meta: false,
             edit_seq: 0,
             settings_seq: 0,
             reference: None,
@@ -5584,6 +5590,9 @@ impl Studio {
             .collect();
         self.edit_seq += 1;
         self.meta_undo.push((self.edit_seq, before));
+        // Un nouveau changement : ce qui avait été défait ne se rétablit plus.
+        self.meta_redo.clear();
+        self.last_undo_meta = false;
         if self.meta_undo.len() > META_UNDO {
             self.meta_undo.remove(0);
         }
@@ -5617,7 +5626,42 @@ impl Studio {
         if seq < self.settings_seq {
             return false;
         }
-        let (_, before) = self.meta_undo.pop().expect("annulation");
+        let (seq, before) = self.meta_undo.pop().expect("annulation");
+        // Ce qu'elles ont maintenant : Cmd+Maj+Z le rend.
+        let after: Vec<(PathBuf, Meta)> = before
+            .iter()
+            .map(|(p, _)| (p.clone(), self.meta.get(p).cloned().unwrap_or_default()))
+            .collect();
+        self.meta_redo.push((seq, after));
+        self.last_undo_meta = true;
+        let n = self.put_back_meta(before);
+        self.status = trf("Annulé : note ou drapeau de {n} photo(s)", &[("n", &n)]);
+        true
+    }
+
+    /// Cmd+Maj+Z juste après un Cmd+Z qui a défait des notes ou drapeaux : ils
+    /// reviennent. `false` sinon (l'historique des réglages s'en charge).
+    fn redo_meta(&mut self) -> bool {
+        if !self.last_undo_meta {
+            return false;
+        }
+        let Some((seq, after)) = self.meta_redo.pop() else {
+            return false;
+        };
+        let before: Vec<(PathBuf, Meta)> = after
+            .iter()
+            .map(|(p, _)| (p.clone(), self.meta.get(p).cloned().unwrap_or_default()))
+            .collect();
+        self.meta_undo.push((seq, before));
+        let n = self.put_back_meta(after);
+        self.status = trf("Rétabli : note ou drapeau de {n} photo(s)", &[("n", &n)]);
+        true
+    }
+
+    /// Rend ces métadonnées à leurs photos (et écrit leurs XMP) ; une seule photo laissée
+    /// derrière (l'avance automatique du tri) : on y revient. Le nombre de photos.
+    fn put_back_meta(&mut self, entries: Vec<(PathBuf, Meta)>) -> usize {
+        let before = entries;
         let current = self.current_path().map(Path::to_path_buf);
         let n = before.len();
         // Une seule photo, laissée derrière (l'avance automatique du tri) : on y revient.
@@ -5639,8 +5683,7 @@ impl Studio {
             self.keep_status = true;
             self.select(i);
         }
-        self.status = trf("Annulé : note ou drapeau de {n} photo(s)", &[("n", &n)]);
-        true
+        n
     }
 
     /// Ajoute des mots‑clés (séparés par des virgules) à la sélection, ou à la photo
@@ -6282,6 +6325,9 @@ impl Studio {
         // Un réglage après des notes : Cmd+Z défait d'abord le réglage.
         self.edit_seq += 1;
         self.settings_seq = self.edit_seq;
+        // Un réglage changé : les notes défaites ne se rétablissent plus.
+        self.meta_redo.clear();
+        self.last_undo_meta = false;
         // Retouchée, sa part au point mesurée ne vaut plus.
         if let Some(p) = self.current_path().map(Path::to_path_buf) {
             self.sharp_shares.remove(&p);
@@ -7244,7 +7290,11 @@ impl Studio {
     fn act_once(&mut self, action: &str) {
         match action {
             "undo" if self.undo_meta() => {}
-            "undo" if self.history_pos > 0 => self.restore(self.history_pos - 1),
+            "undo" if self.history_pos > 0 => {
+                self.last_undo_meta = false;
+                self.restore(self.history_pos - 1)
+            }
+            "redo" if self.redo_meta() => {}
             "redo" if self.history_pos + 1 < self.history.len() => {
                 self.restore(self.history_pos + 1)
             }
