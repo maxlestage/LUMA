@@ -123,26 +123,26 @@ fn align(
 ) -> Result<Aligned> {
     let n = frames.len();
     let long_side = if mode == StackMode::Stars { 3000 } else { 1600 };
-    let mut small = Vec::with_capacity(n);
-    let mut full = (0, 0);
-    for i in 0..n {
-        cancel.check()?;
-        progress(0.3 * i as f32 / n as f32, "Analyse des poses");
-        let img = frames.load(i)?;
-        if i == 0 {
-            full = (img.width, img.height);
-        } else if (img.width, img.height) != full {
-            return Err(Error::Decode(format!(
-                "la pose {} n'a pas la taille des autres ({} × {} au lieu de {} × {})",
-                i + 1,
-                img.width,
-                img.height,
-                full.0,
-                full.1
-            )));
-        }
-        small.push(analysis(&img, long_side));
+    // Deux poses lues et réduites à la fois ; chaque réduction est celle de la pose seule.
+    let read = crate::frames::load_each(
+        frames,
+        |i| {
+            cancel.check()?;
+            progress(0.3 * i as f32 / n as f32, "Analyse des poses");
+            Ok(())
+        },
+        |_, img| ((img.width, img.height), analysis(&img, long_side)),
+    )?;
+    let full = read.first().map_or((0, 0), |r| r.0);
+    if let Some((i, ((w, h), _))) = read.iter().enumerate().find(|(_, r)| r.0 != full) {
+        return Err(Error::Decode(format!(
+            "la pose {} n'a pas la taille des autres ({w} × {h} au lieu de {} × {})",
+            i + 1,
+            full.0,
+            full.1
+        )));
     }
+    let small: Vec<RgbImage> = read.into_iter().map(|r| r.1).collect();
     // En HDR, la référence est l'exposition médiane, et chaque copie est ramenée à sa
     // luminosité : les coins se retrouvent d'une pose à l'autre.
     let levels: Vec<f32> = small.iter().map(median_level).collect();
