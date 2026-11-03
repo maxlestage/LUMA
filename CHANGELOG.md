@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **`luma catalog --summary`** : le bilan du tri des photos montrées (toute la
+  photothèque, une recherche ou une collection) : retenues, rejetées, sans drapeau,
+  nombre de photos par note et par libellé.
 - **Filtre par mot‑clé plus rapide** : chaque mot‑clé comparé sans être recopié en
   minuscules sans accents ; film de 20 000 photos à huit mots‑clés : 25–28 → 3,7 ms,
   aux mêmes photos.
