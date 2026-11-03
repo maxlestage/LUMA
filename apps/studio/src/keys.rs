@@ -281,6 +281,11 @@ pub const ACTIONS: &[Action] = &[
         "Prochaine photo sans drapeau",
         &[Combo::new(Key::N)],
     ),
+    a(
+        "prev_unflagged",
+        "Photo précédente sans drapeau",
+        &[Combo::shift(Key::N)],
+    ),
     a("move_rejects", "Ranger les rejetées", &[]),
     a("export_picks", "Exporter les retenues…", &[]),
     a("label0", "Libellé rouge", &[Combo::new(Key::Num6)]),
