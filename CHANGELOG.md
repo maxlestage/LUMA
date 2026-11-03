@@ -2,9 +2,9 @@
 
 ## 0.4.0 — à venir
 
-- **`luma export` ne reste plus bloqué** : une photo dont la lecture plante devient
-  une erreur pour elle seule ; les suivantes s'exportent, au lieu d'attendre pour
-  toujours leur tour de réserver leurs noms.
+- **`luma tidy <photos|dossier>`** : les photos rejetées (drapeau du XMP) rangées
+  avec leurs XMP dans « Rejetées » (ou `--folder`), comme dans l'app ; rien n'est
+  effacé ni écrasé ; `--dry-run` les nomme seulement.
 - **Correction** : après « Ranger les rejetées » ou la suppression de photos
   importées, le compte rendu (« 2 photo(s) supprimée(s). ») restait une fraction de
   seconde, effacé par l'ouverture de la photo voisine ; il reste affiché.

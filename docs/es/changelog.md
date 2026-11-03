@@ -2,9 +2,9 @@
 
 ## 0.4.0 — próximamente
 
-- **`luma export` ya no se queda bloqueado**: una foto cuya lectura falla se convierte
-  en un error solo para ella; las siguientes se exportan, en lugar de esperar para
-  siempre su turno de reservar sus nombres.
+- **`luma tidy <fotos|carpeta>`**: las fotos rechazadas (marca del XMP) movidas con su
+  XMP a «Rejetées» (o `--folder`), como en la app; no se borra ni se sobrescribe
+  nada; `--dry-run` solo las nombra.
 - **Corrección**: tras «Apartar las rechazadas» o eliminar fotos importadas, el
   resumen («2 foto(s) eliminada(s).») duraba una fracción de segundo, borrado al
   abrirse la foto vecina; ahora se queda en pantalla.

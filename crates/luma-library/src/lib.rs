@@ -19,6 +19,7 @@ pub mod map;
 pub mod query;
 pub mod stacks;
 mod store;
+pub mod tidy;
 pub mod watch;
 
 use std::collections::{BTreeMap, HashMap};

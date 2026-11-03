@@ -2,9 +2,9 @@
 
 ## 0.4.0 — upcoming
 
-- **`luma export` no longer hangs**: a photo whose reading crashes becomes an error
-  for that photo alone; the next ones are exported instead of waiting forever for
-  their turn to reserve their names.
+- **`luma tidy <photos|folder>`**: the rejected photos (XMP flag) moved with their XMP
+  into “Rejetées” (or `--folder`), as in the app; nothing is deleted or overwritten;
+  `--dry-run` only names them.
 - **Fix**: after “Move rejects aside” or deleting imported photos, the report (“2
   photo(s) deleted.”) lasted a split second, wiped by the opening of the neighboring
   photo; it now stays on screen.

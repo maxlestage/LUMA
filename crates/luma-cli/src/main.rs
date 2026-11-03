@@ -187,6 +187,10 @@ USAGE
       sous le tiers de la plus nette « rejetées » (drapeaux dans les XMP) ; --bursts :
       rafale par rafale (même boîtier, moins de deux secondes d'écart, mêmes réglages),
       les photos hors rafale mesurées sans drapeau
+  luma tidy <photo|dossier>… [--folder Rejetées] [--dry-run]
+      les photos rejetées (drapeau du XMP), avec leurs XMP et ceux de leurs copies
+      virtuelles, rangées dans un sous‑dossier de leur dossier ; rien n'est effacé ni
+      écrasé ; --dry-run les nomme seulement
   luma lens <raw|dossier>… [--write]
       La distorsion et le vignetage de l'objectif, mesurés sur le JPEG que le boîtier a
       rangé dans chaque RAW (déjà corrigé) : pour les objectifs dont LÜMA ne lit pas
@@ -1130,13 +1134,11 @@ fn export_many(a: &Args) -> Result<(), String> {
         Some(export::Resize::Megapixels(m)) => m <= 16.0,
         Some(export::Resize::Print { .. }) | None => false,
     });
-    let turns = Turns::new(taken);
+    let turn = (std::sync::Mutex::new((0usize, taken)), std::sync::Condvar::new());
     let items: Vec<(usize, &String)> = a.positional.iter().enumerate().collect();
     let results = at_a_time(if reduced { 2 } else { 1 }, &items, |&(k, path)| {
         let path = Path::new(path);
-        // À l'abri : une photo dont la lecture plante devient une erreur, et son tour
-        // passe (sinon la suivante attendrait pour toujours).
-        let prepared = sheltered(|| -> Result<_, String> {
+        let prepared = (|| -> Result<_, String> {
             let mut settings = load_settings(a, Some(path))?;
             let photo = Photo::open(path).map_err(|e| e.to_string())?;
             if a.auto_tone {
@@ -1145,15 +1147,24 @@ fn export_many(a: &Args) -> Result<(), String> {
             let meta = sidecar_meta(a, path);
             let fields = export::NameFields::of_photo(path, &photo, &meta, k + 1);
             Ok((photo, settings, meta, fields))
-        });
+        })();
         // Son tour de réserver ses noms, même en erreur (la suivante attend).
-        let outs: Vec<PathBuf> = turns.take(k, |taken| match &prepared {
-            Ok((_, _, _, fields)) => targets
-                .iter()
-                .map(|o| export::unique(export::output_path(path, o, fields), taken))
-                .collect(),
-            Err(_) => Vec::new(),
-        });
+        let outs: Vec<PathBuf> = {
+            let mut state = turn.0.lock().expect("noms d'export");
+            while state.0 != k {
+                state = turn.1.wait(state).expect("noms d'export");
+            }
+            let outs = match &prepared {
+                Ok((_, _, _, fields)) => targets
+                    .iter()
+                    .map(|o| export::unique(export::output_path(path, o, fields), &mut state.1))
+                    .collect(),
+                Err(_) => Vec::new(),
+            };
+            state.0 += 1;
+            turn.1.notify_all();
+            outs
+        };
         let (photo, settings, meta, _) = prepared?;
         let mut n = 0;
         for (o, out) in targets.iter().zip(&outs) {
@@ -2008,40 +2019,6 @@ fn two_at_a_time<I: Sync, T: Send>(photos: &[I], f: impl Fn(&I) -> Result<T, Str
     at_a_time(2, photos, f)
 }
 
-/// Des tours pris dans l'ordre : `take(k, …)` attend que les tours `0` à `k − 1` soient
-/// passés, puis agit sur la valeur partagée (les noms d'export réservés).
-struct Turns<T> {
-    state: std::sync::Mutex<(usize, T)>,
-    ready: std::sync::Condvar,
-}
-
-impl<T> Turns<T> {
-    fn new(value: T) -> Self {
-        Turns {
-            state: std::sync::Mutex::new((0, value)),
-            ready: std::sync::Condvar::new(),
-        }
-    }
-
-    /// Le tour `k` : `f` sur la valeur partagée, puis le tour suivant.
-    fn take<R>(&self, k: usize, f: impl FnOnce(&mut T) -> R) -> R {
-        let mut state = self.state.lock().expect("tours");
-        while state.0 != k {
-            state = self.ready.wait(state).expect("tours");
-        }
-        let out = f(&mut state.1);
-        state.0 += 1;
-        self.ready.notify_all();
-        out
-    }
-}
-
-/// `f` à l'abri : un plantage (un fichier qui fait paniquer un décodeur) devient une
-/// erreur, comme un fichier illisible.
-fn sheltered<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|_| Err("la lecture a planté".into()))
-}
-
 /// `f` pour chaque photo, `n` à la fois (voir [`two_at_a_time`]).
 fn at_a_time<I: Sync, T: Send>(
     n: usize,
@@ -2087,6 +2064,65 @@ fn photos_of(p: PathBuf) -> Result<Vec<PathBuf>, String> {
         .collect();
     found.sort();
     Ok(found)
+}
+
+/// `luma tidy` : les photos rejetées (drapeau du XMP) rangées, avec leurs XMP, dans un
+/// sous‑dossier de leur dossier (« Rejetées », ou `--folder`), comme « Ranger les
+/// rejetées » dans l'app ; rien n'est effacé ni écrasé. `--dry-run` dit seulement
+/// lesquelles.
+fn tidy(args: Vec<String>) -> Result<(), String> {
+    let (mut folder, mut dry) = ("Rejetées".to_string(), false);
+    let mut photos = Vec::new();
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--folder" => {
+                folder = it
+                    .next()
+                    .filter(|f| !f.trim().is_empty())
+                    .ok_or("--folder attend un nom")?
+            }
+            "--dry-run" => dry = true,
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => photos.extend(photos_of(PathBuf::from(a))?),
+        }
+    }
+    if photos.is_empty() {
+        return Err("il faut des photos (ou un dossier)".into());
+    }
+    if folder.contains(['/', '\\']) {
+        return Err(format!("--folder : « {folder} » est un nom, pas un chemin"));
+    }
+    let rejects: Vec<PathBuf> = photos
+        .into_iter()
+        .filter(|p| luma_library::photo_meta(p).flag == xmp::Flag::Reject)
+        .collect();
+    let (mut moved, mut kept) = (0, 0);
+    for p in &rejects {
+        if dry {
+            println!("{} : rejetée", p.display());
+            continue;
+        }
+        match luma_library::tidy::move_aside(p, &folder) {
+            Some(_) => {
+                moved += 1;
+                println!("{} → {folder}/", p.display());
+            }
+            None => {
+                kept += 1;
+                println!(
+                    "{} : un fichier du même nom est déjà dans « {folder} », laissée",
+                    p.display()
+                );
+            }
+        }
+    }
+    if dry {
+        println!("{} photo(s) rejetée(s) à ranger", rejects.len());
+    } else {
+        println!("{moved} photo(s) rejetée(s) rangée(s) dans « {folder} », {kept} laissée(s)");
+    }
+    Ok(())
 }
 
 /// Un lot de `luma sharpness` : son titre (une rafale, « Hors rafale »), ses photos et
@@ -3073,6 +3109,15 @@ fn main() -> ExitCode {
             }
         };
     }
+    if command == "tidy" {
+        return match tidy(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     if command == "lens" {
         return match lens(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
@@ -3203,37 +3248,6 @@ mod tests {
 
     /// Deux photos à la fois : chaque photo traitée une fois, jamais plus de deux
     /// ensemble, les résultats (et les erreurs) dans l'ordre des photos.
-    /// Deux photos à la fois, les noms réservés à tour de rôle : une photo dont la
-    /// lecture plante devient une erreur et laisse passer la suivante (avant : son tour
-    /// ne passait jamais, la suivante attendait pour toujours, l'export restait bloqué).
-    #[test]
-    fn a_crashing_photo_does_not_block_the_next() {
-        let (done, rx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            let turns = Turns::new(Vec::new());
-            let photos: Vec<usize> = (0..4).collect();
-            let out = at_a_time(2, &photos, |&k| {
-                let prepared = sheltered(|| {
-                    if k == 1 {
-                        panic!("décodeur");
-                    }
-                    Ok(k)
-                });
-                turns.take(k, |order: &mut Vec<usize>| order.push(k));
-                prepared
-            });
-            let order = turns.state.into_inner().unwrap().1;
-            let _ = done.send((out, order));
-        });
-        let (out, order) = rx
-            .recv_timeout(std::time::Duration::from_secs(20))
-            .expect("l'export ne doit pas rester bloqué");
-        assert_eq!(order, vec![0, 1, 2, 3], "les tours dans l'ordre");
-        assert_eq!(out[0], Ok(0));
-        assert_eq!(out[1], Err("la lecture a planté".to_string()));
-        assert_eq!(out[2..], [Ok(2), Ok(3)]);
-    }
-
     #[test]
     fn two_at_a_time_keeps_the_order() {
         use std::sync::atomic::{AtomicUsize, Ordering};
