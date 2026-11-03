@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **El recorte en la selección a pantalla completa**: la parte de la vista previa
+  quemada (blanco puro) y empastada (negro total), «2,3 % quemado», desde un píxel de
+  cada mil, para descartar una foto fallida sin abrir el indicador de recorte.
 - **Miniaturas instantáneas más rápidas** (la vista previa integrada en el RAW, que se
   muestra al abrir una carpeta): la vista previa se busca en el archivo de ocho en
   ocho bytes; la búsqueda pasa de 6–8 a 2–3 ms por foto, los siete RAW del corpus a

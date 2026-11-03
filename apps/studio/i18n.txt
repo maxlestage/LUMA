@@ -6571,6 +6571,18 @@ fr = {percent} % net
 en = {percent}% sharp
 es = {percent} % nítido
 
+fr = {percent} % brûlé
+en = {percent}% blown
+es = {percent} % quemado
+
+fr = {percent} % bouché
+en = {percent}% crushed
+es = {percent} % empastado
+
+fr = Part de la photo écrêtée : blanc pur (brûlé) ou noir complet (bouché), comme le montre l'indicateur d'écrêtage (J)
+en = Share of the photo that is clipped: pure white (blown) or full black (crushed), as the clipping indicator (J) shows
+es = Parte de la foto recortada: blanco puro (quemado) o negro total (empastado), como muestra el indicador de recorte (J)
+
 fr = Aucune rafale dans le film
 en = No burst in the filmstrip
 es = Ninguna ráfaga en la tira
