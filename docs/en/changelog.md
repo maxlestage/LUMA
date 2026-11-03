@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster keyword search** (`keyword:` in the app search and `luma catalog
+  --search`): each keyword compared without being copied; 100,000 photos:
+  39–57 → 14 ms, with the same photos found.
 - **`luma catalog --summary`**: the culling summary of the photos shown (the whole
   library, a search or a collection): picks, rejects, unflagged, number of photos per
   rating and per label.
