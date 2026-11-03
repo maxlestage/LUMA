@@ -386,6 +386,21 @@ fn culling_full_screen_from_the_keyboard() {
         s.studio().status(),
         "Annulé : note ou drapeau de 1 photo(s)"
     );
+    // Cmd+Maj+Z la rétablit ; Cmd+Z de nouveau la défait.
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::Z)]);
+    assert_eq!(
+        s.studio().current_meta().flag,
+        luma_project::xmp::Flag::Pick
+    );
+    assert_eq!(
+        s.studio().status(),
+        "Rétabli : note ou drapeau de 1 photo(s)"
+    );
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(
+        s.studio().current_meta().flag,
+        luma_project::xmp::Flag::None
+    );
     s.keys(&[(NONE, Key::P)]);
     s.keys(&[(NONE, Key::Num9)]);
     assert_eq!(s.studio().current_meta().label, "");

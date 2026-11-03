@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Cmd+Shift+Z redoes an undone rating or flag**: right after a Cmd+Z that undid
+  ratings, flags, labels or keywords, they come back; a new change clears what could
+  be redone.
 - **Cmd+Z without orphan XMP**: after “Move rejects aside” (or a deleted photo),
   undoing a rating or flag no longer rewrites an XMP where the photo used to be, where
   it would go to another photo of the same name.

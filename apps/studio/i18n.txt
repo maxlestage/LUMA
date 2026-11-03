@@ -1725,6 +1725,10 @@ fr = Tout est trié
 en = All sorted
 es = Todo cribado
 
+fr = Rétabli : note ou drapeau de {n} photo(s)
+en = Redone: rating or flag of {n} photo(s)
+es = Rehecho: valoración o marca de {n} foto(s)
+
 fr = Annulé : note ou drapeau de {n} photo(s)
 en = Undone: rating or flag of {n} photo(s)
 es = Deshecho: valoración o marca de {n} foto(s)

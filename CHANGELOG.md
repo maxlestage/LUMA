@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Cmd+Maj+Z rétablit une note ou un drapeau défait** : juste après un Cmd+Z qui a
+  défait des notes, drapeaux, libellés ou mots‑clés, ils reviennent ; un nouveau
+  changement efface ce qui pouvait être rétabli.
 - **Cmd+Z sans XMP orphelin** : après « Ranger les rejetées » (ou une photo
   supprimée), annuler une note ou un drapeau ne réécrit plus de XMP à l'ancienne place
   de la photo partie, où il irait à une autre photo du même nom.
