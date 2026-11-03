@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Lighter grid and filmstrip**: the list of photos shown (requested several times
+  per frame) no longer copies each photo's metadata; 20,000-photo filmstrip:
+  6.0–6.5 → 2.6–2.9 ms, and 51–56 → 25–28 ms with a keyword, with the same photos.
 - **Cmd+Z also undoes a rating or flag**: a rating, flag, label or keywords set by
   mistake are undone like a setting (the most recent of the two first); while culling,
   the app goes back to the photo concerned.
