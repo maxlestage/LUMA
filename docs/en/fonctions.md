@@ -153,7 +153,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 |---|---|
 | Reads XMP files (`IMG_0001.xmp` sidecar), writes the same format | ✅ automatic saving in the app |
 | Folder filmstrip with thumbnails, ← → navigation | ✅ |
-| Grid, ratings (0 to 5), flags (P, X, U), filter by rating and flag (picks, hide rejects, rejects only, unflagged), stored in the XMP; “Move rejects aside” into a subfolder, deleting nothing; Cmd+A selects the photos shown, Cmd+Shift+A none, Cmd+Alt+A inverts the selection | ✅ |
+| Grid, ratings (0 to 5), flags (P, X, U), filter by rating and flag (picks, hide rejects, rejects only, unflagged), stored in the XMP; “Move rejects aside” into a subfolder, deleting nothing (`luma tidy` on the command line); Cmd+A selects the photos shown, Cmd+Shift+A none, Cmd+Alt+A inverts the selection | ✅ |
 | Full-screen culling from the keyboard (F): ratings, flags, color labels (6 to 9), next photo by itself (A), Esc to leave; labels stored under the format's names in the XMP, found in French, English and Spanish | ✅ |
 | Compare 2 to 4 photos (C): side by side then in a grid, each developed with its own adjustments; synchronized zoom and pan (scroll, double-click, drag), ×4 loupe at the same spot of every photo (L), the in-focus share of each (the sharpest highlighted) and its in-focus areas (Shift+F), a click opens the photo | ✅ |
 | Stacks: bursts and exposure brackets recognized (same camera, less than two seconds apart; a changing exposure makes a bracket), folded behind the first photo (S to expand, Shift+S for all, Shift+C to compare its photos), “Merge the bracket” to the Merge tool | ✅ |
