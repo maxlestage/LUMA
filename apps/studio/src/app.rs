@@ -551,6 +551,53 @@ pub enum FlagFilter {
     Unflagged,
 }
 
+/// Les comptes des drapeaux d'un film : de quoi nommer chaque choix du filtre « Drapeau »
+/// et savoir s'il y a des rejetées à ranger.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct FlagCounts {
+    pub all: usize,
+    pub picks: usize,
+    pub rejects: usize,
+    pub unflagged: usize,
+    /// Les rejetées qui sont des fichiers (pas des copies virtuelles) : ce que « Ranger
+    /// les rejetées » déplacerait.
+    pub rejected_files: usize,
+}
+
+impl FlagCounts {
+    /// Les comptes de ces photos, d'après leurs métadonnées (sans : pas de drapeau).
+    pub fn of(photos: &[PathBuf], meta: &HashMap<PathBuf, Meta>) -> FlagCounts {
+        let mut c = FlagCounts {
+            all: photos.len(),
+            ..FlagCounts::default()
+        };
+        for p in photos {
+            match meta.get(p).map_or(Flag::None, |m| m.flag) {
+                Flag::Pick => c.picks += 1,
+                Flag::Reject => {
+                    c.rejects += 1;
+                    if luma_project::copies::number(p).is_none() {
+                        c.rejected_files += 1;
+                    }
+                }
+                Flag::None => c.unflagged += 1,
+            }
+        }
+        c
+    }
+
+    /// Le nombre de photos que ce filtre montrerait.
+    pub fn get(&self, filter: FlagFilter) -> usize {
+        match filter {
+            FlagFilter::All => self.all,
+            FlagFilter::Picks => self.picks,
+            FlagFilter::NotRejected => self.all - self.rejects,
+            FlagFilter::Rejects => self.rejects,
+            FlagFilter::Unflagged => self.unflagged,
+        }
+    }
+}
+
 /// L'outil Recadrage ouvert : le cadre d'avant (pour Échap) et les proportions.
 struct CropTool {
     saved: Crop,
@@ -2648,19 +2695,13 @@ impl Studio {
     /// Le nombre de photos du film que ce filtre de drapeau montrerait (sans les autres
     /// filtres) : retenues, rejetées, sans drapeau…
     pub fn flag_count(&self, filter: FlagFilter) -> usize {
-        self.folder
-            .iter()
-            .filter(|p| {
-                let flag = self.meta.get(*p).map_or(Flag::None, |m| m.flag);
-                match filter {
-                    FlagFilter::All => true,
-                    FlagFilter::Picks => flag == Flag::Pick,
-                    FlagFilter::NotRejected => flag != Flag::Reject,
-                    FlagFilter::Rejects => flag == Flag::Reject,
-                    FlagFilter::Unflagged => flag == Flag::None,
-                }
-            })
-            .count()
+        self.flag_counts().get(filter)
+    }
+
+    /// Les comptes des drapeaux du film, en un seul passage (le panneau de la
+    /// Bibliothèque les montre à chaque image).
+    pub fn flag_counts(&self) -> FlagCounts {
+        FlagCounts::of(&self.folder, &self.meta)
     }
 
     /// Les photos rejetées du film (des fichiers, pas des copies virtuelles).
@@ -11608,6 +11649,8 @@ impl Studio {
         }
         ui.add_space(8.0);
         ui.label(RichText::new(tr("Drapeau")).color(theme::DIM).size(11.5));
+        // Les comptes en un seul passage pour toute la section.
+        let counts = self.flag_counts();
         for (f, name) in [
             (FlagFilter::All, tr("Toutes")),
             (FlagFilter::Picks, tr("Retenues (P)")),
@@ -11616,7 +11659,7 @@ impl Studio {
             (FlagFilter::Unflagged, tr("Sans drapeau (à trier)")),
         ] {
             // Le nombre de photos de chaque cas, à droite : l'avancement du tri.
-            let count = self.flag_count(f);
+            let count = counts.get(f);
             ui.horizontal(|ui| {
                 ui.radio_value(&mut self.flag_filter, f, name);
                 ui.label(
@@ -11627,7 +11670,7 @@ impl Studio {
             });
         }
         // Toujours à sa place (grisé sans rejetée) : le panneau ne bouge pas.
-        let rejects = self.rejected_photos().len();
+        let rejects = counts.rejected_files;
         if ui
             .add_enabled(rejects > 0, egui::Button::new(tr("Ranger les rejetées")).small())
             .on_hover_text(tr(
@@ -16561,6 +16604,74 @@ fn centered_text(painter: &egui::Painter, top: egui::Pos2, width: f32, text: Str
 #[cfg(test)]
 mod tests {
     use luma_render::slideshow::Transition;
+
+    /// Les comptes en un passage valent ceux d'un passage par filtre ; les copies
+    /// virtuelles rejetées comptent comme rejetées, pas comme fichiers à ranger.
+    #[test]
+    fn flag_counts_in_one_pass() {
+        use super::{Flag, FlagCounts, FlagFilter, Meta};
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+        let n = 20_000;
+        let photos: Vec<PathBuf> = (0..n)
+            .map(|i| {
+                if i % 7 == 0 {
+                    PathBuf::from(format!("/film/IMG_{i}.CR3.copie-2"))
+                } else {
+                    PathBuf::from(format!("/film/IMG_{i}.CR3"))
+                }
+            })
+            .collect();
+        let mut meta = HashMap::new();
+        for (i, p) in photos.iter().enumerate() {
+            let flag = match i % 3 {
+                0 => Flag::Pick,
+                1 => Flag::Reject,
+                _ => continue,
+            };
+            meta.insert(
+                p.clone(),
+                Meta {
+                    flag,
+                    ..Meta::default()
+                },
+            );
+        }
+        let one_by_one = |f: FlagFilter| {
+            photos
+                .iter()
+                .filter(|p| {
+                    let flag = meta.get(*p).map_or(Flag::None, |m| m.flag);
+                    match f {
+                        FlagFilter::All => true,
+                        FlagFilter::Picks => flag == Flag::Pick,
+                        FlagFilter::NotRejected => flag != Flag::Reject,
+                        FlagFilter::Rejects => flag == Flag::Reject,
+                        FlagFilter::Unflagged => flag == Flag::None,
+                    }
+                })
+                .count()
+        };
+        let files = |ps: &[PathBuf]| {
+            ps.iter()
+                .filter(|p| luma_project::copies::number(p).is_none())
+                .filter(|p| meta.get(*p).is_some_and(|m| m.flag == Flag::Reject))
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        let c = FlagCounts::of(&photos, &meta);
+        for f in [
+            FlagFilter::All,
+            FlagFilter::Picks,
+            FlagFilter::NotRejected,
+            FlagFilter::Rejects,
+            FlagFilter::Unflagged,
+        ] {
+            assert_eq!(c.get(f), one_by_one(f), "{f:?}");
+        }
+        assert_eq!(c.rejected_files, files(&photos).len());
+        assert!(c.rejected_files < c.rejects);
+    }
 
     #[test]
     fn a_shuffle_is_a_permutation() {

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Biblioteca más ligera**: los recuentos del filtro «Marca» se hacen en una sola
+  pasada en cada imagen (antes: cinco, más una copia de la lista de rechazadas); tira
+  de 20 000 fotos: 9,5–11,7 → 1,5–2,4 ms por imagen, con los mismos recuentos.
 - **Lo que queda por cribar**: la selección a pantalla completa (F) indica cuántas
   fotos de la tira no tienen marca todavía («12 por cribar»), y luego «Todo cribado».
 - **El avance del cribado**: cada opción del filtro «Marca» muestra su número de

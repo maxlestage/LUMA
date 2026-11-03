@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Bibliothèque plus légère** : les comptes du filtre « Drapeau » se font en un seul
+  passage à chaque image (avant : cinq, plus une copie de la liste des rejetées) ;
+  film de 20 000 photos : 9,5–11,7 → 1,5–2,4 ms par image, aux mêmes comptes.
 - **Ce qui reste à trier** : le tri en plein écran (F) dit combien de photos du film
   n'ont pas encore de drapeau (« 12 à trier »), puis « Tout est trié ».
 - **L'avancement du tri** : chaque choix du filtre « Drapeau » montre son nombre de
