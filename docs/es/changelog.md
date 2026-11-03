@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Decidir en la comparación**: Intro conserva la foto elegida («Seleccionada») y
+  rechaza las demás fotos comparadas; Cmd+Z lo deshace todo.
 - **Exportar las seleccionadas…** (Biblioteca, bajo el filtro «Marca»): la tira solo
   muestra las seleccionadas y la ventana de exportación se abre con ellas; el final
   de un cribado en un clic.

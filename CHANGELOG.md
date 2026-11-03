@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Trancher dans la comparaison** : Entrée garde la photo choisie (« Retenue ») et
+  rejette les autres photos comparées ; Cmd+Z défait le tout.
 - **Exporter les retenues…** (Bibliothèque, sous le filtre « Drapeau ») : le film ne
   montre plus que les retenues et la fenêtre d'export s'ouvre sur elles ; la fin d'un
   tri en un clic.
