@@ -5,6 +5,9 @@
 - **Cmd+Z sans XMP orphelin** : après « Ranger les rejetées » (ou une photo
   supprimée), annuler une note ou un drapeau ne réécrit plus de XMP à l'ancienne place
   de la photo partie, où il irait à une autre photo du même nom.
+- **Grille et film plus légers** : la liste des photos montrées (demandée plusieurs fois
+  par image) ne copie plus les métadonnées de chaque photo ; film de 20 000 photos :
+  6,0–6,5 → 2,6–2,9 ms, et 51–56 → 25–28 ms avec un mot‑clé, aux mêmes photos.
 - **Cmd+Z défait aussi une note ou un drapeau** : une note, un drapeau, un libellé ou
   des mots‑clés posés par erreur se défont comme un réglage (le plus récent des deux
   d'abord) ; pendant le tri, l'app revient à la photo touchée.

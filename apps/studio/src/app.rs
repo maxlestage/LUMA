@@ -551,6 +551,43 @@ pub enum FlagFilter {
     Unflagged,
 }
 
+/// Les photos du film que montrent la grille et le film (leurs indices) : note minimale,
+/// filtre de drapeau, mot‑clé (aux majuscules et accents près), sans les photos
+/// repliées dans une pile (`hidden`). Les métadonnées sont lues sans être copiées et le
+/// mot‑clé mis en forme une seule fois : la grille demande cette liste plusieurs fois
+/// par image.
+fn shown(
+    folder: &[PathBuf],
+    meta: &HashMap<PathBuf, Meta>,
+    min_rating: u8,
+    flag_filter: FlagFilter,
+    keyword: Option<&str>,
+    hidden: impl Fn(&Path) -> bool,
+) -> Vec<usize> {
+    let none = Meta::default();
+    let keyword = keyword.map(fold);
+    folder
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| {
+            let m = meta.get(*p).unwrap_or(&none);
+            m.rating >= min_rating
+                && match flag_filter {
+                    FlagFilter::All => true,
+                    FlagFilter::Picks => m.flag == Flag::Pick,
+                    FlagFilter::NotRejected => m.flag != Flag::Reject,
+                    FlagFilter::Rejects => m.flag == Flag::Reject,
+                    FlagFilter::Unflagged => m.flag == Flag::None,
+                }
+                && keyword
+                    .as_ref()
+                    .is_none_or(|k| m.keywords.iter().any(|w| fold(w) == *k))
+                && !hidden(p)
+        })
+        .map(|(i, _)| i)
+        .collect()
+}
+
 /// Le nombre de changements de notes et drapeaux qu'on peut défaire.
 const META_UNDO: usize = 200;
 
@@ -2878,24 +2915,14 @@ impl Studio {
                 .filter_map(|p| self.folder.iter().position(|f| f == p))
                 .collect();
         }
-        (0..self.folder.len())
-            .filter(|i| {
-                let m = self.meta.get(&self.folder[*i]).cloned().unwrap_or_default();
-                m.rating >= self.min_rating
-                    && match self.flag_filter {
-                        FlagFilter::All => true,
-                        FlagFilter::Picks => m.flag == Flag::Pick,
-                        FlagFilter::NotRejected => m.flag != Flag::Reject,
-                        FlagFilter::Rejects => m.flag == Flag::Reject,
-                        FlagFilter::Unflagged => m.flag == Flag::None,
-                    }
-                    && self
-                        .keyword_filter
-                        .as_ref()
-                        .is_none_or(|k| m.keywords.iter().any(|w| fold(w) == fold(k)))
-                    && !self.folded_away(&self.folder[*i])
-            })
-            .collect()
+        shown(
+            &self.folder,
+            &self.meta,
+            self.min_rating,
+            self.flag_filter,
+            self.keyword_filter.as_deref(),
+            |p| self.folded_away(p),
+        )
     }
 
     /// La pile de la photo ouverte : la déplier, et fusionner une série d'exposition.
@@ -16674,6 +16701,69 @@ fn centered_text(painter: &egui::Painter, top: egui::Pos2, width: f32, text: Str
 #[cfg(test)]
 mod tests {
     use luma_render::slideshow::Transition;
+
+    /// Le filtre du film sans copie des métadonnées donne les mêmes photos que l'ancien
+    /// (une copie par photo, le mot‑clé remis en forme à chaque comparaison), pour
+    /// chaque filtre de drapeau, note minimale et mot‑clé, piles repliées comprises.
+    #[test]
+    fn shown_photos_are_the_same_without_copying_metadata() {
+        use super::{Flag, FlagFilter, Meta, fold, shown};
+        use std::collections::HashMap;
+        use std::path::{Path, PathBuf};
+        let n = 20_000;
+        let photos: Vec<PathBuf> = (0..n)
+            .map(|i| PathBuf::from(format!("/film/IMG_{i}.CR3")))
+            .collect();
+        let mut meta = HashMap::new();
+        for (i, p) in photos.iter().enumerate() {
+            let mut m = Meta {
+                rating: (i % 6) as u8,
+                flag: [Flag::None, Flag::Pick, Flag::Reject][i % 3],
+                ..Meta::default()
+            };
+            m.keywords = (0..8)
+                .map(|k| format!("Mot-clé n°{}", (i + k) % 40))
+                .collect();
+            if i % 5 == 0 {
+                m.keywords.push("Été à Évian".into());
+            }
+            meta.insert(p.clone(), m);
+        }
+        let hidden = |p: &Path| p.to_string_lossy().ends_with('7');
+        let old = |min: u8, f: FlagFilter, k: Option<&String>| -> Vec<usize> {
+            (0..photos.len())
+                .filter(|i| {
+                    let m = meta.get(&photos[*i]).cloned().unwrap_or_default();
+                    m.rating >= min
+                        && match f {
+                            FlagFilter::All => true,
+                            FlagFilter::Picks => m.flag == Flag::Pick,
+                            FlagFilter::NotRejected => m.flag != Flag::Reject,
+                            FlagFilter::Rejects => m.flag == Flag::Reject,
+                            FlagFilter::Unflagged => m.flag == Flag::None,
+                        }
+                        && k.is_none_or(|k| m.keywords.iter().any(|w| fold(w) == fold(k)))
+                        && !hidden(&photos[*i])
+                })
+                .collect()
+        };
+        let keyword = "ÉTÉ À EVIAN".to_string();
+        for f in [
+            FlagFilter::All,
+            FlagFilter::Picks,
+            FlagFilter::NotRejected,
+            FlagFilter::Rejects,
+            FlagFilter::Unflagged,
+        ] {
+            for min in [0, 3] {
+                for k in [None, Some(&keyword)] {
+                    let new = shown(&photos, &meta, min, f, k.map(String::as_str), hidden);
+                    assert_eq!(new, old(min, f, k), "{f:?} {min} {k:?}");
+                }
+            }
+        }
+        assert!(!shown(&photos, &meta, 0, FlagFilter::All, Some(&keyword), hidden).is_empty());
+    }
 
     /// Les comptes en un passage valent ceux d'un passage par filtre ; les copies
     /// virtuelles rejetées comptent comme rejetées, pas comme fichiers à ranger.
