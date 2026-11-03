@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Cmd+Z also undoes a rating or flag**: a rating, flag, label or keywords set by
+  mistake are undone like a setting (the most recent of the two first); while culling,
+  the app goes back to the photo concerned.
 - **Lighter Library**: the “Flag” filter counts are made in a single pass on each
   frame (before: five, plus a copy of the rejects list); 20,000-photo filmstrip:
   9.5–11.7 → 1.5–2.4 ms per frame, with the same counts.

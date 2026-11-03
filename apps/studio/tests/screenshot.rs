@@ -374,6 +374,19 @@ fn culling_full_screen_from_the_keyboard() {
     s.harness.run_steps(1);
     let left = format!("{} à trier", photos.len() - 1);
     assert!(s.harness.query_by_label(&left).is_some(), "{left}");
+    // Cmd+Z défait la retenue (P) : la photo reprend « sans drapeau » ; puis P de
+    // nouveau.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(
+        s.studio().current_meta().flag,
+        luma_project::xmp::Flag::None
+    );
+    assert_eq!(s.studio().current_path(), Some(photos[2].as_path()));
+    assert_eq!(
+        s.studio().status(),
+        "Annulé : note ou drapeau de 1 photo(s)"
+    );
+    s.keys(&[(NONE, Key::P)]);
     s.keys(&[(NONE, Key::Num9)]);
     assert_eq!(s.studio().current_meta().label, "");
     // Échap sort du tri ; tout est dans les XMP, aux noms du format.

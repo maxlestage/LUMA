@@ -551,6 +551,9 @@ pub enum FlagFilter {
     Unflagged,
 }
 
+/// Le nombre de changements de notes et drapeaux qu'on peut défaire.
+const META_UNDO: usize = 200;
+
 /// Les comptes des drapeaux d'un film : de quoi nommer chaque choix du filtre « Drapeau »
 /// et savoir s'il y a des rejetées à ranger.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -1114,6 +1117,12 @@ pub struct Studio {
     /// Le message de la barre d'état gardé à l'ouverture de la photo suivante (une
     /// photo retirée du film : sa voisine s'ouvre, le compte rendu reste).
     keep_status: bool,
+    /// Les notes, drapeaux, libellés et mots‑clés d'avant chaque changement, pour Cmd+Z
+    /// (avec le numéro du changement), et le numéro du dernier réglage retenu dans
+    /// l'historique : Cmd+Z défait le plus récent des deux.
+    meta_undo: Vec<(u64, Vec<(PathBuf, Meta)>)>,
+    edit_seq: u64,
+    settings_seq: u64,
     /// Le lot des avant / après : photos demandées, écrites, en échec.
     before_after_batch: (usize, usize, usize),
     /// La photo de référence, montrée entière à côté de la photo retouchée (Maj+Y) :
@@ -1584,6 +1593,9 @@ impl Studio {
             sharp_batch: None,
             sharp_shares: HashMap::new(),
             keep_status: false,
+            meta_undo: Vec::new(),
+            edit_seq: 0,
+            settings_seq: 0,
             reference: None,
             reference_view: false,
             reference_texture: None,
@@ -5538,16 +5550,64 @@ impl Studio {
     /// Change les métadonnées de plusieurs photos : celle qui est ouverte est
     /// enregistrée avec ses réglages, les autres tout de suite.
     fn edit_meta(&mut self, paths: &[PathBuf], f: impl Fn(&mut Meta)) {
+        // Ce qu'elles étaient avant : Cmd+Z le rend.
+        let before: Vec<(PathBuf, Meta)> = paths
+            .iter()
+            .map(|p| (p.clone(), self.meta.get(p).cloned().unwrap_or_default()))
+            .collect();
+        self.edit_seq += 1;
+        self.meta_undo.push((self.edit_seq, before));
+        if self.meta_undo.len() > META_UNDO {
+            self.meta_undo.remove(0);
+        }
         let current = self.current_path().map(Path::to_path_buf);
         for p in paths {
             let meta = self.meta.entry(p.clone()).or_default();
             f(meta);
-            if Some(p) == current.as_ref() {
-                self.touch();
-            } else if let Err(e) = write_meta(p, meta) {
-                self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
-            }
+            self.save_meta_of(p, current.as_deref());
         }
+    }
+
+    /// Le XMP de cette photo écrit (celui de la photo ouverte, avec ses réglages, au
+    /// prochain enregistrement).
+    fn save_meta_of(&mut self, p: &Path, current: Option<&Path>) {
+        if Some(p) == current {
+            self.touch();
+        } else if let Some(meta) = self.meta.get(p)
+            && let Err(e) = write_meta(p, meta)
+        {
+            self.status = trf("XMP non enregistré : {error}", &[("error", &e)]);
+        }
+    }
+
+    /// Cmd+Z après une note, un drapeau, un libellé ou des mots‑clés posés : les photos
+    /// touchées reprennent ce qu'elles avaient. `false` si le dernier changement est un
+    /// réglage (l'historique des réglages s'en charge).
+    fn undo_meta(&mut self) -> bool {
+        let Some(&(seq, _)) = self.meta_undo.last() else {
+            return false;
+        };
+        if seq < self.settings_seq {
+            return false;
+        }
+        let (_, before) = self.meta_undo.pop().expect("annulation");
+        let current = self.current_path().map(Path::to_path_buf);
+        let n = before.len();
+        // Une seule photo, laissée derrière (l'avance automatique du tri) : on y revient.
+        let back = match before.as_slice() {
+            [(p, _)] if current.as_ref() != Some(p) => self.folder.iter().position(|f| f == p),
+            _ => None,
+        };
+        for (p, m) in before {
+            self.meta.insert(p.clone(), m);
+            self.save_meta_of(&p, current.as_deref());
+        }
+        if let Some(i) = back {
+            self.keep_status = true;
+            self.select(i);
+        }
+        self.status = trf("Annulé : note ou drapeau de {n} photo(s)", &[("n", &n)]);
+        true
     }
 
     /// Ajoute des mots‑clés (séparés par des virgules) à la sélection, ou à la photo
@@ -6186,6 +6246,9 @@ impl Studio {
         self.history.truncate(self.history_pos + 1);
         self.history.push((label, self.settings.clone()));
         self.history_pos = self.history.len() - 1;
+        // Un réglage après des notes : Cmd+Z défait d'abord le réglage.
+        self.edit_seq += 1;
+        self.settings_seq = self.edit_seq;
         // Retouchée, sa part au point mesurée ne vaut plus.
         if let Some(p) = self.current_path().map(Path::to_path_buf) {
             self.sharp_shares.remove(&p);
@@ -7147,6 +7210,7 @@ impl Studio {
 
     fn act_once(&mut self, action: &str) {
         match action {
+            "undo" if self.undo_meta() => {}
             "undo" if self.history_pos > 0 => self.restore(self.history_pos - 1),
             "redo" if self.history_pos + 1 < self.history.len() => {
                 self.restore(self.history_pos + 1)

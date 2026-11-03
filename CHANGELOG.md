@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Cmd+Z défait aussi une note ou un drapeau** : une note, un drapeau, un libellé ou
+  des mots‑clés posés par erreur se défont comme un réglage (le plus récent des deux
+  d'abord) ; pendant le tri, l'app revient à la photo touchée.
 - **Bibliothèque plus légère** : les comptes du filtre « Drapeau » se font en un seul
   passage à chaque image (avant : cinq, plus une copie de la liste des rejetées) ;
   film de 20 000 photos : 9,5–11,7 → 1,5–2,4 ms par image, aux mêmes comptes.

@@ -84,7 +84,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⏳ à faire
 | | Suppression tracée : un trait le long d'un fil, d'une rayure ou d'un câble, effacé d'un seul geste ; sans IA | ✅ |
 | | Correcteur et tampon tracés : un trait le long d'une ride ou d'une rayure, la source au même décalage tout du long | ✅ |
 | | Fluidité (Retouche) : pousser, gonfler, dégonfler au pinceau (taille, force), coups gardés dans le XMP, annulables ; sans IA | ✅ |
-| | Historique, annuler et rétablir, copier‑coller des réglages | ✅ dans LÜMA Studio |
+| | Historique, annuler et rétablir (Cmd+Z défait aussi une note, un drapeau ou un libellé), copier‑coller des réglages | ✅ dans LÜMA Studio |
 | | Copier‑coller sélectif des réglages (« Coller… », Alt+Maj+Cmd+V) : quatorze groupes au choix, recadrage et masques laissés à chaque photo par défaut | ✅ |
 | | Synchroniser une sélection (Maj+Cmd+S) : les réglages de la photo ouverte aux autres photos choisies, groupe par groupe ; balance automatique en lot, chaque photo la sienne | ✅ |
 | | Réglages par défaut par boîtier et à partir d'un ISO (le plus précis l'emporte), point de départ des photos sans XMP ; film d'import donné aux photos qui arrivent (dossier surveillé, boîtier relié) | ✅ |
