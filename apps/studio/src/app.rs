@@ -2215,6 +2215,42 @@ impl Studio {
         }
     }
 
+    /// « Retenues en collection » : les retenues du film rangées dans la collection
+    /// manuelle « Retenues — <dossier> » (créée au besoin, sans doublon) : le choix
+    /// d'un tri gardé, quel que soit le dossier montré ensuite. Rend le nombre ajouté.
+    pub fn picks_to_collection(&mut self) -> usize {
+        let picks: Vec<PathBuf> = self
+            .folder
+            .iter()
+            .filter(|p| self.meta.get(*p).is_some_and(|m| m.flag == Flag::Pick))
+            .cloned()
+            .collect();
+        let Some(first) = picks.first() else {
+            self.status = tr("Aucune photo retenue").into();
+            return 0;
+        };
+        let folder = first
+            .parent()
+            .and_then(Path::file_name)
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let name = format!("{} — {folder}", tr("Retenues|collection"));
+        match self.catalog.add_to_collection(&name, &picks) {
+            Ok(n) => {
+                self.upkeep_changed();
+                self.status = trf(
+                    "{n} photos ajoutées à « {name} »",
+                    &[("n", &n), ("name", &name)],
+                );
+                n
+            }
+            Err(e) => {
+                self.status = trf("Collection impossible : {error}", &[("error", &e)]);
+                0
+            }
+        }
+    }
+
     /// Retire la photo ouverte et les photos choisies de la collection manuelle
     /// affichée, qui est remontrée sans elles. Rend le nombre de photos retirées.
     pub fn remove_from_shown_collection(&mut self) -> usize {
@@ -7344,6 +7380,9 @@ impl Studio {
                 self.commit(tr("Réinitialiser").into());
                 self.touch();
             }
+            "picks_to_collection" => {
+                self.picks_to_collection();
+            }
             "export_picks" => {
                 // Les retenues seules dans le film, puis la fenêtre d'export sur elles.
                 self.flag_filter = FlagFilter::Picks;
@@ -11946,6 +11985,13 @@ impl Studio {
             .clicked()
         {
             self.act("export_picks");
+        }
+        if ui
+            .add_enabled(counts.picks > 0, egui::Button::new(tr("Retenues en collection")).small())
+            .on_hover_text(tr("Range les retenues du film dans la collection « Retenues — nom du dossier », pour les retrouver plus tard"))
+            .clicked()
+        {
+            self.act("picks_to_collection");
         }
         // Toujours à sa place (grisé sans rejetée) : le panneau ne bouge pas.
         let rejects = counts.rejected_files;

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Retenues en collection** (Bibliothèque, sous le filtre « Drapeau ») : les retenues
+  du film rangées dans la collection « Retenues — nom du dossier », pour les retrouver
+  plus tard ; sans doublon si on recommence.
 - **Maj+N : la photo précédente sans drapeau** (modifiable), le pendant de N, en
   repartant de la fin du film.
 - **Trancher dans la comparaison** : Entrée garde la photo choisie (« Retenue ») et
