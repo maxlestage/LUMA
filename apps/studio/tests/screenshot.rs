@@ -4801,6 +4801,16 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
     s.keys(&[(NONE, Key::X)]);
     let all = s.studio().visible().len();
     assert_eq!(all, photos.len());
+    // Le nombre de photos de chaque cas, à côté de chaque choix du filtre.
+    {
+        use luma_studio::app::FlagFilter;
+        let count = |s: &mut Session, f| s.studio().flag_count(f);
+        assert_eq!(count(&mut s, FlagFilter::All), all);
+        assert_eq!(count(&mut s, FlagFilter::Picks), 1);
+        assert_eq!(count(&mut s, FlagFilter::Rejects), 1);
+        assert_eq!(count(&mut s, FlagFilter::NotRejected), all - 1);
+        assert_eq!(count(&mut s, FlagFilter::Unflagged), all - 2);
+    }
     s.harness.get_by_label("Rejetées seulement").click();
     s.harness.run_steps(2);
     assert_eq!(s.studio().visible(), vec![at("f-2.png")]);
