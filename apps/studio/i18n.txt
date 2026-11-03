@@ -1741,6 +1741,10 @@ fr = {n} à trier
 en = {n} left to sort
 es = {n} por cribar
 
+fr = Photo précédente sans drapeau
+en = Previous unflagged photo
+es = Foto anterior sin marca
+
 fr = Prochaine photo sans drapeau
 en = Next unflagged photo
 es = Siguiente foto sin marca

@@ -4942,6 +4942,15 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
         s.studio().current_meta().flag,
         luma_project::xmp::Flag::None
     );
+    // Maj+N : en arrière, une photo sans drapeau aussi (jamais la retenue ni la rejetée).
+    let forward = s.studio().current_path().map(|p| p.to_path_buf());
+    s.wait();
+    s.keys(&[(Modifiers::SHIFT, Key::N)]);
+    assert_eq!(
+        s.studio().current_meta().flag,
+        luma_project::xmp::Flag::None
+    );
+    assert_ne!(s.studio().current_path().map(|p| p.to_path_buf()), forward);
     s.wait();
     s.keys(&[(Modifiers::COMMAND, Key::A), (NONE, Key::P)]);
     s.studio().selected.clear();

@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Shift+N: the previous unflagged photo** (customizable), the counterpart of N,
+  wrapping to the end of the filmstrip.
 - **Decide in the comparison**: Enter keeps the chosen photo (“Pick”) and rejects the
   other compared photos; Cmd+Z undoes it all.
 - **Export picks…** (Library, under the “Flag” filter): the filmstrip shows only the
