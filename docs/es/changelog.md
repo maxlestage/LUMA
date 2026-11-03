@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Cmd+Mayús+Z rehace una valoración o una marca deshecha**: justo después de un
+  Cmd+Z que deshizo valoraciones, marcas, etiquetas o palabras clave, vuelven; un
+  cambio nuevo borra lo que se podía rehacer.
 - **Cmd+Z sin XMP huérfano**: tras «Apartar las rechazadas» (o una foto eliminada),
   deshacer una valoración o una marca ya no reescribe un XMP donde estaba la foto, que
   iría a otra foto del mismo nombre.

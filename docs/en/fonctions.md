@@ -83,7 +83,7 @@ Key: ✅ done and tested · 🟡 partial · ⏳ to do
 | | Traced removal: a stroke along a wire, a scratch or a cable, erased in one gesture; no AI | ✅ |
 | | Traced healing and clone: a stroke along a wrinkle or a scratch, the source at the same offset all along | ✅ |
 | | Liquify (Retouch): push, bloat, pucker with a brush (size, strength), strokes kept in the XMP, undoable; no AI | ✅ |
-| | History, undo and redo (Cmd+Z also undoes a rating, flag or label), copy‑paste settings | ✅ in LÜMA Studio |
+| | History, undo and redo (Cmd+Z also undoes a rating, flag or label, Cmd+Shift+Z redoes them), copy‑paste settings | ✅ in LÜMA Studio |
 | | Selective copy and paste of adjustments (“Paste…”, Alt+Shift+Cmd+V): fourteen groups to choose from, crop and masks left to each photo by default | ✅ |
 | | Sync a selection (Shift+Cmd+S): the open photo's adjustments to the other selected photos, group by group; auto white balance in batch, each photo its own | ✅ |
 | | Default adjustments per camera and from an ISO (the most precise wins), starting point for photos without XMP; import film given to arriving photos (watched folder, tethered camera) | ✅ |
