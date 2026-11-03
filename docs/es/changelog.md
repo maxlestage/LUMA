@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma catalog --summary`**: el balance del cribado de las fotos mostradas (toda la
+  fototeca, una búsqueda o una colección): seleccionadas, rechazadas, sin marca, número
+  de fotos por valoración y por etiqueta.
 - **Filtro por palabra clave más rápido**: cada palabra clave se compara sin copiarla
   en minúsculas sin acentos; tira de 20 000 fotos con ocho palabras clave cada una:
   25–28 → 3,7 ms, con las mismas fotos.

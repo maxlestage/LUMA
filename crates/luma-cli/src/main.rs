@@ -225,7 +225,7 @@ USAGE
       Lit un profil ICC (versions 2 et 4 ; matrice et courbes, ou tables lut8, lut16,
       A→B et B→A) : sa classe, son espace, ses intentions de rendu, le blanc du support,
       et ce que donnent le blanc, le noir et les primaires du périphérique.
-  luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords]
+  luma catalog [dossier]… [--flat] [--catalog f.lumacat] [--list] [--search \"…\"] [--keywords] [--summary]
                [--smart nom \"règle\"] [--add nom photo]… [--remove-from nom photo]…
                [--rename-collection ancien nouveau] [--remove-collection nom]
                [--rename-keyword ancien nouveau] [--delete-keyword mot]
@@ -242,7 +242,9 @@ USAGE
       date:hier (une collection dynamique ainsi faite suit les jours) ; la note en
       plage ou exacte (note:..2, note:=0) ; sans:note, sans:mot, sans:lieu,
       sans:libellé trouvent les photos à qui il manque encore cela.
-      --keywords compte les mots‑clés, les boîtiers et les objectifs du catalogue.
+      --keywords compte les mots‑clés, les boîtiers et les objectifs du catalogue ;
+      --summary fait le bilan du tri des photos montrées (toutes, --search ou
+      --collection) : drapeaux, notes, libellés.
       Collections : --smart crée une collection dynamique (sa règle s'écrit comme une
       recherche : \"note:4 date:2024\"), --add range une photo dans une collection
       manuelle (créée au besoin), --remove-from l'en retire, --rename-collection la
@@ -475,6 +477,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     let mut csv: Option<PathBuf> = None;
     // Sauvegardes et photos manquantes.
     let (mut save_copy, mut list_backups, mut missing, mut duplicates) = (false, false, false, false);
+    let mut summary = false;
     let mut restore = None;
     let mut relocate = None;
     let mut it = args.into_iter();
@@ -488,6 +491,7 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
                 query = Some(luma_library::Query::parse(&text)?);
             }
             "--keywords" => facets = true,
+            "--summary" => summary = true,
             "--rename-collection" | "--rename-keyword" | "--remove-from" => {
                 let name = it.next().ok_or_else(|| format!("{arg} attend deux valeurs"))?;
                 let value = it
@@ -654,8 +658,8 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
     }
     let found = if let Some(name) = &shown {
         Some(cat.collection_photos(name)?)
-    } else if show || query.is_some() || csv.is_some() {
-        // --csv seul : toute la photothèque, comme --list.
+    } else if show || query.is_some() || csv.is_some() || summary {
+        // --csv ou --summary seuls : toute la photothèque, comme --list.
         let query = query.unwrap_or_default();
         let t = Instant::now();
         let found = cat.search(&query);
@@ -667,6 +671,10 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
         None
     };
     let found = found.unwrap_or_default();
+    if summary {
+        print_summary(&found);
+        return Ok(());
+    }
     if let Some(to) = &csv {
         std::fs::write(
             to,
@@ -689,6 +697,36 @@ fn catalog(args: Vec<String>) -> Result<(), String> {
         );
     }
     Ok(())
+}
+
+/// `luma catalog --summary` : le bilan du tri des photos montrées (drapeaux, notes,
+/// libellés), comme l'app le montre sous ses filtres.
+fn print_summary(found: &[&luma_library::Entry]) {
+    let (mut picks, mut rejects) = (0, 0);
+    let mut ratings = [0usize; 6];
+    let mut labels: std::collections::BTreeMap<&str, usize> = Default::default();
+    for e in found {
+        match e.flag {
+            1 => picks += 1,
+            -1 => rejects += 1,
+            _ => {}
+        }
+        ratings[usize::from(e.rating).min(5)] += 1;
+        if !e.label.is_empty() {
+            *labels.entry(e.label.as_str()).or_default() += 1;
+        }
+    }
+    println!("{} photo(s)", found.len());
+    println!(
+        "Drapeaux : {picks} retenue(s), {rejects} rejetée(s), {} sans drapeau",
+        found.len() - picks - rejects
+    );
+    let notes: Vec<String> = (0..=5).map(|k| format!("{k}★ {}", ratings[k])).collect();
+    println!("Notes : {}", notes.join(" · "));
+    if !labels.is_empty() {
+        let l: Vec<String> = labels.iter().map(|(k, n)| format!("{k} {n}")).collect();
+        println!("Libellés : {}", l.join(" · "));
+    }
 }
 
 fn info(a: &Args) -> Result<(), String> {
