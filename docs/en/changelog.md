@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Sharpness in full-screen culling**: the photo's measured in-focus share (“12.5%
+  sharp”), next to its position, when it has been measured.
 - **Faster keyword search** (`keyword:` in the app search and `luma catalog
   --search`): each keyword compared without being copied; 100,000 photos:
   39–57 → 14 ms, with the same photos found.
