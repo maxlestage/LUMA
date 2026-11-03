@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Picks to collection** (Library, under the “Flag” filter): the filmstrip's picks
+  put in the “Picks — folder name” collection, to find them again later; no
+  duplicates when done again.
 - **Shift+N: the previous unflagged photo** (customizable), the counterpart of N,
   wrapping to the end of the filmstrip.
 - **Decide in the comparison**: Enter keeps the chosen photo (“Pick”) and rejects the

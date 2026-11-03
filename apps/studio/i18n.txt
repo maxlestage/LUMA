@@ -1701,6 +1701,18 @@ fr = Rejetées|dossier
 en = Rejects
 es = Rechazadas
 
+fr = Retenues en collection
+en = Picks to collection
+es = Seleccionadas a una colección
+
+fr = Range les retenues du film dans la collection « Retenues — nom du dossier », pour les retrouver plus tard
+en = Puts the filmstrip's picks in the “Picks — folder name” collection, to find them again later
+es = Guarda las seleccionadas de la tira en la colección «Seleccionadas — nombre de la carpeta», para encontrarlas más tarde
+
+fr = Retenues|collection
+en = Picks
+es = Seleccionadas
+
 fr = Exporter les retenues…
 en = Export picks…
 es = Exportar las seleccionadas…

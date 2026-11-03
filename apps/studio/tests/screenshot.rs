@@ -4920,6 +4920,27 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
     s.harness.get_by_label("Toutes").click();
     s.harness.run_steps(2);
     assert_eq!(s.studio().visible().len(), all);
+    // « Retenues en collection » : la retenue rangée dans « Retenues — <dossier> » ; une
+    // seconde fois, rien de plus.
+    let folder = photos[at("f-1.png")]
+        .parent()
+        .and_then(|d| d.file_name())
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
+    let name = format!("Retenues — {folder}");
+    s.harness.get_by_label("Retenues en collection").click();
+    s.harness.run_steps(2);
+    let kept: Vec<std::path::PathBuf> = s
+        .studio()
+        .catalog()
+        .collection_photos(&name)
+        .unwrap()
+        .iter()
+        .map(|e| e.path.clone())
+        .collect();
+    assert_eq!(kept, vec![photos[at("f-1.png")].clone()]);
+    assert_eq!(s.studio().picks_to_collection(), 0);
     // « Exporter les retenues… » : le film ne montre que la retenue, la fenêtre d'export
     // s'ouvre sur elle (« Les 1 du filtre »).
     s.harness.get_by_label("Exporter les retenues…").click();
