@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **`luma catalog --summary`**: the culling summary of the photos shown (the whole
+  library, a search or a collection): picks, rejects, unflagged, number of photos per
+  rating and per label.
 - **Faster keyword filter**: each keyword compared without being copied to lowercase
   without accents; 20,000-photo filmstrip with eight keywords each: 25–28 → 3.7 ms,
   with the same photos.

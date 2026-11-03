@@ -172,3 +172,70 @@ fn found_photos_are_written_as_csv() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `luma catalog --summary` : le bilan du tri des photos montrées, toutes ou celles d'une
+/// recherche.
+#[test]
+fn the_culling_is_summed_up() {
+    let dir = std::env::temp_dir().join(format!("luma-cli-bilan-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("photos")).unwrap();
+    use luma_project::xmp::{Flag, Meta};
+    for (name, rating, flag, label) in [
+        ("a.png", 3, Flag::Pick, "Red"),
+        ("b.png", 0, Flag::Reject, ""),
+        ("c.png", 5, Flag::Pick, "Red"),
+        ("d.png", 1, Flag::None, "Blue"),
+    ] {
+        let p = dir.join("photos").join(name);
+        image::RgbImage::from_pixel(8, 8, image::Rgb([90, 120, 200]))
+            .save(&p)
+            .unwrap();
+        let meta = Meta {
+            rating,
+            flag,
+            label: label.into(),
+            ..Meta::default()
+        };
+        luma_project::xmp::save(
+            &luma_project::xmp::sidecar_path(&p),
+            &luma_project::xmp::write_meta(&meta),
+        )
+        .unwrap();
+    }
+    let cat = dir.join("cat.lumacat");
+    let photos = dir.join("photos");
+    let (ok, text) = luma(&[
+        "catalog",
+        photos.to_str().unwrap(),
+        "--catalog",
+        cat.to_str().unwrap(),
+        "--summary",
+    ]);
+    assert!(ok, "{text}");
+    assert!(text.contains("4 photo(s)"), "{text}");
+    assert!(
+        text.contains("Drapeaux : 2 retenue(s), 1 rejetée(s), 1 sans drapeau"),
+        "{text}"
+    );
+    assert!(
+        text.contains("Notes : 0★ 1 · 1★ 1 · 2★ 0 · 3★ 1 · 4★ 0 · 5★ 1"),
+        "{text}"
+    );
+    assert!(text.contains("Libellés : Blue 1 · Red 2"), "{text}");
+    // Avec une recherche : le bilan des photos trouvées seulement.
+    let (ok, text) = luma(&[
+        "catalog",
+        "--catalog",
+        cat.to_str().unwrap(),
+        "--search",
+        "note:3",
+        "--summary",
+    ]);
+    assert!(ok, "{text}");
+    assert!(
+        text.contains("2 photo(s)") && text.contains("Drapeaux : 2 retenue(s), 0 rejetée(s), 0 sans drapeau"),
+        "{text}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
