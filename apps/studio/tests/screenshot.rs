@@ -462,6 +462,28 @@ fn compare_two_to_four_photos() {
     );
     s.keys(&[(NONE, Key::L)]);
     assert!(s.studio().compare_view_state().unwrap().2);
+    // Entrée : la photo ouverte (la deuxième comparée) gardée, les deux autres
+    // rejetées ; Cmd+Z défait le tout.
+    s.studio().set_current(1);
+    s.wait();
+    s.keys(&[(NONE, Key::Enter)]);
+    use luma_project::xmp::Flag;
+    let flags = |s: &mut Session| {
+        photos[..3]
+            .iter()
+            .map(|p| s.studio().meta_of(p).flag)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(flags(&mut s), [Flag::Reject, Flag::Pick, Flag::Reject]);
+    assert!(
+        s.studio()
+            .status()
+            .ends_with("gardée, 2 autre(s) rejetée(s)"),
+        "{}",
+        s.studio().status()
+    );
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    assert_eq!(flags(&mut s), [Flag::None, Flag::None, Flag::None]);
     s.keys(&[(NONE, Key::C)]);
     assert!(s.studio().compared().is_empty(), "C referme");
 }

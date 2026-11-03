@@ -1713,6 +1713,14 @@ fr = Aucune photo retenue
 en = No picked photo
 es = Ninguna foto seleccionada
 
+fr = Cliquez d'abord la photo à garder
+en = First click the photo to keep
+es = Haz clic primero en la foto que quieres conservar
+
+fr = {file} gardée, {n} autre(s) rejetée(s)
+en = {file} kept, {n} other(s) rejected
+es = {file} conservada, {n} otra(s) rechazada(s)
+
 fr = Ranger les rejetées
 en = Move rejects aside
 es = Apartar las rechazadas
