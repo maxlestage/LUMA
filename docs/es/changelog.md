@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Filtro por palabra clave más rápido**: cada palabra clave se compara sin copiarla
+  en minúsculas sin acentos; tira de 20 000 fotos con ocho palabras clave cada una:
+  25–28 → 3,7 ms, con las mismas fotos.
 - **Las valoraciones contadas**: bajo «Valoración mínima», el número de fotos con al
   menos la valoración elegida y el detalle por valoración (1★ 4 · 2★ 10…).
 - **Cmd+Mayús+Z rehace una valoración o una marca deshecha**: justo después de un
