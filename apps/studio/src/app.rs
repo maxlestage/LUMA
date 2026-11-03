@@ -5599,6 +5599,12 @@ impl Studio {
             _ => None,
         };
         for (p, m) in before {
+            // Une photo partie depuis (rangée dans « Rejetées », supprimée) : son XMP
+            // n'est jamais recréé à l'ancienne place, où il irait à une autre photo du
+            // même nom.
+            if !luma_project::copies::source(&p).exists() {
+                continue;
+            }
             self.meta.insert(p.clone(), m);
             self.save_meta_of(&p, current.as_deref());
         }
