@@ -5258,3 +5258,46 @@ fn moving_rejects_never_overwrites_a_sidecar() {
     assert!(!aside.join("r-2.png").exists());
     assert!(s.studio().photos().contains(&rejected));
 }
+
+/// Cmd+Z après « Ranger les rejetées » : le drapeau d'avant n'est pas réécrit à
+/// l'ancienne place de la photo partie (un XMP orphelin, qui irait à une autre photo du
+/// même nom).
+#[test]
+fn undo_never_writes_beside_a_photo_that_left() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("annuler-rangee", [1440.0, 2000.0], 1.0, |dir| {
+        for (name, v) in [("r-1.png", 60u8), ("r-2.png", 180)] {
+            image::RgbImage::from_pixel(64, 48, image::Rgb([v, v, v]))
+                .save(dir.join(name))
+                .unwrap();
+        }
+    }) else {
+        return;
+    };
+    s.studio().set_stacking(false);
+    s.keys(&[(NONE, Key::G)]);
+    let photos = s.studio().photos().to_vec();
+    let rejected = photos
+        .iter()
+        .find(|p| p.ends_with("r-2.png"))
+        .unwrap()
+        .clone();
+    let i = photos.iter().position(|p| *p == rejected).unwrap();
+    s.studio().set_current(i);
+    s.wait();
+    s.keys(&[(NONE, Key::X)]);
+    assert_eq!(s.studio().move_rejects(), 1);
+    s.wait();
+    let sidecar = luma_studio::worker::sidecar_path(&rejected);
+    assert!(!rejected.exists() && !sidecar.exists());
+    // Cmd+Z : le rejet de la photo partie n'est pas réécrit là où elle était.
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    s.wait();
+    s.studio().flush_xmp();
+    assert!(!sidecar.exists(), "aucun XMP orphelin à l'ancienne place");
+    let moved = rejected.parent().unwrap().join("Rejetées").join("r-2.png");
+    assert_eq!(
+        luma_studio::worker::read_meta(&moved).flag,
+        luma_project::xmp::Flag::Reject
+    );
+}

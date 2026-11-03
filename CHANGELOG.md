@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Cmd+Z sans XMP orphelin** : après « Ranger les rejetées » (ou une photo
+  supprimée), annuler une note ou un drapeau ne réécrit plus de XMP à l'ancienne place
+  de la photo partie, où il irait à une autre photo du même nom.
 - **Cmd+Z défait aussi une note ou un drapeau** : une note, un drapeau, un libellé ou
   des mots‑clés posés par erreur se défont comme un réglage (le plus récent des deux
   d'abord) ; pendant le tri, l'app revient à la photo touchée.

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Cmd+Z without orphan XMP**: after “Move rejects aside” (or a deleted photo),
+  undoing a rating or flag no longer rewrites an XMP where the photo used to be, where
+  it would go to another photo of the same name.
 - **Cmd+Z also undoes a rating or flag**: a rating, flag, label or keywords set by
   mistake are undone like a setting (the most recent of the two first); while culling,
   the app goes back to the photo concerned.

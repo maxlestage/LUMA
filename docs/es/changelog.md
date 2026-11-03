@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Cmd+Z sin XMP huérfano**: tras «Apartar las rechazadas» (o una foto eliminada),
+  deshacer una valoración o una marca ya no reescribe un XMP donde estaba la foto, que
+  iría a otra foto del mismo nombre.
 - **Cmd+Z también deshace una valoración o una marca**: una valoración, una marca,
   una etiqueta o palabras clave puestas por error se deshacen como un ajuste (primero
   lo más reciente); durante el cribado, la app vuelve a la foto afectada.
