@@ -2,6 +2,10 @@
 
 ## 0.4.0 — próximamente
 
+- **Miniaturas instantáneas más rápidas** (la vista previa integrada en el RAW, que se
+  muestra al abrir una carpeta): la vista previa se busca en el archivo de ocho en
+  ocho bytes; la búsqueda pasa de 6–8 a 2–3 ms por foto, los siete RAW del corpus a
+  320 px de 191–202 a 151–163 ms, con los mismos píxeles.
 - **Seleccionadas a una colección** (Biblioteca, bajo el filtro «Marca»): las
   seleccionadas de la tira guardadas en la colección «Seleccionadas — nombre de la
   carpeta», para encontrarlas más tarde; sin duplicados si se repite.

@@ -2,6 +2,10 @@
 
 ## 0.4.0 — à venir
 
+- **Vignettes instantanées plus rapides** (l'aperçu intégré au RAW, montré dès
+  l'ouverture d'un dossier) : l'aperçu cherché dans le fichier huit octets à la fois ;
+  la recherche passe de 6–8 à 2–3 ms par photo, les sept RAW du corpus à 320 px de
+  191–202 à 151–163 ms, aux mêmes pixels.
 - **Retenues en collection** (Bibliothèque, sous le filtre « Drapeau ») : les retenues
   du film rangées dans la collection « Retenues — nom du dossier », pour les retrouver
   plus tard ; sans doublon si on recommence.

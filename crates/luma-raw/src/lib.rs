@@ -1130,13 +1130,7 @@ fn embedded_jpegs(bytes: &[u8]) -> Vec<EmbeddedJpeg> {
         |at: usize| -> Option<usize> { Some(usize::from(u16::from_be_bytes([*bytes.get(at)?, *bytes.get(at + 1)?]))) };
     let mut out = Vec::new();
     let mut i = 0;
-    // On saute d'un octet 0xFF au suivant (recherche rapide), puis on vérifie FF D8 FF.
-    while let Some(k) = bytes[i..].iter().position(|&b| b == 0xFF) {
-        let start = i + k;
-        i = start + 1;
-        if bytes.get(start + 1) != Some(&0xD8) || bytes.get(start + 2) != Some(&0xFF) {
-            continue;
-        }
+    while let Some(start) = next_soi(bytes, i) {
         i = start + 2;
         let mut j = start + 2;
         for _ in 0..64 {
@@ -1170,9 +1164,73 @@ fn embedded_jpegs(bytes: &[u8]) -> Vec<EmbeddedJpeg> {
     out
 }
 
+/// Le premier début de JPEG (FF D8 FF) à partir de `from`. Les octets sont lus huit par
+/// huit : un mot sans aucun 0xFF (presque tous, dans les données d'un capteur) est sauté
+/// d'un coup, les autres vérifiés octet par octet. Lire les 8 Mo du début d'un RAW un
+/// octet à la fois coûtait 6 à 8 ms par vignette.
+fn next_soi(bytes: &[u8], from: usize) -> Option<usize> {
+    const ONES: u64 = 0x0101_0101_0101_0101;
+    const HIGH: u64 = 0x8080_8080_8080_8080;
+    let soi = |p: usize| bytes[p] == 0xFF && bytes.get(p + 1) == Some(&0xD8) && bytes.get(p + 2) == Some(&0xFF);
+    let mut i = from;
+    while let Some(word) = bytes.get(i..i + 8) {
+        // Un octet 0xFF du mot est un octet nul de son inverse (le test classique
+        // « un octet nul dans le mot », exact quand il répond non).
+        let x = !u64::from_le_bytes(word.try_into().expect("huit octets"));
+        if x.wrapping_sub(ONES) & !x & HIGH != 0
+            && let Some(p) = (i..i + 8).find(|&p| soi(p))
+        {
+            return Some(p);
+        }
+        i += 8;
+    }
+    (i..bytes.len()).find(|&p| soi(p))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Les débuts de JPEG, cherchés huit octets à la fois, sont ceux d'une lecture octet
+    /// par octet : des octets au hasard (beaucoup de 0xFF), des débuts posés à chaque
+    /// place d'un mot, collés l'un à l'autre, à cheval sur deux mots et tout à la fin.
+    #[test]
+    fn jpeg_starts_found_word_by_word_are_those_byte_by_byte() {
+        let mut seed = 0x2545_F491u32;
+        let mut next = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            seed
+        };
+        for len in [0usize, 1, 2, 3, 7, 8, 9, 15, 16, 17, 100, 1001, 4099] {
+            for round in 0..20 {
+                let mut b: Vec<u8> = (0..len)
+                    .map(|_| match next() % 4 {
+                        0 => 0xFF,
+                        1 => 0xD8,
+                        _ => next() as u8,
+                    })
+                    .collect();
+                // Quelques débuts posés, parfois à la toute fin.
+                for _ in 0..(round % 5) {
+                    if len >= 3 {
+                        let at = if round % 3 == 0 {
+                            len - 3
+                        } else {
+                            next() as usize % (len - 2)
+                        };
+                        b[at..at + 3].copy_from_slice(&[0xFF, 0xD8, 0xFF]);
+                    }
+                }
+                let byte_by_byte: Vec<usize> = (0..len).filter(|&p| b[p..].starts_with(&[0xFF, 0xD8, 0xFF])).collect();
+                for from in [0, 1, 5, 8, len / 2, len] {
+                    let expected = byte_by_byte.iter().copied().find(|&p| p >= from);
+                    assert_eq!(next_soi(&b, from), expected, "{len} octets, depuis {from}");
+                }
+            }
+        }
+    }
 
     #[test]
     fn the_shrunk_preview_is_the_same_as_the_image_coders() {
