@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **El avance del cribado**: cada opción del filtro «Marca» muestra su número de
+  fotos (seleccionadas, rechazadas, sin marca…).
 - **Fusiones más rápidas**: apilamientos, HDR y panoramas leen sus RAW de dos en dos;
   apilamiento de tres RAW de 24 Mpx: 2,3 → 2,0–2,1 s, con el mismo DNG.
 - **`luma tidy <fotos|carpeta>`**: las fotos rechazadas (marca del XMP) movidas con su

@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Culling progress**: each choice of the “Flag” filter shows its number of photos
+  (picks, rejects, unflagged…).
 - **Faster merges**: stacks, HDR and panoramas read their RAWs two at a time; stack of
   three 24 MP RAWs: 2.3 → 2.0–2.1 s, with the same DNG.
 - **`luma tidy <photos|folder>`**: the rejected photos (XMP flag) moved with their XMP
