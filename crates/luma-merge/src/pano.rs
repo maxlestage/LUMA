@@ -89,15 +89,18 @@ pub fn panorama(frames: &dyn Frames, projection: Projection, progress: &Progress
         return Err(Error::Decode("il faut au moins deux photos".into()));
     }
     // Les photos, gardées en 16 bits, et leurs versions d'analyse.
-    let mut images = Vec::with_capacity(n);
-    let mut small = Vec::with_capacity(n);
-    for i in 0..n {
-        cancel.check()?;
-        progress(0.25 * i as f32 / n as f32, "Lecture des photos");
-        let img = frames.load(i)?;
-        small.push(analysis(&img, 1600));
-        images.push(Compact::new(&img));
-    }
+    // Deux photos lues à la fois, gardées dans l'ordre.
+    let (small, images): (Vec<RgbImage>, Vec<Compact>) = crate::frames::load_each(
+        frames,
+        |i| {
+            cancel.check()?;
+            progress(0.25 * i as f32 / n as f32, "Lecture des photos");
+            Ok(())
+        },
+        |_, img| (analysis(&img, 1600), Compact::new(&img)),
+    )?
+    .into_iter()
+    .unzip();
     let (w, h) = (images[0].width, images[0].height);
     if images.iter().any(|im| (im.width, im.height) != (w, h)) {
         return Err(Error::Decode(
