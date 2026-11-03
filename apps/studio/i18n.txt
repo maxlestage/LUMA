@@ -1721,6 +1721,10 @@ fr = {n} à trier
 en = {n} left to sort
 es = {n} por cribar
 
+fr = Prochaine photo sans drapeau
+en = Next unflagged photo
+es = Siguiente foto sin marca
+
 fr = Tout est trié
 en = All sorted
 es = Todo cribado

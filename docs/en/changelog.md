@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **N: the next unflagged photo** (customizable): while culling, straight to the next
+  one left to sort, wrapping to the start of the filmstrip; “All sorted” when there
+  is none left.
 - **Sharpness in full-screen culling**: the photo's measured in-focus share (“12.5%
   sharp”), next to its position, when it has been measured.
 - **Faster keyword search** (`keyword:` in the app search and `luma catalog

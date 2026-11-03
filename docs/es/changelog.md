@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **N: la siguiente foto sin marca** (modificable): durante el cribado, directo a la
+  siguiente que queda por cribar, volviendo al inicio de la tira; «Todo cribado»
+  cuando no queda ninguna.
 - **La nitidez en la selección a pantalla completa**: la parte enfocada medida de la
   foto («12,5 % nítido»), junto a su posición, cuando se ha medido.
 - **Búsqueda por palabra clave más rápida** (`keyword:` en la búsqueda de la app y
