@@ -317,7 +317,7 @@ impl Query {
         if self
             .keyword
             .as_ref()
-            .is_some_and(|k| !e.keywords.iter().any(|w| fold(w) == *k))
+            .is_some_and(|k| !e.keywords.iter().any(|w| fold_eq(w, k)))
         {
             return false;
         }
@@ -450,6 +450,47 @@ impl Entry {
 
 #[cfg(test)]
 mod tests {
+
+    /// Une recherche par mot‑clé (comparé sans être recopié, `fold_eq`), libellé ou
+    /// objectif exact trouve les mêmes photos qu'avec des textes repliés à chaque
+    /// comparaison.
+    #[test]
+    fn searches_without_copying_give_the_same_photos() {
+        use crate::Entry;
+        let entries: Vec<Entry> = (0..100_000)
+            .map(|i| Entry {
+                path: format!("/photos/IMG_{i}.ARW").into(),
+                lens: ["FE 24-70mm F2.8 GM", "Été 35mm", "XF23mmF1.4"][i % 3].into(),
+                label: ["Red", "Rouge", "", "À revoir"][i % 4].into(),
+                keywords: (0..6)
+                    .map(|k| format!("Mot n°{}", (i + k) % 50))
+                    .chain((i % 7 == 0).then(|| "Été à Évian".to_string()))
+                    .collect(),
+                ..Entry::default()
+            })
+            .collect();
+        for (text, old) in [
+            (
+                "mot:\"ete a evian\"",
+                Box::new(|e: &Entry| e.keywords.iter().any(|w| fold(w) == "ete a evian"))
+                    as Box<dyn Fn(&Entry) -> bool>,
+            ),
+            (
+                "libellé:\"à revoir\"",
+                Box::new(|e: &Entry| fold(&e.label) == "a revoir"),
+            ),
+            (
+                "objectif:=\"été 35mm\"",
+                Box::new(|e: &Entry| fold(&e.lens) == "ete 35mm"),
+            ),
+        ] {
+            let q = Query::parse(text).unwrap();
+            let new: Vec<usize> = (0..entries.len()).filter(|&i| q.matches(&entries[i])).collect();
+            let expected: Vec<usize> = (0..entries.len()).filter(|&i| old(&entries[i])).collect();
+            assert!(!expected.is_empty(), "{text}");
+            assert_eq!(new, expected, "{text}");
+        }
+    }
 
     /// `fold_eq` répond comme `fold(…) ==` : textes ASCII ou accentués, majuscules,
     /// longueurs différentes, caractères qui deviennent plusieurs en minuscules.
