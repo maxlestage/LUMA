@@ -7728,6 +7728,7 @@ impl Studio {
                     self.select(i);
                 }
             }
+            "next_unflagged" => self.next_unflagged(),
             "clipping" => self.clipping = !self.clipping,
             "focus_peaking" => self.focus_peaking = !self.focus_peaking && self.photo.is_some(),
             "scope" => {
@@ -7736,6 +7737,30 @@ impl Studio {
             }
             "zoom" => self.zoom = !self.zoom,
             _ => {}
+        }
+    }
+
+    /// La prochaine photo montrée encore sans drapeau, après la photo ouverte (en
+    /// repartant du début du film) ; s'il n'y en a plus, la barre d'état le dit.
+    pub fn next_unflagged(&mut self) {
+        let visible = self.visible();
+        let at = self
+            .current
+            .and_then(|c| visible.iter().position(|v| *v == c))
+            .map_or(0, |k| k + 1);
+        let unflagged = |i: &usize| {
+            self.meta
+                .get(&self.folder[*i])
+                .is_none_or(|m| m.flag == Flag::None)
+        };
+        let found = visible[at.min(visible.len())..]
+            .iter()
+            .chain(&visible[..at.min(visible.len())])
+            .copied()
+            .find(|i| Some(*i) != self.current && unflagged(i));
+        match found {
+            Some(i) => self.select(i),
+            None => self.status = tr("Tout est trié").into(),
         }
     }
 

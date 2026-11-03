@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **N : la prochaine photo sans drapeau** (modifiable) : pendant le tri, droit à la
+  suivante qui reste à trier, en repartant du début du film ; « Tout est trié » quand
+  il n'y en a plus.
 - **La netteté dans le tri en plein écran** : la part au point mesurée de la photo
   (« 12,5 % net »), à côté de sa position, quand elle a été mesurée.
 - **Recherche par mot‑clé plus rapide** (`mot:` dans la recherche de l'app et `luma
