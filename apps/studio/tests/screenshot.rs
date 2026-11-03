@@ -4817,7 +4817,8 @@ fn the_sharpest_of_each_burst_is_picked() {
 /// Le filtre « Drapeau » : une retenue, une rejetée, une sans drapeau ; « Rejetées
 /// seulement » ne montre que la rejetée, « Sans drapeau (à trier) » que celle sans
 /// drapeau (et les RAW du corpus, sans drapeau eux aussi), « Toutes » tout le film ;
-/// Cmd+A choisit les photos montrées, Cmd+Maj+A aucune, Cmd+Alt+A inverse le choix.
+/// Cmd+A choisit les photos montrées, Cmd+Maj+A aucune, Cmd+Alt+A inverse le choix ;
+/// N mène à la prochaine photo sans drapeau.
 #[test]
 fn the_flag_filter_shows_rejects_or_what_is_left() {
     let _gpu = one_at_a_time();
@@ -4897,6 +4898,24 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
     s.harness.get_by_label("Toutes").click();
     s.harness.run_steps(2);
     assert_eq!(s.studio().visible().len(), all);
+    // N : de la retenue, la prochaine photo sans drapeau (pas la rejetée) ; tout
+    // retenu, N le dit.
+    s.studio().set_current(at("f-1.png"));
+    s.wait();
+    s.keys(&[(NONE, Key::N)]);
+    assert_ne!(
+        s.studio().current_path(),
+        Some(photos[at("f-1.png")].as_path())
+    );
+    assert_eq!(
+        s.studio().current_meta().flag,
+        luma_project::xmp::Flag::None
+    );
+    s.wait();
+    s.keys(&[(Modifiers::COMMAND, Key::A), (NONE, Key::P)]);
+    s.studio().selected.clear();
+    s.keys(&[(NONE, Key::N)]);
+    assert_eq!(s.studio().status(), "Tout est trié");
 }
 
 /// « Ranger les rejetées » : la photo rejetée et son XMP déplacés dans « Rejetées » à
