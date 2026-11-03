@@ -8806,6 +8806,10 @@ impl Studio {
                 trf("{n} à trier", &[("n", &left)])
             };
             ui.label(RichText::new(text).size(11.5).color(theme::DIM));
+            // Sa part au point, si elle a été mesurée (« Retenir la plus nette »…).
+            if let Some(sharp) = self.sharp_label(&path) {
+                ui.label(RichText::new(sharp).size(11.5).color(theme::ACCENT));
+            }
             ui.add_space(12.0);
             if let Some(n) = widgets::rating(ui, meta.rating, 18.0) {
                 self.act(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n as usize]);

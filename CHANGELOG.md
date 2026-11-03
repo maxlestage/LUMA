@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **La netteté dans le tri en plein écran** : la part au point mesurée de la photo
+  (« 12,5 % net »), à côté de sa position, quand elle a été mesurée.
 - **Recherche par mot‑clé plus rapide** (`mot:` dans la recherche de l'app et `luma
   catalog --search`) : chaque mot‑clé comparé sans être recopié ; 100 000 photos :
   39–57 → 14 ms, aux mêmes photos trouvées.

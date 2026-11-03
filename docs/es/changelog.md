@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **La nitidez en la selección a pantalla completa**: la parte enfocada medida de la
+  foto («12,5 % nítido»), junto a su posición, cuando se ha medido.
 - **Búsqueda por palabra clave más rápida** (`keyword:` en la búsqueda de la app y
   `luma catalog --search`): cada palabra clave se compara sin copiarla; 100 000 fotos:
   39–57 → 14 ms, con las mismas fotos encontradas.
