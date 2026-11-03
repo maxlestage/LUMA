@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Recherche par mot‑clé plus rapide** (`mot:` dans la recherche de l'app et `luma
+  catalog --search`) : chaque mot‑clé comparé sans être recopié ; 100 000 photos :
+  39–57 → 14 ms, aux mêmes photos trouvées.
 - **`luma catalog --summary`** : le bilan du tri des photos montrées (toute la
   photothèque, une recherche ou une collection) : retenues, rejetées, sans drapeau,
   nombre de photos par note et par libellé.

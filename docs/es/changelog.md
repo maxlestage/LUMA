@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Búsqueda por palabra clave más rápida** (`keyword:` en la búsqueda de la app y
+  `luma catalog --search`): cada palabra clave se compara sin copiarla; 100 000 fotos:
+  39–57 → 14 ms, con las mismas fotos encontradas.
 - **`luma catalog --summary`**: el balance del cribado de las fotos mostradas (toda la
   fototeca, una búsqueda o una colección): seleccionadas, rechazadas, sin marca, número
   de fotos por valoración y por etiqueta.
