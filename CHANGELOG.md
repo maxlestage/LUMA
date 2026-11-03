@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Les notes comptées** : sous « Note minimale », le nombre de photos qui ont au moins
+  la note choisie et le détail par note (1★ 4 · 2★ 10…).
 - **Cmd+Maj+Z rétablit une note ou un drapeau défait** : juste après un Cmd+Z qui a
   défait des notes, drapeaux, libellés ou mots‑clés, ils reviennent ; un nouveau
   changement efface ce qui pouvait être rétabli.
