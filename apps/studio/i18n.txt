@@ -1733,6 +1733,10 @@ fr = Annulé : note ou drapeau de {n} photo(s)
 en = Undone: rating or flag of {n} photo(s)
 es = Deshecho: valoración o marca de {n} foto(s)
 
+fr = {n} photo(s) · {detail}
+en = {n} photo(s) · {detail}
+es = {n} foto(s) · {detail}
+
 fr = Rejetées seulement
 en = Rejects only
 es = Solo rechazadas

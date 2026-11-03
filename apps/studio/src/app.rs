@@ -602,6 +602,8 @@ pub struct FlagCounts {
     /// Les rejetées qui sont des fichiers (pas des copies virtuelles) : ce que « Ranger
     /// les rejetées » déplacerait.
     pub rejected_files: usize,
+    /// Le nombre de photos de chaque note, de 0 à 5 étoiles.
+    pub ratings: [usize; 6],
 }
 
 impl FlagCounts {
@@ -612,6 +614,8 @@ impl FlagCounts {
             ..FlagCounts::default()
         };
         for p in photos {
+            let rating = meta.get(p).map_or(0, |m| usize::from(m.rating).min(5));
+            c.ratings[rating] += 1;
             match meta.get(p).map_or(Flag::None, |m| m.flag) {
                 Flag::Pick => c.picks += 1,
                 Flag::Reject => {
@@ -624,6 +628,11 @@ impl FlagCounts {
             }
         }
         c
+    }
+
+    /// Le nombre de photos qui ont au moins cette note.
+    pub fn at_least(&self, rating: u8) -> usize {
+        self.ratings[usize::from(rating).min(5)..].iter().sum()
     }
 
     /// Le nombre de photos que ce filtre montrerait.
@@ -11794,6 +11803,23 @@ impl Studio {
         if let Some(n) = widgets::rating(ui, self.min_rating, 18.0) {
             self.min_rating = n;
         }
+        // Combien de photos ont au moins la note choisie, et le détail par note.
+        let counts = self.flag_counts();
+        let detail = (1..=5)
+            .map(|k| format!("{k}★ {}", counts.ratings[k]))
+            .collect::<Vec<_>>()
+            .join(" · ");
+        ui.label(
+            RichText::new(trf(
+                "{n} photo(s) · {detail}",
+                &[
+                    ("n", &counts.at_least(self.min_rating)),
+                    ("detail", &detail),
+                ],
+            ))
+            .size(11.0)
+            .color(theme::DIM),
+        );
         ui.add_space(8.0);
         ui.label(RichText::new(tr("Drapeau")).color(theme::DIM).size(11.5));
         // Les comptes en un seul passage pour toute la section.

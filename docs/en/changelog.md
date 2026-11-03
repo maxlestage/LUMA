@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Ratings counted**: under “Minimum rating”, the number of photos with at least the
+  chosen rating and the breakdown per rating (1★ 4 · 2★ 10…).
 - **Cmd+Shift+Z redoes an undone rating or flag**: right after a Cmd+Z that undid
   ratings, flags, labels or keywords, they come back; a new change clears what could
   be redone.
