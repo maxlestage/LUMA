@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Seleccionadas a una colección** (Biblioteca, bajo el filtro «Marca»): las
+  seleccionadas de la tira guardadas en la colección «Seleccionadas — nombre de la
+  carpeta», para encontrarlas más tarde; sin duplicados si se repite.
 - **Mayús+N: la foto anterior sin marca** (modificable), el complemento de N,
   volviendo al final de la tira.
 - **Decidir en la comparación**: Intro conserva la foto elegida («Seleccionada») y
