@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Decide in the comparison**: Enter keeps the chosen photo (“Pick”) and rejects the
+  other compared photos; Cmd+Z undoes it all.
 - **Export picks…** (Library, under the “Flag” filter): the filmstrip shows only the
   picks and the export window opens on them; the end of a cull in one click.
 - **N: the next unflagged photo** (customizable): while culling, straight to the next

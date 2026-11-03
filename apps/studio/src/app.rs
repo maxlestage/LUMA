@@ -5786,6 +5786,11 @@ impl Studio {
     }
 
     /// La note et le drapeau de la photo affichée.
+    /// La note, le drapeau, le libellé… de cette photo du film (par défaut : rien).
+    pub fn meta_of(&self, path: &Path) -> Meta {
+        self.meta.get(path).cloned().unwrap_or_default()
+    }
+
     pub fn current_meta(&self) -> Meta {
         self.current_path()
             .and_then(|p| self.meta.get(p))
@@ -7397,6 +7402,8 @@ impl Studio {
                     });
                 }
             }
+            // Entrée dans la comparaison : la photo choisie gardée, les autres rejetées.
+            "crop_done" if self.compare.is_some() => self.compare_keep(),
             "crop_done" => {
                 if self.crop_tool.take().is_some() {
                     self.commit(tr("Recadrage").into());
@@ -8465,6 +8472,38 @@ impl Studio {
             center: vec2(0.5, 0.5),
             loupe: false,
         });
+    }
+
+    /// Dans la comparaison, garde la photo ouverte (« Retenue ») et rejette les autres
+    /// photos comparées (« Rejetée ») ; Cmd+Z défait le tout. Sans photo ouverte parmi
+    /// elles, rien ne change.
+    pub fn compare_keep(&mut self) {
+        let Some(paths) = self.compare.as_ref().map(|c| c.paths.clone()) else {
+            return;
+        };
+        let Some(kept) = self
+            .current_path()
+            .map(Path::to_path_buf)
+            .filter(|p| paths.contains(p))
+        else {
+            self.status = tr("Cliquez d'abord la photo à garder").into();
+            return;
+        };
+        let others: Vec<PathBuf> = paths.into_iter().filter(|p| *p != kept).collect();
+        // Un seul changement pour Cmd+Z : toutes les photos comparées ensemble.
+        let all: Vec<PathBuf> = std::iter::once(kept.clone())
+            .chain(others.iter().cloned())
+            .collect();
+        self.edit_meta(&all, |m| m.flag = Flag::Reject);
+        if let Some(m) = self.meta.get_mut(&kept) {
+            m.flag = Flag::Pick;
+        }
+        let current = self.current_path().map(Path::to_path_buf);
+        self.save_meta_of(&kept, current.as_deref());
+        self.status = trf(
+            "{file} gardée, {n} autre(s) rejetée(s)",
+            &[("file", &file_name(&kept)), ("n", &others.len())],
+        );
     }
 
     /// Toutes les photos de la comparaison sont‑elles rendues ?
