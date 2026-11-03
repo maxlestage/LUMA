@@ -5,6 +5,9 @@
 - **Cmd+Z sin XMP huérfano**: tras «Apartar las rechazadas» (o una foto eliminada),
   deshacer una valoración o una marca ya no reescribe un XMP donde estaba la foto, que
   iría a otra foto del mismo nombre.
+- **Cuadrícula y tira más ligeras**: la lista de fotos mostradas (pedida varias veces
+  por imagen) ya no copia los metadatos de cada foto; tira de 20 000 fotos:
+  6,0–6,5 → 2,6–2,9 ms, y 51–56 → 25–28 ms con una palabra clave, con las mismas fotos.
 - **Cmd+Z también deshace una valoración o una marca**: una valoración, una marca,
   una etiqueta o palabras clave puestas por error se deshacen como un ajuste (primero
   lo más reciente); durante el cribado, la app vuelve a la foto afectada.
