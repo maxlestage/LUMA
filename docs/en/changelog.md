@@ -2,6 +2,10 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster instant thumbnails** (the preview embedded in the RAW, shown as soon as a
+  folder opens): the preview is searched for in the file eight bytes at a time; the
+  search goes from 6–8 to 2–3 ms per photo, the seven RAW files of the corpus at
+  320 px from 191–202 to 151–163 ms, with the same pixels.
 - **Picks to collection** (Library, under the “Flag” filter): the filmstrip's picks
   put in the “Picks — folder name” collection, to find them again later; no
   duplicates when done again.
