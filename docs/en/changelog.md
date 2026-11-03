@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster merges**: stacks, HDR and panoramas read their RAWs two at a time; stack of
+  three 24 MP RAWs: 2.3 → 2.0–2.1 s, with the same DNG.
 - **`luma tidy <photos|folder>`**: the rejected photos (XMP flag) moved with their XMP
   into “Rejetées” (or `--folder`), as in the app; nothing is deleted or overwritten;
   `--dry-run` only names them.

@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Fusions plus rapides** : empilements, HDR et panoramas lisent leurs RAW deux à la
+  fois ; empilement de trois RAW de 24 Mpx : 2,3 → 2,0–2,1 s, au même DNG.
 - **`luma tidy <photos|dossier>`** : les photos rejetées (drapeau du XMP) rangées
   avec leurs XMP dans « Rejetées » (ou `--folder`), comme dans l'app ; rien n'est
   effacé ni écrasé ; `--dry-run` les nomme seulement.
