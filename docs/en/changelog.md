@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Lighter Library**: the “Flag” filter counts are made in a single pass on each
+  frame (before: five, plus a copy of the rejects list); 20,000-photo filmstrip:
+  9.5–11.7 → 1.5–2.4 ms per frame, with the same counts.
 - **What is left to sort**: full-screen culling (F) tells how many photos of the
   filmstrip have no flag yet (“12 left to sort”), then “All sorted”.
 - **Culling progress**: each choice of the “Flag” filter shows its number of photos
