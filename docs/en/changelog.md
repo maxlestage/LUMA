@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Export picks…** (Library, under the “Flag” filter): the filmstrip shows only the
+  picks and the export window opens on them; the end of a cull in one click.
 - **N: the next unflagged photo** (customizable): while culling, straight to the next
   one left to sort, wrapping to the start of the filmstrip; “All sorted” when there
   is none left.

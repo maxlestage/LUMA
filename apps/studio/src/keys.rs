@@ -282,6 +282,7 @@ pub const ACTIONS: &[Action] = &[
         &[Combo::new(Key::N)],
     ),
     a("move_rejects", "Ranger les rejetées", &[]),
+    a("export_picks", "Exporter les retenues…", &[]),
     a("label0", "Libellé rouge", &[Combo::new(Key::Num6)]),
     a("label1", "Libellé jaune", &[Combo::new(Key::Num7)]),
     a("label2", "Libellé vert", &[Combo::new(Key::Num8)]),
