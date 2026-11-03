@@ -20,7 +20,7 @@ use egui::{
 };
 use luma_color::OutputSpace;
 use luma_image::scopes::Scope;
-use luma_library::query::fold;
+use luma_library::query::{fold, fold_eq};
 use luma_project::presets::{self, PRESETS};
 use luma_project::xmp::{Flag, Meta};
 use luma_project::{Crop, Mask, Profile, Range, Settings, Shape, WhiteBalance};
@@ -581,7 +581,7 @@ fn shown(
                 }
                 && keyword
                     .as_ref()
-                    .is_none_or(|k| m.keywords.iter().any(|w| fold(w) == *k))
+                    .is_none_or(|k| m.keywords.iter().any(|w| fold_eq(w, k)))
                 && !hidden(p)
         })
         .map(|(i, _)| i)

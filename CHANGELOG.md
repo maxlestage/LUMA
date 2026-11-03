@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Filtre par mot‑clé plus rapide** : chaque mot‑clé comparé sans être recopié en
+  minuscules sans accents ; film de 20 000 photos à huit mots‑clés : 25–28 → 3,7 ms,
+  aux mêmes photos.
 - **Les notes comptées** : sous « Note minimale », le nombre de photos qui ont au moins
   la note choisie et le détail par note (1★ 4 · 2★ 10…).
 - **Cmd+Maj+Z rétablit une note ou un drapeau défait** : juste après un Cmd+Z qui a

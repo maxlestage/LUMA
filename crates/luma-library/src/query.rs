@@ -97,26 +97,37 @@ pub fn fold(s: &str) -> String {
     if s.is_ascii() {
         return s.to_ascii_lowercase();
     }
-    s.chars()
-        .flat_map(char::to_lowercase)
-        .map(|c| match c {
-            'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ă' | 'ą' => 'a',
-            'ç' | 'ć' | 'č' => 'c',
-            'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ė' | 'ę' | 'ě' => 'e',
-            'ì' | 'í' | 'î' | 'ï' | 'ī' | 'į' => 'i',
-            'ñ' | 'ń' | 'ň' => 'n',
-            'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' | 'ő' => 'o',
-            'ù' | 'ú' | 'û' | 'ü' | 'ū' | 'ů' | 'ű' => 'u',
-            'ý' | 'ÿ' => 'y',
-            'ś' | 'š' => 's',
-            'ź' | 'ż' | 'ž' => 'z',
-            'ł' => 'l',
-            'ř' => 'r',
-            'ť' => 't',
-            'ď' => 'd',
-            c => c,
-        })
-        .collect()
+    folded_chars(s).collect()
+}
+
+/// `fold(s) == folded`, sans écrire `fold(s)` : caractère par caractère, sans mémoire
+/// à prendre (le filtre par mot‑clé compare chaque mot‑clé de chaque photo).
+pub fn fold_eq(s: &str, folded: &str) -> bool {
+    if s.is_ascii() {
+        return s.len() == folded.len() && s.bytes().zip(folded.bytes()).all(|(a, b)| a.to_ascii_lowercase() == b);
+    }
+    folded_chars(s).eq(folded.chars())
+}
+
+/// Les caractères de `s` en minuscules et sans accents.
+fn folded_chars(s: &str) -> impl Iterator<Item = char> + '_ {
+    s.chars().flat_map(char::to_lowercase).map(|c| match c {
+        'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ă' | 'ą' => 'a',
+        'ç' | 'ć' | 'č' => 'c',
+        'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ė' | 'ę' | 'ě' => 'e',
+        'ì' | 'í' | 'î' | 'ï' | 'ī' | 'į' => 'i',
+        'ñ' | 'ń' | 'ň' => 'n',
+        'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' | 'ő' => 'o',
+        'ù' | 'ú' | 'û' | 'ü' | 'ū' | 'ů' | 'ű' => 'u',
+        'ý' | 'ÿ' => 'y',
+        'ś' | 'š' => 's',
+        'ź' | 'ż' | 'ž' => 'z',
+        'ł' => 'l',
+        'ř' => 'r',
+        'ť' => 't',
+        'ď' => 'd',
+        c => c,
+    })
 }
 
 fn range<T: std::str::FromStr + PartialOrd + Copy>(s: &str) -> Option<Range<T>> {
@@ -439,6 +450,38 @@ impl Entry {
 
 #[cfg(test)]
 mod tests {
+
+    /// `fold_eq` répond comme `fold(…) ==` : textes ASCII ou accentués, majuscules,
+    /// longueurs différentes, caractères qui deviennent plusieurs en minuscules.
+    #[test]
+    fn fold_eq_answers_like_fold() {
+        let words = [
+            "",
+            "Mer",
+            "MER",
+            "mer",
+            "Été à Évian",
+            "ete a evian",
+            "ÉTÉ",
+            "ete",
+            "Straße",
+            "strasse",
+            "İstanbul",
+            "i̇stanbul",
+            "Łódź",
+            "lodz",
+            "Ørsted",
+            "orsted",
+            "Paris > Nord",
+            "paris",
+        ];
+        for a in words {
+            for b in words {
+                let folded = fold(b);
+                assert_eq!(fold_eq(a, &folded), fold(a) == folded, "{a:?} {b:?}");
+            }
+        }
+    }
     use super::*;
 
     fn photo(name: &str, date: &str) -> Entry {
