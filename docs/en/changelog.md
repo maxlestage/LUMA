@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **What is left to sort**: full-screen culling (F) tells how many photos of the
+  filmstrip have no flag yet (“12 left to sort”), then “All sorted”.
 - **Culling progress**: each choice of the “Flag” filter shows its number of photos
   (picks, rejects, unflagged…).
 - **Faster merges**: stacks, HDR and panoramas read their RAWs two at a time; stack of
