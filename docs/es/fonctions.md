@@ -84,7 +84,7 @@ Leyenda: ✅ hecho y probado · 🟡 parcial · ⏳ pendiente
 | | Eliminación trazada: un trazo a lo largo de un cable, una raya o un alambre, borrado de un solo gesto; sin IA | ✅ |
 | | Corrector y tampón trazados: un trazo a lo largo de una arruga o una raya, la fuente con el mismo desplazamiento en todo el trazo | ✅ |
 | | Licuar (Retoque): empujar, inflar, desinflar con un pincel (tamaño, fuerza), trazos guardados en el XMP, deshacibles; sin IA | ✅ |
-| | Historial, deshacer y rehacer, copiar y pegar ajustes | ✅ en LÜMA Studio |
+| | Historial, deshacer y rehacer (Cmd+Z también deshace una valoración, una marca o una etiqueta), copiar y pegar ajustes | ✅ en LÜMA Studio |
 | | Copiar y pegar selectivo de ajustes («Pegar…», Alt+Mayús+Cmd+V): catorce grupos a elegir, recorte y máscaras propios de cada foto por defecto | ✅ |
 | | Sincronizar una selección (Mayús+Cmd+S): los ajustes de la foto abierta a las demás fotos elegidas, grupo por grupo; balance automático en lote, cada foto el suyo | ✅ |
 | | Ajustes predeterminados por cámara y a partir de un ISO (gana el más preciso), punto de partida de las fotos sin XMP; película de importación para las fotos que llegan (carpeta vigilada, cámara conectada) | ✅ |

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Cmd+Z también deshace una valoración o una marca**: una valoración, una marca,
+  una etiqueta o palabras clave puestas por error se deshacen como un ajuste (primero
+  lo más reciente); durante el cribado, la app vuelve a la foto afectada.
 - **Biblioteca más ligera**: los recuentos del filtro «Marca» se hacen en una sola
   pasada en cada imagen (antes: cinco, más una copia de la lista de rechazadas); tira
   de 20 000 fotos: 9,5–11,7 → 1,5–2,4 ms por imagen, con los mismos recuentos.
