@@ -357,6 +357,9 @@ fn culling_full_screen_from_the_keyboard() {
     assert!(s.studio().is_culling());
     let photos = s.studio().photos().to_vec();
     assert!(photos.len() >= 3);
+    // Ce qui reste à trier : tout le film, sans drapeau.
+    let left = format!("{} à trier", photos.len());
+    assert!(s.harness.query_by_label(&left).is_some(), "{left}");
     s.capture("tri");
     // Une note, puis la suivante d'elle‑même ; un libellé rouge (6), puis la suivante.
     s.keys(&[(NONE, Key::Num3)]);
@@ -367,6 +370,10 @@ fn culling_full_screen_from_the_keyboard() {
     s.keys(&[(NONE, Key::A), (NONE, Key::Num9), (NONE, Key::P)]);
     assert_eq!(s.studio().current_path(), Some(photos[2].as_path()));
     assert_eq!(s.studio().current_meta().label, "Blue");
+    // Retenue (P) : une de moins à trier.
+    s.harness.run_steps(1);
+    let left = format!("{} à trier", photos.len() - 1);
+    assert!(s.harness.query_by_label(&left).is_some(), "{left}");
     s.keys(&[(NONE, Key::Num9)]);
     assert_eq!(s.studio().current_meta().label, "");
     // Échap sort du tri ; tout est dans les XMP, aux noms du format.

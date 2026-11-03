@@ -8601,6 +8601,14 @@ impl Studio {
                     .size(11.5)
                     .color(theme::DIM),
             );
+            // Ce qui reste à trier : les photos du film sans drapeau.
+            let left = self.flag_count(FlagFilter::Unflagged);
+            let text = if left == 0 {
+                tr("Tout est trié").to_owned()
+            } else {
+                trf("{n} à trier", &[("n", &left)])
+            };
+            ui.label(RichText::new(text).size(11.5).color(theme::DIM));
             ui.add_space(12.0);
             if let Some(n) = widgets::rating(ui, meta.rating, 18.0) {
                 self.act(["rate0", "rate1", "rate2", "rate3", "rate4", "rate5"][n as usize]);

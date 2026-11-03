@@ -1717,6 +1717,14 @@ fr = {n} photo(s) rejetée(s) rangée(s) dans « {folder} »
 en = {n} rejected photo(s) moved to “{folder}”
 es = {n} foto(s) rechazada(s) movida(s) a «{folder}»
 
+fr = {n} à trier
+en = {n} left to sort
+es = {n} por cribar
+
+fr = Tout est trié
+en = All sorted
+es = Todo cribado
+
 fr = Rejetées seulement
 en = Rejects only
 es = Solo rechazadas
