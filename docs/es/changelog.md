@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Lo que queda por cribar**: la selección a pantalla completa (F) indica cuántas
+  fotos de la tira no tienen marca todavía («12 por cribar»), y luego «Todo cribado».
 - **El avance del cribado**: cada opción del filtro «Marca» muestra su número de
   fotos (seleccionadas, rechazadas, sin marca…).
 - **Fusiones más rápidas**: apilamientos, HDR y panoramas leen sus RAW de dos en dos;

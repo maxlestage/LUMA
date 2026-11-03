@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Ce qui reste à trier** : le tri en plein écran (F) dit combien de photos du film
+  n'ont pas encore de drapeau (« 12 à trier »), puis « Tout est trié ».
 - **L'avancement du tri** : chaque choix du filtre « Drapeau » montre son nombre de
   photos (retenues, rejetées, sans drapeau…).
 - **Fusions plus rapides** : empilements, HDR et panoramas lisent leurs RAW deux à la
