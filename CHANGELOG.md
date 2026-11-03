@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Maj+N : la photo précédente sans drapeau** (modifiable), le pendant de N, en
+  repartant de la fin du film.
 - **Trancher dans la comparaison** : Entrée garde la photo choisie (« Retenue ») et
   rejette les autres photos comparées ; Cmd+Z défait le tout.
 - **Exporter les retenues…** (Bibliothèque, sous le filtre « Drapeau ») : le film ne

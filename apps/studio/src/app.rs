@@ -7750,6 +7750,7 @@ impl Studio {
                 }
             }
             "next_unflagged" => self.next_unflagged(),
+            "prev_unflagged" => self.prev_unflagged(),
             "clipping" => self.clipping = !self.clipping,
             "focus_peaking" => self.focus_peaking = !self.focus_peaking && self.photo.is_some(),
             "scope" => {
@@ -7764,7 +7765,19 @@ impl Studio {
     /// La prochaine photo montrée encore sans drapeau, après la photo ouverte (en
     /// repartant du début du film) ; s'il n'y en a plus, la barre d'état le dit.
     pub fn next_unflagged(&mut self) {
-        let visible = self.visible();
+        self.step_unflagged(false);
+    }
+
+    /// La photo montrée sans drapeau d'avant la photo ouverte (en repartant de la fin).
+    pub fn prev_unflagged(&mut self) {
+        self.step_unflagged(true);
+    }
+
+    fn step_unflagged(&mut self, backwards: bool) {
+        let mut visible = self.visible();
+        if backwards {
+            visible.reverse();
+        }
         let at = self
             .current
             .and_then(|c| visible.iter().position(|v| *v == c))

@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Mayús+N: la foto anterior sin marca** (modificable), el complemento de N,
+  volviendo al final de la tira.
 - **Decidir en la comparación**: Intro conserva la foto elegida («Seleccionada») y
   rechaza las demás fotos comparadas; Cmd+Z lo deshace todo.
 - **Exportar las seleccionadas…** (Biblioteca, bajo el filtro «Marca»): la tira solo
