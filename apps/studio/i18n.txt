@@ -1701,6 +1701,18 @@ fr = Rejetées|dossier
 en = Rejects
 es = Rechazadas
 
+fr = Exporter les retenues…
+en = Export picks…
+es = Exportar las seleccionadas…
+
+fr = Ne montre que les retenues et ouvre l'export sur elles
+en = Shows only the picks and opens the export on them
+es = Muestra solo las seleccionadas y abre la exportación con ellas
+
+fr = Aucune photo retenue
+en = No picked photo
+es = Ninguna foto seleccionada
+
 fr = Ranger les rejetées
 en = Move rejects aside
 es = Apartar las rechazadas

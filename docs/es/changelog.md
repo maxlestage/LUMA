@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Exportar las seleccionadas…** (Biblioteca, bajo el filtro «Marca»): la tira solo
+  muestra las seleccionadas y la ventana de exportación se abre con ellas; el final
+  de un cribado en un clic.
 - **N: la siguiente foto sin marca** (modificable): durante el cribado, directo a la
   siguiente que queda por cribar, volviendo al inicio de la tira; «Todo cribado»
   cuando no queda ninguna.

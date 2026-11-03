@@ -4898,6 +4898,15 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
     s.harness.get_by_label("Toutes").click();
     s.harness.run_steps(2);
     assert_eq!(s.studio().visible().len(), all);
+    // « Exporter les retenues… » : le film ne montre que la retenue, la fenêtre d'export
+    // s'ouvre sur elle (« Les 1 du filtre »).
+    s.harness.get_by_label("Exporter les retenues…").click();
+    s.harness.run_steps(3);
+    assert_eq!(s.studio().visible(), vec![at("f-1.png")]);
+    assert!(s.harness.query_by_label("Les 1 du filtre").is_some());
+    s.keys(&[(NONE, Key::Escape)]);
+    s.harness.get_by_label("Toutes").click();
+    s.harness.run_steps(2);
     // N : de la retenue, la prochaine photo sans drapeau (pas la rejetée) ; tout
     // retenu, N le dit.
     s.studio().set_current(at("f-1.png"));

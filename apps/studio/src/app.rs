@@ -7339,6 +7339,20 @@ impl Studio {
                 self.commit(tr("Réinitialiser").into());
                 self.touch();
             }
+            "export_picks" => {
+                // Les retenues seules dans le film, puis la fenêtre d'export sur elles.
+                self.flag_filter = FlagFilter::Picks;
+                if self.visible().is_empty() {
+                    self.status = tr("Aucune photo retenue").into();
+                } else {
+                    if !self.current.is_some_and(|c| self.visible().contains(&c)) {
+                        let first = self.visible()[0];
+                        self.select(first);
+                    }
+                    self.act("export");
+                    self.export_all = true;
+                }
+            }
             "export" => {
                 if self.current.is_some() {
                     self.export_all = self.module == Module::Library;
@@ -11870,6 +11884,16 @@ impl Studio {
                         .color(theme::DIM),
                 );
             });
+        }
+        if ui
+            .add_enabled(
+                counts.picks > 0,
+                egui::Button::new(tr("Exporter les retenues…")).small(),
+            )
+            .on_hover_text(tr("Ne montre que les retenues et ouvre l'export sur elles"))
+            .clicked()
+        {
+            self.act("export_picks");
         }
         // Toujours à sa place (grisé sans rejetée) : le panneau ne bouge pas.
         let rejects = counts.rejected_files;
