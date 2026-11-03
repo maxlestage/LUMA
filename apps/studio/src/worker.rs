@@ -36,6 +36,9 @@ pub struct Frame {
     pub clean: Option<Vec<u8>>,
     /// La part de l'aperçu au point (0 à 1), quand les zones nettes sont demandées.
     pub sharp: Option<f32>,
+    /// Les parts de l'aperçu écrêtées (0 à 1), celles que l'indicateur d'écrêtage
+    /// peint : brûlées (une couche au moins à 255) et bouchées (noir complet).
+    pub clipped: [f32; 2],
 }
 
 /// Les corrections d'objectif mesurées sur le JPEG du boîtier.
@@ -1077,6 +1080,7 @@ fn render_job(
             p.table.apply_rgba(&mut rgba);
         }
         let histogram = histogram_rgba(&rgba);
+        let clipped = clipped_shares(&rgba);
         let scope = luma_image::scopes::render(job.scope, &rgba, w, h);
         let clean = (gamut.is_some() || job.clipping || job.focus.is_some() || job.dust_view)
             .then(|| rgba.clone());
@@ -1121,6 +1125,7 @@ fn render_job(
             scope,
             clean,
             sharp,
+            clipped,
         };
         let _ = sender.send(Event::Rendered(Box::new(frame)));
         repaint();
@@ -1182,6 +1187,28 @@ pub fn histogram_rgba(rgba: &[u8]) -> [[u32; 256]; 3] {
                 a
             },
         )
+}
+
+/// Les parts (0 à 1) d'une image RGBA brûlées et bouchées : les pixels que
+/// [`clip_color`] peint en couleur, et ceux qu'il peint en bleu. Par bandes sur tous
+/// les cœurs (des comptes : les mêmes dans n'importe quel ordre).
+pub fn clipped_shares(rgba: &[u8]) -> [f32; 2] {
+    use rayon::prelude::*;
+    let px = rgba.as_chunks::<4>().0;
+    let [blown, blocked] = px
+        .par_chunks(64_000)
+        .map(|band| {
+            band.iter().fold([0usize; 2], |[b, k], p| {
+                let rgb = [p[0], p[1], p[2]];
+                [
+                    b + usize::from(rgb.contains(&255)),
+                    k + usize::from(rgb == [0, 0, 0]),
+                ]
+            })
+        })
+        .reduce(|| [0; 2], |a, b| [a[0] + b[0], a[1] + b[1]]);
+    let n = px.len().max(1) as f32;
+    [blown as f32 / n, blocked as f32 / n]
 }
 
 /// L'indicateur d'écrêtage sur une image RGBA (voir [`to_rgba`]).
@@ -1691,6 +1718,36 @@ mod tests {
             failed,
             Err("Erreur inattendue pendant le calcul".to_owned())
         );
+    }
+
+    #[test]
+    fn clipped_shares_count_what_the_indicator_paints() {
+        // 200 003 pixels (plus d'une bande) : brûlés d'une couche, des trois, bouchés,
+        // presque noirs, ordinaires.
+        let kinds: [[u8; 3]; 5] = [
+            [255, 10, 10],
+            [255, 255, 255],
+            [0, 0, 0],
+            [0, 0, 1],
+            [90, 120, 30],
+        ];
+        let mut rgba = Vec::new();
+        let mut expected = [0usize; 2];
+        for i in 0..200_003usize {
+            let p = kinds[(i * 7 + i / 3) % 5];
+            match clip_color(p) {
+                Some([40, 90, 255]) => expected[1] += 1,
+                Some(_) => expected[0] += 1,
+                None => {}
+            }
+            rgba.extend_from_slice(&[p[0], p[1], p[2], 255]);
+        }
+        let n = 200_003.0;
+        assert_eq!(
+            super::clipped_shares(&rgba),
+            [expected[0] as f32 / n, expected[1] as f32 / n]
+        );
+        assert_eq!(super::clipped_shares(&[]), [0.0, 0.0]);
     }
 
     #[test]

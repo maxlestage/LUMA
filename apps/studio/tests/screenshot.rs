@@ -4667,6 +4667,71 @@ fn burst_culling_from_the_keyboard() {
 /// photos (à dix minutes d'écart), une photo seule ; la nette de chaque rafale est
 /// retenue, la floue et la photo seule restent sans drapeau. Puis « Rejeter les floues
 /// de chaque rafale » (Alt+Maj+X) : la floue de chaque rafale rejetée.
+/// Le tri en plein écran montre ce que l'aperçu a de brûlé et de bouché ; rien pour
+/// une photo sans écrêtage.
+#[test]
+fn culling_shows_what_is_clipped() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("ecretage-au-tri", [1440.0, 900.0], 1.0, |dir| {
+        // Un tiers blanc pur, un sixième noir complet, le reste en dégradé moyen.
+        image::RgbImage::from_fn(600, 400, |x, _| match x {
+            0..200 => image::Rgb([255, 255, 255]),
+            200..300 => image::Rgb([0, 0, 0]),
+            _ => {
+                let v = 60 + (x % 100) as u8;
+                image::Rgb([v, v, v])
+            }
+        })
+        .save(dir.join("a-ecretee.png"))
+        .unwrap();
+        image::RgbImage::from_fn(600, 400, |x, y| {
+            let v = 70 + ((x + y) % 90) as u8;
+            image::Rgb([v, v + 10, v])
+        })
+        .save(dir.join("b-juste.png"))
+        .unwrap();
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    s.studio().set_current(at("a-ecretee.png"));
+    s.wait();
+    let labels = s.studio().clip_labels(&photos[at("a-ecretee.png")]);
+    assert_eq!(labels.len(), 2, "{labels:?}");
+    assert!(labels[0].ends_with(" % brûlé"), "{labels:?}");
+    assert!(labels[1].ends_with(" % bouché"), "{labels:?}");
+    // Un tiers brûlé, un sixième bouché (à l'arrondi de l'aperçu près).
+    let percent = |l: &str| {
+        l.split(" %")
+            .next()
+            .unwrap()
+            .replace(',', ".")
+            .parse::<f32>()
+            .unwrap()
+    };
+    assert!((percent(&labels[0]) - 33.3).abs() < 2.0, "{labels:?}");
+    assert!((percent(&labels[1]) - 16.7).abs() < 2.0, "{labels:?}");
+    s.keys(&[(NONE, Key::F)]);
+    s.harness.run_steps(1);
+    for l in &labels {
+        assert!(s.harness.query_by_label(l).is_some(), "{l}");
+    }
+    // La photo suivante, sans écrêtage : plus rien (pas les chiffres de la précédente).
+    let b = &photos[at("b-juste.png")];
+    s.studio().set_current(at("b-juste.png"));
+    assert!(s.studio().clip_labels(b).is_empty());
+    s.wait();
+    assert_eq!(s.studio().current_path(), Some(b.as_path()));
+    assert!(
+        s.studio().clip_labels(b).is_empty(),
+        "{:?}",
+        s.studio().clip_labels(b)
+    );
+    assert!(s.harness.query_by_label(&labels[0]).is_none());
+    s.keys(&[(NONE, Key::Escape)]);
+}
+
 #[test]
 fn the_sharpest_of_each_burst_is_picked() {
     let _gpu = one_at_a_time();
