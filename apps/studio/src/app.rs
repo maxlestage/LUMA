@@ -2673,41 +2673,14 @@ impl Studio {
         let mut moved = Vec::new();
         let mut dirs = std::collections::BTreeSet::new();
         for p in &rejects {
-            let (Some(dir), Some(name)) = (p.parent(), p.file_name()) else {
-                continue;
-            };
-            let target_dir = dir.join(&folder_name);
-            let target = target_dir.join(name);
-            let copies = luma_project::copies::of(p);
-            // Les XMP suivent, sous leur nom à côté de la photo rangée.
-            let mut sidecars = vec![crate::worker::sidecar_path(p)];
-            sidecars.extend(copies.iter().map(|c| luma_project::copies::sidecar(c)));
-            let sidecars: Vec<(PathBuf, PathBuf)> = sidecars
-                .into_iter()
-                .filter(|x| x.exists())
-                .filter_map(|x| {
-                    let to = target_dir.join(x.file_name()?);
-                    Some((x, to))
-                })
-                .collect();
-            // Rien n'est écrasé : ni une photo du même nom déjà rangée, ni un XMP du même
-            // nom (celui d'une autre photo rangée avant, `IMG.ARW` puis `IMG.DNG`) ; la
-            // photo reste alors où elle est.
-            if target.exists()
-                || sidecars.iter().any(|(_, to)| to.exists())
-                || std::fs::create_dir_all(&target_dir).is_err()
-            {
-                continue;
+            // Rien n'est écrasé : une photo ou un XMP du même nom déjà rangé laisse la
+            // photo où elle est (`luma_library::tidy`).
+            if let Some(gone) = luma_library::tidy::move_aside(p, &folder_name) {
+                if let Some(dir) = p.parent() {
+                    dirs.insert(dir.to_path_buf());
+                }
+                moved.extend(gone);
             }
-            if std::fs::rename(p, &target).is_err() {
-                continue;
-            }
-            for (x, to) in sidecars {
-                let _ = std::fs::rename(&x, &to);
-            }
-            dirs.insert(dir.to_path_buf());
-            moved.push(p.clone());
-            moved.extend(copies);
         }
         let n = rejects.iter().filter(|p| moved.contains(p)).count();
         self.drop_from_film(&moved);
