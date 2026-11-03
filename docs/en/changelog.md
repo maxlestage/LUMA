@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Clipping in full-screen culling**: the share of the preview that is blown (pure
+  white) and crushed (full black), “2.3% blown”, from one pixel in a thousand, to set
+  aside a failed photo without opening the clipping indicator.
 - **Faster instant thumbnails** (the preview embedded in the RAW, shown as soon as a
   folder opens): the preview is searched for in the file eight bytes at a time; the
   search goes from 6–8 to 2–3 ms per photo, the seven RAW files of the corpus at

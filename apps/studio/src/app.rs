@@ -222,6 +222,10 @@ struct Field {
     get: fn(&mut Settings) -> &mut f32,
 }
 
+/// La part écrêtée (brûlée ou bouchée) d'un aperçu à partir de laquelle le tri en plein
+/// écran la montre : un pixel sur mille.
+const CLIP_SHOWN: f32 = 0.001;
+
 const fn field(
     label: &'static str,
     min: f32,
@@ -1201,6 +1205,8 @@ pub struct Studio {
     pub delete_asked: Option<Vec<PathBuf>>,
     /// La part de l'aperçu au point (0 à 1), lue avec les zones nettes.
     pub sharp_share: Option<f32>,
+    /// Les parts brûlée et bouchée du dernier aperçu, avec la photo qu'il montre.
+    clipped: Option<(PathBuf, [f32; 2])>,
     proofing: Proofing,
     pub zoom: bool,
     compare: Option<Compare>,
@@ -1662,6 +1668,7 @@ impl Studio {
             imports_dir: None,
             delete_asked: None,
             sharp_share: None,
+            clipped: None,
             proofing: Proofing::default(),
             zoom: false,
             compare: None,
@@ -6028,6 +6035,9 @@ impl Studio {
                     }
                     self.image_size = frame.size;
                     self.sharp_share = frame.sharp;
+                    self.clipped = self
+                        .current_path()
+                        .map(|p| (p.to_path_buf(), frame.clipped));
                     self.pick_map = pick_map(frame.size, &frame.rgba);
                     // Une nouvelle base : la zone d'un masque à plage est à relire.
                     if frame.scene.is_some() {
@@ -6387,6 +6397,28 @@ impl Studio {
     /// La part au point mesurée de cette photo (par « Retenir la plus nette », « Rejeter
     /// les floues », le tri par netteté…), telle que la grille la montre : « 12,5 % net ».
     /// Oubliée quand la photo est retouchée.
+    /// Ce que l'aperçu de cette photo a d'écrêté, s'il en a assez pour compter (un
+    /// pixel sur mille) : « 2,3 % brûlé », « 1,1 % bouché ». Vide tant que son aperçu
+    /// n'est pas rendu.
+    pub fn clip_labels(&self, path: &Path) -> Vec<String> {
+        let Some((p, shares)) = &self.clipped else {
+            return Vec::new();
+        };
+        if p != path {
+            return Vec::new();
+        }
+        let percent = |s: f32| widgets::format_value(s * 100.0, 1, false);
+        let [blown, blocked] = *shares;
+        let mut out = Vec::new();
+        if blown >= CLIP_SHOWN {
+            out.push(trf("{percent} % brûlé", &[("percent", &percent(blown))]));
+        }
+        if blocked >= CLIP_SHOWN {
+            out.push(trf("{percent} % bouché", &[("percent", &percent(blocked))]));
+        }
+        out
+    }
+
     pub fn sharp_label(&self, path: &Path) -> Option<String> {
         let share = self.sharp_shares.get(path)?;
         Some(trf(
@@ -8939,6 +8971,13 @@ impl Studio {
             // Sa part au point, si elle a été mesurée (« Retenir la plus nette »…).
             if let Some(sharp) = self.sharp_label(&path) {
                 ui.label(RichText::new(sharp).size(11.5).color(theme::ACCENT));
+            }
+            // Ce que l'aperçu a de brûlé ou de bouché, pour écarter une photo ratée sans
+            // ouvrir l'indicateur d'écrêtage.
+            for text in self.clip_labels(&path) {
+                ui.label(RichText::new(text).size(11.5).color(theme::DIM)).on_hover_text(tr(
+                    "Part de la photo écrêtée : blanc pur (brûlé) ou noir complet (bouché), comme le montre l'indicateur d'écrêtage (J)",
+                ));
             }
             ui.add_space(12.0);
             if let Some(n) = widgets::rating(ui, meta.rating, 18.0) {
