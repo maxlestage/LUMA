@@ -4846,6 +4846,18 @@ fn the_flag_filter_shows_rejects_or_what_is_left() {
         assert_eq!(count(&mut s, FlagFilter::NotRejected), all - 1);
         assert_eq!(count(&mut s, FlagFilter::Unflagged), all - 2);
     }
+    // Les notes : une photo à trois étoiles ; sous « Note minimale », le compte et le
+    // détail par note.
+    s.keys(&[(NONE, Key::Num3)]);
+    let counts = s.studio().flag_counts();
+    assert_eq!(counts.ratings[3], 1);
+    assert_eq!(
+        (counts.at_least(0), counts.at_least(3), counts.at_least(4)),
+        (all, 1, 0)
+    );
+    s.harness.run_steps(1);
+    let line = format!("{all} photo(s) · 1★ 0 · 2★ 0 · 3★ 1 · 4★ 0 · 5★ 0");
+    assert!(s.harness.query_by_label(&line).is_some(), "{line}");
     s.harness.get_by_label("Rejetées seulement").click();
     s.harness.run_steps(2);
     assert_eq!(s.studio().visible(), vec![at("f-2.png")]);

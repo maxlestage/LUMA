@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Las valoraciones contadas**: bajo «Valoración mínima», el número de fotos con al
+  menos la valoración elegida y el detalle por valoración (1★ 4 · 2★ 10…).
 - **Cmd+Mayús+Z rehace una valoración o una marca deshecha**: justo después de un
   Cmd+Z que deshizo valoraciones, marcas, etiquetas o palabras clave, vuelven; un
   cambio nuevo borra lo que se podía rehacer.
