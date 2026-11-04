@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Vistazo más rápido** (la vista previa integrada que se muestra al abrir una foto,
+  en la selección y en todas partes): su conversión para la pantalla hecha en todos los
+  núcleos; 2048 px: 4,0–4,6 → 1,4–1,5 ms, con los mismos bytes.
 - **El zoom sigue en la selección a pantalla completa**: el zoom 1:1 queda abierto de
   una foto a otra, en el mismo lugar de la imagen, para comparar una ráfaga detalle a
   detalle.
