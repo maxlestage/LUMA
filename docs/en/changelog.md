@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **The place in the burst** (full-screen culling): “Burst 2 / 3”, or “Bracket 1 / 5”
+  for an exposure bracket, so the end of a burst shows before reaching it.
 - **Even smoother large filmstrips**: photo metadata stored under a fast hash of the
   paths; 20,000 photos: the list of photos shown 2.4–2.9 → 1.6 ms, the flag counts
   4.0–4.3 → 3.1–3.3 ms, several times per frame.

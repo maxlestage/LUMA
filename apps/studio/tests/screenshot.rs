@@ -5021,7 +5021,20 @@ fn bursts_are_stepped_through() {
     assert_eq!(name(&mut s).as_deref(), Some("a-1.png"));
     s.keys(&[(alt, Key::ArrowLeft)]);
     s.harness.run_steps(2);
-    assert_eq!(s.studio().status(), "Pas de rafale avant celle-ci");
+    assert_eq!(s.studio().status(), "Pas de rafale avant celle-ci"); // Dans le tri en plein écran, la place dans la rafale ; rien pour la photo seule.
+    s.keys(&[(NONE, Key::F)]);
+    s.harness.run_steps(2);
+    assert_eq!(
+        s.studio().stack_place(&photos[at("a-1.png")]).as_deref(),
+        Some("Rafale 1 / 2")
+    );
+    assert_eq!(
+        s.studio().stack_place(&photos[at("b-2.png")]).as_deref(),
+        Some("Rafale 2 / 2")
+    );
+    assert_eq!(s.studio().stack_place(&photos[at("seule.png")]), None);
+    assert!(s.harness.query_by_label("Rafale 1 / 2").is_some());
+    s.keys(&[(NONE, Key::Escape)]);
 }
 
 /// Alt+X : la meilleure de la rafale retenue (P), le reste de la rafale rejeté d'un coup
