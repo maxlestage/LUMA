@@ -6753,3 +6753,11 @@ fr = Pile : {n} photo(s) rejetée(s), {picks} retenue(s) gardée(s)
 en = Stack: {n} photo(s) rejected, {picks} pick(s) kept
 es = Pila: {n} foto(s) rechazada(s), {picks} seleccionada(s) conservada(s)
 
+fr = Rafale {k} / {n}
+en = Burst {k} / {n}
+es = Ráfaga {k} / {n}
+
+fr = Série {k} / {n}
+en = Bracket {k} / {n}
+es = Serie {k} / {n}
+

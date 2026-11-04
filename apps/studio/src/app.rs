@@ -6533,6 +6533,23 @@ impl Studio {
         }
     }
 
+    /// La place de cette photo dans sa pile : « Rafale 2 / 3 », « Série 1 / 5 » (une
+    /// série d'exposition) ; rien hors pile. Les photos de la pile encore dans le film.
+    pub fn stack_place(&self, path: &Path) -> Option<String> {
+        let stack = &self.stacks[*self.stack_of.get(path)?];
+        let members: Vec<&PathBuf> = stack
+            .photos
+            .iter()
+            .filter(|p| self.folder.contains(p))
+            .collect();
+        let k = members.iter().position(|p| p.as_path() == path)? + 1;
+        let values: [(&str, &dyn std::fmt::Display); 2] = [("k", &k), ("n", &members.len())];
+        Some(match stack.kind {
+            luma_library::stacks::Kind::Burst => trf("Rafale {k} / {n}", &values),
+            luma_library::stacks::Kind::Bracket => trf("Série {k} / {n}", &values),
+        })
+    }
+
     /// La prise de vue de cette photo (voir [`shooting_line`]), une fois ouverte.
     pub fn shooting_label(&self, path: &Path) -> Option<&str> {
         self.shooting
@@ -9227,6 +9244,10 @@ impl Studio {
                 trf("{n} à trier", &[("n", &left)])
             };
             ui.label(RichText::new(text).size(11.5).color(theme::DIM));
+            // Sa place dans sa rafale : la fin d'une rafale se voit avant d'y arriver.
+            if let Some(place) = self.stack_place(&path) {
+                ui.label(RichText::new(place).size(11.5).color(theme::DIM));
+            }
             // Sa part au point, si elle a été mesurée (« Retenir la plus nette »…).
             if let Some(sharp) = self.sharp_label(&path) {
                 ui.label(RichText::new(sharp).size(11.5).color(theme::ACCENT));
