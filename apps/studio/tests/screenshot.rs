@@ -4860,6 +4860,53 @@ fn culling_shows_what_is_clipped() {
     s.keys(&[(NONE, Key::Escape)]);
 }
 
+/// « Rejeter les écrêtées » : la photo brûlée d'un tiers est rejetée ; la juste, et
+/// celle écrêtée sous le seuil (2 %), restent sans drapeau ; Cmd+Z les remet toutes.
+#[test]
+fn the_clipped_photos_are_rejected() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("rejeter-ecretees", [1440.0, 2000.0], 1.0, |dir| {
+        let scene = |white: u32| {
+            image::RgbImage::from_fn(600, 400, move |x, y| {
+                if x < white {
+                    image::Rgb([255, 255, 255])
+                } else {
+                    let v = 70 + ((x + y) % 90) as u8;
+                    image::Rgb([v, v + 10, v])
+                }
+            })
+        };
+        scene(200).save(dir.join("brulee.png")).unwrap();
+        scene(0).save(dir.join("juste.png")).unwrap();
+        scene(12).save(dir.join("un-peu.png")).unwrap();
+    }) else {
+        return;
+    };
+    s.wait();
+    s.keys(&[(NONE, Key::G)]);
+    s.harness.get_by_label("Rejeter les écrêtées").click();
+    s.harness.run_steps(2);
+    s.wait();
+    assert_eq!(
+        s.studio().status(),
+        "Écrêtées : 1 photo(s) rejetée(s) (brûlées ou bouchées sur 5 % au moins)"
+    );
+    s.studio().flush_xmp();
+    use luma_project::xmp::Flag;
+    let photos = s.studio().photos().to_vec();
+    let flag = |name: &str| {
+        let p = photos.iter().find(|p| p.ends_with(name)).unwrap();
+        luma_studio::worker::read_meta(p).flag
+    };
+    assert_eq!(
+        ["brulee.png", "juste.png", "un-peu.png"].map(flag),
+        [Flag::Reject, Flag::None, Flag::None]
+    );
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    s.studio().flush_xmp();
+    assert_eq!(flag("brulee.png"), Flag::None);
+}
+
 #[test]
 fn the_sharpest_of_each_burst_is_picked() {
     let _gpu = one_at_a_time();

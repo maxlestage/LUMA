@@ -6700,3 +6700,24 @@ es = Zoom 1:1 en la zona más nítida
 fr = Aucune zone nette sur cette photo
 en = No sharp area in this photo
 es = Ninguna zona nítida en esta foto
+
+fr = Rejeter les écrêtées
+en = Reject the clipped
+es = Rechazar las recortadas
+
+fr = Mesure la part brûlée (blanc pur) et bouchée (noir complet) de chaque photo du film et donne le drapeau « Rejetée » à celles qui en ont 5 % au moins
+en = Measures the blown (pure white) and crushed (full black) share of each photo in the filmstrip and gives the “Rejected” flag to those with 5% or more
+es = Mide la parte quemada (blanco puro) y empastada (negro total) de cada foto de la tira y da la marca «Rechazada» a las que tienen un 5 % o más
+
+fr = Écrêtage de {n} photo(s)…
+en = Clipping of {n} photo(s)…
+es = Recorte de {n} foto(s)…
+
+fr = Écrêtage : aucune photo n'a pu être mesurée
+en = Clipping: no photo could be measured
+es = Recorte: no se pudo medir ninguna foto
+
+fr = Écrêtées : {n} photo(s) rejetée(s) (brûlées ou bouchées sur {percent} % au moins)
+en = Clipped: {n} photo(s) rejected (blown or crushed over {percent}% or more)
+es = Recortadas: {n} foto(s) rechazada(s) (quemadas o empastadas en un {percent} % o más)
+

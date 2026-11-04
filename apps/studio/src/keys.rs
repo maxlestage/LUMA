@@ -270,6 +270,7 @@ pub const ACTIONS: &[Action] = &[
             ..Combo::shift(Key::X)
         }],
     ),
+    a("reject_clipped", "Rejeter les écrêtées", &[]),
     a(
         "reject_blurred",
         "Rejeter les floues",

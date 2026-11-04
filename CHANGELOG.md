@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Rejeter les écrêtées** (Bibliothèque, avec les rafales) : la part brûlée et bouchée
+  de chaque photo du film mesurée en arrière‑plan ; celles écrêtées sur 5 % au moins
+  rejetées d'un coup (Cmd+Z les remet), comme `luma clipping --reject 5`.
 - **`luma clipping`** : la part brûlée (blanc pur) et bouchée (noir complet) de chaque
   photo d'un dossier, la plus écrêtée d'abord ; `--reject 5` rejette celles écrêtées
   sur 5 % au moins (drapeau dans le XMP), pour écarter les photos ratées d'un coup.
