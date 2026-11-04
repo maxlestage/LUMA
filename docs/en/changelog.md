@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **From burst to burst** (Alt+→, Alt+←): the first photo of the next or previous
+  burst in the filmstrip, single photos skipped, bursts folded or unfolded.
 - **The full-screen culling strip**: the open photo and its neighbours in the
   filmstrip as thumbnails, above the bar, picks underlined in white, rejects dimmed; a
   click opens one.

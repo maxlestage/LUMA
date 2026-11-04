@@ -6721,3 +6721,19 @@ fr = Écrêtées : {n} photo(s) rejetée(s) (brûlées ou bouchées sur {percent
 en = Clipped: {n} photo(s) rejected (blown or crushed over {percent}% or more)
 es = Recortadas: {n} foto(s) rechazada(s) (quemadas o empastadas en un {percent} % o más)
 
+fr = Rafale précédente
+en = Previous burst
+es = Ráfaga anterior
+
+fr = Rafale suivante
+en = Next burst
+es = Ráfaga siguiente
+
+fr = Pas de rafale avant celle-ci
+en = No burst before this one
+es = No hay ninguna ráfaga antes de esta
+
+fr = Pas de rafale après celle-ci
+en = No burst after this one
+es = No hay ninguna ráfaga después de esta
+

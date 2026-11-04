@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **De rafale en rafale** (Alt+→, Alt+←) : la première photo de la rafale suivante ou
+  précédente du film, les photos seules sautées, rafales repliées ou dépliées.
 - **Le bandeau du tri en plein écran** : la photo ouverte et ses voisines du film en
   vignettes, au‑dessus de la barre, les retenues soulignées de blanc, les rejetées
   assombries ; un clic en ouvre une.
