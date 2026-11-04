@@ -251,6 +251,41 @@ pub fn shooting_line(e: &luma_raw::Exif) -> Option<String> {
 /// n'a pas pu être mesurée).
 type ClipShare = (PathBuf, Option<[f32; 2]>);
 
+/// Les métadonnées des photos du film, par chemin. Le hachage par défaut (résistant aux
+/// attaques par collisions, inutile pour des chemins de fichiers locaux) coûtait la
+/// plus grande part de chaque liste et de chaque compte du film, refaits à chaque image.
+pub type MetaMap = HashMap<PathBuf, Meta, std::hash::BuildHasherDefault<PathHasher>>;
+
+/// Un hachage rapide pour les chemins : huit octets à la fois, une rotation, un XOR et
+/// une multiplication par mot (la méthode des compilateurs pour leurs tables internes).
+#[derive(Default)]
+pub struct PathHasher(u64);
+
+impl std::hash::Hasher for PathHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        const K: u64 = 0x517c_c1b7_2722_0a95;
+        let (words, rest) = bytes.as_chunks::<8>();
+        for w in words {
+            self.0 = (self.0.rotate_left(5) ^ u64::from_le_bytes(*w)).wrapping_mul(K);
+        }
+        for &b in rest {
+            self.0 = (self.0.rotate_left(5) ^ u64::from(b)).wrapping_mul(K);
+        }
+    }
+
+    fn write_u8(&mut self, n: u8) {
+        self.write(&[n]);
+    }
+
+    fn write_usize(&mut self, n: usize) {
+        self.write(&n.to_le_bytes());
+    }
+
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+
 /// La hauteur (en points) du bandeau des voisines du tri en plein écran.
 const STRIP_HEIGHT: f32 = 48.0;
 
@@ -598,7 +633,7 @@ pub enum FlagFilter {
 /// par image.
 fn shown(
     folder: &[PathBuf],
-    meta: &HashMap<PathBuf, Meta>,
+    meta: &MetaMap,
     min_rating: u8,
     flag_filter: FlagFilter,
     keyword: Option<&str>,
@@ -648,7 +683,7 @@ pub struct FlagCounts {
 
 impl FlagCounts {
     /// Les comptes de ces photos, d'après leurs métadonnées (sans : pas de drapeau).
-    pub fn of(photos: &[PathBuf], meta: &HashMap<PathBuf, Meta>) -> FlagCounts {
+    pub fn of(photos: &[PathBuf], meta: &MetaMap) -> FlagCounts {
         let mut c = FlagCounts {
             all: photos.len(),
             ..FlagCounts::default()
@@ -1323,7 +1358,7 @@ pub struct Studio {
     /// L'onglet des courbes à points : luminosité, rouge, vert, bleu.
     curve_channel: usize,
     pub module: Module,
-    meta: HashMap<PathBuf, Meta>,
+    meta: MetaMap,
     min_rating: u8,
     flag_filter: FlagFilter,
     /// Le mot‑clé choisi dans la Bibliothèque : seules ses photos s'affichent.
@@ -1759,7 +1794,7 @@ impl Studio {
             hsl_tab: 0,
             curve_channel: 0,
             module: Module::Develop,
-            meta: HashMap::new(),
+            meta: MetaMap::default(),
             min_rating: 0,
             flag_filter: FlagFilter::All,
             keyword_filter: None,
@@ -17304,16 +17339,51 @@ mod tests {
     /// Le filtre du film sans copie des métadonnées donne les mêmes photos que l'ancien
     /// (une copie par photo, le mot‑clé remis en forme à chaque comparaison), pour
     /// chaque filtre de drapeau, note minimale et mot‑clé, piles repliées comprises.
+    /// Le hachage des chemins : le même chemin, la même valeur ; des chemins qui ne
+    /// diffèrent que d'un octet, n'importe où (dans un mot de huit, dans le reste), des
+    /// valeurs différentes ; et la table trouve chacun de 20 000 chemins.
+    #[test]
+    fn paths_hash_apart() {
+        use std::hash::BuildHasher;
+        let h = std::hash::BuildHasherDefault::<super::PathHasher>::default();
+        let base = "/Volumes/Photos/2026/Islande/IMG_0001.CR3";
+        assert_eq!(h.hash_one(Path::new(base)), h.hash_one(Path::new(base)));
+        for at in 0..base.len() {
+            let mut other = base.as_bytes().to_vec();
+            other[at] ^= 1;
+            let other = String::from_utf8(other).unwrap();
+            assert_ne!(
+                h.hash_one(Path::new(base)),
+                h.hash_one(Path::new(&other)),
+                "{other}"
+            );
+        }
+        let mut map = super::MetaMap::default();
+        for i in 0..20_000u32 {
+            map.insert(
+                PathBuf::from(format!("/film/IMG_{i}.CR3")),
+                Meta {
+                    rating: (i % 6) as u8,
+                    ..Meta::default()
+                },
+            );
+        }
+        assert!((0..20_000u32).all(|i| {
+            map.get(Path::new(&format!("/film/IMG_{i}.CR3")))
+                .map(|m| m.rating)
+                == Some((i % 6) as u8)
+        }));
+    }
+
     #[test]
     fn shown_photos_are_the_same_without_copying_metadata() {
         use super::{Flag, FlagFilter, Meta, fold, shown};
-        use std::collections::HashMap;
         use std::path::{Path, PathBuf};
         let n = 20_000;
         let photos: Vec<PathBuf> = (0..n)
             .map(|i| PathBuf::from(format!("/film/IMG_{i}.CR3")))
             .collect();
-        let mut meta = HashMap::new();
+        let mut meta = super::MetaMap::default();
         for (i, p) in photos.iter().enumerate() {
             let mut m = Meta {
                 rating: (i % 6) as u8,
@@ -17369,7 +17439,6 @@ mod tests {
     #[test]
     fn flag_counts_in_one_pass() {
         use super::{Flag, FlagCounts, FlagFilter, Meta};
-        use std::collections::HashMap;
         use std::path::PathBuf;
         let n = 20_000;
         let photos: Vec<PathBuf> = (0..n)
@@ -17381,7 +17450,7 @@ mod tests {
                 }
             })
             .collect();
-        let mut meta = HashMap::new();
+        let mut meta = super::MetaMap::default();
         for (i, p) in photos.iter().enumerate() {
             let flag = match i % 3 {
                 0 => Flag::Pick,
