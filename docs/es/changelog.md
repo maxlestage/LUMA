@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Rechazar las recortadas** (Biblioteca, con las ráfagas): la parte quemada y
+  empastada de cada foto de la tira medida en segundo plano; las recortadas en un 5 % o
+  más rechazadas de una vez (Cmd+Z las devuelve), como `luma clipping --reject 5`.
 - **`luma clipping`**: la parte quemada (blanco puro) y empastada (negro total) de cada
   foto de una carpeta, la más recortada primero; `--reject 5` rechaza las recortadas en
   un 5 % o más (bandera en el XMP), para descartar de una vez las fotos fallidas.

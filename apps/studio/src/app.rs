@@ -247,6 +247,14 @@ pub fn shooting_line(e: &luma_raw::Exif) -> Option<String> {
     (!parts.is_empty()).then(|| parts.join(" · "))
 }
 
+/// Une photo de « Rejeter les écrêtées » et ses parts brûlée et bouchée (`None` si elle
+/// n'a pas pu être mesurée).
+type ClipShare = (PathBuf, Option<[f32; 2]>);
+
+/// La part brûlée ou bouchée d'une photo à partir de laquelle « Rejeter les écrêtées »
+/// la rejette (celle de `luma clipping --reject 5`).
+const REJECT_CLIPPED: f32 = 0.05;
+
 /// La part écrêtée (brûlée ou bouchée) d'un aperçu à partir de laquelle le tri en plein
 /// écran la montre : un pixel sur mille.
 const CLIP_SHOWN: f32 = 0.001;
@@ -1235,6 +1243,8 @@ pub struct Studio {
     pub sharp_share: Option<f32>,
     /// Les parts brûlée et bouchée du dernier aperçu, avec la photo qu'il montre.
     clipped: Option<(PathBuf, [f32; 2])>,
+    /// « Rejeter les écrêtées » en cours : le nombre de photos, les mesures arrivées.
+    clip_batch: Option<(usize, Vec<ClipShare>)>,
     /// La prise de vue de la photo ouverte (vitesse, ouverture, ISO, focale), avec elle.
     shooting: Option<(PathBuf, String)>,
     proofing: Proofing,
@@ -1700,6 +1710,7 @@ impl Studio {
             delete_asked: None,
             sharp_share: None,
             clipped: None,
+            clip_batch: None,
             shooting: None,
             proofing: Proofing::default(),
             zoom: false,
@@ -5926,6 +5937,7 @@ impl Studio {
             && self.lens_batch.0 == 0
             && self.before_after_batch.0 == 0
             && self.sharp_batch.is_none()
+            && self.clip_batch.is_none()
             && (self.split.is_none() || self.before_asked.is_none())
             && self.reference_asked.is_none()
     }
@@ -6193,6 +6205,16 @@ impl Studio {
                                     );
                                 }
                             }
+                        }
+                    }
+                }
+                Event::Clipped { path, result } => {
+                    if let Some(batch) = &mut self.clip_batch {
+                        batch.1.push((path, result.ok()));
+                        if batch.1.len() >= batch.0
+                            && let Some((_, done)) = self.clip_batch.take()
+                        {
+                            self.reject_clipped_of(done);
                         }
                     }
                 }
@@ -7512,6 +7534,7 @@ impl Studio {
             "pick_sharpest" => self.sharpest_selected(),
             "pick_sharpest_bursts" => self.sharpest_of_each_burst(),
             "reject_blurred_bursts" => self.blurred_of_each_burst(),
+            "reject_clipped" => self.reject_clipped(),
             "reject_blurred" => self.reject_blurred_selected(),
             "unflag" => self.set_meta(|m| m.flag = Flag::None),
             r if r.starts_with("rate") => {
@@ -10094,6 +10117,55 @@ impl Studio {
 
     /// Les floues des parts reçues (moins de [`BLURRED_FRACTION`] de la plus nette) :
     /// leur drapeau « Rejetée » ; la barre d'état dit combien.
+    /// « Rejeter les écrêtées » : la part brûlée et bouchée de chaque photo du film (sur
+    /// son rendu, en arrière‑plan) ; celles écrêtées sur 5 % au moins (`REJECT_CLIPPED`)
+    /// reçoivent le drapeau « Rejetée », en un seul changement pour Cmd+Z.
+    pub fn reject_clipped(&mut self) {
+        if self.folder.is_empty() || self.clip_batch.is_some() {
+            return;
+        }
+        let open = (self.loading.is_none() && self.photo.is_some())
+            .then(|| self.current_path().map(Path::to_path_buf))
+            .flatten();
+        let paths: Vec<(PathBuf, Option<Settings>)> = self
+            .folder
+            .iter()
+            .map(|p| {
+                let given = (open.as_ref() == Some(p)).then(|| self.settings.clone());
+                (p.clone(), given)
+            })
+            .collect();
+        let n = paths.len();
+        self.clip_batch = Some((n, Vec::new()));
+        self.status = trf("Écrêtage de {n} photo(s)…", &[("n", &n)]);
+        self.worker.clipping(paths);
+    }
+
+    fn reject_clipped_of(&mut self, measured: Vec<ClipShare>) {
+        if measured.iter().all(|m| m.1.is_none()) {
+            self.status = tr("Écrêtage : aucune photo n'a pu être mesurée").into();
+            return;
+        }
+        let clipped: Vec<PathBuf> = measured
+            .into_iter()
+            .filter(|(_, s)| s.is_some_and(|[b, k]| b.max(k) >= REJECT_CLIPPED))
+            .map(|(p, _)| p)
+            .collect();
+        if !clipped.is_empty() {
+            self.edit_meta(&clipped, |m| m.flag = Flag::Reject);
+        }
+        self.status = trf(
+            "Écrêtées : {n} photo(s) rejetée(s) (brûlées ou bouchées sur {percent} % au moins)",
+            &[
+                ("n", &clipped.len()),
+                (
+                    "percent",
+                    &widgets::format_value(REJECT_CLIPPED * 100.0, 0, false),
+                ),
+            ],
+        );
+    }
+
     fn reject_blurred(&mut self, shares: Vec<SharpShare>) {
         let measured: Vec<(PathBuf, f32)> = shares
             .into_iter()
@@ -12032,6 +12104,18 @@ impl Studio {
             .clicked()
         {
             self.act("reject_blurred_bursts");
+        }
+        if ui
+            .add_enabled(
+                self.clip_batch.is_none(),
+                egui::Button::new(tr("Rejeter les écrêtées")).small(),
+            )
+            .on_hover_text(tr(
+                "Mesure la part brûlée (blanc pur) et bouchée (noir complet) de chaque photo du film et donne le drapeau « Rejetée » à celles qui en ont 5 % au moins",
+            ))
+            .clicked()
+        {
+            self.act("reject_clipped");
         }
         ui.add_space(10.0);
         section_title(ui, tr("Filtre"));

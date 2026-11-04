@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Reject the clipped** (Library, with the bursts): the blown and crushed share of
+  each photo in the filmstrip measured in the background; those clipped over 5% or
+  more rejected at once (Cmd+Z puts them back), like `luma clipping --reject 5`.
 - **`luma clipping`**: the blown (pure white) and crushed (full black) share of each
   photo in a folder, the most clipped first; `--reject 5` rejects those clipped over
   5% or more (flag in the XMP), to set aside the failed photos at once.
