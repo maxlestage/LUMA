@@ -1079,8 +1079,7 @@ fn render_job(
         if let Some(p) = job.proof.as_ref().filter(|p| p.simulate) {
             p.table.apply_rgba(&mut rgba);
         }
-        let histogram = histogram_rgba(&rgba);
-        let clipped = clipped_shares(&rgba);
+        let (histogram, clipped) = histogram_and_clipped(&rgba);
         let scope = luma_image::scopes::render(job.scope, &rgba, w, h);
         let clean = (gamut.is_some() || job.clipping || job.focus.is_some() || job.dust_view)
             .then(|| rgba.clone());
@@ -1158,57 +1157,54 @@ pub fn color_image(size: [usize; 2], rgba: &[u8]) -> egui::ColorImage {
 /// tous les cœurs, chacune son histogramme, puis leur somme (des comptes : les mêmes,
 /// dans n'importe quel ordre).
 pub fn histogram_rgba(rgba: &[u8]) -> [[u32; 256]; 3] {
+    histogram_and_clipped(rgba).0
+}
+
+/// [`histogram_rgba`] et [`clipped_shares`] d'un seul passage sur les pixels (chacun
+/// coûtait le sien, 1,1 ms sur un aperçu de 2048 px).
+pub fn histogram_and_clipped(rgba: &[u8]) -> ([[u32; 256]; 3], [f32; 2]) {
     use rayon::prelude::*;
-    let count = |h: &mut [[u32; 256]; 3], px: &[[u8; 4]]| {
+    type Counts = ([[u32; 256]; 3], [usize; 2]);
+    let count = |(h, clip): &mut Counts, px: &[[u8; 4]]| {
         for p in px {
             for c in 0..3 {
                 h[c][usize::from(p[c])] += 1;
             }
+            let rgb = [p[0], p[1], p[2]];
+            clip[0] += usize::from(rgb.contains(&255));
+            clip[1] += usize::from(rgb == [0, 0, 0]);
         }
     };
-    rgba.as_chunks::<4>()
-        .0
+    let px = rgba.as_chunks::<4>().0;
+    let (histogram, [blown, blocked]) = px
         .par_chunks(64_000)
         .fold(
-            || [[0u32; 256]; 3],
-            |mut h, px| {
-                count(&mut h, px);
-                h
+            || ([[0u32; 256]; 3], [0usize; 2]),
+            |mut acc, band| {
+                count(&mut acc, band);
+                acc
             },
         )
         .reduce(
-            || [[0u32; 256]; 3],
-            |mut a, b| {
-                for (ca, cb) in a.iter_mut().zip(&b) {
-                    for (x, y) in ca.iter_mut().zip(cb) {
+            || ([[0u32; 256]; 3], [0usize; 2]),
+            |(mut a, ca), (b, cb)| {
+                for (ha, hb) in a.iter_mut().zip(&b) {
+                    for (x, y) in ha.iter_mut().zip(hb) {
                         *x += y;
                     }
                 }
-                a
+                (a, [ca[0] + cb[0], ca[1] + cb[1]])
             },
-        )
+        );
+    let n = px.len().max(1) as f32;
+    (histogram, [blown as f32 / n, blocked as f32 / n])
 }
 
 /// Les parts (0 à 1) d'une image RGBA brûlées et bouchées : les pixels que
-/// [`clip_color`] peint en couleur, et ceux qu'il peint en bleu. Par bandes sur tous
-/// les cœurs (des comptes : les mêmes dans n'importe quel ordre).
+/// [`clip_color`] peint en couleur, et ceux qu'il peint en bleu (comptés avec
+/// l'histogramme, voir [`histogram_and_clipped`]).
 pub fn clipped_shares(rgba: &[u8]) -> [f32; 2] {
-    use rayon::prelude::*;
-    let px = rgba.as_chunks::<4>().0;
-    let [blown, blocked] = px
-        .par_chunks(64_000)
-        .map(|band| {
-            band.iter().fold([0usize; 2], |[b, k], p| {
-                let rgb = [p[0], p[1], p[2]];
-                [
-                    b + usize::from(rgb.contains(&255)),
-                    k + usize::from(rgb == [0, 0, 0]),
-                ]
-            })
-        })
-        .reduce(|| [0; 2], |a, b| [a[0] + b[0], a[1] + b[1]]);
-    let n = px.len().max(1) as f32;
-    [blown as f32 / n, blocked as f32 / n]
+    histogram_and_clipped(rgba).1
 }
 
 /// L'indicateur d'écrêtage sur une image RGBA (voir [`to_rgba`]).

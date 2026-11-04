@@ -24,7 +24,21 @@ pub const SHARE_SIDE: usize = 1600;
 /// La part au point (0 à 1) d'une image RGBA de `w × h` : la part de ses pixels nets
 /// (voir [`sharp`]).
 pub fn share(rgba: &[u8], w: usize, h: usize) -> f32 {
-    let n = sharp(rgba, w, h).iter().filter(|&&m| m).count();
+    // Comptés bande par bande, sans écrire le masque : les mêmes pixels que [`sharp`].
+    let n: usize = if w < 5 || h < 5 || rgba.len() < w * h * 4 {
+        0
+    } else {
+        (0..h.div_ceil(BAND))
+            .into_par_iter()
+            .map(|i| {
+                let mut n = 0;
+                laplacian_band(rgba, w, h, i * BAND, BAND.min(h - i * BAND), |_, around| {
+                    n += (2..w - 2).filter(|&x| laplacian(around, x).abs() > THRESHOLD).count();
+                });
+                n
+            })
+            .sum()
+    };
     n as f32 / (w * h).max(1) as f32
 }
 
@@ -108,6 +122,13 @@ pub fn paint_mask(dest: &mut [u8], mask: &[bool], color: Color) -> usize {
     n
 }
 
+/// Le laplacien de la luminance lissée en `x` : la ligne du dessus, la ligne, celle du
+/// dessous.
+#[inline(always)]
+fn laplacian([up, mid, down]: [&[f32]; 3], x: usize) -> f32 {
+    4.0 * mid[x] - mid[x - 1] - mid[x + 1] - up[x] - down[x]
+}
+
 /// La luminance (0 à 255) d'un pixel 8 bits encodé.
 #[inline]
 fn luma(p: &[u8]) -> f32 {
@@ -126,50 +147,58 @@ pub fn sharp_above(rgba: &[u8], w: usize, h: usize, threshold: f32) -> Vec<bool>
     if w < 5 || h < 5 || rgba.len() < w * h * 4 {
         return out;
     }
-    // Par bandes de lignes, chacune sur un cœur avec ses petits tampons (la luminance et
-    // la luminance lissée 3 × 3 de ses lignes et de leurs voisines), qui restent dans le
-    // cache : trois images entières en mémoire coûtaient plus que le calcul. Les mêmes
-    // opérations dans le même ordre, donc les mêmes pixels.
+    // Par bandes de lignes, chacune sur un cœur (voir [`laplacian_band`]).
     out.par_chunks_mut(w * BAND).enumerate().for_each(|(i, band)| {
         let y0 = i * BAND;
-        // Les lignes marquées de la bande (les deux du bord ne comptent jamais).
-        let (ya, yb) = (y0.max(2), (y0 + band.len() / w).min(h - 2));
-        if ya >= yb {
-            return;
-        }
-        // La luminance des lignes ya − 2 à yb + 1 : le lissage du bruit d'un pixel.
-        let first = ya - 2;
-        let lum: Vec<f32> = rgba[first * w * 4..(yb + 2) * w * 4]
-            .as_chunks::<4>()
-            .0
-            .iter()
-            .map(|p| luma(p))
-            .collect();
-        let line = |y: usize| &lum[(y - first) * w..(y - first + 1) * w];
-        // Lissée, lignes ya − 1 à yb ; les sommes des trois lignes une fois par colonne.
-        let top = ya - 1;
-        let mut smooth = vec![0.0f32; (yb + 1 - top) * w];
-        let mut col = vec![0.0f32; w];
-        for (r, row) in (top..=yb).zip(smooth.chunks_exact_mut(w)) {
-            let (a, b, c) = (line(r - 1), line(r), line(r + 1));
-            for (i, v) in col.iter_mut().enumerate() {
-                *v = a[i] + b[i] + c[i];
-            }
-            for (x, v) in row.iter_mut().enumerate().take(w - 1).skip(1) {
-                *v = (col[x - 1] + col[x] + col[x + 1]) / 9.0;
-            }
-        }
-        let smoothed = |y: usize| &smooth[(y - top) * w..(y - top + 1) * w];
-        for y in ya..yb {
-            let (up, mid, down) = (smoothed(y - 1), smoothed(y), smoothed(y + 1));
+        laplacian_band(rgba, w, h, y0, band.len() / w, |y, around| {
             let row = &mut band[(y - y0) * w..(y - y0 + 1) * w];
             for (x, v) in row.iter_mut().enumerate().take(w - 2).skip(2) {
-                let lap = 4.0 * mid[x] - mid[x - 1] - mid[x + 1] - up[x] - down[x];
-                *v = lap.abs() > threshold;
+                *v = laplacian(around, x).abs() > threshold;
             }
-        }
+        });
     });
     out
+}
+
+/// La luminance lissée 3 × 3 autour de chaque ligne marquable d'une bande (`rows`
+/// lignes depuis `y0` ; les deux du bord ne comptent jamais), donnée ligne par ligne à
+/// `emit` (la ligne ; celle du dessus, elle‑même, celle du dessous), qui en tire le
+/// laplacien par [`laplacian`]. La bande a ses petits tampons (la luminance et la luminance lissée de ses
+/// lignes et de leurs voisines), qui restent dans le cache : trois images entières en
+/// mémoire coûtaient plus que le calcul. Les mêmes opérations dans le même ordre, donc
+/// les mêmes valeurs, pour le masque comme pour le compte.
+fn laplacian_band(rgba: &[u8], w: usize, h: usize, y0: usize, rows: usize, mut emit: impl FnMut(usize, [&[f32]; 3])) {
+    // Les lignes marquées de la bande (les deux du bord ne comptent jamais).
+    let (ya, yb) = (y0.max(2), (y0 + rows).min(h - 2));
+    if ya >= yb {
+        return;
+    }
+    // La luminance des lignes ya − 2 à yb + 1 : le lissage du bruit d'un pixel.
+    let first = ya - 2;
+    let lum: Vec<f32> = rgba[first * w * 4..(yb + 2) * w * 4]
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|p| luma(p))
+        .collect();
+    let line = |y: usize| &lum[(y - first) * w..(y - first + 1) * w];
+    // Lissée, lignes ya − 1 à yb ; les sommes des trois lignes une fois par colonne.
+    let top = ya - 1;
+    let mut smooth = vec![0.0f32; (yb + 1 - top) * w];
+    let mut col = vec![0.0f32; w];
+    for (r, row) in (top..=yb).zip(smooth.chunks_exact_mut(w)) {
+        let (a, b, c) = (line(r - 1), line(r), line(r + 1));
+        for (i, v) in col.iter_mut().enumerate() {
+            *v = a[i] + b[i] + c[i];
+        }
+        for (x, v) in row.iter_mut().enumerate().take(w - 1).skip(1) {
+            *v = (col[x - 1] + col[x] + col[x + 1]) / 9.0;
+        }
+    }
+    let smoothed = |y: usize| &smooth[(y - top) * w..(y - top + 1) * w];
+    for y in ya..yb {
+        emit(y, [smoothed(y - 1), smoothed(y), smoothed(y + 1)]);
+    }
 }
 
 /// Les zones nettes peintes par‑dessus l'image RGBA (voir [`sharp`]) ; le nombre de
@@ -193,6 +222,36 @@ mod tests {
             }
         }
         v
+    }
+
+    /// La part au point, comptée sans écrire le masque, est celle du masque : des tailles
+    /// qui ne tombent pas sur les bandes (1 ligne de plus, 31, 33, 65), trop petites,
+    /// des pixels au hasard et des contours francs.
+    #[test]
+    fn the_share_counts_the_pixels_of_the_mask() {
+        for (w, h) in [
+            (4, 40),
+            (5, 5),
+            (6, 7),
+            (40, 31),
+            (40, 33),
+            (97, 65),
+            (300, 129),
+            (640, 427),
+        ] {
+            let img = image(w, h, |x, y| {
+                // Un « hasard » fixe par pixel, des contours francs une case sur deux.
+                let mut s = (x as u32).wrapping_mul(0x9E37_79B9) ^ (y as u32).wrapping_mul(0x85EB_CA6B);
+                s ^= s >> 15;
+                s = s.wrapping_mul(0x2C1B_3C6D);
+                s ^= s >> 12;
+                if (x / 4 + y / 3) % 2 == 0 { (s >> 24) as u8 } else { 200 }
+            });
+            let mask = sharp(&img, w, h);
+            let expected = mask.iter().filter(|&&m| m).count() as f32 / (w * h) as f32;
+            assert_eq!(share(&img, w, h).to_bits(), expected.to_bits(), "{w} × {h}");
+        }
+        assert_eq!(share(&[], 10, 10), 0.0);
     }
 
     /// Un damier net à gauche, le même flouté à droite : les zones nettes sont à
