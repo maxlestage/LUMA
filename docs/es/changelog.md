@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Quitar las banderas de la pila** (Alt+U): toda la pila de la foto abierta sin
+  bandera de una vez (Cmd+Z la devuelve), para rehacer la selección de una ráfaga.
 - **El lugar en la ráfaga** (selección a pantalla completa): «Ráfaga 2 / 3», o
   «Serie 1 / 5» para una serie de exposición, el final de una ráfaga se ve antes de
   llegar.
