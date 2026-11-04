@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster glimpse** (the embedded preview shown as soon as a photo opens, in culling
+  as elsewhere): its conversion for the screen done on all cores; 2048 px:
+  4.0–4.6 → 1.4–1.5 ms, with the same bytes.
 - **The zoom follows in full-screen culling**: the 1:1 zoom stays open from one photo
   to the next, at the same place in the image, to compare a burst detail by detail.
 - **Zoom on the sharp area** (Shift+Z, also in full-screen culling): the 1:1 zoom

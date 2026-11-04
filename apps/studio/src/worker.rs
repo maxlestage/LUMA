@@ -309,15 +309,27 @@ pub fn clip_color(p: [u8; 3]) -> Option<[u8; 3]> {
 
 /// RGB 8 bits → RGBA, avec en option l'indicateur d'écrêtage ([`clip_color`]).
 pub fn to_rgba(rgb: &[u8], clipping: bool) -> Vec<u8> {
-    let mut out = Vec::with_capacity(rgb.len() / 3 * 4);
-    for p in rgb.as_chunks::<3>().0 {
-        let px = if clipping {
-            clip_color(*p).unwrap_or(*p)
-        } else {
-            *p
-        };
-        out.extend_from_slice(&[px[0], px[1], px[2], 255]);
-    }
+    use rayon::prelude::*;
+    // Par bandes de 64 000 pixels sur tous les cœurs, l'alpha posé d'avance et l'écrêtage
+    // choisi une fois par bande (une boucle par pixel sur un seul cœur coûtait 4,5 ms pour
+    // un coup d'œil de 2048 px). Chaque pixel écrit d'après le sien : les mêmes octets.
+    const BAND: usize = 64_000;
+    let px = rgb.as_chunks::<3>().0;
+    let mut out = vec![255u8; px.len() * 4];
+    out.par_chunks_mut(BAND * 4)
+        .zip(px.par_chunks(BAND))
+        .for_each(|(dest, src)| {
+            let dest = dest.as_chunks_mut::<4>().0;
+            if clipping {
+                for (d, p) in dest.iter_mut().zip(src) {
+                    d[..3].copy_from_slice(&clip_color(*p).unwrap_or(*p));
+                }
+            } else {
+                for (d, p) in dest.iter_mut().zip(src) {
+                    d[..3].copy_from_slice(p);
+                }
+            }
+        });
     out
 }
 
@@ -1714,6 +1726,33 @@ mod tests {
             failed,
             Err("Erreur inattendue pendant le calcul".to_owned())
         );
+    }
+
+    #[test]
+    fn rgba_on_all_cores_is_pixel_by_pixel() {
+        // Les octets d'une conversion pixel par pixel, avec et sans l'écrêtage, de part et
+        // d'autre d'une bande (64 000 pixels) et pour une image vide.
+        for n in [0usize, 1, 63_999, 64_000, 64_001, 200_003] {
+            let rgb: Vec<u8> = (0..n * 3)
+                .map(|i| [0u8, 255, 17, 128][(i * 7 + i / 5) % 4])
+                .collect();
+            for clipping in [false, true] {
+                let mut one = Vec::new();
+                for p in rgb.as_chunks::<3>().0 {
+                    let px = if clipping {
+                        clip_color(*p).unwrap_or(*p)
+                    } else {
+                        *p
+                    };
+                    one.extend_from_slice(&[px[0], px[1], px[2], 255]);
+                }
+                assert_eq!(
+                    super::to_rgba(&rgb, clipping),
+                    one,
+                    "{n} pixels, écrêtage {clipping}"
+                );
+            }
+        }
     }
 
     #[test]
