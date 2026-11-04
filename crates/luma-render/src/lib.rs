@@ -495,6 +495,15 @@ impl Photo {
         Ok(luma_image::focus::share(&rgba, w, h))
     }
 
+    /// Les parts (0 à 1) de la photo brûlées (une couche au moins à 255) et bouchées
+    /// (noir complet), sur son rendu avec ces réglages à la taille de la mesure au point :
+    /// ce que l'indicateur d'écrêtage peint.
+    pub fn clipped_shares(&self, settings: &Settings, cancel: &Cancel) -> Result<[f32; 2]> {
+        let r = self.render(settings, Size::Fit(luma_image::focus::SHARE_SIDE), cancel)?;
+        let rgb = luma_image::encode8(&r.image, luma_color::OutputSpace::Srgb);
+        Ok(clipped_of_rgb(&rgb))
+    }
+
     /// Les étapes de voisinage, en cache tant que [`luma_image::base_key`] ne change pas.
     pub fn base(&self, settings: &Settings, size: Size, cancel: &Cancel, timings: &mut Timings) -> Result<Base> {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
@@ -607,8 +616,27 @@ fn swaps_axes(o: luma_raw::Orientation) -> bool {
     matches!(o, O::Rotate90 | O::Rotate270 | O::Transpose | O::Transverse)
 }
 
+/// Les parts brûlée et bouchée d'une image RGB 8 bits (voir [`Photo::clipped_shares`]).
+fn clipped_of_rgb(rgb: &[u8]) -> [f32; 2] {
+    let px = rgb.as_chunks::<3>().0;
+    let (blown, blocked) = px.iter().fold((0usize, 0usize), |(b, k), p| {
+        (b + usize::from(p.contains(&255)), k + usize::from(*p == [0, 0, 0]))
+    });
+    let n = px.len().max(1) as f32;
+    [blown as f32 / n, blocked as f32 / n]
+}
+
 #[cfg(test)]
 mod tests {
+    /// Les parts brûlée et bouchée : une couche à 255 suffit ; le noir complet seul est
+    /// bouché ; une image vide n'a rien.
+    #[test]
+    fn clipped_shares_of_an_rgb_image() {
+        let rgb = [255, 10, 10, 0, 0, 0, 0, 0, 1, 90, 255, 255];
+        assert_eq!(super::clipped_of_rgb(&rgb), [0.5, 0.25]);
+        assert_eq!(super::clipped_of_rgb(&[]), [0.0, 0.0]);
+    }
+
     use super::*;
 
     /// Réduire puis tourner donne la même image que tourner puis réduire, pour les huit

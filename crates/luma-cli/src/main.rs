@@ -18,6 +18,7 @@
 //! luma geotag <photo>… --gpx t.gpx  place les photos d'après une trace GPX (dans le XMP)
 //! luma lens <raw>… [--write]       distorsion et vignetage d'après le JPEG du boîtier
 //! luma sharpness <photos|dossier>  la part au point de chaque photo, la plus nette retenue
+//! luma clipping <photos|dossier>  la part brûlée et bouchée de chaque photo
 //! luma before-after <photos|dossier> l'avant / après de chaque photo, à côté d'elle
 //! luma import [carte] --to dossier  importe une carte (rangement, renommage, 2nd disque)
 //! luma print <photo>… -o f.pdf      met en page pour l'imprimante (planche contact…)
@@ -187,6 +188,10 @@ USAGE
       sous le tiers de la plus nette « rejetées » (drapeaux dans les XMP) ; --bursts :
       rafale par rafale (même boîtier, moins de deux secondes d'écart, mêmes réglages),
       les photos hors rafale mesurées sans drapeau
+  luma clipping <photo|dossier>… [--reject P]
+      la part brûlée (blanc pur) et bouchée (noir complet) de chaque photo (ses
+      réglages, sinon ceux par défaut), la plus écrêtée d'abord ; --reject P : celles
+      brûlées ou bouchées sur P % au moins « rejetées » (drapeaux dans les XMP)
   luma tidy <photo|dossier>… [--folder Rejetées] [--dry-run]
       les photos rejetées (drapeau du XMP), avec leurs XMP et ceux de leurs copies
       virtuelles, rangées dans un sous‑dossier de leur dossier ; rien n'est effacé ni
@@ -2163,6 +2168,92 @@ fn tidy(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// `luma clipping` : la part brûlée et bouchée de chaque photo (la mesure du tri en plein
+/// écran, sur le rendu de la mesure au point), la plus écrêtée d'abord ; `--reject P`
+/// rejette celles brûlées ou bouchées sur P % au moins.
+fn clipping(args: Vec<String>) -> Result<(), String> {
+    let mut reject: Option<f32> = None;
+    let mut photos = Vec::new();
+    let mut args = args.into_iter();
+    while let Some(a) = args.next() {
+        match a.as_str() {
+            "--reject" => {
+                let v = args.next().ok_or("--reject demande un pourcentage")?;
+                let p: f32 = v
+                    .replace(',', ".")
+                    .trim_end_matches('%')
+                    .parse()
+                    .map_err(|_| format!("--reject : « {v} » n'est pas un pourcentage"))?;
+                if !(p > 0.0 && p <= 100.0) {
+                    return Err(format!("--reject : {p} % (de 0 à 100 %)"));
+                }
+                reject = Some(p);
+            }
+            s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
+            _ => {
+                let p = PathBuf::from(a);
+                if p.is_dir() {
+                    let mut found: Vec<PathBuf> = std::fs::read_dir(&p)
+                        .map_err(|e| format!("{} : {e}", p.display()))?
+                        .flatten()
+                        .map(|e| e.path())
+                        .filter(|f| f.is_file() && luma_raw::is_photo(f))
+                        .collect();
+                    found.sort();
+                    photos.extend(found);
+                } else {
+                    photos.push(p);
+                }
+            }
+        }
+    }
+    if photos.is_empty() {
+        return Err("il faut des photos (ou un dossier)".into());
+    }
+    let measured = two_at_a_time(&photos, |path| {
+        let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
+        let settings = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
+        photo
+            .clipped_shares(&settings, &Cancel::new())
+            .map_err(|e| format!("{} : {e}", path.display()))
+    });
+    let mut shares = Vec::new();
+    for (path, s) in photos.iter().zip(measured) {
+        shares.push((path.clone(), s?));
+    }
+    // La plus écrêtée d'abord (la plus grande des deux parts), à égalité par nom.
+    shares.sort_by(|a, b| b.1[0].max(b.1[1]).total_cmp(&a.1[0].max(a.1[1])));
+    let mut rejected = 0;
+    for (path, [blown, blocked]) in &shares {
+        let worst = blown.max(*blocked) * 100.0;
+        let mut note = String::new();
+        if let Some(p) = reject
+            && worst >= p
+        {
+            let mut meta = luma_library::photo_meta(path);
+            meta.flag = xmp::Flag::Reject;
+            let settings = luma_library::photo_settings(path)
+                .or_else(|| Photo::open(path).ok().map(|p| p.default_settings()))
+                .unwrap_or_default();
+            let target = xmp::sidecar_path(path);
+            xmp::save(&target, &xmp::write_with_meta(&settings, &meta))
+                .map_err(|e| format!("{} : {e}", target.display()))?;
+            rejected += 1;
+            note = " — rejetée".into();
+        }
+        println!(
+            "{:5.1} % brûlé  {:5.1} % bouché  {}{note}",
+            blown * 100.0,
+            blocked * 100.0,
+            path.display()
+        );
+    }
+    if let Some(p) = reject {
+        println!("{rejected} photo(s) rejetée(s) (brûlées ou bouchées sur {p} % au moins)");
+    }
+    Ok(())
+}
+
 /// Un lot de `luma sharpness` : son titre (une rafale, « Hors rafale »), ses photos et
 /// leurs parts au point, et s'il reçoit des drapeaux.
 type Lot = (Option<String>, Vec<(PathBuf, f32)>, bool);
@@ -3131,6 +3222,15 @@ fn main() -> ExitCode {
     }
     if command == "before-after" {
         return match before_after(args.collect()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("erreur : {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if command == "clipping" {
+        return match clipping(args.collect()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("erreur : {e}");

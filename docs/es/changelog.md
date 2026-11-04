@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma clipping`**: la parte quemada (blanco puro) y empastada (negro total) de cada
+  foto de una carpeta, la más recortada primero; `--reject 5` rechaza las recortadas en
+  un 5 % o más (bandera en el XMP), para descartar de una vez las fotos fallidas.
 - **Vistazo más rápido** (la vista previa integrada que se muestra al abrir una foto,
   en la selección y en todas partes): su conversión para la pantalla hecha en todos los
   núcleos; 2048 px: 4,0–4,6 → 1,4–1,5 ms, con los mismos bytes.
