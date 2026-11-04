@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **`luma sharpness --bursts --one`**: a single photo kept per burst, the sharpest
+  picked, the rest of the burst rejected (even if sharp), photos outside bursts left
+  alone; the batch equivalent of Alt+X.
 - **Reject the rest of the stack** (Alt+X): the best of a burst picked (P), the other
   photos of the stack rejected at once (Cmd+Z puts them back), the picks kept.
 - **Smoother large filmstrips**: full-screen culling and the Library panel redo fewer

@@ -117,5 +117,37 @@ fn burst_by_burst() {
         ["a-1.png", "a-2.png", "b-1.png", "b-2.png", "seule.png"].map(flag),
         [Flag::Reject, Flag::Pick, Flag::Pick, Flag::Reject, Flag::None]
     );
+    // --one : une seule par rafale, même la photo nette mais moins nette que la
+    // meilleure rejetée ; la photo hors rafale reste sans drapeau.
+    let c3 = dir.join("c-3.png");
+    image::imageops::blur(&scene(3), 0.6).save(&c3).unwrap();
+    scene(3).save(dir.join("c-4.png")).unwrap();
+    for name in ["c-3.png", "c-4.png"] {
+        let file = std::fs::File::options().write(true).open(dir.join(name)).unwrap();
+        file.set_modified(start + std::time::Duration::from_secs(40 * 60))
+            .unwrap();
+    }
+    let o = Command::new(env!("CARGO_BIN_EXE_luma"))
+        .args(["sharpness", dir.to_str().unwrap(), "--bursts", "--one"])
+        .output()
+        .unwrap();
+    let text = String::from_utf8_lossy(&o.stdout).into_owned();
+    assert!(o.status.success(), "{text}{}", String::from_utf8_lossy(&o.stderr));
+    assert!(text.contains("c-4.png — retenue"), "{text}");
+    assert!(text.contains("c-3.png — rejetée"), "{text}");
+    assert!(
+        text.ends_with("3 photo(s) rejetée(s) (le reste de chaque rafale)\n"),
+        "{text}"
+    );
+    assert_eq!(
+        ["c-3.png", "c-4.png", "seule.png"].map(flag),
+        [Flag::Reject, Flag::Pick, Flag::None]
+    );
+    // Sans --bursts, refusé.
+    let o = Command::new(env!("CARGO_BIN_EXE_luma"))
+        .args(["sharpness", dir.to_str().unwrap(), "--one"])
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
     let _ = std::fs::remove_dir_all(&dir);
 }

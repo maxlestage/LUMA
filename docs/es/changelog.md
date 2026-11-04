@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **`luma sharpness --bursts --one`**: una sola foto conservada por ráfaga, la más
+  nítida seleccionada, el resto de la ráfaga rechazado (aunque esté nítido), las fotos
+  fuera de ráfaga intactas; el equivalente por lotes de Alt+X.
 - **Rechazar el resto de la pila** (Alt+X): la mejor de una ráfaga seleccionada (P),
   las demás fotos de la pila rechazadas de una vez (Cmd+Z las devuelve), las
   seleccionadas conservadas.
