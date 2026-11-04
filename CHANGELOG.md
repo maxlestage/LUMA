@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Remettre la pile sans drapeau** (Alt+U) : toute la pile de la photo ouverte sans
+  drapeau d'un coup (Cmd+Z la remet), pour refaire le tri d'une rafale.
 - **La place dans la rafale** (tri en plein écran) : « Rafale 2 / 3 » ou « Série 1 / 5 »
   pour une série d'exposition, la fin d'une rafale se voit avant d'y arriver.
 - **Grands films encore plus fluides** : les métadonnées des photos rangées sous un

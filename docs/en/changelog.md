@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Unflag the stack** (Alt+U): the whole stack of the open photo unflagged at once
+  (Cmd+Z puts it back), to redo the culling of a burst.
 - **The place in the burst** (full-screen culling): “Burst 2 / 3”, or “Bracket 1 / 5”
   for an exposure bracket, so the end of a burst shows before reaching it.
 - **Even smoother large filmstrips**: photo metadata stored under a fast hash of the

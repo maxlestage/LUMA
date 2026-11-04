@@ -6761,3 +6761,11 @@ fr = Série {k} / {n}
 en = Bracket {k} / {n}
 es = Serie {k} / {n}
 
+fr = Remettre la pile sans drapeau
+en = Unflag the stack
+es = Quitar las banderas de la pila
+
+fr = Pile : {n} photo(s) remise(s) sans drapeau
+en = Stack: {n} photo(s) unflagged
+es = Pila: {n} foto(s) sin bandera
+

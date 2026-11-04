@@ -7964,6 +7964,7 @@ impl Studio {
             "prev_unflagged" => self.prev_unflagged(),
             "next_burst" => self.step_burst(false),
             "reject_rest" => self.reject_rest_of_stack(),
+            "unflag_stack" => self.unflag_stack(),
             "prev_burst" => self.step_burst(true),
             "clipping" => self.clipping = !self.clipping,
             "focus_peaking" => self.focus_peaking = !self.focus_peaking && self.photo.is_some(),
@@ -10251,6 +10252,30 @@ impl Studio {
         self.status = trf(
             "Pile : {n} photo(s) rejetée(s), {picks} retenue(s) gardée(s)",
             &[("n", &rest.len()), ("picks", &picks)],
+        );
+    }
+
+    /// « Remettre la pile sans drapeau » : toutes les photos de la pile de la photo
+    /// ouverte perdent leur drapeau, en un seul changement pour Cmd+Z, pour refaire le
+    /// tri d'une rafale ; hors pile, la barre d'état le dit.
+    pub fn unflag_stack(&mut self) {
+        let Some(&k) = self.current_path().and_then(|p| self.stack_of.get(p)) else {
+            self.status = tr("Cette photo n'est pas dans une pile").into();
+            return;
+        };
+        let flagged: Vec<PathBuf> = self.stacks[k]
+            .photos
+            .iter()
+            .filter(|p| self.folder.contains(p))
+            .filter(|p| self.meta.get(*p).is_some_and(|m| m.flag != Flag::None))
+            .cloned()
+            .collect();
+        if !flagged.is_empty() {
+            self.edit_meta(&flagged, |m| m.flag = Flag::None);
+        }
+        self.status = trf(
+            "Pile : {n} photo(s) remise(s) sans drapeau",
+            &[("n", &flagged.len())],
         );
     }
 

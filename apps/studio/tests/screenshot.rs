@@ -5107,6 +5107,23 @@ fn the_rest_of_the_stack_is_rejected() {
     assert_eq!(
         ["a-1.png", "a-2.png", "a-3.png"].map(flag),
         [Flag::None, Flag::Pick, Flag::None]
+    ); // Alt+U : toute la pile sans drapeau d'un coup ; Cmd+Z la remet.
+    s.keys(&[alt_x]);
+    s.keys(&[(Modifiers::ALT, Key::U)]);
+    assert_eq!(
+        s.studio().status(),
+        "Pile : 3 photo(s) remise(s) sans drapeau"
+    );
+    s.studio().flush_xmp();
+    assert_eq!(
+        ["a-1.png", "a-2.png", "a-3.png"].map(flag),
+        [Flag::None, Flag::None, Flag::None]
+    );
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    s.studio().flush_xmp();
+    assert_eq!(
+        ["a-1.png", "a-2.png", "a-3.png"].map(flag),
+        [Flag::Reject, Flag::Pick, Flag::Reject]
     );
 }
 

@@ -302,6 +302,14 @@ pub const ACTIONS: &[Action] = &[
     ),
     a("unflag", "Sans drapeau", &[Combo::new(Key::U)]),
     a(
+        "unflag_stack",
+        "Remettre la pile sans drapeau",
+        &[Combo {
+            alt: true,
+            ..Combo::new(Key::U)
+        }],
+    ),
+    a(
         "next_unflagged",
         "Prochaine photo sans drapeau",
         &[Combo::new(Key::N)],
