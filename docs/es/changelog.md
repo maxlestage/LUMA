@@ -4,6 +4,10 @@
 
 - **Datos de toma de un RAW con EXIF dañado**: una velocidad, apertura o focal nula ya
   no se muestra («1/inf s», «f/0»); simplemente se omite.
+- **Vistas previas y ráfagas más rápidas**: el histograma y el recorte de cada vista
+  previa contados en una sola pasada (2048 px: 1,9 → 1,4 ms en el mejor caso), la parte
+  enfocada de una foto («Quedarse con la más nítida») contada sin escribir la máscara de
+  zonas nítidas (2,3 → 1,8 ms), con los mismos resultados.
 - **Los datos de la toma en la selección a pantalla completa**: «1/250 s · f/2,8 ·
   ISO 400 · 50 mm», para ver de un vistazo una velocidad demasiado lenta para la focal.
 - **El recorte en la selección a pantalla completa**: la parte de la vista previa

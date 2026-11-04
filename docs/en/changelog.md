@@ -4,6 +4,10 @@
 
 - **Shooting info of a RAW with damaged EXIF**: a zero shutter speed, aperture or
   focal length is no longer shown (“1/inf s”, “f/0”); it is simply left out.
+- **Faster previews and bursts**: the histogram and clipping of each preview counted
+  in a single pass (2048 px: 1.9 → 1.4 ms at best), the in-focus share of a photo
+  (“Pick the sharpest”) counted without writing the sharp-area mask (2.3 → 1.8 ms),
+  with the same results.
 - **Shooting settings in full-screen culling**: “1/250 s · f/2.8 · ISO 400 · 50 mm”,
   to see at a glance a shutter speed too slow for the focal length.
 - **Clipping in full-screen culling**: the share of the preview that is blown (pure
