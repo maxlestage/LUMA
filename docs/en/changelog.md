@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Zoom on the sharp area** (Shift+Z, also in full-screen culling): the 1:1 zoom
+  opens where the focus landed, to check it without looking for it. And a 1:1 zoom
+  opened on a point no longer drifts back to the top left corner by itself.
 - **Shooting info of a RAW with damaged EXIF**: a zero shutter speed, aperture or
   focal length is no longer shown (“1/inf s”, “f/0”); it is simply left out.
 - **Faster previews and bursts**: the histogram and clipping of each preview counted

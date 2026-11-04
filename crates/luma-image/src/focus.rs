@@ -42,6 +42,53 @@ pub fn share(rgba: &[u8], w: usize, h: usize) -> f32 {
     n as f32 / (w * h).max(1) as f32
 }
 
+/// Les cases (par grand côté) de la grille où [`sharpest_point`] cherche.
+const GRID: usize = 16;
+
+/// Le centre (en fractions de la largeur et de la hauteur, 0 à 1) de la zone la plus
+/// nette d'une image RGBA de `w × h` : la case d'une grille de 16 au grand côté qui a,
+/// avec ses huit voisines, le plus de pixels nets (voir [`sharp`]) ; la première en
+/// lisant de gauche à droite et de haut en bas à égalité. `None` sans aucun pixel net
+/// (une photo floue, une image trop petite).
+pub fn sharpest_point(rgba: &[u8], w: usize, h: usize) -> Option<(f32, f32)> {
+    let mask = sharp(rgba, w, h);
+    let cell = w.max(h).div_ceil(GRID).max(1);
+    let (cw, ch) = (w.div_ceil(cell), h.div_ceil(cell));
+    let mut counts = vec![0usize; cw * ch];
+    for (y, row) in mask.chunks_exact(w.max(1)).enumerate() {
+        for (x, &m) in row.iter().enumerate() {
+            counts[(y / cell) * cw + x / cell] += usize::from(m);
+        }
+    }
+    let score = |cx: usize, cy: usize| -> usize {
+        let mut s = 0;
+        for y in cy.saturating_sub(1)..(cy + 2).min(ch) {
+            for x in cx.saturating_sub(1)..(cx + 2).min(cw) {
+                s += counts[y * cw + x];
+            }
+        }
+        s
+    };
+    let mut best: Option<(usize, usize, usize)> = None;
+    for cy in 0..ch {
+        for cx in 0..cw {
+            // Une case sans pixel net n'est jamais retenue (même entourée de nettes) :
+            // le centre tombe sur du détail.
+            if counts[cy * cw + cx] == 0 {
+                continue;
+            }
+            let s = score(cx, cy);
+            if best.is_none_or(|(b, _, _)| s > b) {
+                best = Some((s, cx, cy));
+            }
+        }
+    }
+    let (_, cx, cy) = best?;
+    // Le centre de la case, dans l'image (la dernière case peut être plus petite).
+    let center = |c: usize, n: usize| ((c * cell + ((c + 1) * cell).min(n)) as f32 / 2.0) / n as f32;
+    Some((center(cx, w), center(cy, h)))
+}
+
 /// La sensibilité des zones nettes : haute, les détails fins d'un objectif doux comptent
 /// aussi ; basse, seuls les contours les plus francs.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -222,6 +269,25 @@ mod tests {
             }
         }
         v
+    }
+
+    /// La zone la plus nette : un damier net dans un coin d'une image floue (ailleurs,
+    /// des aplats) y mène ; rien sur une image sans détail ni sur une trop petite.
+    #[test]
+    fn the_sharpest_point_is_where_the_detail_is() {
+        let (w, h) = (640, 400);
+        // Le damier net dans le quart en bas à droite, centré vers (480, 300).
+        let img = image(w, h, |x, y| {
+            if (420..540).contains(&x) && (240..360).contains(&y) {
+                if (x / 2 + y / 2) % 2 == 0 { 30 } else { 220 }
+            } else {
+                120
+            }
+        });
+        let (fx, fy) = sharpest_point(&img, w, h).expect("une zone nette");
+        assert!((fx - 0.75).abs() < 0.06 && (fy - 0.75).abs() < 0.08, "{fx} {fy}");
+        assert_eq!(sharpest_point(&image(w, h, |_, _| 120), w, h), None);
+        assert_eq!(sharpest_point(&image(4, 4, |x, _| (x * 60) as u8), 4, 4), None);
     }
 
     /// La part au point, comptée sans écrire le masque, est celle du masque : des tailles

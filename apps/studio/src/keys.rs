@@ -313,6 +313,11 @@ pub const ACTIONS: &[Action] = &[
         }],
     ),
     a("zoom", "Zoom 100 %", &[Combo::new(Key::Z)]),
+    a(
+        "zoom_sharp",
+        "Zoom sur la zone nette",
+        &[Combo::shift(Key::Z)],
+    ),
     a("clipping", "Écrêtage", &[Combo::new(Key::J)]),
     a("scope", "Instruments de mesure", &[Combo::shift(Key::J)]),
     a("focus_peaking", "Zones nettes", &[Combo::shift(Key::F)]),
