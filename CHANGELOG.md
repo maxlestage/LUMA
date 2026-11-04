@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **`luma clipping`** : la part brûlée (blanc pur) et bouchée (noir complet) de chaque
+  photo d'un dossier, la plus écrêtée d'abord ; `--reject 5` rejette celles écrêtées
+  sur 5 % au moins (drapeau dans le XMP), pour écarter les photos ratées d'un coup.
 - **Coup d'œil plus rapide** (l'aperçu intégré montré dès qu'une photo s'ouvre, dans
   le tri comme ailleurs) : sa conversion pour l'écran faite sur tous les cœurs ;
   2048 px : 4,0–4,6 → 1,4–1,5 ms, aux mêmes octets.
