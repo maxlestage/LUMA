@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Shooting info of a RAW with damaged EXIF**: a zero shutter speed, aperture or
+  focal length is no longer shown (“1/inf s”, “f/0”); it is simply left out.
 - **Shooting settings in full-screen culling**: “1/250 s · f/2.8 · ISO 400 · 50 mm”,
   to see at a glance a shutter speed too slow for the focal length.
 - **Clipping in full-screen culling**: the share of the preview that is blown (pure

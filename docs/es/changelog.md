@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Datos de toma de un RAW con EXIF dañado**: una velocidad, apertura o focal nula ya
+  no se muestra («1/inf s», «f/0»); simplemente se omite.
 - **Los datos de la toma en la selección a pantalla completa**: «1/250 s · f/2,8 ·
   ISO 400 · 50 mm», para ver de un vistazo una velocidad demasiado lenta para la focal.
 - **El recorte en la selección a pantalla completa**: la parte de la vista previa
