@@ -236,6 +236,22 @@ pub const ACTIONS: &[Action] = &[
     a("prev", "Photo précédente", &[Combo::new(Key::ArrowLeft)]),
     a("next", "Photo suivante", &[Combo::new(Key::ArrowRight)]),
     a(
+        "prev_burst",
+        "Rafale précédente",
+        &[Combo {
+            alt: true,
+            ..Combo::new(Key::ArrowLeft)
+        }],
+    ),
+    a(
+        "next_burst",
+        "Rafale suivante",
+        &[Combo {
+            alt: true,
+            ..Combo::new(Key::ArrowRight)
+        }],
+    ),
+    a(
         "space",
         "Photo suivante, pause du diaporama",
         &[Combo::new(Key::Space)],
