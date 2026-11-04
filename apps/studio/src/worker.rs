@@ -118,6 +118,12 @@ pub enum Event {
         path: PathBuf,
         result: Result<f32, String>,
     },
+    /// Les parts brûlée et bouchée d'une photo d'un lot (0 à 1), ou pourquoi elles
+    /// manquent.
+    Clipped {
+        path: PathBuf,
+        result: Result<[f32; 2], String>,
+    },
     /// L'avant / après d'une photo d'un lot, écrit (son fichier) ou pas (pourquoi).
     BeforeAfterWritten {
         result: Result<PathBuf, String>,
@@ -437,6 +443,17 @@ fn sharp_share(path: &Path, given: Option<Settings>) -> Result<f32, String> {
         .unwrap_or_else(|| photo.default_settings());
     photo
         .in_focus_share(&settings, &Cancel::new())
+        .map_err(|e| e.to_string())
+}
+
+/// Les parts brûlée et bouchée d'une photo (la mesure de `luma clipping`).
+fn clipped_of(path: &Path, given: Option<Settings>) -> Result<[f32; 2], String> {
+    let photo = crate::dialogs::open_photo(path).map_err(|e| e.to_string())?;
+    let settings = given
+        .or_else(|| read_sidecar(path))
+        .unwrap_or_else(|| photo.default_settings());
+    photo
+        .clipped_shares(&settings, &Cancel::new())
         .map_err(|e| e.to_string())
 }
 
@@ -807,6 +824,17 @@ impl Worker {
         two_at_a_time("luma-nettete", paths, move |(path, given)| {
             let result = caught(|| sharp_share(&path, given));
             let _ = sender.send(Event::Sharpness { path, result });
+            repaint();
+        });
+    }
+
+    /// Les parts brûlée et bouchée de chaque photo (avec les réglages donnés, sinon les
+    /// siens), deux à la fois ; chacune arrive dès qu'elle est mesurée.
+    pub fn clipping(&self, paths: Vec<(PathBuf, Option<Settings>)>) {
+        let (sender, repaint) = (self.sender.clone(), self.repaint.clone());
+        two_at_a_time("luma-ecretage", paths, move |(path, given)| {
+            let result = caught(|| clipped_of(&path, given));
+            let _ = sender.send(Event::Clipped { path, result });
             repaint();
         });
     }
