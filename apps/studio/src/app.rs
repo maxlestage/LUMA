@@ -7911,6 +7911,7 @@ impl Studio {
             "next_unflagged" => self.next_unflagged(),
             "prev_unflagged" => self.prev_unflagged(),
             "next_burst" => self.step_burst(false),
+            "reject_rest" => self.reject_rest_of_stack(),
             "prev_burst" => self.step_burst(true),
             "clipping" => self.clipping = !self.clipping,
             "focus_peaking" => self.focus_peaking = !self.focus_peaking && self.photo.is_some(),
@@ -10162,6 +10163,41 @@ impl Studio {
 
     /// La plus nette des parts reçues : son drapeau « Retenue », et la barre d'état le
     /// dit (avec l'écart à la suivante).
+    /// « Rejeter le reste de la pile » : une fois la meilleure retenue (P), les autres
+    /// photos de la pile de la photo ouverte (une rafale, une série) reçoivent le
+    /// drapeau « Rejetée », en un seul changement pour Cmd+Z. Les retenues sont gardées ;
+    /// sans retenue dans la pile, ou hors pile, la barre d'état le dit.
+    pub fn reject_rest_of_stack(&mut self) {
+        let Some(&k) = self.current_path().and_then(|p| self.stack_of.get(p)) else {
+            self.status = tr("Cette photo n'est pas dans une pile").into();
+            return;
+        };
+        let members: Vec<PathBuf> = self.stacks[k]
+            .photos
+            .iter()
+            .filter(|p| self.folder.contains(p))
+            .cloned()
+            .collect();
+        let flag = |p: &PathBuf| self.meta.get(p).map_or(Flag::None, |m| m.flag);
+        let picks = members.iter().filter(|p| flag(p) == Flag::Pick).count();
+        if picks == 0 {
+            self.status = tr("Retenez d'abord une photo de la pile (P)").into();
+            return;
+        }
+        let rest: Vec<PathBuf> = members
+            .iter()
+            .filter(|p| flag(p) == Flag::None)
+            .cloned()
+            .collect();
+        if !rest.is_empty() {
+            self.edit_meta(&rest, |m| m.flag = Flag::Reject);
+        }
+        self.status = trf(
+            "Pile : {n} photo(s) rejetée(s), {picks} retenue(s) gardée(s)",
+            &[("n", &rest.len()), ("picks", &picks)],
+        );
+    }
+
     fn keep_sharpest(&mut self, shares: Vec<SharpShare>) {
         let mut measured: Vec<(PathBuf, f32)> = shares
             .into_iter()

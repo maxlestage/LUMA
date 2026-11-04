@@ -6737,3 +6737,19 @@ fr = Pas de rafale après celle-ci
 en = No burst after this one
 es = No hay ninguna ráfaga después de esta
 
+fr = Rejeter le reste de la pile
+en = Reject the rest of the stack
+es = Rechazar el resto de la pila
+
+fr = Cette photo n'est pas dans une pile
+en = This photo is not in a stack
+es = Esta foto no está en una pila
+
+fr = Retenez d'abord une photo de la pile (P)
+en = First pick a photo of the stack (P)
+es = Seleccione primero una foto de la pila (P)
+
+fr = Pile : {n} photo(s) rejetée(s), {picks} retenue(s) gardée(s)
+en = Stack: {n} photo(s) rejected, {picks} pick(s) kept
+es = Pila: {n} foto(s) rechazada(s), {picks} seleccionada(s) conservada(s)
+

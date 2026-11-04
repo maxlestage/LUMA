@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Rechazar el resto de la pila** (Alt+X): la mejor de una ráfaga seleccionada (P),
+  las demás fotos de la pila rechazadas de una vez (Cmd+Z las devuelve), las
+  seleccionadas conservadas.
 - **Tiras grandes más fluidas**: la selección a pantalla completa y el panel de la
   Biblioteca rehacen menos cálculos en cada imagen; 20 000 fotos: unos 3 ms menos por
   imagen en la selección, de 3,5 a 5 ms en la Biblioteca, con los mismos recuentos.
