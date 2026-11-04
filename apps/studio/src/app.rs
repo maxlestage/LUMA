@@ -1181,6 +1181,9 @@ pub struct Studio {
     /// Le zoom 1:1 : là où l'on en est (le décalage de la vue, en points), et où le
     /// navigateur demande d'aller.
     pub zoom_offset: egui::Vec2,
+    /// Le centre de la vue 1:1 (en fractions de la photo), pour la rouvrir au même
+    /// endroit sur la photo suivante du tri.
+    zoom_center: Option<egui::Vec2>,
     zoom_jump: Option<egui::Vec2>,
     /// Le point de la photo (0 à 1) sur lequel centrer le zoom 1:1 qui s'ouvre.
     zoom_target: Option<egui::Vec2>,
@@ -1669,6 +1672,7 @@ impl Studio {
             split_against: None,
             split_across: false,
             zoom_offset: egui::Vec2::ZERO,
+            zoom_center: None,
             zoom_jump: None,
             zoom_target: None,
             zoom_retries: 0,
@@ -5990,7 +5994,14 @@ impl Studio {
                             }
                             self.photo = Some(photo);
                             self.original_asked = None;
-                            self.zoom = false;
+                            // Dans le tri en plein écran, le zoom 1:1 suit d'une photo à
+                            // l'autre, au même endroit de l'image : une rafale se compare
+                            // détail par détail. Ailleurs, la photo s'ouvre entière.
+                            if self.culling && self.zoom {
+                                self.zoom_target = self.zoom_center;
+                            } else {
+                                self.zoom = false;
+                            }
                             // Des corrections d'objectif arrivées pendant l'ouverture.
                             if let Some((p, m)) = self.lens_on_load.take()
                                 && p == path
@@ -13693,6 +13704,11 @@ impl Studio {
                 self.zoom = false;
             }
             self.zoom_offset = shown.state.clamped_offset();
+            let seen = shown.inner_rect.size();
+            if size.x > 0.0 && size.y > 0.0 {
+                let c = (self.zoom_offset + seen / 2.0) / size;
+                self.zoom_center = Some(vec2(c.x.clamp(0.0, 1.0), c.y.clamp(0.0, 1.0)));
+            }
             // La zone ne connaît sa nouvelle taille qu'une image plus tard : le décalage
             // demandé est redonné tant qu'il n'est pas atteint (quelques images au plus).
             if let Some(o) = jump

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **El zoom sigue en la selección a pantalla completa**: el zoom 1:1 queda abierto de
+  una foto a otra, en el mismo lugar de la imagen, para comparar una ráfaga detalle a
+  detalle.
 - **Zoom en la zona nítida** (Mayús+Z, también en la selección a pantalla completa): el
   zoom 1:1 se abre donde cayó el enfoque, para comprobarlo sin buscarlo. Y el zoom 1:1
   abierto en un punto ya no vuelve solo hacia la esquina superior izquierda.

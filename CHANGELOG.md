@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Le zoom suit dans le tri en plein écran** : le zoom 1:1 reste ouvert d'une photo à
+  l'autre, au même endroit de l'image, pour comparer une rafale détail par détail.
 - **Zoom sur la zone nette** (Maj+Z, aussi dans le tri en plein écran) : le zoom 1:1
   s'ouvre là où la mise au point est tombée, pour la vérifier sans la chercher. Et le
   zoom 1:1 ouvert sur un point ne revient plus de lui‑même vers le coin haut gauche.
