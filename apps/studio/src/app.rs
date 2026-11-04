@@ -251,6 +251,9 @@ pub fn shooting_line(e: &luma_raw::Exif) -> Option<String> {
 /// n'a pas pu être mesurée).
 type ClipShare = (PathBuf, Option<[f32; 2]>);
 
+/// La hauteur (en points) du bandeau des voisines du tri en plein écran.
+const STRIP_HEIGHT: f32 = 48.0;
+
 /// La part brûlée ou bouchée d'une photo à partir de laquelle « Rejeter les écrêtées »
 /// la rejette (celle de `luma clipping --reject 5`).
 const REJECT_CLIPPED: f32 = 0.05;
@@ -8969,12 +8972,101 @@ impl Studio {
             pos2(full.min.x + m, full.max.y - m - 64.0),
             full.max - vec2(m, m),
         );
-        let stage = Rect::from_min_max(full.min, pos2(full.max.x, bar.min.y - m * 0.5));
+        // Le bandeau des voisines, entre la photo et la barre.
+        let strip = Rect::from_min_max(
+            pos2(full.min.x + m, bar.min.y - m * 0.5 - STRIP_HEIGHT),
+            pos2(full.max.x - m, bar.min.y - m * 0.5),
+        );
+        let stage = Rect::from_min_max(full.min, pos2(full.max.x, strip.min.y - m * 0.5));
         ui.scope_builder(egui::UiBuilder::new().max_rect(stage), |ui| {
             ui.set_clip_rect(stage);
             self.viewer(ui);
         });
+        self.culling_strip(ui, strip);
         self.island(ui, bar, |s, ui| s.culling_bar(ui));
+    }
+
+    /// Le bandeau du tri : la photo ouverte et ses voisines dans le film (quatre de
+    /// chaque côté au plus), en vignettes ; la photo ouverte cernée, les retenues
+    /// soulignées de blanc, les rejetées assombries et soulignées de rouge. Un clic sur
+    /// une voisine l'ouvre.
+    fn culling_strip(&mut self, ui: &mut Ui, rect: Rect) {
+        let visible = self.visible();
+        // La photo ouverte, ou sa pile repliée (la photo du dessus la représente).
+        let stack = |i: usize| {
+            self.folder
+                .get(i)
+                .and_then(|p| self.stack_of.get(p))
+                .copied()
+        };
+        let Some(pos) = self.current.and_then(|c| {
+            visible.iter().position(|&v| v == c).or_else(|| {
+                visible
+                    .iter()
+                    .position(|&v| stack(v).is_some() && stack(v) == stack(c))
+            })
+        }) else {
+            return;
+        };
+        let (from, to) = (pos.saturating_sub(4), (pos + 5).min(visible.len()));
+        let cell = vec2(STRIP_HEIGHT * 1.5, STRIP_HEIGHT);
+        let gap = 6.0;
+        let n = (to - from) as f32;
+        // La photo ouverte au milieu du bandeau, ses voisines de part et d'autre.
+        let left = rect.center().x - cell.x / 2.0 - (pos - from) as f32 * (cell.x + gap);
+        let painter = ui.painter_at(rect);
+        let mut open = None;
+        for (k, &index) in visible[from..to].iter().enumerate() {
+            let at = Rect::from_min_size(pos2(left + k as f32 * (cell.x + gap), rect.min.y), cell);
+            if !rect.contains_rect(at) && n > 1.0 {
+                continue;
+            }
+            let path = &self.folder[index];
+            painter.rect_filled(at, 4.0, Color32::from_gray(0x22));
+            if let Some(t) = self.thumbs.get(path) {
+                let [w, h] = t.size();
+                let fitted = fit(at, w, h);
+                painter.image(
+                    t.id(),
+                    fitted,
+                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
+            let meta = self.meta.get(path).cloned().unwrap_or_default();
+            let mark = Rect::from_min_max(pos2(at.min.x, at.max.y - 3.0), at.max);
+            match meta.flag {
+                Flag::Pick => {
+                    painter.rect_filled(mark, 0.0, Color32::WHITE);
+                }
+                Flag::Reject => {
+                    painter.rect_filled(at, 4.0, Color32::from_black_alpha(140));
+                    painter.rect_filled(mark, 0.0, Color32::from_rgb(0xe0, 0x50, 0x50));
+                }
+                Flag::None => {}
+            }
+            if k + from == pos {
+                painter.rect_stroke(
+                    at.expand(2.0),
+                    5.0,
+                    egui::Stroke::new(2.0, theme::ACCENT),
+                    egui::StrokeKind::Outside,
+                );
+            }
+            let r = ui.interact(
+                at,
+                ui.scope_id().with(("bandeau", index)),
+                egui::Sense::click(),
+            );
+            let name = file_name(path);
+            r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &name));
+            if r.on_hover_text(name.clone()).clicked() && Some(index) != self.current {
+                open = Some(index);
+            }
+        }
+        if let Some(index) = open {
+            self.select(index);
+        }
     }
 
     /// Une image du diaporama : la photo affichée et, pendant la transition, celle qui

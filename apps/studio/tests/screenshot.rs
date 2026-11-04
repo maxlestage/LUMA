@@ -4771,6 +4771,64 @@ fn burst_culling_from_the_keyboard() {
 /// photos (à dix minutes d'écart), une photo seule ; la nette de chaque rafale est
 /// retenue, la floue et la photo seule restent sans drapeau. Puis « Rejeter les floues
 /// de chaque rafale » (Alt+Maj+X) : la floue de chaque rafale rejetée.
+/// Le bandeau du tri : la photo ouverte et ses voisines du film, en vignettes ; un clic
+/// sur une voisine l'ouvre.
+#[test]
+fn the_culling_strip_shows_the_neighbours() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("bandeau-du-tri", [1440.0, 900.0], 1.0, |dir| {
+        for (k, name) in ["v-1.png", "v-2.png", "v-3.png"].iter().enumerate() {
+            image::RgbImage::from_fn(600, 400, |x, y| {
+                let v = ((x * (k as u32 + 2) + y) % 200) as u8;
+                image::Rgb([v, 90, 255 - v])
+            })
+            .save(dir.join(name))
+            .unwrap();
+            // À dix minutes d'écart : trois photos à part, pas une rafale repliée.
+            let when = std::time::SystemTime::now()
+                - std::time::Duration::from_secs(3600 - 600 * k as u64);
+            std::fs::File::options()
+                .write(true)
+                .open(dir.join(name))
+                .unwrap()
+                .set_modified(when)
+                .unwrap();
+        }
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    s.studio().set_current(at("v-2.png"));
+    s.wait();
+    s.keys(&[(NONE, Key::F)]);
+    s.harness.run_steps(2);
+    // La photo ouverte et ses deux voisines sont dans le bandeau (au moins).
+    for name in ["v-1.png", "v-2.png", "v-3.png"] {
+        assert!(s.harness.get_all_by_label(name).count() >= 1, "{name}");
+    }
+    // Celle du bandeau (en bas de l'écran, au‑dessus de la barre) : le nom peut se
+    // trouver ailleurs aussi.
+    let in_strip = s
+        .harness
+        .get_all_by_label("v-3.png")
+        .map(|n| n.rect())
+        .max_by(|a, b| a.min.y.total_cmp(&b.min.y))
+        .unwrap();
+    assert!(in_strip.min.y > 700.0, "{in_strip:?}");
+    s.harness.drag_at(in_strip.center());
+    s.harness.run_steps(1);
+    s.harness.drop_at(in_strip.center());
+    s.harness.run_steps(2);
+    s.wait();
+    assert_eq!(
+        s.studio().current_path(),
+        Some(photos[at("v-3.png")].as_path())
+    );
+    assert!(s.studio().is_culling());
+    s.keys(&[(NONE, Key::Escape)]);
+}
+
 /// Le tri en plein écran montre la prise de vue de la photo ouverte (le RAW du corpus).
 #[test]
 fn culling_shows_how_the_photo_was_taken() {
