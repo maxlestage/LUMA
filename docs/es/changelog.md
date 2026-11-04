@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **De ráfaga en ráfaga** (Alt+→, Alt+←): la primera foto de la ráfaga siguiente o
+  anterior de la tira, las fotos sueltas saltadas, ráfagas plegadas o desplegadas.
 - **La banda de la selección a pantalla completa**: la foto abierta y sus vecinas de la
   tira en miniaturas, encima de la barra, las seleccionadas subrayadas en blanco, las
   rechazadas oscurecidas; un clic abre una.

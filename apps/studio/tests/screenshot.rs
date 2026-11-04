@@ -4965,6 +4965,65 @@ fn the_clipped_photos_are_rejected() {
     assert_eq!(flag("brulee.png"), Flag::None);
 }
 
+/// Alt+→ et Alt+← : de rafale en rafale (à leur première photo), la photo seule sautée ;
+/// au bout, la barre d'état le dit.
+#[test]
+fn bursts_are_stepped_through() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("de-rafale-en-rafale", [1440.0, 900.0], 1.0, |dir| {
+        let start = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+        for (k, (name, minutes)) in [
+            ("a-1.png", 0u64),
+            ("a-2.png", 0),
+            ("seule.png", 10),
+            ("b-1.png", 20),
+            ("b-2.png", 20),
+        ]
+        .iter()
+        .enumerate()
+        {
+            image::RgbImage::from_fn(300, 200, |x, y| {
+                let v = ((x * (k as u32 + 2) + y) % 200) as u8;
+                image::Rgb([v, 90, 255 - v])
+            })
+            .save(dir.join(name))
+            .unwrap();
+            std::fs::File::options()
+                .write(true)
+                .open(dir.join(name))
+                .unwrap()
+                .set_modified(start + std::time::Duration::from_secs(minutes * 60))
+                .unwrap();
+        }
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let name = |s: &mut Session| {
+        s.studio()
+            .current_path()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+    };
+    s.studio().set_current(at("a-2.png"));
+    s.wait();
+    let alt = Modifiers::ALT;
+    s.keys(&[(alt, Key::ArrowRight)]);
+    s.wait();
+    assert_eq!(name(&mut s).as_deref(), Some("b-1.png"));
+    s.keys(&[(alt, Key::ArrowRight)]);
+    s.harness.run_steps(2);
+    assert_eq!(s.studio().status(), "Pas de rafale après celle-ci");
+    assert_eq!(name(&mut s).as_deref(), Some("b-1.png"));
+    s.keys(&[(alt, Key::ArrowLeft)]);
+    s.wait();
+    assert_eq!(name(&mut s).as_deref(), Some("a-1.png"));
+    s.keys(&[(alt, Key::ArrowLeft)]);
+    s.harness.run_steps(2);
+    assert_eq!(s.studio().status(), "Pas de rafale avant celle-ci");
+}
+
 #[test]
 fn the_sharpest_of_each_burst_is_picked() {
     let _gpu = one_at_a_time();

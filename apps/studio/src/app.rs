@@ -7910,6 +7910,8 @@ impl Studio {
             }
             "next_unflagged" => self.next_unflagged(),
             "prev_unflagged" => self.prev_unflagged(),
+            "next_burst" => self.step_burst(false),
+            "prev_burst" => self.step_burst(true),
             "clipping" => self.clipping = !self.clipping,
             "focus_peaking" => self.focus_peaking = !self.focus_peaking && self.photo.is_some(),
             "scope" => {
@@ -7931,6 +7933,47 @@ impl Studio {
     /// La photo montrée sans drapeau d'avant la photo ouverte (en repartant de la fin).
     pub fn prev_unflagged(&mut self) {
         self.step_unflagged(true);
+    }
+
+    /// La première photo de la rafale suivante du film (ou de la précédente) : une
+    /// séance se parcourt rafale par rafale, qu'elles soient repliées ou dépliées. Sans
+    /// rafale après (ou avant), la barre d'état le dit.
+    pub fn step_burst(&mut self, backwards: bool) {
+        let index_of = |p: &PathBuf| self.folder.iter().position(|f| f == p);
+        // Chaque rafale : la place de sa première photo dans le film, et ses photos.
+        let mut bursts: Vec<(usize, Vec<PathBuf>)> = self
+            .bursts()
+            .into_iter()
+            .filter_map(|b| Some((b.iter().filter_map(index_of).min()?, b)))
+            .collect();
+        if bursts.is_empty() {
+            self.status = tr("Aucune rafale dans le film").into();
+            return;
+        }
+        bursts.sort_by_key(|b| b.0);
+        let current = self.current.unwrap_or(0);
+        let path = self.folder.get(current).cloned();
+        // D'où l'on part : le début de la rafale de la photo ouverte, sinon la photo.
+        let from = bursts
+            .iter()
+            .find(|(_, b)| path.as_ref().is_some_and(|p| b.contains(p)))
+            .map_or(current, |b| b.0);
+        let found = if backwards {
+            bursts.iter().rev().find(|b| b.0 < from)
+        } else {
+            bursts.iter().find(|b| b.0 > from)
+        };
+        match found {
+            Some(&(first, _)) => self.select(first),
+            None => {
+                self.status = tr(if backwards {
+                    "Pas de rafale avant celle-ci"
+                } else {
+                    "Pas de rafale après celle-ci"
+                })
+                .into()
+            }
+        }
     }
 
     fn step_unflagged(&mut self, backwards: bool) {
