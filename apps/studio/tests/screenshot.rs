@@ -4262,6 +4262,53 @@ fn the_zoom_navigator_moves_the_view() {
     assert!(o.x > 1000.0 && o.y > 500.0, "{o:?}");
 }
 
+/// Maj+Z, dans le tri en plein écran : le zoom 1:1 s'ouvre sur la zone nette (ici un
+/// damier dans le coin bas droit d'un aplat) ; sur un aplat sans détail, la barre d'état
+/// le dit et la vue reste entière.
+#[test]
+fn the_zoom_opens_on_the_sharp_area() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("zoom-zone-nette", [1440.0, 900.0], 1.0, |dir| {
+        image::RgbImage::from_fn(3000, 2000, |x, y| {
+            if (2400..2800).contains(&x) && (1500..1900).contains(&y) {
+                let v = if (x / 3 + y / 3) % 2 == 0 { 40 } else { 210 };
+                image::Rgb([v, v, v])
+            } else {
+                image::Rgb([120, 125, 118])
+            }
+        })
+        .save(dir.join("nette-en-bas.png"))
+        .unwrap();
+        image::RgbImage::from_pixel(900, 600, image::Rgb([120, 125, 118]))
+            .save(dir.join("aplat.png"))
+            .unwrap();
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    s.studio().set_current(at("aplat.png"));
+    s.wait();
+    s.keys(&[(NONE, Key::F)]);
+    s.keys(&[(Modifiers::SHIFT, Key::Z)]);
+    s.harness.run_steps(2);
+    assert!(!s.studio().zoom);
+    assert_eq!(s.studio().status(), "Aucune zone nette sur cette photo");
+    s.studio().set_current(at("nette-en-bas.png"));
+    s.wait();
+    s.keys(&[(Modifiers::SHIFT, Key::Z)]);
+    s.harness.run_steps(2);
+    assert!(s.studio().zoom);
+    assert_eq!(s.studio().status(), "Zoom 1:1 sur la zone la plus nette");
+    s.wait();
+    s.harness.run_steps(4);
+    // Le damier (2400 à 2800 sur 1500 à 1900) au milieu de la vue : bien au‑delà du
+    // coin haut gauche.
+    let o = s.studio().zoom_offset;
+    assert!(o.x > 1500.0 && o.y > 900.0, "{o:?}");
+    s.keys(&[(NONE, Key::Escape)]);
+}
+
 /// Un clic sur la photo ouvre le zoom 1:1 centré sur le point cliqué (ici vers le coin
 /// bas droit), et non sur le coin haut gauche.
 #[test]
@@ -4281,6 +4328,13 @@ fn the_zoom_opens_on_the_clicked_point() {
     s.harness.run_steps(4);
     let o = s.studio().zoom_offset;
     assert!(o.x > 1500.0 && o.y > 1000.0, "{o:?}");
+    // Et elle y reste : elle ne revient pas d'elle‑même vers le coin haut gauche.
+    s.harness.run_steps(30);
+    assert!(
+        (s.studio().zoom_offset - o).length() < 1.0,
+        "{o:?} → {:?}",
+        s.studio().zoom_offset
+    );
 }
 
 /// « Avant / après » sur deux photos choisies, en arrière‑plan : chacune son JPEG à côté
