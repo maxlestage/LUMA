@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Even smoother large filmstrips**: photo metadata stored under a fast hash of the
+  paths; 20,000 photos: the list of photos shown 2.4–2.9 → 1.6 ms, the flag counts
+  4.0–4.3 → 3.1–3.3 ms, several times per frame.
 - **`luma sharpness --bursts --one`**: a single photo kept per burst, the sharpest
   picked, the rest of the burst rejected (even if sharp), photos outside bursts left
   alone; the batch equivalent of Alt+X.
