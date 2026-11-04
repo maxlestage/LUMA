@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Grands films plus fluides** : le tri en plein écran et le panneau de la
+  Bibliothèque refont moins de calculs à chaque image ; 20 000 photos : environ 3 ms
+  de moins par image dans le tri, 3,5 à 5 ms dans la Bibliothèque, aux mêmes comptes.
 - **De rafale en rafale** (Alt+→, Alt+←) : la première photo de la rafale suivante ou
   précédente du film, les photos seules sautées, rafales repliées ou dépliées.
 - **Le bandeau du tri en plein écran** : la photo ouverte et ses voisines du film en

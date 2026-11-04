@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **Smoother large filmstrips**: full-screen culling and the Library panel redo fewer
+  computations on each frame; 20,000 photos: about 3 ms less per frame in culling,
+  3.5 to 5 ms in the Library, with the same counts.
 - **From burst to burst** (Alt+→, Alt+←): the first photo of the next or previous
   burst in the filmstrip, single photos skipped, bursts folded or unfolded.
 - **The full-screen culling strip**: the open photo and its neighbours in the
