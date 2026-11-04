@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Rejeter le reste de la pile** (Alt+X) : la meilleure d'une rafale retenue (P), les
+  autres photos de la pile rejetées d'un coup (Cmd+Z les remet), les retenues gardées.
 - **Grands films plus fluides** : le tri en plein écran et le panneau de la
   Bibliothèque refont moins de calculs à chaque image ; 20 000 photos : environ 3 ms
   de moins par image dans le tri, 3,5 à 5 ms dans la Bibliothèque, aux mêmes comptes.

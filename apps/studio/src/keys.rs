@@ -266,6 +266,14 @@ pub const ACTIONS: &[Action] = &[
     a("pick", "Retenue", &[Combo::new(Key::P)]),
     a("reject", "Rejetée", &[Combo::new(Key::X)]),
     a(
+        "reject_rest",
+        "Rejeter le reste de la pile",
+        &[Combo {
+            alt: true,
+            ..Combo::new(Key::X)
+        }],
+    ),
+    a(
         "pick_sharpest",
         "Retenir la plus nette",
         &[Combo::shift(Key::P)],

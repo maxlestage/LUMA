@@ -5024,6 +5024,79 @@ fn bursts_are_stepped_through() {
     assert_eq!(s.studio().status(), "Pas de rafale avant celle-ci");
 }
 
+/// Alt+X : la meilleure de la rafale retenue (P), le reste de la rafale rejeté d'un coup
+/// (Cmd+Z le remet) ; sans retenue, ou hors pile, la barre d'état le dit.
+#[test]
+fn the_rest_of_the_stack_is_rejected() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("reste-de-la-pile", [1440.0, 900.0], 1.0, |dir| {
+        let start = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+        for (k, (name, minutes)) in [
+            ("a-1.png", 0u64),
+            ("a-2.png", 0),
+            ("a-3.png", 0),
+            ("seule.png", 10),
+        ]
+        .iter()
+        .enumerate()
+        {
+            image::RgbImage::from_fn(300, 200, |x, y| {
+                let v = ((x * (k as u32 + 2) + y) % 200) as u8;
+                image::Rgb([v, 90, 255 - v])
+            })
+            .save(dir.join(name))
+            .unwrap();
+            std::fs::File::options()
+                .write(true)
+                .open(dir.join(name))
+                .unwrap()
+                .set_modified(start + std::time::Duration::from_secs(minutes * 60))
+                .unwrap();
+        }
+    }) else {
+        return;
+    };
+    use luma_project::xmp::Flag;
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    let flag = |name: &str| {
+        let p = photos.iter().find(|p| p.ends_with(name)).unwrap();
+        luma_studio::worker::read_meta(p).flag
+    };
+    let alt_x = (Modifiers::ALT, Key::X);
+    // Hors pile.
+    s.studio().set_current(at("seule.png"));
+    s.wait();
+    s.keys(&[alt_x]);
+    assert_eq!(s.studio().status(), "Cette photo n'est pas dans une pile");
+    // Dans la rafale, sans retenue.
+    s.studio().set_current(at("a-2.png"));
+    s.wait();
+    s.keys(&[alt_x]);
+    assert_eq!(
+        s.studio().status(),
+        "Retenez d'abord une photo de la pile (P)"
+    );
+    // La meilleure retenue, puis le reste rejeté.
+    s.keys(&[(NONE, Key::P)]);
+    s.keys(&[alt_x]);
+    assert_eq!(
+        s.studio().status(),
+        "Pile : 2 photo(s) rejetée(s), 1 retenue(s) gardée(s)"
+    );
+    s.studio().flush_xmp();
+    assert_eq!(
+        ["a-1.png", "a-2.png", "a-3.png", "seule.png"].map(flag),
+        [Flag::Reject, Flag::Pick, Flag::Reject, Flag::None]
+    );
+    s.keys(&[(Modifiers::COMMAND, Key::Z)]);
+    s.studio().flush_xmp();
+    assert_eq!(
+        ["a-1.png", "a-2.png", "a-3.png"].map(flag),
+        [Flag::None, Flag::Pick, Flag::None]
+    );
+}
+
 #[test]
 fn the_sharpest_of_each_burst_is_picked() {
     let _gpu = one_at_a_time();
