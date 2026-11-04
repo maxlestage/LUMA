@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **La prise de vue dans le tri en plein écran** : « 1/250 s · f/2,8 · ISO 400 ·
+  50 mm », pour voir d'un coup d'œil une vitesse trop lente pour la focale.
 - **L'écrêtage dans le tri en plein écran** : la part de l'aperçu brûlée (blanc pur)
   et bouchée (noir complet), « 2,3 % brûlé », dès un pixel sur mille, pour écarter une
   photo ratée sans ouvrir l'indicateur d'écrêtage.

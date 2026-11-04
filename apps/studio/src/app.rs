@@ -222,6 +222,31 @@ struct Field {
     get: fn(&mut Settings) -> &mut f32,
 }
 
+/// Une durée de pose : « 1/250 s » sous la seconde, « 2.0 s » au‑delà.
+fn shutter_text(t: f32) -> String {
+    if t < 1.0 {
+        format!("1/{:.0} s", 1.0 / t)
+    } else {
+        format!("{t:.1} s")
+    }
+}
+
+/// La prise de vue en une ligne, dans l'ordre où on la règle : « 1/250 s · f/2,8 ·
+/// ISO 400 · 50 mm » ; seulement ce que le fichier dit, `None` s'il ne dit rien.
+pub fn shooting_line(e: &luma_raw::Exif) -> Option<String> {
+    let parts: Vec<String> = [
+        e.exposure_time.map(shutter_text),
+        e.aperture
+            .map(|a| format!("f/{}", format_value(a, 1, false))),
+        e.iso.map(|iso| format!("ISO {iso}")),
+        e.focal_length.map(|f| format!("{f:.0} mm")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    (!parts.is_empty()).then(|| parts.join(" · "))
+}
+
 /// La part écrêtée (brûlée ou bouchée) d'un aperçu à partir de laquelle le tri en plein
 /// écran la montre : un pixel sur mille.
 const CLIP_SHOWN: f32 = 0.001;
@@ -1207,6 +1232,8 @@ pub struct Studio {
     pub sharp_share: Option<f32>,
     /// Les parts brûlée et bouchée du dernier aperçu, avec la photo qu'il montre.
     clipped: Option<(PathBuf, [f32; 2])>,
+    /// La prise de vue de la photo ouverte (vitesse, ouverture, ISO, focale), avec elle.
+    shooting: Option<(PathBuf, String)>,
     proofing: Proofing,
     pub zoom: bool,
     compare: Option<Compare>,
@@ -1669,6 +1696,7 @@ impl Studio {
             delete_asked: None,
             sharp_share: None,
             clipped: None,
+            shooting: None,
             proofing: Proofing::default(),
             zoom: false,
             compare: None,
@@ -5954,12 +5982,9 @@ impl Studio {
                                 info += &format!(" · f/{}", format_value(a, 1, false));
                             }
                             if let Some(t) = e.exposure_time {
-                                info += &if t < 1.0 {
-                                    format!(" · 1/{:.0} s", 1.0 / t)
-                                } else {
-                                    format!(" · {t:.1} s")
-                                };
+                                info += &format!(" · {}", shutter_text(t));
                             }
+                            self.shooting = shooting_line(e).map(|l| (path.clone(), l));
                             if !std::mem::take(&mut self.keep_status) {
                                 self.status = info;
                             }
@@ -6417,6 +6442,14 @@ impl Studio {
             out.push(trf("{percent} % bouché", &[("percent", &percent(blocked))]));
         }
         out
+    }
+
+    /// La prise de vue de cette photo (voir [`shooting_line`]), une fois ouverte.
+    pub fn shooting_label(&self, path: &Path) -> Option<&str> {
+        self.shooting
+            .as_ref()
+            .filter(|(p, _)| p == path)
+            .map(|(_, l)| l.as_str())
     }
 
     pub fn sharp_label(&self, path: &Path) -> Option<String> {
@@ -8974,6 +9007,10 @@ impl Studio {
             }
             // Ce que l'aperçu a de brûlé ou de bouché, pour écarter une photo ratée sans
             // ouvrir l'indicateur d'écrêtage.
+            // La prise de vue : une vitesse trop lente pour la focale se voit d'un coup d'œil.
+            if let Some(line) = self.shooting_label(&path) {
+                ui.label(RichText::new(line).size(11.5).color(theme::DIM));
+            }
             for text in self.clip_labels(&path) {
                 ui.label(RichText::new(text).size(11.5).color(theme::DIM)).on_hover_text(tr(
                     "Part de la photo écrêtée : blanc pur (brûlé) ou noir complet (bouché), comme le montre l'indicateur d'écrêtage (J)",
@@ -12681,14 +12718,7 @@ impl Studio {
                 rows.push((tr("Ouverture"), format!("f/{}", format_value(a, 1, false))));
             }
             if let Some(t) = e.exposure_time {
-                rows.push((
-                    tr("Vitesse"),
-                    if t < 1.0 {
-                        format!("1/{:.0} s", 1.0 / t)
-                    } else {
-                        format!("{t:.1} s")
-                    },
-                ));
+                rows.push((tr("Vitesse"), shutter_text(t)));
             }
             egui::Grid::new("exif").num_columns(2).show(ui, |ui| {
                 for (k, v) in rows {
@@ -17150,6 +17180,35 @@ mod tests {
     }
 
     use super::*;
+
+    /// La prise de vue en une ligne : dans l'ordre vitesse, ouverture, ISO, focale ;
+    /// seulement ce que le fichier dit ; rien s'il ne dit rien.
+    #[test]
+    fn the_shooting_line_reads_like_the_camera() {
+        let e = luma_raw::Exif {
+            exposure_time: Some(1.0 / 250.0),
+            aperture: Some(2.8),
+            iso: Some(400),
+            focal_length: Some(50.0),
+            ..Default::default()
+        };
+        let line = shooting_line(&e).unwrap();
+        let parts: Vec<&str> = line.split(" · ").collect();
+        assert_eq!(parts.len(), 4, "{line}");
+        assert_eq!(parts[0], "1/250 s");
+        assert!(
+            parts[1].starts_with("f/2") && parts[1].ends_with('8'),
+            "{line}"
+        );
+        assert_eq!(&parts[2..], ["ISO 400", "50 mm"]);
+        let slow = luma_raw::Exif {
+            exposure_time: Some(2.0),
+            iso: Some(100),
+            ..Default::default()
+        };
+        assert_eq!(shooting_line(&slow).as_deref(), Some("2.0 s · ISO 100"));
+        assert_eq!(shooting_line(&luma_raw::Exif::default()), None);
+    }
 
     #[test]
     fn raw_extensions() {
