@@ -6688,3 +6688,15 @@ es = Los originales se quedan en Fotos o en Archivos: puede importarlos de nuevo
 fr = {n} photo(s) supprimée(s).
 en = {n} photo(s) deleted.
 es = {n} foto(s) eliminada(s).
+
+fr = Zoom sur la zone nette
+en = Zoom on the sharp area
+es = Zoom en la zona nítida
+
+fr = Zoom 1:1 sur la zone la plus nette
+en = 1:1 zoom on the sharpest area
+es = Zoom 1:1 en la zona más nítida
+
+fr = Aucune zone nette sur cette photo
+en = No sharp area in this photo
+es = Ninguna zona nítida en esta foto

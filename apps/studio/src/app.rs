@@ -6444,6 +6444,24 @@ impl Studio {
         out
     }
 
+    /// Le zoom 1:1 sur la zone la plus nette de l'aperçu affiché (là où la mise au point
+    /// est tombée), pour la vérifier d'un coup ; sans zone nette, la barre d'état le dit
+    /// et la vue reste entière. Tant que l'aperçu de la photo n'est pas là, rien.
+    pub fn zoom_sharp(&mut self) {
+        let ([w, h], rgba) = &self.probe_image;
+        if self.loading.is_some() || self.shown < self.fresh_from || rgba.is_empty() {
+            return;
+        }
+        match luma_image::focus::sharpest_point(rgba, *w, *h) {
+            Some((x, y)) => {
+                self.zoom = true;
+                self.zoom_target = Some(vec2(x, y));
+                self.status = tr("Zoom 1:1 sur la zone la plus nette").into();
+            }
+            None => self.status = tr("Aucune zone nette sur cette photo").into(),
+        }
+    }
+
     /// La prise de vue de cette photo (voir [`shooting_line`]), une fois ouverte.
     pub fn shooting_label(&self, path: &Path) -> Option<&str> {
         self.shooting
@@ -7862,6 +7880,7 @@ impl Studio {
                 self.scope_texture = None;
             }
             "zoom" => self.zoom = !self.zoom,
+            "zoom_sharp" => self.zoom_sharp(),
             _ => {}
         }
     }
@@ -13659,11 +13678,17 @@ impl Studio {
             if let Some(o) = jump {
                 area = area.scroll_offset(o);
             }
+            // Sans l'effet élastique au bord (egui 0.37) : le décalage donné tout de suite
+            // à l'ouverture, avant que la zone connaisse la taille de la photo, passait
+            // pour un dépassement et la vue revenait d'elle‑même vers le coin haut gauche.
+            let elastic =
+                std::mem::replace(&mut ui.spacing_mut().scroll.kinetic.rubber_band, false);
             let shown = area.show(ui, |ui| {
                 let (r, resp) = ui.allocate_exact_size(size, egui::Sense::click());
                 ui.painter().image(t.id(), r, uv, Color32::WHITE);
                 resp.clicked()
             });
+            ui.spacing_mut().scroll.kinetic.rubber_band = elastic;
             if shown.inner {
                 self.zoom = false;
             }

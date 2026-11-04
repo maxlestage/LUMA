@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Zoom en la zona nítida** (Mayús+Z, también en la selección a pantalla completa): el
+  zoom 1:1 se abre donde cayó el enfoque, para comprobarlo sin buscarlo. Y el zoom 1:1
+  abierto en un punto ya no vuelve solo hacia la esquina superior izquierda.
 - **Datos de toma de un RAW con EXIF dañado**: una velocidad, apertura o focal nula ya
   no se muestra («1/inf s», «f/0»); simplemente se omite.
 - **Vistas previas y ráfagas más rápidas**: el histograma y el recorte de cada vista

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Zoom sur la zone nette** (Maj+Z, aussi dans le tri en plein écran) : le zoom 1:1
+  s'ouvre là où la mise au point est tombée, pour la vérifier sans la chercher. Et le
+  zoom 1:1 ouvert sur un point ne revient plus de lui‑même vers le coin haut gauche.
 - **Prise de vue d'un RAW à l'EXIF abîmé** : une vitesse, une ouverture ou une focale
   nulle n'est plus montrée (« 1/inf s », « f/0 ») ; elle est simplement absente.
 - **Aperçus et rafales plus rapides** : l'histogramme et l'écrêtage de chaque aperçu
