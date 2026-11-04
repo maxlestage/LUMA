@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **`luma clipping`**: the blown (pure white) and crushed (full black) share of each
+  photo in a folder, the most clipped first; `--reject 5` rejects those clipped over
+  5% or more (flag in the XMP), to set aside the failed photos at once.
 - **Faster glimpse** (the embedded preview shown as soon as a photo opens, in culling
   as elsewhere): its conversion for the screen done on all cores; 2048 px:
   4.0–4.6 → 1.4–1.5 ms, with the same bytes.
