@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Reject the rest of the stack** (Alt+X): the best of a burst picked (P), the other
+  photos of the stack rejected at once (Cmd+Z puts them back), the picks kept.
 - **Smoother large filmstrips**: full-screen culling and the Library panel redo fewer
   computations on each frame; 20,000 photos: about 3 ms less per frame in culling,
   3.5 to 5 ms in the Library, with the same counts.
