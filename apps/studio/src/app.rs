@@ -9025,16 +9025,19 @@ impl Studio {
             ui.set_clip_rect(stage);
             self.viewer(ui);
         });
-        self.culling_strip(ui, strip);
-        self.island(ui, bar, |s, ui| s.culling_bar(ui));
+        // Les photos affichées une fois pour le bandeau et la barre (une liste du film :
+        // 2 à 3 ms sur 20 000 photos) ; ni l'un ni l'autre ne la change avant de s'en
+        // servir.
+        let visible = self.visible();
+        self.culling_strip(ui, strip, &visible);
+        self.island(ui, bar, |s, ui| s.culling_bar(ui, &visible));
     }
 
     /// Le bandeau du tri : la photo ouverte et ses voisines dans le film (quatre de
     /// chaque côté au plus), en vignettes ; la photo ouverte cernée, les retenues
     /// soulignées de blanc, les rejetées assombries et soulignées de rouge. Un clic sur
     /// une voisine l'ouvre.
-    fn culling_strip(&mut self, ui: &mut Ui, rect: Rect) {
-        let visible = self.visible();
+    fn culling_strip(&mut self, ui: &mut Ui, rect: Rect, visible: &[usize]) {
         // La photo ouverte, ou sa pile repliée (la photo du dessus la représente).
         let stack = |i: usize| {
             self.folder
@@ -9164,12 +9167,11 @@ impl Studio {
         }
     }
 
-    fn culling_bar(&mut self, ui: &mut Ui) {
+    fn culling_bar(&mut self, ui: &mut Ui, visible: &[usize]) {
         let Some(path) = self.current_path().map(Path::to_path_buf) else {
             return;
         };
         let meta = self.current_meta();
-        let visible = self.visible();
         let at = self
             .current
             .and_then(|c| visible.iter().position(|&v| v == c))
@@ -12106,10 +12108,14 @@ impl Studio {
             View::Search(text) => trf("Recherche : {text}", &[("text", text)]),
         };
         ui.label(RichText::new(dir).size(12.0));
+        // Les photos affichées comptées une fois pour le panneau (une liste du film à
+        // chaque image : 2 à 3 ms sur 20 000 photos), recomptées seulement si un bouton
+        // ci‑dessous change ce qui est affiché.
+        let mut shown = self.visible().len();
         ui.label(
             RichText::new(trf(
                 "{n} photos, {shown} affichées",
-                &[("n", &self.folder.len()), ("shown", &self.visible().len())],
+                &[("n", &self.folder.len()), ("shown", &shown)],
             ))
             .size(11.5)
             .color(theme::DIM),
@@ -12119,6 +12125,7 @@ impl Studio {
             if self.duplicates.is_some() || self.place.is_some() {
                 if ui.button(tr("Tout afficher")).clicked() {
                     self.hide_duplicates();
+                    shown = self.visible().len();
                 }
             } else if ui
                 .button(tr("Chercher les doublons"))
@@ -12128,11 +12135,12 @@ impl Studio {
                 .clicked()
             {
                 self.show_duplicates();
+                shown = self.visible().len();
             }
         });
         if self.map.is_some() {
             let placed = self.placed().len();
-            let missing = self.visible().len() - placed;
+            let missing = shown - placed;
             ui.label(
                 RichText::new(trf(
                     "{n} photos sur la carte, {m} sans position",
@@ -12281,8 +12289,7 @@ impl Studio {
         );
         ui.add_space(8.0);
         ui.label(RichText::new(tr("Drapeau")).color(theme::DIM).size(11.5));
-        // Les comptes en un seul passage pour toute la section.
-        let counts = self.flag_counts();
+        // Les mêmes comptes pour toute la section (la note minimale n'y change rien).
         for (f, name) in [
             (FlagFilter::All, tr("Toutes")),
             (FlagFilter::Picks, tr("Retenues (P)")),

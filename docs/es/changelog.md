@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Tiras grandes más fluidas**: la selección a pantalla completa y el panel de la
+  Biblioteca rehacen menos cálculos en cada imagen; 20 000 fotos: unos 3 ms menos por
+  imagen en la selección, de 3,5 a 5 ms en la Biblioteca, con los mismos recuentos.
 - **De ráfaga en ráfaga** (Alt+→, Alt+←): la primera foto de la ráfaga siguiente o
   anterior de la tira, las fotos sueltas saltadas, ráfagas plegadas o desplegadas.
 - **La banda de la selección a pantalla completa**: la foto abierta y sus vecinas de la
