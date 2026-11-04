@@ -4,6 +4,10 @@
 
 - **Prise de vue d'un RAW à l'EXIF abîmé** : une vitesse, une ouverture ou une focale
   nulle n'est plus montrée (« 1/inf s », « f/0 ») ; elle est simplement absente.
+- **Aperçus et rafales plus rapides** : l'histogramme et l'écrêtage de chaque aperçu
+  comptés d'un seul passage (2048 px : 1,9 → 1,4 ms au mieux), la part au point d'une
+  photo (« Retenir la plus nette ») comptée sans écrire le masque des zones nettes
+  (2,3 → 1,8 ms), aux mêmes résultats.
 - **La prise de vue dans le tri en plein écran** : « 1/250 s · f/2,8 · ISO 400 ·
   50 mm », pour voir d'un coup d'œil une vitesse trop lente pour la focale.
 - **L'écrêtage dans le tri en plein écran** : la part de l'aperçu brûlée (blanc pur)
