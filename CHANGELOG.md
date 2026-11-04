@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **La place dans la rafale** (tri en plein écran) : « Rafale 2 / 3 » ou « Série 1 / 5 »
+  pour une série d'exposition, la fin d'une rafale se voit avant d'y arriver.
 - **Grands films encore plus fluides** : les métadonnées des photos rangées sous un
   hachage rapide des chemins ; 20 000 photos : la liste des photos affichées 2,4–2,9 →
   1,6 ms, le compte des drapeaux 4,0–4,3 → 3,1–3,3 ms, plusieurs fois par image.
