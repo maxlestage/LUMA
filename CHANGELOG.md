@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Grands films encore plus fluides** : les métadonnées des photos rangées sous un
+  hachage rapide des chemins ; 20 000 photos : la liste des photos affichées 2,4–2,9 →
+  1,6 ms, le compte des drapeaux 4,0–4,3 → 3,1–3,3 ms, plusieurs fois par image.
 - **`luma sharpness --bursts --one`** : une seule photo gardée par rafale, la plus
   nette retenue, le reste de la rafale rejeté (même net), les photos hors rafale
   intactes ; l'équivalent en lot d'Alt+X.

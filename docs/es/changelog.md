@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Tiras grandes aún más fluidas**: los metadatos de las fotos guardados con un hash
+  rápido de las rutas; 20 000 fotos: la lista de fotos mostradas 2,4–2,9 → 1,6 ms, los
+  recuentos de banderas 4,0–4,3 → 3,1–3,3 ms, varias veces por imagen.
 - **`luma sharpness --bursts --one`**: una sola foto conservada por ráfaga, la más
   nítida seleccionada, el resto de la ráfaga rechazado (aunque esté nítido), las fotos
   fuera de ráfaga intactas; el equivalente por lotes de Alt+X.
