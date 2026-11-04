@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Shooting settings in full-screen culling**: “1/250 s · f/2.8 · ISO 400 · 50 mm”,
+  to see at a glance a shutter speed too slow for the focal length.
 - **Clipping in full-screen culling**: the share of the preview that is blown (pure
   white) and crushed (full black), “2.3% blown”, from one pixel in a thousand, to set
   aside a failed photo without opening the clipping indicator.

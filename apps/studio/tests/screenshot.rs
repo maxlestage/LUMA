@@ -4667,6 +4667,30 @@ fn burst_culling_from_the_keyboard() {
 /// photos (à dix minutes d'écart), une photo seule ; la nette de chaque rafale est
 /// retenue, la floue et la photo seule restent sans drapeau. Puis « Rejeter les floues
 /// de chaque rafale » (Alt+Maj+X) : la floue de chaque rafale rejetée.
+/// Le tri en plein écran montre la prise de vue de la photo ouverte (le RAW du corpus).
+#[test]
+fn culling_shows_how_the_photo_was_taken() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("prise-de-vue-au-tri") else {
+        return;
+    };
+    s.wait();
+    let path = s.studio().current_path().unwrap().to_path_buf();
+    let line = s
+        .studio()
+        .shooting_label(&path)
+        .expect("prise de vue")
+        .to_owned();
+    assert!(
+        line.contains(" s · f/") && line.contains("ISO ") && line.ends_with(" mm"),
+        "{line}"
+    );
+    s.keys(&[(NONE, Key::F)]);
+    s.harness.run_steps(1);
+    assert!(s.harness.query_by_label(&line).is_some(), "{line}");
+    s.keys(&[(NONE, Key::Escape)]);
+}
+
 /// Le tri en plein écran montre ce que l'aperçu a de brûlé et de bouché ; rien pour
 /// une photo sans écrêtage.
 #[test]

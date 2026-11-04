@@ -2,6 +2,8 @@
 
 ## 0.4.0 — próximamente
 
+- **Los datos de la toma en la selección a pantalla completa**: «1/250 s · f/2,8 ·
+  ISO 400 · 50 mm», para ver de un vistazo una velocidad demasiado lenta para la focal.
 - **El recorte en la selección a pantalla completa**: la parte de la vista previa
   quemada (blanco puro) y empastada (negro total), «2,3 % quemado», desde un píxel de
   cada mil, para descartar una foto fallida sin abrir el indicador de recorte.
