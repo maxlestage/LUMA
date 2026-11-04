@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **La banda de la selección a pantalla completa**: la foto abierta y sus vecinas de la
+  tira en miniaturas, encima de la barra, las seleccionadas subrayadas en blanco, las
+  rechazadas oscurecidas; un clic abre una.
 - **Carpetas ya vistas más rápidas de reabrir**: las miniaturas guardadas se releen en
   todos los núcleos en lugar de una a una; 300 fotos: 157–236 → 43–60 ms, las mismas
   miniaturas.
