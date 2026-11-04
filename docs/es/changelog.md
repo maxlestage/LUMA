@@ -2,6 +2,9 @@
 
 ## 0.4.0 — próximamente
 
+- **Carpetas ya vistas más rápidas de reabrir**: las miniaturas guardadas se releen en
+  todos los núcleos en lugar de una a una; 300 fotos: 157–236 → 43–60 ms, las mismas
+  miniaturas.
 - **Rechazar las recortadas** (Biblioteca, con las ráfagas): la parte quemada y
   empastada de cada foto de la tira medida en segundo plano; las recortadas en un 5 % o
   más rechazadas de una vez (Cmd+Z las devuelve), como `luma clipping --reject 5`.

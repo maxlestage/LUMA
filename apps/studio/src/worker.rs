@@ -1282,20 +1282,37 @@ fn thumbnail_loop(
             })
             .expect("fil des rendus de vignettes");
     }
-    while let Ok(path) = queue.recv() {
-        guarded(&path, || {
-            if saved_thumbnail(&path, &sender, &repaint) {
-                return;
-            }
-            // Une photo retouchée attend son vrai rendu : l'aperçu intégré au RAW la
-            // montrerait sans ses retouches. Sinon l'aperçu tout de suite, le rendu ensuite.
-            let edited =
-                read_sidecar(&path).is_some_and(|s| luma_project::presets::summary(&s).is_edited());
-            if !edited {
-                quick_thumbnail(&path, &sender, &repaint);
-            }
-            renders.push(path.clone());
-        });
+    while let Ok(first) = queue.recv() {
+        // Toutes les demandes en attente d'un coup (un dossier qui s'ouvre en fait des
+        // centaines) : les vignettes déjà enregistrées relues sur tous les cœurs (le
+        // décodage, une demi‑milliseconde chacune, se faisait l'une après l'autre) ; les
+        // autres ensuite, dans l'ordre des demandes.
+        let mut batch = vec![first];
+        batch.extend(queue.try_iter());
+        let saved: Vec<bool> = {
+            use rayon::prelude::*;
+            batch
+                .par_iter()
+                .map(|path| {
+                    let mut hit = false;
+                    guarded(path, || hit = saved_thumbnail(path, &sender, &repaint));
+                    hit
+                })
+                .collect()
+        };
+        for (path, _) in batch.iter().zip(saved).filter(|(_, hit)| !hit) {
+            guarded(path, || {
+                // Une photo retouchée attend son vrai rendu : l'aperçu intégré au RAW la
+                // montrerait sans ses retouches. Sinon l'aperçu tout de suite, le rendu
+                // ensuite.
+                let edited = read_sidecar(path)
+                    .is_some_and(|s| luma_project::presets::summary(&s).is_edited());
+                if !edited {
+                    quick_thumbnail(path, &sender, &repaint);
+                }
+                renders.push(path.clone());
+            });
+        }
     }
     // Plus de demandes : les fils de rendu finissent ce qui attend, puis s'arrêtent.
     renders.close();
