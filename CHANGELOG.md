@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Dossiers déjà vus plus rapides à rouvrir** : les vignettes enregistrées relues sur
+  tous les cœurs au lieu d'une à la fois ; 300 photos : 157–236 → 43–60 ms, les mêmes
+  vignettes.
 - **Rejeter les écrêtées** (Bibliothèque, avec les rafales) : la part brûlée et bouchée
   de chaque photo du film mesurée en arrière‑plan ; celles écrêtées sur 5 % au moins
   rejetées d'un coup (Cmd+Z les remet), comme `luma clipping --reject 5`.

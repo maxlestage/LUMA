@@ -176,3 +176,64 @@ fn a_broken_file_does_not_stop_the_thumbnails() {
     assert!(got.is_some(), "la vignette de la bonne photo");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Les vignettes déjà enregistrées, demandées d'un coup (un dossier qui s'ouvre), sont
+/// relues sur tous les cœurs : chacune arrive une fois, avec les octets de son rendu.
+#[test]
+fn saved_thumbnails_asked_at_once_arrive_each_once() {
+    let dir = std::env::temp_dir().join(format!("luma-vignettes-relues-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let photos: Vec<std::path::PathBuf> = (0..24u32)
+        .map(|k| {
+            let p = dir.join(format!("p{k:02}.png"));
+            image::RgbImage::from_fn(300, 200, |x, y| {
+                let v = ((x * (k + 3) + y * 7) % 200) as u8;
+                image::Rgb([v, v / 2 + 40, 255 - v])
+            })
+            .save(&p)
+            .unwrap();
+            p
+        })
+        .collect();
+    let collect = |worker: &Worker| {
+        let mut got: Vec<(std::path::PathBuf, Vec<u8>)> = Vec::new();
+        let start = Instant::now();
+        while got.len() < photos.len() && start.elapsed() < Duration::from_secs(60) {
+            for e in worker.poll() {
+                if let Event::Thumbnail { path, rgba, .. } = e {
+                    got.push((path, rgba));
+                }
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        // Encore un instant : rien d'autre n'arrive (pas de seconde vignette).
+        std::thread::sleep(Duration::from_millis(300));
+        for e in worker.poll() {
+            if let Event::Thumbnail { path, rgba, .. } = e {
+                got.push((path, rgba));
+            }
+        }
+        got
+    };
+    // Rendues et enregistrées une première fois.
+    let first = Worker::new(|| {});
+    for p in &photos {
+        first.thumbnail(p.clone());
+    }
+    let rendered = collect(&first);
+    assert_eq!(rendered.len(), photos.len());
+    // Puis relues, toutes demandées d'un coup.
+    let again = Worker::new(|| {});
+    for p in &photos {
+        again.thumbnail(p.clone());
+    }
+    let reread = collect(&again);
+    assert_eq!(reread.len(), photos.len(), "une vignette chacune");
+    for p in &photos {
+        let a = rendered.iter().find(|(q, _)| q == p).map(|r| &r.1);
+        let b = reread.iter().find(|(q, _)| q == p).map(|r| &r.1);
+        assert!(a.is_some() && a == b, "{}", p.display());
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **Faster to reopen folders already seen**: saved thumbnails read back on all cores
+  instead of one at a time; 300 photos: 157–236 → 43–60 ms, the same thumbnails.
 - **Reject the clipped** (Library, with the bursts): the blown and crushed share of
   each photo in the filmstrip measured in the background; those clipped over 5% or
   more rejected at once (Cmd+Z puts them back), like `luma clipping --reject 5`.
