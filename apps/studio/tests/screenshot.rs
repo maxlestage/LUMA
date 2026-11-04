@@ -4309,6 +4309,56 @@ fn the_zoom_opens_on_the_sharp_area() {
     s.keys(&[(NONE, Key::Escape)]);
 }
 
+/// Dans le tri en plein écran, le zoom 1:1 reste ouvert d'une photo à l'autre, au même
+/// endroit (ici vers le coin bas droit) ; hors du tri, la photo suivante s'ouvre entière.
+#[test]
+fn the_zoom_follows_from_photo_to_photo_in_culling() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open_prepared("zoom-qui-suit", [1440.0, 900.0], 1.0, |dir| {
+        for (name, shade) in [("rafale-1.png", 0u8), ("rafale-2.png", 9)] {
+            image::RgbImage::from_fn(3000, 2000, |x, y| {
+                if (2400..2800).contains(&x) && (1500..1900).contains(&y) {
+                    let v = if (x / 3 + y / 3) % 2 == 0 { 40 } else { 210 };
+                    image::Rgb([v, v + shade, v])
+                } else {
+                    image::Rgb([120, 125 + shade, 118])
+                }
+            })
+            .save(dir.join(name))
+            .unwrap();
+        }
+    }) else {
+        return;
+    };
+    let photos = s.studio().photos().to_vec();
+    let at = |name: &str| photos.iter().position(|p| p.ends_with(name)).unwrap();
+    s.studio().set_current(at("rafale-1.png"));
+    s.wait();
+    s.keys(&[(NONE, Key::F)]);
+    s.keys(&[(Modifiers::SHIFT, Key::Z)]);
+    s.wait();
+    s.harness.run_steps(4);
+    let o = s.studio().zoom_offset;
+    assert!(o.x > 1500.0 && o.y > 900.0, "{o:?}");
+    s.studio().set_current(at("rafale-2.png"));
+    s.wait();
+    s.harness.run_steps(6);
+    assert!(s.studio().zoom);
+    assert_eq!(
+        s.studio().current_path(),
+        Some(photos[at("rafale-2.png")].as_path())
+    );
+    let o2 = s.studio().zoom_offset;
+    assert!((o2 - o).length() < 4.0, "{o:?} → {o2:?}");
+    // Hors du tri : la photo suivante s'ouvre entière.
+    s.keys(&[(NONE, Key::Escape)]);
+    s.harness.run_steps(2);
+    s.studio().zoom = true;
+    s.studio().set_current(at("rafale-1.png"));
+    s.wait();
+    assert!(!s.studio().zoom);
+}
+
 /// Un clic sur la photo ouvre le zoom 1:1 centré sur le point cliqué (ici vers le coin
 /// bas droit), et non sur le coin haut gauche.
 #[test]

@@ -2,6 +2,8 @@
 
 ## 0.4.0 — upcoming
 
+- **The zoom follows in full-screen culling**: the 1:1 zoom stays open from one photo
+  to the next, at the same place in the image, to compare a burst detail by detail.
 - **Zoom on the sharp area** (Shift+Z, also in full-screen culling): the 1:1 zoom
   opens where the focus landed, to check it without looking for it. And a 1:1 zoom
   opened on a point no longer drifts back to the top left corner by itself.
