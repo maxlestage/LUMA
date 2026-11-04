@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Coup d'œil plus rapide** (l'aperçu intégré montré dès qu'une photo s'ouvre, dans
+  le tri comme ailleurs) : sa conversion pour l'écran faite sur tous les cœurs ;
+  2048 px : 4,0–4,6 → 1,4–1,5 ms, aux mêmes octets.
 - **Le zoom suit dans le tri en plein écran** : le zoom 1:1 reste ouvert d'une photo à
   l'autre, au même endroit de l'image, pour comparer une rafale détail par détail.
 - **Zoom sur la zone nette** (Maj+Z, aussi dans le tri en plein écran) : le zoom 1:1
