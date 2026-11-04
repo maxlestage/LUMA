@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **Le bandeau du tri en plein écran** : la photo ouverte et ses voisines du film en
+  vignettes, au‑dessus de la barre, les retenues soulignées de blanc, les rejetées
+  assombries ; un clic en ouvre une.
 - **Dossiers déjà vus plus rapides à rouvrir** : les vignettes enregistrées relues sur
   tous les cœurs au lieu d'une à la fois ; 300 photos : 157–236 → 43–60 ms, les mêmes
   vignettes.

@@ -2,6 +2,9 @@
 
 ## 0.4.0 — upcoming
 
+- **The full-screen culling strip**: the open photo and its neighbours in the
+  filmstrip as thumbnails, above the bar, picks underlined in white, rejects dimmed; a
+  click opens one.
 - **Faster to reopen folders already seen**: saved thumbnails read back on all cores
   instead of one at a time; 300 photos: 157–236 → 43–60 ms, the same thumbnails.
 - **Reject the clipped** (Library, with the bursts): the blown and crushed share of
