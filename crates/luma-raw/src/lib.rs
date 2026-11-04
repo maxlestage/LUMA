@@ -193,8 +193,12 @@ fn illuminant_temperature(i: rawler::imgop::xyz::Illuminant) -> f32 {
     }
 }
 
+/// Une vitesse, une ouverture ou une focale : une valeur nulle (un EXIF abîmé ou mal
+/// rempli) n'en est pas une, comme dans [`exif`] (sinon « 1/inf s », « f/0 »).
 fn rational(r: &Option<rawler::formats::tiff::Rational>) -> Option<f32> {
-    r.as_ref().filter(|r| r.d != 0).map(|r| r.n as f32 / r.d as f32)
+    r.as_ref()
+        .filter(|r| r.d != 0 && r.n != 0)
+        .map(|r| r.n as f32 / r.d as f32)
 }
 
 /// `BaselineExposure` d'un DNG, lu dans son IFD racine.
@@ -1189,6 +1193,19 @@ fn next_soi(bytes: &[u8], from: usize) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+    /// Les vitesses, ouvertures et focales des RAW : une valeur nulle ou un dénominateur
+    /// nul n'en donne aucune (avant : 0 s, montré « 1/inf s »).
+    #[test]
+    fn zero_exif_rationals_are_no_value() {
+        use rawler::formats::tiff::Rational;
+        let r = |n, d| rational(&Some(Rational { n, d }));
+        assert_eq!(r(1, 125), Some(1.0 / 125.0));
+        assert_eq!(r(0, 1), None);
+        assert_eq!(r(1, 0), None);
+        assert_eq!(r(0, 0), None);
+        assert_eq!(rational(&None), None);
+    }
+
     use super::*;
 
     /// Les débuts de JPEG, cherchés huit octets à la fois, sont ceux d'une lecture octet

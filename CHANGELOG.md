@@ -2,6 +2,8 @@
 
 ## 0.4.0 — à venir
 
+- **Prise de vue d'un RAW à l'EXIF abîmé** : une vitesse, une ouverture ou une focale
+  nulle n'est plus montrée (« 1/inf s », « f/0 ») ; elle est simplement absente.
 - **La prise de vue dans le tri en plein écran** : « 1/250 s · f/2,8 · ISO 400 ·
   50 mm », pour voir d'un coup d'œil une vitesse trop lente pour la focale.
 - **L'écrêtage dans le tri en plein écran** : la part de l'aperçu brûlée (blanc pur)
