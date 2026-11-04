@@ -182,12 +182,13 @@ USAGE
       l'avant / après de chaque photo (ses réglages, sinon ceux par défaut) en un JPEG
       à côté d'elle, « nom-avant-apres.jpg » (numéroté s'il existe), chaque moitié au
       grand côté N (1600)
-  luma sharpness <photo|dossier>… [--pick] [--reject] [--bursts]
+  luma sharpness <photo|dossier>… [--pick] [--reject] [--bursts [--one]]
       la part au point de chaque photo (ses réglages, sinon ceux par défaut), la plus
       nette d'abord, sans IA ; --pick : la plus nette « retenue », --reject : celles
       sous le tiers de la plus nette « rejetées » (drapeaux dans les XMP) ; --bursts :
       rafale par rafale (même boîtier, moins de deux secondes d'écart, mêmes réglages),
-      les photos hors rafale mesurées sans drapeau
+      les photos hors rafale mesurées sans drapeau ; --bursts --one : une seule par
+      rafale, la plus nette « retenue », le reste de la rafale « rejeté »
   luma clipping <photo|dossier>… [--reject P]
       la part brûlée (blanc pur) et bouchée (noir complet) de chaque photo (ses
       réglages, sinon ceux par défaut), la plus écrêtée d'abord ; --reject P : celles
@@ -2263,13 +2264,14 @@ type Lot = (Option<String>, Vec<(PathBuf, f32)>, bool);
 /// `--bursts`, rafale par rafale (les piles de `luma_library::stacks`).
 fn sharpness(args: Vec<String>) -> Result<(), String> {
     use luma_image::focus::BLURRED_FRACTION;
-    let (mut pick, mut reject, mut bursts) = (false, false, false);
+    let (mut pick, mut reject, mut bursts, mut one) = (false, false, false, false);
     let mut photos = Vec::new();
     for a in args {
         match a.as_str() {
             "--pick" => pick = true,
             "--reject" => reject = true,
             "--bursts" => bursts = true,
+            "--one" => one = true,
             s if s.starts_with('-') => return Err(format!("option inconnue « {s} »")),
             _ => {
                 let p = PathBuf::from(a);
@@ -2291,6 +2293,11 @@ fn sharpness(args: Vec<String>) -> Result<(), String> {
     if photos.is_empty() {
         return Err("il faut des photos (ou un dossier)".into());
     }
+    // Une seule par rafale : la plus nette retenue, le reste de la rafale rejeté.
+    if one && !bursts {
+        return Err("--one va avec --bursts (une photo gardée par rafale)".into());
+    }
+    let pick = pick || one;
     let measured = two_at_a_time(&photos, |path| {
         let photo = Photo::open(path).map_err(|e| format!("{} : {e}", path.display()))?;
         let settings = luma_library::photo_settings(path).unwrap_or_else(|| photo.default_settings());
@@ -2360,7 +2367,7 @@ fn sharpness(args: Vec<String>) -> Result<(), String> {
                 flag(path, xmp::Flag::Pick)?;
                 picked += 1;
                 note = " — retenue".into();
-            } else if reject && blurred {
+            } else if (reject && blurred) || (one && flags) {
                 flag(path, xmp::Flag::Reject)?;
                 rejected += 1;
                 note = " — rejetée".into();
@@ -2373,7 +2380,9 @@ fn sharpness(args: Vec<String>) -> Result<(), String> {
     if bursts && pick {
         println!("{picked} photo(s) retenue(s) (la plus nette de chaque rafale)");
     }
-    if reject {
+    if one {
+        println!("{rejected} photo(s) rejetée(s) (le reste de chaque rafale)");
+    } else if reject {
         println!("{rejected} photo(s) rejetée(s) (moins du tiers de la plus nette)");
     }
     Ok(())

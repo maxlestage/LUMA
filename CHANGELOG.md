@@ -2,6 +2,9 @@
 
 ## 0.4.0 — à venir
 
+- **`luma sharpness --bursts --one`** : une seule photo gardée par rafale, la plus
+  nette retenue, le reste de la rafale rejeté (même net), les photos hors rafale
+  intactes ; l'équivalent en lot d'Alt+X.
 - **Rejeter le reste de la pile** (Alt+X) : la meilleure d'une rafale retenue (P), les
   autres photos de la pile rejetées d'un coup (Cmd+Z les remet), les retenues gardées.
 - **Grands films plus fluides** : le tri en plein écran et le panneau de la
