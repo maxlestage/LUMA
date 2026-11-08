@@ -2,6 +2,11 @@
 
 ## 0.4.0 — à venir
 
+- **Export Instax Link Wide** : un préréglage d'export pour l'imprimante instantanée,
+  à sa taille (1 260 × 800 points, dans le sens de la photo) et renforcé, elle qui tire
+  pâle (plus de contraste, tons moyens plus denses, couleurs plus vives). Le renfort se
+  pose aussi sur n'importe quel export (« Tirage instantané », faible, normal ou fort ;
+  `luma export --instant forte`).
 - **Remettre la pile sans drapeau** (Alt+U) : toute la pile de la photo ouverte sans
   drapeau d'un coup (Cmd+Z la remet), pour refaire le tri d'une rafale.
 - **La place dans la rafale** (tri en plein écran) : « Rafale 2 / 3 » ou « Série 1 / 5 »

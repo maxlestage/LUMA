@@ -3099,6 +3099,26 @@ fr = Déjà abonné avec ce compte Apple ?
 en = Already subscribed with this Apple Account?
 es = ¿Ya tienes una suscripción con esta cuenta de Apple?
 
+fr = Tirage instantané
+en = Instant print
+es = Copia instantánea
+
+fr = renforcée pour Instax
+en = boosted for Instax
+es = reforzada para Instax
+
+fr = Renforcer pour Instax
+en = Boost for Instax
+es = Reforzar para Instax
+
+fr = Les imprimantes Instax (Link Wide, Mini, Square) tirent pâle : plus de contraste, des tons moyens plus denses et des couleurs plus vives pour compenser
+en = Instax printers (Link Wide, Mini, Square) print pale: more contrast, denser midtones and richer colours to make up for it
+es = Las impresoras Instax (Link Wide, Mini, Square) imprimen pálido: más contraste, medios tonos más densos y colores más vivos para compensarlo
+
+fr = Instax Link Wide
+en = Instax Link Wide
+es = Instax Link Wide
+
 fr = Restaurer les achats
 en = Restore Purchases
 es = Restaurar compras

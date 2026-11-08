@@ -2,6 +2,11 @@
 
 ## 0.4.0 — próximamente
 
+- **Exportar para Instax Link Wide**: un ajuste de exportación para la impresora
+  instantánea, a su tamaño (1260 × 800 puntos, según la orientación de la foto) y
+  reforzado, porque imprime pálido (más contraste, medios tonos más densos, colores más
+  vivos). El refuerzo sirve para cualquier exportación («Copia instantánea», bajo,
+  normal o fuerte; `luma export --instant forte`).
 - **Quitar las banderas de la pila** (Alt+U): toda la pila de la foto abierta sin
   bandera de una vez (Cmd+Z la devuelve), para rehacer la selección de una ráfaga.
 - **El lugar en la ráfaga** (selección a pantalla completa): «Ráfaga 2 / 3», o
