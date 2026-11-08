@@ -1265,7 +1265,9 @@ fn export_instax_boost() {
         s.harness.query_by_label("Instax Link Wide").is_some(),
         "le préréglage"
     );
-    s.harness.get_by_label("Renforcer pour Instax").scroll_to_me();
+    s.harness
+        .get_by_label("Renforcer pour Instax")
+        .scroll_to_me();
     s.wait();
     s.harness.get_by_label("Renforcer pour Instax").click();
     s.wait();
