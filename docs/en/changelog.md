@@ -1,6 +1,6 @@
 # What's new
 
-## 0.4.0 — upcoming
+## 0.4.0 — November 2026
 
 - **Instax Link Wide export**: an export preset for the instant printer, at its size
   (1,260 × 800 dots, following the photo's orientation) and boosted, since it prints
