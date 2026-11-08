@@ -2,6 +2,10 @@
 
 ## 0.4.0 — upcoming
 
+- **Instax Link Wide export**: an export preset for the instant printer, at its size
+  (1,260 × 800 dots, following the photo's orientation) and boosted, since it prints
+  pale (more contrast, denser midtones, richer colours). The boost works on any export
+  too (“Instant print”, low, normal or strong; `luma export --instant forte`).
 - **Unflag the stack** (Alt+U): the whole stack of the open photo unflagged at once
   (Cmd+Z puts it back), to redo the culling of a burst.
 - **The place in the burst** (full-screen culling): “Burst 2 / 3”, or “Bracket 1 / 5”

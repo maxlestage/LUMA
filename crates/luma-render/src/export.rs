@@ -422,6 +422,9 @@ pub struct Options {
     /// Le poids maximal d'un JPEG, en kilo‑octets (1 000 octets) : la qualité descend
     /// jusqu'à ce qu'il tienne ; `None` : la qualité demandée.
     pub max_kb: Option<u32>,
+    /// Le renfort pour une imprimante instantanée (Instax), qui tire pâle ; `None` :
+    /// aucun.
+    pub instant: Option<InstantPrint>,
 }
 
 impl Default for Options {
@@ -441,6 +444,75 @@ impl Default for Options {
             web: false,
             enlarge: false,
             max_kb: None,
+            instant: None,
+        }
+    }
+}
+
+/// Le renfort d'un tirage instantané : les imprimantes Instax (Link Wide, Mini, Square)
+/// tirent pâle — noirs laiteux, couleurs éteintes, tons moyens trop clairs. L'image est
+/// préparée pour : plus de contraste (une courbe en S), des tons moyens plus denses et
+/// plus de saturation. Appliqué à l'image à sa taille finale, avant l'accentuation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InstantPrint {
+    pub strength: Strength,
+}
+
+impl InstantPrint {
+    /// La courbe en S, la densité des tons moyens et la saturation, pour cette intensité.
+    fn amounts(self) -> (f32, f32, f32) {
+        let k = match self.strength {
+            Strength::Low => 0.6,
+            Strength::Standard => 1.0,
+            Strength::High => 1.4,
+        };
+        (0.30 * k, 1.0 + 0.10 * k, 1.0 + 0.25 * k)
+    }
+
+    /// Une couleur sRGB (0 à 1, valeurs encodées) renforcée.
+    fn encoded(self, c: [f32; 3]) -> [f32; 3] {
+        let (curve, density, saturation) = self.amounts();
+        let tone = |x: f32| {
+            let x = x.clamp(0.0, 1.0);
+            let s = x * x * (3.0 - 2.0 * x);
+            (x + (s - x) * curve).powf(density)
+        };
+        let t = c.map(tone);
+        let luma = 0.2126 * t[0] + 0.7152 * t[1] + 0.0722 * t[2];
+        t.map(|v| (luma + (v - luma) * saturation).clamp(0.0, 1.0))
+    }
+
+    /// Renforce l'image (linéaire, à sa taille finale).
+    pub fn apply(self, img: &mut RgbImage) {
+        use rayon::prelude::*;
+        img.data.par_iter_mut().for_each(|p| {
+            let e = p.map(|v| luma_color::srgb_encode(v.clamp(0.0, 1.0)));
+            *p = self.encoded(e).map(luma_color::srgb_decode);
+        });
+    }
+
+    /// Lit `instant`, `instant:forte`, `instax:faible`… (intensité normale par défaut).
+    pub fn parse(s: &str) -> Option<InstantPrint> {
+        let s = s.trim().to_lowercase();
+        let (name, k) = s.split_once(':').unwrap_or((&s, "standard"));
+        if !matches!(name.trim(), "instant" | "instantane" | "instantané" | "instax") {
+            return None;
+        }
+        let strength = match k.trim() {
+            "low" | "faible" => Strength::Low,
+            "standard" | "normal" | "normale" => Strength::Standard,
+            "high" | "forte" | "fort" => Strength::High,
+            _ => return None,
+        };
+        Some(InstantPrint { strength })
+    }
+
+    /// Ce que [`InstantPrint::parse`] relit.
+    pub fn id(self) -> &'static str {
+        match self.strength {
+            Strength::Low => "instant:faible",
+            Strength::Standard => "instant",
+            Strength::High => "instant:forte",
         }
     }
 }
@@ -1077,6 +1149,9 @@ pub fn develop(
             image = image.resize_area(w, h);
         }
     }
+    if let Some(i) = options.instant {
+        i.apply(&mut image);
+    }
     if let Some(sh) = options.sharpen {
         sh.apply(&mut image);
     }
@@ -1159,6 +1234,28 @@ pub fn builtin() -> Vec<Preset> {
                 ..Options::default()
             },
         ),
+        // L'imprimante Instax Link Wide : 1 260 × 800 points (un peu plus de 10 × 6,3 cm
+        // à 320 ppp), dans le sens de la photo ; renforcée, elle qui tire pâle.
+        preset(
+            "Instax Link Wide",
+            Options {
+                quality: 95,
+                resize: Some(Resize::Print {
+                    width_cm: 10.0,
+                    height_cm: 6.35,
+                    dpi: 320,
+                }),
+                enlarge: true,
+                sharpen: Some(OutputSharpen {
+                    medium: Medium::Glossy,
+                    strength: Strength::Low,
+                }),
+                instant: Some(InstantPrint {
+                    strength: Strength::Standard,
+                }),
+                ..Options::default()
+            },
+        ),
     ]
 }
 
@@ -1205,6 +1302,8 @@ struct StoredPreset {
     enlarge: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     max_kb: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    instant: Option<String>,
 }
 
 /// Les métadonnées, seulement si elles diffèrent de celles d'un export ordinaire.
@@ -1287,6 +1386,7 @@ impl StoredPreset {
             web: o.web,
             enlarge: o.enlarge,
             max_kb: o.max_kb,
+            instant: o.instant.map(|i| i.id().to_owned()),
         }
     }
 
@@ -1356,6 +1456,10 @@ impl StoredPreset {
                 web: self.web,
                 enlarge: self.enlarge,
                 max_kb: self.max_kb.filter(|&k| k > 0),
+                instant: match self.instant {
+                    Some(v) => Some(InstantPrint::parse(&v)?),
+                    None => None,
+                },
             },
         })
     }
@@ -1501,6 +1605,13 @@ pub fn describe(o: &Options) -> String {
     if o.enlarge && o.resize.is_some() {
         out += ", agrandie au besoin";
     }
+    if let Some(i) = o.instant {
+        out += match i.strength {
+            Strength::Low => ", renfort tirage instantané faible",
+            Strength::Standard => ", renfort tirage instantané",
+            Strength::High => ", renfort tirage instantané fort",
+        };
+    }
     if let Some(sh) = o.sharpen {
         out += &format!(", {}", sh.describe());
     }
@@ -1525,6 +1636,67 @@ pub fn describe(o: &Options) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Le renfort Instax : plus de contraste et de saturation, des tons moyens plus
+    /// denses ; le noir et le blanc ne bougent pas.
+    #[test]
+    fn the_instant_print_boost_deepens_and_saturates() {
+        let boost = InstantPrint {
+            strength: Strength::Standard,
+        };
+        assert_eq!(boost.encoded([0.0; 3]), [0.0; 3]);
+        assert_eq!(boost.encoded([1.0; 3]), [1.0; 3]);
+        // Un gris moyen : plus dense. Un gris sombre : plus sombre, un clair : à peine
+        // plus clair, ou moins (le contraste et la densité se compensent en haut).
+        let mid = boost.encoded([0.5; 3])[0];
+        assert!(mid < 0.5 && mid > 0.4, "{mid}");
+        assert!(boost.encoded([0.25; 3])[0] < 0.25);
+        // Une couleur : plus saturée (l'écart entre ses composantes grandit).
+        let c = boost.encoded([0.7, 0.45, 0.3]);
+        assert!(c[0] - c[2] > 0.7 - 0.3, "{c:?}");
+        // Plus fort, plus marqué ; faible, moins.
+        let at = |strength| InstantPrint { strength }.encoded([0.5; 3])[0];
+        assert!(at(Strength::High) < at(Strength::Standard) && at(Strength::Standard) < at(Strength::Low));
+        // Sur une image linéaire.
+        let mut img = RgbImage::from_fn(4, 4, |_, _| [0.18, 0.18, 0.18]);
+        boost.apply(&mut img);
+        assert!(img.data.iter().all(|p| p[0] < 0.18 && p[0] > 0.1));
+        // Lu et relu.
+        for id in ["instant", "instant:faible", "instant:forte"] {
+            assert_eq!(InstantPrint::parse(id).unwrap().id(), id);
+        }
+        assert_eq!(InstantPrint::parse("Instax:Forte").unwrap().strength, Strength::High);
+        assert!(InstantPrint::parse("polaroid").is_none());
+    }
+
+    /// Le préréglage Instax Link Wide : 1 260 × 800 points dans le sens de la photo,
+    /// renforcé, et gardé tel quel dans le fichier des préréglages.
+    #[test]
+    fn the_instax_link_wide_preset() {
+        let p = builtin().into_iter().find(|p| p.name == "Instax Link Wide").unwrap();
+        let o = &p.options;
+        let r = o.resize.unwrap();
+        assert_eq!(r.fit(6300, 4000, true), (1260, 800));
+        assert_eq!(r.fit(4000, 6300, true), (800, 1260));
+        // 3:2 : la hauteur remplie, la largeur un peu plus courte.
+        assert_eq!(r.fit(6000, 4000, true), (1200, 800));
+        assert!(o.instant.is_some() && o.format == Format::Jpeg && o.space == OutputSpace::Srgb);
+        assert!(describe(o).contains("renfort tirage instantané"));
+        let dir = std::env::temp_dir().join(format!("luma-instax-{}", std::process::id()));
+        let file = dir.join("exports.json");
+        let mut mine = Preset {
+            name: "Instax forte".into(),
+            options: o.clone(),
+        };
+        mine.options.instant = InstantPrint::parse("instant:forte");
+        Presets {
+            user: vec![mine.clone()],
+        }
+        .save(&file)
+        .unwrap();
+        assert_eq!(Presets::load(&file).user, vec![mine]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     /// Les PNG se relisent aux octets de la conversion, en 8 bits (codeur d'images) et
     /// en 16 bits (écrit sur tous les cœurs), avec la résolution d'un tirage en 16 bits

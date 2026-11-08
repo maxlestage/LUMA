@@ -50,7 +50,7 @@ USAGE
                      [--quality 1-100] [--bits 8|16] [--xmp f.xmp] [--settings f.json]
                      [--no-sidecar] [--set nom=valeur]… [--lut film.cube[:intensité]]
                      [--preset nom] [--name modèle] [--resize taille] [--enlarge] [--web]
-                     [--max-kb N] [--auto-tone] [--before-after]
+                     [--max-kb N] [--instant faible|normale|forte] [--auto-tone] [--before-after]
                      [--output-sharpen screen|matte|glossy[:low|standard|high]]
                      [--watermark texte] [--watermark-position bottom-right]
                      [--watermark-size 0.5-25] [--watermark-opacity 0-100] [--watermark-dark]
@@ -71,6 +71,9 @@ USAGE
       calculées pour l'image : de 9 à 29 % plus léger ; le préréglage Web le fait).
       --max-kb : le poids maximal d'un JPEG, en kilo‑octets (1 000 octets),
       métadonnées comprises : la meilleure qualité qui tient, --quality au plus.
+      --instant : le renfort pour une imprimante instantanée (Instax), qui tire pâle :
+      plus de contraste et de saturation, des tons moyens plus denses. Le préréglage
+      « Instax Link Wide » le fait, à la taille de l'imprimante (1260 × 800 points).
       --resize : 2048 ou long:2048 (grand côté), short:1080 (petit côté), 1920x1080
       (l'image tient dans le cadre), 12mp (mégapixels), 30x40cm@300 (tirage : le cadre
       en centimètres à 300 ppp, inscrits dans le JPEG et le TIFF) ; jamais d'agrandissement, sauf
@@ -98,9 +101,10 @@ USAGE
                      [--watermark texte …|--no-watermark] [--logo f.png …|--no-logo]
                      [--author nom] [--copyright texte] [--keep-gps|--remove-gps]
                      [--exif|--no-exif] [--keywords|--no-keywords] [--web|--no-web]
-                     [--enlarge|--no-enlarge] [--max-kb N|0] [--delete]
+                     [--enlarge|--no-enlarge] [--max-kb N|0]
+                     [--instant faible|normale|forte|--no-instant] [--delete]
       Sans nom : la liste des préréglages d'export (Web, Pleine définition, Écran P3,
-      Impression, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
+      Impression, Instax Link Wide, puis les vôtres). Avec un nom : crée le préréglage ou le modifie
       (partagé avec l'app) ; --delete le retire.
   luma xmp <raw|f.xmp|f.json> [--set nom=valeur]… [-o f.xmp]
   luma bench <raw> [--size N] [--runs N]
@@ -334,10 +338,19 @@ struct Args {
     enlarge: Option<bool>,
     /// `--max-kb N` : le poids maximal d'un JPEG, en kilo‑octets (0 : aucun).
     max_kb: Option<u32>,
+    /// `--instant [faible|normale|forte]` / `--no-instant` : le renfort pour une
+    /// imprimante instantanée (Instax), qui tire pâle.
+    instant: Option<Option<export::InstantPrint>>,
     /// `--auto-tone` : exposition, contraste, hautes lumières et ombres lus sur la photo.
     auto_tone: bool,
     /// `--before-after` : l'avant / après côte à côte, en une image.
     before_after: bool,
+}
+
+/// L'intensité de `--instant` : `faible`, `normale` ou `forte`.
+fn instant(v: &str) -> Result<export::InstantPrint, String> {
+    export::InstantPrint::parse(&format!("instant:{v}"))
+        .ok_or_else(|| format!("--instant : faible, normale ou forte (pas « {v} »)"))
 }
 
 /// L'erreur d'un `--max-kb` illisible.
@@ -367,6 +380,7 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
         web: None,
         enlarge: None,
         max_kb: None,
+        instant: None,
         auto_tone: false,
         before_after: false,
     };
@@ -387,6 +401,8 @@ fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
             "--enlarge" => a.enlarge = Some(true),
             "--no-enlarge" => a.enlarge = Some(false),
             "--max-kb" => a.max_kb = Some(value(&arg)?.parse().map_err(|_| MAX_KB)?),
+            "--instant" => a.instant = Some(Some(instant(&value(&arg)?)?)),
+            "--no-instant" => a.instant = Some(None),
             "--auto-tone" => a.auto_tone = true,
             "--before-after" => a.before_after = true,
             "--name" => a.name = Some(value(&arg)?),
@@ -845,6 +861,7 @@ fn develop(a: &Args) -> Result<(), String> {
         || a.resize.is_some()
         || a.enlarge.is_some()
         || a.max_kb.is_some()
+        || a.instant.is_some()
         || a.output_sharpen.is_some()
         || !a.watermark.is_empty()
         || !a.logo.is_empty()
@@ -1138,6 +1155,9 @@ fn export_options(a: &Args, preset: Option<&str>, presets: &export::Presets) -> 
     if let Some(k) = a.max_kb {
         o.max_kb = (k > 0).then_some(k);
     }
+    if let Some(i) = a.instant {
+        o.instant = i;
+    }
     o.resize = a
         .resize
         .or(a.size.filter(|&n| n > 0).map(export::Resize::LongEdge))
@@ -1285,6 +1305,8 @@ fn export_preset(args: Vec<String>) -> Result<(), String> {
                 let k: u32 = value()?.parse().map_err(|_| MAX_KB)?;
                 o.max_kb = (k > 0).then_some(k);
             }
+            "--instant" => o.instant = Some(instant(&value()?)?),
+            "--no-instant" => o.instant = None,
             "--bits" => {
                 o.bits = match value()?.as_str() {
                     "8" => 8,
