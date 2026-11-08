@@ -1,6 +1,6 @@
 # Nouveautés
 
-## 0.4.0 — à venir
+## 0.4.0 — novembre 2026
 
 - **Export Instax Link Wide** : un préréglage d'export pour l'imprimante instantanée,
   à sa taille (1 260 × 800 points, dans le sens de la photo) et renforcé, elle qui tire
