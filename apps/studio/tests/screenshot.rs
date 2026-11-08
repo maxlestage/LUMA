@@ -1215,6 +1215,9 @@ fn export_enlarge() {
     // Un grand côté de 12 000 px : la case apparaît et se coche.
     s.studio().export_options.resize = Some(luma_render::export::Resize::LongEdge(12000));
     s.wait();
+    // Plus bas dans la fenêtre, qui défile.
+    s.harness.get_by_label("Agrandir au besoin").scroll_to_me();
+    s.wait();
     s.harness.get_by_label("Agrandir au besoin").click();
     s.wait();
     assert!(s.studio().export_options.enlarge);
@@ -1247,6 +1250,34 @@ fn export_max_weight() {
     s.harness.get_by_label("Au plus").click();
     s.wait();
     assert_eq!(s.studio().export_options.max_kb, None);
+}
+
+/// Le renfort Instax : la case le pose (intensité normale), « Forte » le monte, et le
+/// préréglage Instax Link Wide est proposé.
+#[test]
+fn export_instax_boost() {
+    let _gpu = one_at_a_time();
+    let Some(mut s) = Session::open("export-instax") else {
+        return;
+    };
+    s.keys(&[(Modifiers::COMMAND | Modifiers::SHIFT, Key::E)]);
+    assert!(
+        s.harness.query_by_label("Instax Link Wide").is_some(),
+        "le préréglage"
+    );
+    s.harness.get_by_label("Renforcer pour Instax").scroll_to_me();
+    s.wait();
+    s.harness.get_by_label("Renforcer pour Instax").click();
+    s.wait();
+    let boost = |s: &mut Session| s.studio().export_options.instant.map(|i| i.strength);
+    assert_eq!(boost(&mut s), Some(luma_render::export::Strength::Standard));
+    s.harness.get_all_by_label("Forte").last().unwrap().click();
+    s.wait();
+    assert_eq!(boost(&mut s), Some(luma_render::export::Strength::High));
+    s.capture("export-instax");
+    s.harness.get_by_label("Renforcer pour Instax").click();
+    s.wait();
+    assert_eq!(boost(&mut s), None);
 }
 
 #[test]

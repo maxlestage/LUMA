@@ -8363,6 +8363,9 @@ impl Studio {
                         form_row(ui, compact, tr("Accentuation de sortie"));
                         ui.horizontal_wrapped(|ui| sharpen_editor(ui, &mut o.sharpen));
                         form_end(ui, compact);
+                        form_row(ui, compact, tr("Tirage instantané"));
+                        ui.horizontal_wrapped(|ui| instant_editor(ui, &mut o.instant));
+                        form_end(ui, compact);
                         form_row(ui, compact, tr("Filigrane"));
                         ui.vertical(|ui| watermark_editor(ui, &mut o.watermark));
                         form_end(ui, compact);
@@ -17170,6 +17173,33 @@ fn sharpen_editor(ui: &mut Ui, sharpen: &mut Option<luma_render::export::OutputS
     }
 }
 
+/// Le renfort pour une imprimante instantanée (Instax), qui tire pâle : coché, plus de
+/// contraste, de densité et de saturation, à l'intensité choisie.
+fn instant_editor(ui: &mut Ui, instant: &mut Option<luma_render::export::InstantPrint>) {
+    use luma_render::export::{InstantPrint, Strength};
+    let mut on = instant.is_some();
+    if ui
+        .checkbox(&mut on, tr("Renforcer pour Instax"))
+        .on_hover_text(tr(
+            "Les imprimantes Instax (Link Wide, Mini, Square) tirent pâle : plus de contraste, des tons moyens plus denses et des couleurs plus vives pour compenser",
+        ))
+        .changed()
+    {
+        *instant = on.then_some(InstantPrint {
+            strength: Strength::Standard,
+        });
+    }
+    if let Some(i) = instant {
+        for (k, name) in [
+            (Strength::Low, tr("Faible")),
+            (Strength::Standard, tr("Normale")),
+            (Strength::High, tr("Forte")),
+        ] {
+            ui.radio_value(&mut i.strength, k, name);
+        }
+    }
+}
+
 /// Un nombre de pixels d'export.
 fn pixels(v: &mut usize) -> egui::DragValue<'_> {
     egui::DragValue::new(v).range(64..=20000).suffix(" px")
@@ -17352,10 +17382,14 @@ fn export_summary(o: &ExportOptions) -> String {
             ],
         ),
     };
+    let mut out = format!("{format}, {space}, {size}");
     if o.enlarge && o.resize.is_some() {
-        return format!("{format}, {space}, {size}, {}", tr("agrandie au besoin"));
+        out = format!("{out}, {}", tr("agrandie au besoin"));
     }
-    format!("{format}, {space}, {size}")
+    if o.instant.is_some() {
+        out = format!("{out}, {}", tr("renforcée pour Instax"));
+    }
+    out
 }
 
 /// Le modèle du nom des fichiers exportés est‑il valable ?
